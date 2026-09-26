@@ -1,6 +1,12 @@
 version: 1
 domain: Pinball Museum
-actors: []
+actors:
+  - id: ACT-Visitor
+    name: Visitor
+  - id: ACT-Helper
+    name: Helper
+  - id: ACT-Technician
+    name: Technician
 external_systems: []
 bounded_contexts: []
 aggregates: []
