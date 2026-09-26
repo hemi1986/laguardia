@@ -20,6 +20,7 @@ _Avoid_: Bug, error, issue
 **Defect report**:
 A message from anyone about something wrong with a pinball machine, before it has been assessed.
 _Avoid_: Ticket, complaint
+_UI (de)_: Meldung
 
 ### Workshop
 
@@ -32,6 +33,7 @@ _Avoid_: Fix, service
 
 - **Be opinionated.** When multiple words exist for the same concept, pick the best one and list the others under `_Avoid_`.
 - **Keep definitions tight.** One or two sentences max. Define what it IS, not what it does.
+- **German UI wording.** The software UI is German. Every term gets a `_UI (de)_` line with the one German word the UI uses for it – no synonyms in the UI either.
 - **Only include terms specific to this domain.** General programming concepts (timeouts, error types, utility patterns) don't belong. Before adding a term, ask: is this a concept unique to the domain, or a general concept? Only the former belongs.
 - **Group terms by bounded context** (subheadings named like the contexts in `docs/domain/events.yaml`) once contexts exist. Before that, a flat list is fine. Terms used across contexts go under `### Shared`.
 - The same word with different meanings in two contexts gets one entry per context, each defined for its context.

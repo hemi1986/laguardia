@@ -10,6 +10,8 @@ Total chaos today:
 - It is unclear who is working on what – duplicate work or no work at all.
 - Nobody has an overview of which machines are playable right now.
 
+Machines are not only pinball: the museum also has arcade machines and other machines (jukeboxes, gum machines, table football, …).
+
 Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines that are not playable. Two technicians who can repair electronics, plus a number of helpers for simple tasks.
 
 ## User Groups
@@ -55,7 +57,35 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - For every machine, anyone on the team can see the current status and full repair history in under a minute.
 
 ## Constraints
+- Language: the software (UI) is in German – the visitor pages in German and English; defect titles are shown untranslated; all documentation, the glossary, stories and code are in English.
 - On-site usage / devices: mainly smartphones, probably tablets; the workshop PC for administration.
 - Network/Wi-Fi in the exhibition: good Wi-Fi everywhere, no offline capability needed.
 - Operations & hosting: minimal operating effort – keep it simple.
 - Who develops and maintains it long-term: a single volunteer, who is also one of the two technicians.
+
+## Initial Maintenance Plan
+Starting point agreed in the event storming; technicians maintain the maintenance plan in La Guardia. Intervals are time-based and count from the last *done* maintenance record.
+
+| Maintenance task | Interval | Suitable for helpers | Applies to |
+|---|---|---|---|
+| Clean glass (inside & out) | 1 month | yes | Pinball |
+| Switch test (every switch) | 1 month | yes | Pinball |
+| Lamp & flasher test, replace dead bulbs/LEDs | 1 month | yes | Pinball |
+| Check balls for chips/rust, replace if needed | 1 month | yes | Pinball |
+| Check flipper strength & play | 1 month | yes | Pinball |
+| Clean playfield | 3 months | yes | Pinball |
+| Check rubbers, replace cracked ones | 3 months | yes | Pinball |
+| Check coin door, legs, leg bolts, levelling | 3 months | yes | Pinball |
+| Wax playfield | 12 months | yes | Pinball |
+| Replace all rubbers and balls | 12 months | yes | Pinball |
+| Flipper rebuild check (bushings, coil stops, links) | 12 months | no | Pinball |
+| Check fuses, connectors, boards for burn marks | 12 months | no | Pinball |
+| Clean & adjust score reels / stepper units | 12 months | no | Pinball / EM |
+| Clean screen, bezel and cabinet | 1 month | yes | Arcade |
+| Test joysticks, buttons, coin door | 1 month | yes | Arcade |
+| Check control panel for loose parts, replace worn microswitches | 3 months | yes | Arcade |
+| Clean fans and dust out cabinet | 12 months | yes | Arcade |
+| Check PSU voltages, connectors, board | 12 months | no | Arcade |
+| Check monitor geometry, convergence, capacitors | 12 months | no | Arcade / CRT |
+
+No maintenance tasks for machine category *Other* by default.

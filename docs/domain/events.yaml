@@ -7,12 +7,601 @@ actors:
     name: Helper
   - id: ACT-Technician
     name: Technician
+  - id: ACT-TeamMember
+    name: Team member
+    description: Any helper or technician – used where both may act.
 external_systems: []
-bounded_contexts: []
-aggregates: []
-events: []
-commands: []
-policies: []
-read_models: []
-hotspots: []
-flows: []
+# Machine status lives in Collection (technician decision; Repair only prompts it via policies).
+# Team accounts, roles and last login: a generic "Team" area, not modelled here – domain-architect adds it to the context map as a supplier.
+bounded_contexts:
+  - id: BC-Collection
+    name: Collection
+    purpose: Which machines the museum has, what they are, where they stand, whether they are playable, and their files
+  - id: BC-Repair
+    name: Repair
+    purpose: From problem reports via triage to defects that are worked on and resolved
+  - id: BC-Maintenance
+    name: Maintenance
+    purpose: The maintenance plan and keeping every machine's scheduled maintenance up to date
+aggregates:
+  - id: AGG-ProblemReport
+    name: Problem report
+    context: BC-Repair
+    invariants:
+      - A problem report is triaged at most once – exactly one outcome (defect recorded, linked, resolved on the spot, dismissed)
+      - A problem report dismissed as spam has no description and no photo
+  - id: AGG-Defect
+    name: Defect
+    context: BC-Repair
+    description: Contains its work log entries.
+    invariants:
+      - A resolved defect cannot be claimed, prioritized, put on hold or have work logged – only reopened
+      - A defect has at most one claimant
+      - Only defects suitable for helpers can be claimed or resolved by helpers
+      - Only an open defect can be put on hold; only a defect on hold can be resumed
+      - Resolving ends the claim
+  - id: AGG-Machine
+    name: Machine
+    context: BC-Collection
+    invariants:
+      - A machine always has exactly one machine status
+      - A retired machine cannot change status
+      - Helpers can only set Out of order
+  - id: AGG-MachineModel
+    name: Machine model
+    context: BC-Collection
+    invariants:
+      - The technology fits the machine category (Pinball – EM, Solid-state, DMD, LCD; Arcade – CRT, LCD; Other – none)
+  - id: AGG-File
+    name: File
+    context: BC-Collection
+    invariants:
+      - A file belongs to exactly one machine or one machine model
+      - A file has exactly one file category
+  - id: AGG-MaintenancePlan
+    name: Maintenance plan
+    context: BC-Maintenance
+    invariants:
+      - Every maintenance task has a positive interval and a start date
+      - A restriction to a technology fits the restricted machine category
+  - id: AGG-MaintenanceRecord
+    name: Maintenance record
+    context: BC-Maintenance
+    description: Append-only; one per machine and maintenance task carried out. Due and overdue are derived from records, plan and machine status over time.
+    invariants:
+      - A maintenance record refers to exactly one machine and one maintenance task
+
+events:
+  # --- Problem reports ---
+  - id: EVT-ProblemReported
+    aggregate: AGG-ProblemReport
+    pivotal: true
+    name: Problem reported
+    data: [Machine, Description, Photo (optional), Reporter (team member or visitor), Reported at]
+    description: Visitors report via the QR code on the machine, only for machines that are on display. Team members can always report.
+  - id: EVT-DefectRecorded
+    aggregate: AGG-Defect
+    pivotal: true
+    name: Defect recorded
+    data: [Machine, Problem report, Title, Priority, Suitable for helpers, Recorded by]
+    description: Triage outcome – the problem report becomes a new defect. The title is shown to visitors, so it must be understandable.
+  - id: EVT-ProblemReportLinkedToDefect
+    aggregate: AGG-ProblemReport
+    name: Problem report linked to defect
+    data: [Problem report, Defect, Linked by]
+    description: Triage outcome – the problem report describes an already known defect.
+  - id: EVT-ProblemResolvedOnTheSpot
+    aggregate: AGG-ProblemReport
+    name: Problem resolved on the spot
+    data: [Problem report, Note, Resolved by]
+    description: Triage outcome – fixed immediately (e.g. stuck ball freed), no defect. Helpers may do this too.
+  - id: EVT-ProblemReportDismissed
+    aggregate: AGG-ProblemReport
+    name: Problem report dismissed
+    data: [Problem report, Reason (e.g. not a fault, spam), Dismissed by]
+    description: Triage outcome. Dismissing as spam removes the text and photo.
+
+  # --- Defects ---
+  - id: EVT-DefectPrioritized
+    aggregate: AGG-Defect
+    name: Defect prioritized
+    data: [Defect, Priority, Prioritized by]
+  - id: EVT-DefectClaimed
+    aggregate: AGG-Defect
+    name: Defect claimed
+    data: [Defect, Claimed by, Assigned by (optional)]
+    description: A team member claims a defect, or a technician assigns it to someone.
+  - id: EVT-DefectClaimReleased
+    aggregate: AGG-Defect
+    name: Defect claim released
+    data: [Defect, Released by]
+    description: Released by the claimant or by a technician. Stale claims are only highlighted, never released automatically.
+  - id: EVT-WorkLogged
+    aggregate: AGG-Defect
+    name: Work logged
+    data: [Defect, What was done, Parts used (free text), Photos (optional), Logged by, Logged at]
+  - id: EVT-DefectPutOnHold
+    aggregate: AGG-Defect
+    name: Defect put on hold
+    data: [Defect, Reason (waiting for part, waiting for technician, other), Note]
+  - id: EVT-DefectResumed
+    aggregate: AGG-Defect
+    name: Defect resumed
+    data: [Defect]
+  - id: EVT-DefectResolved
+    aggregate: AGG-Defect
+    pivotal: true
+    name: Defect resolved
+    data: [Defect, Closing note, Resolved by]
+  - id: EVT-DefectReopened
+    aggregate: AGG-Defect
+    name: Defect reopened
+    data: [Defect, Reason, Reopened by]
+  - id: EVT-DefectClosedOnRetirement
+    aggregate: AGG-Defect
+    name: Defect closed on retirement
+    data: [Defect, Machine]
+    description: Open defects are closed when their machine is retired.
+
+  # --- Machines ---
+  - id: EVT-MachineModelCreated
+    aggregate: AGG-MachineModel
+    name: Machine model created
+    data: [Title, Manufacturer, Year, Machine category, Technology (optional)]
+  - id: EVT-MachineRegistered
+    aggregate: AGG-Machine
+    pivotal: true
+    name: Machine registered
+    data: [Machine model, Museum number, Serial number (optional), Location (free text), Machine status]
+  - id: EVT-MachineStatusChanged
+    aggregate: AGG-Machine
+    pivotal: true
+    name: Machine status changed
+    data: [Machine, Previous status, New status, Reason, Changed by]
+    description: Technicians only – except helpers, who may set Out of order when a machine is unsafe.
+  - id: EVT-FileAttached
+    aggregate: AGG-File
+    name: File attached
+    data: [Machine or machine model, File, Title, File category (Manual, Schematic, Photo, Other), Attached by]
+  - id: EVT-FileRemoved
+    aggregate: AGG-File
+    name: File removed
+    data: [File, Removed by]
+  - id: EVT-MachineRetired
+    aggregate: AGG-Machine
+    pivotal: true
+    name: Machine retired
+    data: [Machine, Reason, Retired by]
+
+  # --- Maintenance ---
+  - id: EVT-MaintenancePlanChanged
+    aggregate: AGG-MaintenancePlan
+    name: Maintenance plan changed
+    data: [Maintenance task, Instruction, Interval, Suitable for helpers, Restriction to machine category / technology (optional), Start date]
+    description: A maintenance task was added, changed or removed.
+  - id: EVT-MaintenanceTaskDue
+    context: BC-Maintenance
+    pivotal: true
+    name: Maintenance task due
+    origin: time
+    data: [Machine, Maintenance task, Due since]
+    description: Interval passed since the last done maintenance record (or since the start date set when the task was added). Not for machines that are Not on display.
+  - id: EVT-MaintenanceTaskOverdue
+    context: BC-Maintenance
+    name: Maintenance task overdue
+    origin: time
+    data: [Machine, Maintenance task]
+    description: Due for more than 25% of the interval.
+  - id: EVT-MaintenanceRecorded
+    aggregate: AGG-MaintenanceRecord
+    name: Maintenance recorded
+    data: [Machine, Maintenance task, Outcome (done, partially done), Note, Recorded by, Recorded at]
+    description: Only "done" resets the interval.
+
+commands:
+  # --- Problem reports ---
+  - id: CMD-ReportProblem
+    aggregate: AGG-ProblemReport
+    name: Report problem
+    actor: ACT-Visitor
+    produces: [EVT-ProblemReported]
+    description: Also used by team members. A technician's own problem report is triaged in the same step.
+    rules:
+      - Visitors can report only for machines that are not Not on display and not retired
+      - Team members can report for any machine that is not retired
+      - Description is required, photo is optional
+  - id: CMD-RecordDefect
+    aggregate: AGG-Defect
+    name: Record defect
+    actor: ACT-Technician
+    produces: [EVT-DefectRecorded]
+    description: Triage outcome. The technician may change the machine status in the same step (see POL-DefectMayChangeMachineStatus).
+    rules:
+      - The problem report has not been triaged yet
+      - Title is required and understandable for visitors
+      - Priority defaults to normal
+  - id: CMD-LinkProblemReportToDefect
+    aggregate: AGG-ProblemReport
+    name: Link problem report to defect
+    actor: ACT-Technician
+    produces: [EVT-ProblemReportLinkedToDefect]
+    description: Triage outcome. Linking to a resolved defect reopens it (see POL-LinkReopensResolvedDefect).
+    rules:
+      - The problem report has not been triaged yet
+      - The defect belongs to the same machine as the problem report
+  - id: CMD-ResolveProblemOnTheSpot
+    aggregate: AGG-ProblemReport
+    name: Resolve problem on the spot
+    actor: ACT-TeamMember
+    produces: [EVT-ProblemResolvedOnTheSpot]
+    rules:
+      - The problem report has not been triaged yet
+      - A note is required
+  - id: CMD-DismissProblemReport
+    aggregate: AGG-ProblemReport
+    name: Dismiss problem report
+    actor: ACT-Technician
+    produces: [EVT-ProblemReportDismissed]
+    rules:
+      - The problem report has not been triaged yet
+      - A reason is required
+      - Dismissing as spam removes the description and photo
+
+  # --- Defects ---
+  - id: CMD-PrioritizeDefect
+    aggregate: AGG-Defect
+    name: Prioritize defect
+    actor: ACT-Technician
+    produces: [EVT-DefectPrioritized]
+    rules:
+      - The defect is not resolved
+  - id: CMD-ClaimDefect
+    aggregate: AGG-Defect
+    name: Claim defect
+    actor: ACT-TeamMember
+    produces: [EVT-DefectClaimed]
+    description: Technicians may also assign a defect to any team member. Claiming an already claimed defect takes it over.
+    rules:
+      - The defect is not resolved
+      - Claiming a defect claimed by someone else takes it over – allowed for everyone
+      - Helpers can only claim, or be assigned, defects suitable for helpers
+  - id: CMD-ReleaseClaim
+    aggregate: AGG-Defect
+    name: Release claim
+    actor: ACT-TeamMember
+    produces: [EVT-DefectClaimReleased]
+    rules:
+      - Team members release their own claim; technicians release any claim
+  - id: CMD-LogWork
+    aggregate: AGG-Defect
+    name: Log work
+    actor: ACT-TeamMember
+    produces: [EVT-WorkLogged]
+    rules:
+      - The defect is not resolved
+      - What was done is required; parts used and photos are optional
+      - Any team member may log work, with or without a claim
+  - id: CMD-PutDefectOnHold
+    aggregate: AGG-Defect
+    name: Put defect on hold
+    actor: ACT-TeamMember
+    produces: [EVT-DefectPutOnHold]
+    rules:
+      - The defect is not resolved and not on hold
+      - Only technicians or the team member who claimed the defect
+      - A reason is required
+  - id: CMD-ResumeDefect
+    aggregate: AGG-Defect
+    name: Resume defect
+    actor: ACT-TeamMember
+    produces: [EVT-DefectResumed]
+    rules:
+      - The defect is on hold
+      - Only technicians or the team member who claimed the defect
+  - id: CMD-ResolveDefect
+    aggregate: AGG-Defect
+    name: Resolve defect
+    actor: ACT-TeamMember
+    produces: [EVT-DefectResolved]
+    rules:
+      - The defect is not resolved
+      - A closing note is required
+      - Helpers can only resolve defects suitable for helpers
+      - Resolving ends the claim; a reopened defect is unclaimed
+  - id: CMD-ReopenDefect
+    aggregate: AGG-Defect
+    name: Reopen defect
+    actor: ACT-TeamMember
+    produces: [EVT-DefectReopened]
+    rules:
+      - The defect is resolved and its machine is not retired
+      - A reason is required
+
+  # --- Machines ---
+  - id: CMD-CreateMachineModel
+    aggregate: AGG-MachineModel
+    name: Create machine model
+    actor: ACT-Technician
+    produces: [EVT-MachineModelCreated]
+    rules:
+      - Title, manufacturer and machine category are required
+      - The technology must fit the machine category
+  - id: CMD-RegisterMachine
+    aggregate: AGG-Machine
+    name: Register machine
+    actor: ACT-Technician
+    produces: [EVT-MachineRegistered]
+    rules:
+      - The museum number is unique; La Guardia assigns one if none is given
+      - The machine model exists
+  - id: CMD-ChangeMachineStatus
+    aggregate: AGG-Machine
+    name: Change machine status
+    actor: ACT-Technician
+    produces: [EVT-MachineStatusChanged]
+    rules:
+      - The machine is not retired
+      - Helpers may only set Out of order, and only when the machine is unsafe; a reason is required
+  - id: CMD-AttachFile
+    aggregate: AGG-File
+    name: Attach file
+    actor: ACT-TeamMember
+    produces: [EVT-FileAttached]
+    rules:
+      - Attached to exactly one machine or one machine model
+      - File category is required
+  - id: CMD-RemoveFile
+    aggregate: AGG-File
+    name: Remove file
+    actor: ACT-Technician
+    produces: [EVT-FileRemoved]
+  - id: CMD-RetireMachine
+    aggregate: AGG-Machine
+    name: Retire machine
+    actor: ACT-Technician
+    produces: [EVT-MachineRetired]
+    rules:
+      - The machine is not retired yet
+      - A reason is required
+
+  - id: CMD-CloseDefectOnRetirement
+    aggregate: AGG-Defect
+    name: Close defect on retirement
+    produces: [EVT-DefectClosedOnRetirement]
+    rules:
+      - Only defects that are not resolved
+
+  # --- Maintenance ---
+  - id: CMD-ChangeMaintenancePlan
+    aggregate: AGG-MaintenancePlan
+    name: Change maintenance plan
+    actor: ACT-Technician
+    produces: [EVT-MaintenancePlanChanged]
+    rules:
+      - A new maintenance task requires a start date that counts as last done
+      - The interval is a positive time span
+  - id: CMD-RecordMaintenance
+    aggregate: AGG-MaintenanceRecord
+    name: Record maintenance
+    actor: ACT-TeamMember
+    produces: [EVT-MaintenanceRecorded]
+    description: Can be recorded for several machines at once – one event per machine.
+    rules:
+      - The maintenance task applies to the machine's category and technology
+      - Helpers can only record maintenance tasks suitable for helpers
+      - The machine is not retired
+policies:
+  # --- automatic ---
+  - id: POL-LinkReopensResolvedDefect
+    name: Linking to a resolved defect reopens it
+    when: [EVT-ProblemReportLinkedToDefect]
+    then: [CMD-ReopenDefect]
+    description: Automatic, only if the linked defect is resolved. Reason = the linked problem report.
+  - id: POL-RetirementClosesDefects
+    name: Retirement closes open defects
+    when: [EVT-MachineRetired]
+    then: [CMD-CloseDefectOnRetirement]
+    description: Automatic, for every defect of the machine that is not resolved.
+  - id: POL-RetirementDismissesProblemReports
+    name: Retirement dismisses untriaged problem reports
+    when: [EVT-MachineRetired]
+    then: [CMD-DismissProblemReport]
+    description: Automatic, for every untriaged problem report of the machine, reason "machine retired".
+  # --- manual routines ---
+  - id: POL-TriageProblemReports
+    name: New problem reports are triaged
+    when: [EVT-ProblemReported]
+    then: [CMD-RecordDefect, CMD-LinkProblemReportToDefect, CMD-ResolveProblemOnTheSpot, CMD-DismissProblemReport]
+    description: Manual routine of the technicians via the triage list; a technician's own report is triaged in the same step. Highlighted after 3 days.
+  - id: POL-DefectMayChangeMachineStatus
+    name: A new or reopened defect may change the machine status
+    when: [EVT-DefectRecorded, EVT-DefectReopened]
+    then: [CMD-ChangeMachineStatus]
+    description: Manual – the technician decides in the same step whether the machine becomes Limited or Out of order.
+  - id: POL-ResolvedDefectsReturnMachineToPlay
+    name: Machines without open defects return to play
+    when: [EVT-DefectResolved]
+    then: [CMD-ChangeMachineStatus]
+    description: Manual – a Limited or Out of order machine without open defects is highlighted for technicians, who decide on Playable.
+  - id: POL-DueMaintenanceIsCarriedOut
+    name: Due maintenance is carried out
+    when: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]
+    then: [CMD-RecordMaintenance]
+    description: Manual routine of team members via the list of due maintenance tasks.
+  - id: POL-MaintenanceFindingIsReported
+    name: Findings during maintenance are reported
+    when: [EVT-MaintenanceRecorded]
+    then: [CMD-ReportProblem]
+    description: Manual – a fault found during maintenance becomes a problem report.
+read_models:
+  - id: RM-VisitorMachinePage
+    name: Visitor machine page
+    description: Opened via the QR code by visitors; German and English. Used to decide whether to report a problem. Deliberately minimal – no storytelling about the machine.
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement]
+    used_by: [ACT-Visitor]
+    fields: [Machine model title, Manufacturer, Year, Machine status, Titles of open defects, Number of untriaged problem reports, Reporting possible (machine on display)]
+  - id: RM-TriageList
+    name: Triage list
+    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-MachineRetired]
+    used_by: [ACT-Technician, ACT-Helper]
+    description: Helpers use it only to resolve problems on the spot.
+    fields: [Museum number, Machine model title, Description, Photo, Reporter (visitor or team member), Reported at, Waiting longer than 3 days, Open and recently resolved defects of the machine (for linking)]
+  - id: RM-OpenDefects
+    name: Open defects
+    fed_by: [EVT-DefectRecorded, EVT-DefectPrioritized, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-ProblemReportLinkedToDefect]
+    used_by: [ACT-TeamMember]
+    description: Filterable by machine, priority, suitable for helpers, claimed by me, on hold.
+    fields: [Museum number, Machine model title, Title, Priority, Suitable for helpers, Claimed by, On hold with reason, Number of linked problem reports, Open since, Last work log entry]
+  - id: RM-MachineOverview
+    name: Machine overview
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-DefectRecorded, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
+    used_by: [ACT-TeamMember]
+    description: All active machines at a glance; entry point for searching by museum number or title.
+    fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
+  - id: RM-MachineRecord
+    name: Machine record
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue]
+    used_by: [ACT-TeamMember]
+    description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
+    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Due and overdue maintenance tasks, Files of the machine and its machine model by file category]
+  - id: RM-DueMaintenance
+    name: Due maintenance
+    fed_by: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired]
+    used_by: [ACT-TeamMember]
+    description: Grouped by maintenance task so the same task can be recorded for several machines at once.
+    fields: [Maintenance task, Instruction, Suitable for helpers, Museum number, Machine model title, Location, Last done, Due since, Overdue]
+  - id: RM-MaintenancePlan
+    name: Maintenance plan
+    fed_by: [EVT-MaintenancePlanChanged]
+    used_by: [ACT-Technician]
+    fields: [Maintenance task, Instruction, Interval, Suitable for helpers, Machine category, Technology]
+  - id: RM-TechnicianDashboard
+    name: Technician dashboard
+    description: Highlights everything new since the viewer's last login.
+    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-MachineStatusChanged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClaimed, EVT-WorkLogged, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
+    used_by: [ACT-Technician]
+    fields: [Untriaged problem reports (waiting longer than 3 days highlighted), Machine status changes, Defects resolved or reopened, Overdue maintenance tasks, Limited or Out of order machines without open defects, Claims older than 14 days without a work log entry, New since last login]
+  - id: RM-HelperDashboard
+    name: Helper dashboard
+    description: Highlights everything new since the viewer's last login.
+    fed_by: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
+    used_by: [ACT-Helper]
+    fields: [Open defects suitable for helpers, Due maintenance tasks suitable for helpers, My claimed defects and what changed on them (incl. taken over), New since last login]
+  - id: RM-RepairTimes
+    name: Repair times
+    description: Measures the success criteria – a simple view (median times, last 30/90 days), no export. Report time of a defect = its earliest problem report.
+    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved]
+    used_by: [ACT-Technician]
+    fields: [Priority, Period, Time from problem report to first work log entry, Time from problem report to defect resolved, Number of defects]
+hotspots:
+  # --- Flow: problem report to defect ---
+  - id: HS-1
+    question: What does a visitor see about problem reports that are not yet triaged for the machine they are standing at?
+    refs: [EVT-ProblemReported]
+    status: resolved
+    resolution: "Visitors only see a count (\"Already reported 2x today – not yet reviewed\"), never the untriaged text."
+  - id: HS-2
+    question: How long may a problem report wait for triage before it is highlighted?
+    refs: [EVT-ProblemReported, EVT-DefectRecorded]
+    status: resolved
+    resolution: "Problem reports waiting for triage longer than 3 days are highlighted on the technician dashboard (read model, no rule)."
+  - id: HS-3
+    question: Is the machine status changed as part of triage, or as a separate step?
+    refs: [EVT-DefectRecorded, EVT-MachineStatusChanged]
+    status: resolved
+    resolution: "Same step: recording a defect optionally includes a new machine status (two events, one action)."
+  - id: HS-4
+    question: What happens when one problem report describes two different faults?
+    refs: [EVT-ProblemReported, EVT-DefectRecorded]
+    status: resolved
+    resolution: "One problem report leads to one defect; the technician records further faults as own problem reports, triaged in the same step."
+  # --- Flow: repairing a defect ---
+  - id: HS-5
+    question: Can team members attach photos to defects and work log entries (e.g. before/after)?
+    refs: [EVT-WorkLogged, EVT-FileAttached]
+    status: resolved
+    resolution: "Yes – work log entries can carry photos."
+  - id: HS-6
+    question: Who returns a machine to Playable after a repair, and is a test play required?
+    refs: [EVT-DefectResolved, EVT-MachineStatusChanged]
+    status: resolved
+    resolution: "Machine status stays technician-only; the technician dashboard highlights Limited / Out of order machines without open defects. No mandatory test play."
+  - id: HS-7
+    question: Who may reopen a defect, and is there a time limit after which a new defect is recorded instead?
+    refs: [EVT-DefectReopened]
+    status: resolved
+    resolution: "Any team member may reopen, no time limit. Guideline: the same fault months later becomes a new defect."
+  - id: HS-8
+    question: May someone log work on or resolve a defect they have not claimed? May helpers log work on defects not suitable for helpers?
+    refs: [EVT-WorkLogged, EVT-DefectResolved, EVT-DefectClaimed]
+    status: resolved
+    resolution: "Anyone on the team may log work on any open defect. Technicians resolve any defect, helpers only defects suitable for helpers. Claiming is optional – a signal, not a lock."
+  - id: HS-9
+    question: What counts as "start of repair" for the success criterion "time from report to start of repair"?
+    refs: [EVT-DefectClaimed, EVT-WorkLogged]
+    status: resolved
+    resolution: "Start of repair = first work log entry. Measured: report to first work log entry, and report to resolved, per priority."
+  # --- Flow: scheduled maintenance ---
+  - id: HS-10
+    question: Which machine types exist for restricting maintenance tasks? The museum also has arcade machines and other machines ("Sonstiges"), not only pinball.
+    refs: [EVT-MachineModelCreated, EVT-MaintenancePlanChanged]
+    status: resolved
+    resolution: "Two levels on the machine model: machine category (Pinball, Arcade, Other – required) and technology (Pinball: EM, Solid-state, DMD, LCD; Arcade: CRT, LCD; Other: none – optional). Maintenance tasks can be restricted to a category and/or technology. Other = jukeboxes, gum machines, table football etc., no maintenance tasks by default."
+  - id: HS-11
+    question: Can a maintenance task be recorded for several machines at once (e.g. glass cleaning on a whole hall)?
+    refs: [EVT-MaintenanceRecorded]
+    status: resolved
+    resolution: "Yes – one action for several machines, producing one Maintenance recorded per machine."
+  - id: HS-12
+    question: When is a newly added maintenance task first due – immediately on all machines (flood on go-live) or later?
+    refs: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue]
+    status: resolved
+    resolution: "When a maintenance task is added, the technician sets a start date that counts as last done; first due one interval later. At go-live realistic last-done dates are entered."
+  - id: HS-13
+    question: Can maintenance be recorded on a machine that is Not on display (e.g. full cleaning during restoration)?
+    refs: [EVT-MaintenanceRecorded]
+    status: resolved
+    resolution: "Yes – it counts and resets the interval; machines Not on display just never become due."
+  # --- Flow: machine lifecycle ---
+  - id: HS-14
+    question: How is a machine identified – museum inventory number, serial number, or both? Many EMs have no readable serial number.
+    refs: [EVT-MachineRegistered]
+    status: resolved
+    resolution: "A required, unique museum number (e.g. LG-042) printed on the QR sticker; serial number optional. La Guardia assigns museum numbers if none exist."
+  - id: HS-15
+    question: Do files have categories (manual, schematic, photo, other)?
+    refs: [EVT-FileAttached]
+    status: resolved
+    resolution: "Yes – fixed categories: Manual, Schematic, Photo, Other."
+  # --- Aggregates ---
+  - id: HS-16
+    question: Record defect creates a Defect but must also mark the Problem report as triaged (two aggregates). How is double triage by two technicians at the same time prevented?
+    refs: [CMD-RecordDefect, AGG-ProblemReport, AGG-Defect]
+    status: open
+  - id: HS-17
+    question: The museum number must be unique across all machines – a rule across Machine aggregates. Where is it enforced?
+    refs: [CMD-RegisterMachine, AGG-Machine]
+    status: open
+
+flows:
+  - id: FLOW-ProblemReportTriage
+    name: From problem report to defect
+    description: >-
+      Main path shown. Alternative triage outcomes instead of Defect recorded:
+      Problem report linked to defect, Problem resolved on the spot, Problem report dismissed.
+    sequence: [ACT-Visitor, EVT-ProblemReported, ACT-Technician, EVT-DefectRecorded, EVT-MachineStatusChanged]
+  - id: FLOW-DefectRepair
+    name: Repairing a defect
+    description: >-
+      On hold / resumed and work logged may repeat. Reopened leads back to claiming and work.
+      After resolution the technician may return the machine to Playable.
+    sequence: [EVT-DefectRecorded, EVT-DefectPrioritized, EVT-DefectClaimed, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-MachineStatusChanged, EVT-DefectReopened]
+  - id: FLOW-ScheduledMaintenance
+    name: Scheduled maintenance
+    description: >-
+      Repeats per machine and maintenance task. A finding during maintenance becomes a problem report
+      and enters the triage flow.
+    sequence: [ACT-Technician, EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, ACT-Helper, EVT-MaintenanceRecorded, EVT-ProblemReported]
+  - id: FLOW-MachineLifecycle
+    name: Machine lifecycle
+    sequence: [ACT-Technician, EVT-MachineModelCreated, EVT-MachineRegistered, EVT-FileAttached, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-DefectClosedOnRetirement]

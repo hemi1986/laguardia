@@ -1,93 +1,143 @@
 # La Guardia
 
-Management of the pinball museum's pinball machines: defects, repairs, manuals and problem reports.
+Management of the pinball museum's machines – pinball, arcade and other machines: problem reports, defects, repairs, scheduled maintenance and files.
 
 ## Language
 
-### People
+### Shared
 
 **Visitor**:
 A museum guest who plays the machines and may report problems, without an account.
 _Avoid_: Guest, customer, player
+_UI (de)_: Besucher:in
 
 **Helper**:
 A volunteer who carries out simple tasks on machines but does not repair electronics.
 _Avoid_: Assistant, volunteer (too broad – technicians are volunteers too)
+_UI (de)_: Helfer:in
 
 **Technician**:
 One of the specialists who can repair electronics; technicians set priorities, triage problem reports and decide a machine's status.
 _Avoid_: Mechanic, repairer, admin
+_UI (de)_: Techniker:in
 
-### Machines
+**Team member**:
+A helper or a technician – anyone on the museum team with a personal account.
+_Avoid_: User, staff, volunteer, crew
+_UI (de)_: Teammitglied
+
+**Suitable for helpers**:
+A mark on a defect or a maintenance task saying a helper may take it on (claim and resolve the defect, or record the maintenance).
+_Avoid_: Easy task, simple ticket
+_UI (de)_: Für Helfer:innen geeignet
+
+### Collection
 
 **Machine model**:
-A pinball title as built by a manufacturer (title, manufacturer, year, type), shared by all machines of that title; holds manuals and schematics.
+A product as built by a manufacturer (title, manufacturer, year, machine category, technology), shared by all machines of that model; holds manuals and schematics.
 _Avoid_: Game, title (alone), type
+_UI (de)_: Modell
+
+**Machine category**:
+The kind of machine: *Pinball*, *Arcade* (video arcade game) or *Other* (e.g. jukebox, gum machine, table football).
+_Avoid_: Type, class, kind
+_UI (de)_: Kategorie (Flipper / Arcade / Sonstiges)
+
+**Technology**:
+The optional technical generation within a machine category – for Pinball *EM*, *Solid-state*, *DMD* or *LCD*; for Arcade *CRT* or *LCD*; none for Other.
+_Avoid_: Generation, era, type
+_UI (de)_: Technik
 
 **Machine**:
-One physical pinball machine owned by the museum, with its own serial number, status, files and history.
-_Avoid_: Pinball, game, flipper, device, unit
+One physical exhibit the team maintains – a pinball machine, an arcade machine or another machine – with its own museum number, status, files and history.
+_Avoid_: Pinball (for machines in general), game, device, unit, exhibit
+_UI (de)_: Gerät
+
+**Museum number**:
+The museum's unique, short identifier of a machine (e.g. LG-042), printed on its QR sticker.
+_Avoid_: ID, inventory ID, serial number (that is the manufacturer's)
+_UI (de)_: Museumsnummer
+
+**Location**:
+Free-text description of where a machine stands in the museum (e.g. "Hall 2, row 3").
+_Avoid_: Position, place, slot
+_UI (de)_: Standort
 
 **Machine status**:
 The technician-set state of a machine: *Playable*, *Limited* (playable with a noticeable defect), *Out of order* (not playable for visitors) or *Not on display* (storage, workshop or restoration).
 _Avoid_: State, availability
+_UI (de)_: Status (Spielbereit / Eingeschränkt / Außer Betrieb / Nicht ausgestellt)
 
 **Registered machine** / **Retired machine**:
 A machine becomes part of La Guardia when a technician registers it; it is retired when it leaves the museum, keeping its history but leaving the active lists.
 _Avoid_: Deleted, archived, sold
+_UI (de)_: Erfasst / Ausgemustert
 
-**Repair history**:
-All defects of a machine with their work log entries, plus problem reports resolved on the spot.
-_Avoid_: Service history, log
-
-### Problems and repairs
+### Repair
 
 **Problem report**:
 A raw, unverified message from anyone – visitor or team member – about something wrong with a machine, optionally with a photo.
 _Avoid_: Ticket, issue, complaint, bug report
+_UI (de)_: Meldung
 
 **Triage**:
 The assessment of a problem report by a technician: it becomes a new defect, is linked to an existing defect, is resolved on the spot (helpers may do this too), or is dismissed.
 _Avoid_: Review, screening
+_UI (de)_: Sichtung
 
 **Defect**:
 A confirmed, specific fault on a machine that stays open until it is resolved.
 _Avoid_: Ticket, issue, bug, error, problem
+_UI (de)_: Defekt
 
 **Priority**:
 The technician-set urgency of a defect: *high*, *normal* (default) or *low*.
 _Avoid_: Severity, urgency
-
-**Suitable for helpers**:
-A mark on a defect saying a helper may claim and resolve it.
-_Avoid_: Easy task, simple ticket
+_UI (de)_: Priorität (hoch / normal / niedrig)
 
 **Resolved on the spot**:
 A triage outcome for a problem report that was fixed immediately (e.g. a stuck ball freed) without becoming a defect; it stays in the machine history. Helpers may choose this outcome too.
 _Avoid_: Quick fix, closed
+_UI (de)_: Direkt behoben
 
 **Claim**:
 A team member taking on a defect so others see who works on it; technicians may also assign or release a claim. Maintenance tasks are not claimed.
 _Avoid_: Assignment (for self-claiming), ownership, lock
+_UI (de)_: Übernehmen
+
+**On hold**:
+A defect that is open but temporarily cannot progress – waiting for a part, waiting for a technician, or another reason.
+_Avoid_: Paused, blocked, parked
+_UI (de)_: Pausiert
 
 **Work log entry**:
 A record of work done on a defect – who, when, what was done, parts used as free text.
 _Avoid_: Repair order, comment, note
+_UI (de)_: Arbeitsschritt
+
+**Repair history**:
+All defects of a machine with their work log entries, plus problem reports resolved on the spot.
+_Avoid_: Service history, log
+_UI (de)_: Reparaturhistorie
 
 ### Maintenance
 
 **Maintenance task**:
-A recurring job on a machine with a time-based interval, a short instruction, a *suitable for helpers* mark and optionally a restriction to a machine type (e.g. EM only).
+A recurring job on a machine with a time-based interval, a short instruction, a *suitable for helpers* mark and optionally a restriction to a machine category and/or technology (e.g. Pinball/EM only).
 _Avoid_: Service, check, inspection, chore
+_UI (de)_: Wartungsaufgabe
 
 **Maintenance plan**:
 The single, museum-wide set of all maintenance tasks.
 _Avoid_: Schedule, checklist
+_UI (de)_: Wartungsplan
 
 **Due** / **Overdue**:
-A maintenance task is due on a machine once its interval has passed since it was last done there (or immediately if never done), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*.
+A maintenance task is due on a machine once its interval has passed since it was last done there (or since the start date set when the task was added), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*.
 _Avoid_: Pending, late
+_UI (de)_: Fällig / Überfällig
 
 **Maintenance record**:
 A record that a maintenance task was carried out on a machine – who, when, done or partially done, optional note.
 _Avoid_: Maintenance log, service entry, work log entry (that belongs to a defect)
+_UI (de)_: Wartungseintrag
