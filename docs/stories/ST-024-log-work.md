@@ -3,13 +3,13 @@ id: ST-024
 title: Log work on a defect
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-WorkLogged]
-depends_on: [ST-021]
+depends_on: [ST-021, ST-028]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story
@@ -21,7 +21,8 @@ Command `CMD-LogWork` (any team member). Rules and invariants:
 - What was done is required; parts used (free text) is optional; photos are optional (ST-032).
 - Any team member may log work, with or without a claim, also on defects not suitable for helpers (HS-8).
 - Work log entries are only added, never changed or removed.
-The first work log entry counts as the start of repair (HS-9, ST-051). The open defects list shows the last work log entry.
+- Logging work on a defect that is on hold does not resume it (scenario in ST-029).
+The first work log entry counts as the start of repair (HS-9, ST-051). The open defects list shows the last work log entry; the defect details show all work log entries, newest first.
 
 ## Acceptance Criteria
 
@@ -30,6 +31,11 @@ Scenario: Team member logs work
   When the technician Tom logs work with "Replaced coil stop and EOS switch" and the parts used "1x coil stop, 1x EOS switch"
   Then the defect has a work log entry by Tom with what was done, parts used and the time
   And the open defects list shows it as the last work log entry of "Left flipper weak"
+
+Scenario: Defect details show all work log entries newest first
+  Given "Left flipper weak" has work log entries from Monday, Tuesday and Wednesday
+  When a team member opens the defect "Left flipper weak"
+  Then all three work log entries are shown, Wednesday's first
 
 Scenario: Helper logs work without claim on a defect not suitable for helpers
   Given the open defect "Display flickers" is not suitable for helpers and not claimed

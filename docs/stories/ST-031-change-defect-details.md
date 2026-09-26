@@ -3,13 +3,13 @@ id: ST-031
 title: Change a defect's title or suitable-for-helpers mark
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-DefectDetailsChanged, EVT-DefectClaimReleased]
 depends_on: [ST-025]
-labels: [defect-work]
-status: review
+labels: [mvp, defect-work]
+status: ready
 ---
 
 ## Story

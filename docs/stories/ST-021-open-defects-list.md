@@ -3,13 +3,13 @@ id: ST-021
 title: Open defects list and defect details
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: low
 events: [EVT-DefectRecorded]
 depends_on: [ST-008, ST-018]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story
@@ -17,8 +17,9 @@ As a team member, I want to see all open defects, filter them and open a single 
 
 ## Context
 Read model `RM-OpenDefects`: museum number, machine model title, title, priority, suitable for helpers, claimed by, on hold with reason, number of linked problem reports, open since, last work log entry. Filterable by machine, priority, suitable for helpers, claimed by me, on hold.
-This story delivers the list with the filters machine, priority and suitable for helpers, and the defect details (machine, title, priority, suitable for helpers, open since, originating problem report). Claim, hold and work log fields and their filters are added by ST-024, ST-025 and ST-029.
-Also: the machine overview (ST-008) shows the number of open defects per machine.
+- Order: by priority (high first), within a priority the oldest defect first.
+- This story delivers the list with the filters machine, priority and suitable for helpers, and the defect details: machine, title, priority, suitable-for-helpers mark, open since, the originating problem report and all linked problem reports with their descriptions. All work log entries are added to the details by ST-024, photos by ST-016. Claim, hold and work log columns and filters are added by ST-024, ST-025 and ST-029.
+- Also: the machine overview (ST-008) shows the number of open defects per machine.
 
 ## Acceptance Criteria
 
@@ -28,6 +29,11 @@ Scenario: Team member sees all open defects
   When a team member opens the open defects list
   Then both defects are listed with museum number, machine model title, title, priority, suitable for helpers and open since
   And "Left flipper weak" comes before "Display flickers" because of its higher priority
+
+Scenario: Oldest first within a priority
+  Given the open defects "Rubber cracked" (normal, open since 10 days) and "Display flickers" (normal, open since 2 days)
+  When a team member opens the open defects list
+  Then "Rubber cracked" comes before "Display flickers"
 
 Scenario: Filter by suitable for helpers
   Given "Rubber cracked" is suitable for helpers and "Display flickers" is not
@@ -40,7 +46,12 @@ Scenario: Filter by machine
 
 Scenario: Team member opens a defect
   When a team member opens the defect "Left flipper weak"
-  Then its machine, title, priority, suitable-for-helpers mark, open since and the originating problem report with its description and photo are shown
+  Then its machine, title, priority, suitable-for-helpers mark, open since and the originating problem report with its description are shown
+
+Scenario: Defect details show all linked problem reports
+  Given two problem reports were linked to "Left flipper weak"
+  When a team member opens the defect "Left flipper weak"
+  Then the originating problem report and both linked problem reports are shown with description, reporter and time
 
 Scenario: Machine overview shows the number of open defects
   Given "LG-042" has 2 open defects and 1 resolved defect
@@ -54,7 +65,8 @@ Scenario: Resolved defects are not listed
 
 ## Out of Scope
 - Claim, hold and work log columns and filters (ST-024, ST-025, ST-029)
-- Number of linked problem reports (ST-022)
+- Linking itself and the number of linked problem reports in the list (ST-022)
+- Photos (ST-016)
 
 ## Open Questions
 - none

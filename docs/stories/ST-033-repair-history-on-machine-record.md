@@ -3,21 +3,21 @@ id: ST-033
 title: Repair history on the machine record
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
-events: [EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-ProblemResolvedOnTheSpot, EVT-DefectDetailsChanged]
-depends_on: [ST-011, ST-019, ST-024, ST-029, ST-030]
+priority: must
+size: M
+risk: low
+events: [EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-DefectDetailsChanged]
+depends_on: [ST-011, ST-019, ST-024, ST-029, ST-030, ST-039]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story
 As a technician, I want to see a machine's open defects and its complete repair history on its machine record, so that I know what was already tried and done before I start a repair.
 
 ## Context
-Read model `RM-MachineRecord` – sections "Open defects" and "Repair history". Repair history (`CONTEXT.md`): all defects of a machine with their work log entries (and photos), plus problem reports resolved on the spot. Each resolution keeps its closing note and, if reopened, the reopen reason (`docs/architecture/data-model.md`).
-Success criterion (`docs/product/vision.md`): anyone on the team can see a machine's current status and full repair history in under a minute.
+Read model `RM-MachineRecord` – sections "Open defects" and "Repair history". Repair history (`CONTEXT.md`): all defects of a machine with their work log entries (and photos, if any), plus problem reports resolved on the spot. Each resolution keeps its closing note and, if reopened, the reopen reason (`docs/architecture/data-model.md`). Defects closed on retirement are shown as *closed on retirement*, not as resolved.
+Success criterion (`docs/product/vision.md`): anyone on the team can see a machine's current status and full repair history in under a minute. As an automatable criterion: the QR address opens the machine status and the repair history directly, and the machine record loads in under 2 seconds with 5 years of realistic data for that machine.
 
 ## Acceptance Criteria
 
@@ -29,7 +29,7 @@ Scenario: Machine record shows open defects
 Scenario: Repair history shows defects with their work log entries
   Given the defect "Coin door jammed" of "LG-042" has two work log entries and was resolved with the closing note "Lock replaced"
   When a team member opens the repair history of "LG-042"
-  Then "Coin door jammed" is shown with both work log entries (who, when, what was done, parts used, photos) and the closing note
+  Then "Coin door jammed" is shown with both work log entries (who, when, what was done, parts used, photos if any) and the closing note
 
 Scenario: Reopened defects show every resolution
   Given "Left flipper weak" was resolved, reopened with the reason "Weak again" and is open again
@@ -41,15 +41,21 @@ Scenario: Problems resolved on the spot are part of the repair history
   When a team member opens the repair history of "LG-042"
   Then the problem report with its note, who resolved it and when is shown
 
+Scenario: Defects closed on retirement are shown as such
+  Given the retired machine "LG-013" had the defect "Display dead" closed on retirement
+  When a team member opens the repair history of "LG-013"
+  Then "Display dead" is shown as closed on retirement, not as resolved
+
 Scenario: Dismissed problem reports are not part of the repair history
   Given a problem report for "LG-042" was dismissed as not a fault
   When a team member opens the repair history of "LG-042"
   Then that problem report is not shown
 
-Scenario: Status and history within a minute
-  Given a team member stands at "LG-042" with a logged-in phone
-  When the team member scans the QR sticker of "LG-042"
-  Then the machine status and the repair history of "LG-042" are visible in under a minute, without searching
+Scenario: Status and history directly from the QR address
+  Given "LG-042" has 5 years of realistic repair history test data
+  When a logged-in team member opens the QR address of "LG-042"
+  Then the machine status and the repair history of "LG-042" are shown without further navigation
+  And the page has loaded in under 2 seconds
 
 ## Out of Scope
 - Maintenance records on the machine record (ST-047)

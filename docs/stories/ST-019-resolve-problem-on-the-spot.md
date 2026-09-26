@@ -3,13 +3,13 @@ id: ST-019
 title: Triage – resolve a problem on the spot
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-ProblemResolvedOnTheSpot]
 depends_on: [ST-017]
 labels: [mvp, triage]
-status: review
+status: ready
 ---
 
 ## Story
@@ -17,7 +17,7 @@ As a helper, I want to mark a problem report as resolved on the spot with a shor
 
 ## Context
 Command `CMD-ResolveProblemOnTheSpot` (actor: team member – helpers and technicians). Rules:
-- The problem report has not been triaged yet.
+- The problem report has not been triaged yet – guarded by the same version check on the problem report as in ST-018, so a concurrent triage is rejected.
 - A note is required.
 Outcome *resolved on the spot* (`CONTEXT.md`): no defect is created; the problem report stays in the repair history (ST-033).
 Helpers use the triage list only for this triage outcome (`RM-TriageList`).

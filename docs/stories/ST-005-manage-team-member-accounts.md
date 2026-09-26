@@ -3,13 +3,13 @@ id: ST-005
 title: Manage team member accounts
 type: story
 context: BC-Team
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: low
 events: []
 depends_on: [ST-004]
 labels: [mvp, foundation, team]
-status: review
+status: ready
 ---
 
 ## Story
@@ -20,7 +20,9 @@ As a technician, I want to create accounts for helpers and technicians, set thei
 - An account has a name (shown as "claimed by", reporter, "logged by", …), a unique username and a role: *Helper* or *Technician*.
 - Deactivating ends all sessions of that account; the team member's name stays on everything they did.
 - The last active technician account cannot be deactivated or changed to Helper, so the team can never lock itself out.
+- This also holds when two technicians change each other at the same time: at least one active technician always remains.
 - Team members can change their own password when logged in, by entering their current password.
+- Every password (initial, reset or own change) has at least 10 characters (same rule as ST-004).
 
 ## Acceptance Criteria
 
@@ -61,6 +63,16 @@ Scenario: Helpers cannot manage accounts
 Scenario: The last technician cannot lock the team out
   Given exactly one active technician account exists
   When that account is deactivated or its role is changed to Helper
+  Then the change is rejected
+
+Scenario: Two technicians demote each other at the same time
+  Given Tom and Eva are the only active technicians
+  When Tom changes Eva's role to Helper and Eva changes Tom's role to Helper at the same time
+  Then exactly one of the two changes is stored
+  And one active technician remains
+
+Scenario: Passwords need at least 10 characters
+  When a technician creates an account or resets a password with a password of 9 characters
   Then the change is rejected
 
 Scenario: Team member changes their own password

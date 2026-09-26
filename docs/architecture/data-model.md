@@ -354,7 +354,7 @@ A maintenance task **applies** to a machine when the machine is registered and n
 - *Last done* = latest *Recorded at* with outcome *done*, otherwise the task's *Start date* (`RM-DueMaintenance`).
 - *Due since* = *Last done* + *Interval*; never due while the machine is *Not on display* (status history).
 - *Overdue* once due for more than 25% of the interval.
-- A machine returning from *Not on display* is due immediately; overdue counts from the day it returned (HS-20).
+- A machine returning from *Not on display* follows the normal interval rule; only a task already due at the return counts as due since the return date, overdue counted from there. For a machine registered after a task's start date, or a task newly applying after a machine model correction, last done is the registration or correction date (HS-20, revised in the story review D5).
 
 ```mermaid
 stateDiagram-v2
@@ -366,7 +366,8 @@ stateDiagram-v2
     NotDue --> Suspended : EVT-MachineStatusChanged (Not on display)
     Due --> Suspended : EVT-MachineStatusChanged (Not on display)
     Overdue --> Suspended : EVT-MachineStatusChanged (Not on display)
-    Suspended --> NotDue : EVT-MachineStatusChanged (back on display, see HS-20)
+    Suspended --> NotDue : EVT-MachineStatusChanged (back on display, interval not passed)
+    Suspended --> Due : EVT-MachineStatusChanged (back on display, already due – due since return, HS-20)
 ```
 
 `Suspended` is only a diagram label for "machine not on display", not a domain term.

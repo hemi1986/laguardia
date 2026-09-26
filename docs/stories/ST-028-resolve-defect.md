@@ -3,13 +3,13 @@ id: ST-028
 title: Resolve a defect with a closing note
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-DefectResolved]
 depends_on: [ST-025]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story

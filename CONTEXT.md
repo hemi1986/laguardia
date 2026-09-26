@@ -120,6 +120,11 @@ A team member taking on a defect so others see who works on it; technicians may 
 _Avoid_: Assignment (for self-claiming), ownership, lock
 _UI (de)_: Übernehmen
 
+**Stale claim**:
+A claim older than 14 days without a work log entry since it was made.
+_Avoid_: Old claim, abandoned claim, dead claim
+_UI (de)_: Liegengeblieben
+
 **On hold**:
 A defect that is open but temporarily cannot progress – waiting for a part, waiting for a technician, or another reason.
 _Avoid_: Paused, blocked, parked
@@ -153,7 +158,7 @@ _Avoid_: Schedule, checklist
 _UI (de)_: Wartungsplan
 
 **Due** / **Overdue**:
-A maintenance task is due on a machine once its interval has passed since it was last done there (or since the start date set when the task was added), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*.
+A maintenance task is due on a machine once its interval has passed since it was last done there (or since the task's start date, or the machine's registration if later), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*.
 _Avoid_: Pending, late
 _UI (de)_: Fällig / Überfällig
 

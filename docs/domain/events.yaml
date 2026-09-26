@@ -398,7 +398,7 @@ commands:
     produces: [EVT-MachineRegistered]
     rules:
       - The museum number is unique among all machines, including retired ones – checked by the Collection context across all machines (HS-17)
-      - La Guardia assigns a museum number if none is given (format see HS-19)
+      - La Guardia assigns a museum number if none is given (format see HS-19); reserved (corrected-away) numbers count for uniqueness and for "next above the highest"; after LG-999 the next free lower number is used
       - The machine model exists
   - id: CMD-ChangeMachineStatus
     aggregate: AGG-Machine
@@ -438,6 +438,7 @@ commands:
     rules:
       - Attached to exactly one machine or one machine model
       - File category is required
+      - Files are visible to team members only, like photos
   - id: CMD-RemoveFile
     aggregate: AGG-File
     name: Remove file
@@ -478,6 +479,8 @@ commands:
       - The maintenance task applies to the machine's category and technology
       - Helpers can only record maintenance tasks suitable for helpers
       - The machine is not retired
+      - The date may be up to 7 days in the past (default today), never in the future
+      - Any machine the maintenance task applies to can be recorded, whether due or not; the interval restarts from the recorded date
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect
@@ -710,7 +713,7 @@ hotspots:
       last done date.
     refs: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineStatusChanged]
     status: resolved
-    resolution: "Accepted as recommended: due immediately on return to display; overdue counts from the day it returned, not from the last done date."
+    resolution: "Revised in the story review (2026-09-26, D5): on return to display the normal interval rule applies. Only a maintenance task that was already due at the return counts as due since the return date, and overdue is counted from there. For a machine registered after a task's start date – or a task that newly applies after a machine model correction – last done is the registration or correction date."
   - id: HS-21
     question: >-
       The dashboards highlight what is new "since the last login". Team members will stay logged in on their phones for

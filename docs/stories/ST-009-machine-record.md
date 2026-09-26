@@ -3,13 +3,13 @@ id: ST-009
 title: Machine record with machine status history
 type: story
 context: BC-Collection
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-MachineRegistered, EVT-MachineModelCreated, EVT-MachineStatusChanged]
 depends_on: [ST-008]
 labels: [mvp, collection]
-status: review
+status: ready
 ---
 
 ## Story
@@ -17,6 +17,7 @@ As a team member, I want to open the machine record of a machine with its detail
 
 ## Context
 Read model `RM-MachineRecord`. This story delivers the base of the page: museum number, serial number, machine model (title, manufacturer, year, machine category, technology), location, machine status with history (previous status, new status, reason, who, when).
+All times are shown in Europe/Berlin (time convention, ST-003). The retired-machine scenario is tested with test data until retirement exists (ST-039).
 Further sections are added by later stories: report problem (ST-015), repair history (ST-033), files (ST-037), maintenance (ST-047). Team members scanning the QR code land here (ST-011).
 
 ## Acceptance Criteria

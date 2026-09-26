@@ -3,13 +3,13 @@ id: ST-020
 title: Triage – dismiss a problem report, removing spam content
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-ProblemReportDismissed]
 depends_on: [ST-017]
 labels: [mvp, triage]
-status: review
+status: ready
 ---
 
 ## Story
@@ -20,6 +20,8 @@ Command `CMD-DismissProblemReport` (technicians only). Rules and invariants:
 - The problem report has not been triaged yet.
 - A reason is required, chosen from *not a fault*, *spam* or *other*; *other* requires a free text.
 - Dismissing as spam removes the description and the photo – a problem report dismissed as spam has no description and no photo.
+- The stored photo is deleted from object storage after the dismissal is committed; if that deletion fails, the failure is logged (without the photo or text) and can be retried. A short delay until a cached copy disappears from the storage provider's delivery network is acceptable, because photos are team-only anyway.
+- In the MVP this is the only protection against spam (decision D3).
 - The reason "machine retired" is set only automatically by `POL-RetirementDismissesProblemReports` (ST-039).
 
 ## Acceptance Criteria

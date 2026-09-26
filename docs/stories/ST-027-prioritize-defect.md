@@ -3,13 +3,13 @@ id: ST-027
 title: Prioritize a defect
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: XS
+risk: low
 events: [EVT-DefectPrioritized]
-depends_on: [ST-021]
+depends_on: [ST-021, ST-028]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story

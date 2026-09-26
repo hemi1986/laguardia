@@ -3,13 +3,13 @@ id: ST-015
 title: Team member reports a problem from the machine record
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-ProblemReported]
 depends_on: [ST-009, ST-013]
 labels: [mvp, triage]
-status: review
+status: ready
 ---
 
 ## Story

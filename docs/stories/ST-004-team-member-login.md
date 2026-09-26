@@ -3,25 +3,26 @@ id: ST-004
 title: Log in as a team member
 type: story
 context: BC-Team
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: medium
 events: []
 depends_on: [ST-003]
 labels: [mvp, foundation, team]
-status: review
+status: ready
 ---
 
 ## Story
 As a team member, I want to log in once on my phone with my personal username and password and stay logged in, so that everything I do is recorded under my name without logging in again at every machine.
 
 ## Context
-- Decision: `docs/adr/0004-team-authentication.md` – own accounts in La Guardia's database, username and password, no e-mail address, no e-mail ever sent; an established authentication library, no hand-written password handling.
-- Sessions are long-lived and stored server-side, so deactivating an account ends its sessions (ST-005).
-- The first technician account is created by a one-off setup step.
-- Team pages require login; the visitor machine page and *Report problem* for visitors stay public.
-- Sessions expire after 90 days without use.
-- Login throttling: after 10 failed attempts within 15 minutes, a username is locked for 15 minutes.
+- Decision: `docs/adr/0004-team-authentication.md` – own accounts in La Guardia's database, username and password, no e-mail address, no e-mail ever sent; the established authentication library chosen in ST-001, no hand-written password handling.
+- Passwords have at least 10 characters.
+- Sessions are long-lived, stored server-side and kept in secure, HTTP-only cookies; deactivating an account ends its sessions (ST-005). Sessions expire after 90 days without use.
+- The role is read again on every request, so a role change or deactivation applies to the next action.
+- Login throttling: after 10 failed attempts within 15 minutes, a username is locked for 15 minutes. That someone could lock out a known username on purpose is a consciously accepted risk (technicians are on site).
+- The first technician account is created by a one-off command-line setup script.
+- Team pages require login; the visitor machine page, the legal pages and *Report problem* for visitors stay public.
 
 ## Acceptance Criteria
 
@@ -43,6 +44,11 @@ Scenario: Team member stays logged in on the phone
   When she opens a team page on that phone
   Then she is still logged in without entering her password
 
+Scenario: Session expires after 90 days without use
+  Given Anna last used La Guardia on her phone 91 days ago
+  When she opens a team page on that phone
+  Then the login is requested again
+
 Scenario: Team pages require login
   Given nobody is logged in on a phone
   When a team page such as the machine overview is opened
@@ -62,12 +68,12 @@ Scenario: Team member logs out
 
 Scenario: First technician account is created at setup
   Given La Guardia has no team member account yet
-  When the one-off setup step is run with a name, username and password
+  When the setup script is run with a name, username and a password of at least 10 characters
   Then a technician account with that name and username exists
 
 Scenario: Setup cannot be repeated once accounts exist
   Given at least one team member account exists
-  When the setup step is run again
+  When the setup script is run again
   Then no account is created or changed
 
 ## Out of Scope

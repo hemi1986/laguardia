@@ -3,13 +3,13 @@ id: ST-012
 title: Change the machine status
 type: story
 context: BC-Collection
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-MachineStatusChanged]
 depends_on: [ST-009]
 labels: [mvp, collection]
-status: review
+status: ready
 ---
 
 ## Story
@@ -18,7 +18,7 @@ As a technician, I want to change a machine's status with a reason, so that the 
 ## Context
 Command `CMD-ChangeMachineStatus`. Rules and invariants (`AGG-Machine`):
 - The machine is not retired; a retired machine cannot change status.
-- Technicians may set any machine status. Helpers may only set *Out of order*, and only when the machine is unsafe.
+- Technicians may set any machine status. Helpers may only set *Out of order*. That helpers do this only when the machine is unsafe is a matter of trust, not a rule La Guardia can check; the required reason documents it.
 - A reason is required; every change is kept in the status history (previous status, new status, reason, who, when – `docs/architecture/data-model.md`).
 UI wording (de): Spielbereit / Eingeschränkt / Außer Betrieb / Nicht ausgestellt.
 

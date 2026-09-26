@@ -3,13 +3,13 @@ id: ST-018
 title: Triage – record a defect, optionally changing the machine status
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
 labels: [mvp, triage]
-status: review
+status: ready
 ---
 
 ## Story
@@ -22,7 +22,8 @@ Rules and invariants:
 - Title is required and understandable for visitors – it is shown untranslated on the visitor machine page.
 - Priority defaults to *normal* (*high*, *normal*, *low*).
 - One problem report leads to one defect (HS-4).
-- Manual policy `POL-DefectMayChangeMachineStatus` / HS-3: in the same step the technician may set the machine to *Limited* or *Out of order* – two events, one action, one transaction. The status history entry's reason is a reference to the new defect (its title); no extra input is needed.
+- Manual policy `POL-DefectMayChangeMachineStatus` / HS-3: in the same step the technician may set the machine to *Limited* or *Out of order* – two events, one action, one transaction. Only *Limited* and *Out of order* are offered in this step. The status history entry's reason is a reference to the new defect (its title); no extra input is needed. If the status change is rejected (e.g. the machine was retired meanwhile), the defect is not recorded either and the problem report stays untriaged.
+- The race between two technicians is covered by a real concurrency test (two transactions on the same problem report version), not only by a sequential test.
 
 ## Acceptance Criteria
 
@@ -48,14 +49,25 @@ Scenario: Machine status is changed in the same step
   And the reason of that entry refers to the defect "Coil burnt, ball not ejected"
   And the technician did not have to enter a separate reason
 
+Scenario: Only Limited or Out of order in the same step
+  Given a problem report for "LG-042" is untriaged
+  When a technician records a defect from it
+  Then the machine statuses offered in the same step are only Limited and Out of order
+
+Scenario: Rejected status change rolls back the defect
+  Given a problem report for "LG-042" is untriaged
+  And "LG-042" was retired a moment ago
+  When a technician records a defect from that problem report and sets "LG-042" to Out of order in the same step
+  Then neither the defect nor the status change is stored
+
 Scenario: Title is required
   When a technician records a defect from an untriaged problem report without a title
   Then nothing is recorded
   And the problem report stays untriaged
 
 Scenario: Two technicians triage the same problem report
-  Given Tom recorded a defect from a problem report a moment ago
-  When Eva records a defect from the same problem report on her still-open page
+  Given Tom and Eva have the same untriaged problem report open
+  When both record a defect from it at the same time and Tom's transaction commits first
   Then Eva's action is rejected with the message that the problem report was already triaged by Tom
   And only Tom's defect exists
 

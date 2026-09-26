@@ -1,22 +1,22 @@
 ---
 id: ST-047
-title: Maintenance on the machine record and in the machine overview
+title: Maintenance on the machine record
 type: story
 context: BC-Maintenance
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]
-depends_on: [ST-009, ST-044]
-labels: [maintenance]
-status: review
+depends_on: [ST-009, ST-044, ST-056]
+labels: [mvp, maintenance]
+status: ready
 ---
 
 ## Story
-As a technician, I want to see a machine's maintenance records and its due and overdue maintenance tasks on its machine record, and the number of overdue maintenance tasks per machine in the machine overview, so that I see at a glance which machines are neglected.
+As a technician, I want to see a machine's maintenance records and its due and overdue maintenance tasks on its machine record, and record maintenance from there, so that I see at a glance whether the machine is neglected and can act right at the machine.
 
 ## Context
-Read models `RM-MachineRecord` (maintenance records, due and overdue maintenance tasks) and `RM-MachineOverview` (number of overdue maintenance tasks). Due and overdue follow the rules of ST-043.
+Read model `RM-MachineRecord` (maintenance records, due and overdue maintenance tasks). Due and overdue follow the rules of ST-043 and ST-056. Recording follows the rules of ST-044. The number of overdue maintenance tasks in the machine overview follows in ST-057 (second part of the split, story review 2026-09-26).
 
 ## Acceptance Criteria
 
@@ -30,10 +30,11 @@ Scenario: Machine record shows due and overdue maintenance tasks
   When a team member opens the machine record of "LG-042"
   Then "Clean playfield" is shown as due and "Wax playfield" as overdue, each with due since
 
-Scenario: Machine overview shows the number of overdue maintenance tasks
-  Given "LG-042" has 2 overdue maintenance tasks and "LG-043" none
-  When a team member opens the machine overview
-  Then "LG-042" shows 2 overdue maintenance tasks and "LG-043" none
+Scenario: Recording maintenance from the machine record
+  Given "Clean playfield" is due on "LG-042"
+  When a helper records "Clean playfield" as done from the machine record of "LG-042"
+  Then the maintenance record is stored
+  And the machine record no longer shows "Clean playfield" as due
 
 Scenario: Machines not on display show nothing due
   Given the machine "LG-030" is Not on display
@@ -42,7 +43,7 @@ Scenario: Machines not on display show nothing due
   But its maintenance records are shown
 
 ## Out of Scope
-- Recording maintenance from the machine record (possible via ST-044)
+- Number of overdue maintenance tasks in the machine overview (ST-057)
 
 ## Open Questions
 - none

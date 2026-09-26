@@ -3,13 +3,13 @@ id: ST-026
 title: Assign a defect and release claims
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-DefectClaimed, EVT-DefectClaimReleased]
 depends_on: [ST-025]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story

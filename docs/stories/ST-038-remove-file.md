@@ -4,12 +4,12 @@ title: Remove a file
 type: story
 context: BC-Collection
 priority: should
-size: null
-risk: null
+size: S
+risk: low
 events: [EVT-FileRemoved]
 depends_on: [ST-037]
 labels: [files]
-status: review
+status: ready
 ---
 
 ## Story
@@ -17,15 +17,21 @@ As a technician, I want to remove a wrong or outdated file, so that the team onl
 
 ## Context
 Command `CMD-RemoveFile` (technicians only – `docs/product/vision.md`: file deletion is technician-only). Invariant: a removed file stays removed. The content of a removed file is deleted from object storage; the record of which file was removed, by whom and when is kept (`docs/architecture/data-model.md`).
+Removal is permanent within La Guardia – there is no undo (only a restore from the storage backup of ST-062 in an emergency) – so the technician confirms it explicitly.
 
 ## Acceptance Criteria
 
 Scenario: Technician removes a file
   Given the machine model "Medieval Madness" has the file "MM Manual (wrong edition)"
-  When a technician removes it
+  When a technician removes it and confirms the removal
   Then no machine record shows "MM Manual (wrong edition)" anymore
   And its content is deleted from object storage
   And it is recorded which file was removed, by whom and when
+
+Scenario: Removal needs a confirmation
+  Given the machine model "Medieval Madness" has the file "MM Operations Manual"
+  When a technician starts removing it but does not confirm
+  Then "MM Operations Manual" is still attached
 
 Scenario: Helpers cannot remove files
   Given a helper is logged in

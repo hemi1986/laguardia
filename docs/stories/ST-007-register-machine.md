@@ -3,13 +3,13 @@ id: ST-007
 title: Register a machine with its museum number
 type: story
 context: BC-Collection
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: medium
 events: [EVT-MachineRegistered]
 depends_on: [ST-006]
 labels: [mvp, collection]
-status: review
+status: ready
 ---
 
 ## Story
@@ -21,6 +21,8 @@ Command `CMD-RegisterMachine` (technicians only). Rules:
 - The museum number is unique among all machines ever registered, retired ones included (set-based rule, HS-17 – guaranteed atomically by the machine store).
 - A given museum number must have the format "LG-" plus three digits, so automatic assignment and the printed stickers stay consistent.
 - If no museum number is given, La Guardia assigns "LG-" plus three digits, the next number above the highest existing one; numbers are never reused (HS-19).
+- Reserved museum numbers – numbers a machine had before a correction (ST-035) – count for uniqueness and for "next above the highest", just like numbers in use. After LG-999, the next free lower number is assigned (decision D11).
+- Two automatic assignments at the same time never get the same number: the second one is retried with the next free number.
 - The serial number is optional; the location (free text) is required (`docs/architecture/data-model.md`).
 - The initial machine status (*Playable*, *Limited*, *Out of order*, *Not on display*) is the first entry of the machine's status history (reason: registration).
 
@@ -42,8 +44,24 @@ Scenario: Museum number of a retired machine is never reused
   When a technician registers a machine without a museum number
   Then the machine is registered with the museum number "LG-051"
 
+Scenario: Reserved museum numbers count
+  Given the highest museum number in use is "LG-041"
+  And "LG-045" is reserved because a machine's museum number was corrected from "LG-045" to "LG-040"
+  When a technician registers a machine without a museum number
+  Then the machine is registered with the museum number "LG-046"
+
+Scenario: After LG-999 the next free lower number is used
+  Given "LG-999" is in use and "LG-017" is the only lower number that is neither in use nor reserved
+  When a technician registers a machine without a museum number
+  Then the machine is registered with the museum number "LG-017"
+
+Scenario: Concurrent automatic assignment
+  Given the highest museum number is "LG-041"
+  When two technicians register a machine without a museum number at the same time
+  Then one machine gets "LG-042" and the other "LG-043"
+
 Scenario: Duplicate museum number is rejected
-  Given a machine with the museum number "LG-007" exists, retired or not
+  Given the museum number "LG-007" is in use by a machine, retired or not, or reserved
   When a technician registers another machine with the museum number "LG-007"
   Then the registration is rejected because the museum number is already used
 

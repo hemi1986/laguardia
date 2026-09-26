@@ -3,13 +3,13 @@ id: ST-022
 title: Triage – link a problem report to an open defect
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-ProblemReportLinkedToDefect]
-depends_on: [ST-018]
+depends_on: [ST-018, ST-021]
 labels: [mvp, triage]
-status: review
+status: ready
 ---
 
 ## Story
@@ -21,7 +21,8 @@ Command `CMD-LinkProblemReportToDefect` (technicians only). Rules and invariants
 - The defect belongs to the same machine as the problem report.
 - A linked problem report refers to exactly one defect; the outcome never changes.
 The triage list (ST-017) shows the open defects of the machine next to each problem report for linking. The open defects list shows the number of linked problem reports.
-Linking to a *resolved* defect reopens it automatically (`POL-LinkReopensResolvedDefect`) – see ST-030.
+Linking uses the same version check on the problem report as ST-018.
+Linking to a *resolved* defect reopens it automatically (`POL-LinkReopensResolvedDefect`) – see ST-053.
 
 ## Acceptance Criteria
 
@@ -37,6 +38,13 @@ Scenario: Technician links a problem report to an open defect
   When a technician links the problem report to "Left flipper weak"
   Then the problem report is triaged with the outcome linked, referring to "Left flipper weak"
   And the open defects list shows 1 linked problem report for "Left flipper weak"
+  And the defect details of "Left flipper weak" show the linked problem report
+
+Scenario: Visitor count drops after linking
+  Given the only untriaged problem report of "LG-042" is linked to "Left flipper weak"
+  When a visitor opens the visitor machine page of "LG-042"
+  Then the page shows no untriaged problem reports
+  And "Left flipper weak" is shown as an open defect
 
 Scenario: Defect of another machine cannot be linked
   Given the open defect "Display flickers" belongs to "LG-007"
@@ -55,7 +63,7 @@ Scenario: Helpers cannot link
   Then the action is rejected
 
 ## Out of Scope
-- Linking to a resolved defect, which reopens it (ST-030)
+- Linking to a resolved defect, which reopens it (ST-053)
 
 ## Open Questions
 - none

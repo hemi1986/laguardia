@@ -3,13 +3,13 @@ id: ST-006
 title: Create a machine model
 type: story
 context: BC-Collection
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-MachineModelCreated]
 depends_on: [ST-004]
 labels: [mvp, collection]
-status: review
+status: ready
 ---
 
 ## Story

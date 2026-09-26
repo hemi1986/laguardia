@@ -1,37 +1,47 @@
 ---
 id: ST-003
-title: Module structure, command layer and event journal
+title: Module structure, command layer, event journal and time convention
 type: tech-task
 context: BC-Team
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: medium
 events: []
-depends_on: [ST-001]
+depends_on: [ST-059]
 labels: [mvp, foundation]
-status: review
+status: ready
 ---
 
 ## Task
-Set up the application skeleton from ST-001 as the modular monolith of `docs/adr/0002-modular-monolith-state-based-persistence.md`, so all following stories share one way of executing commands:
+Set up the application skeleton from ST-001 as the modular monolith of `docs/adr/0002-modular-monolith-state-based-persistence.md`, so all following stories share one way of executing commands and one way of handling time:
 
 - Modules **Collection**, **Repair**, **Maintenance** and **Team**, each owning its data; other modules reference it by ID only and change it only through the owning module's commands. (This task spans all contexts; it is filed under `BC-Team`, the generic context that supplies the acting team member and role to all others.)
-- A **command layer** helper: runs a command in one database transaction, performs the authorization check (acting team member and role) server-side, and appends the command's domain events to the append-only **event journal** (type, time, acting team member or visitor, aggregate reference, machine reference, data) in the same transaction.
-- **Optimistic version check** on aggregates (needed for triage, HS-16 in `docs/domain/events.yaml`).
+- A **command layer** helper: runs a command in one database transaction, performs the authorization check (acting team member and role) server-side, and appends the command's domain events to the append-only **event journal** (type, time, acting team member, visitor or *system*, aggregate reference, machine reference, data) in the same transaction. Automatic policies (e.g. retirement closing defects) act as the *system* actor.
+- **Optimistic version check** on aggregates (HS-16), used by every triage command and every command on a defect.
+- **Security basics**: CSRF protection for all commands, security headers, output encoding of all text entered by visitors and team members.
+- **Time convention** (story review TT-B, decision D4), one helper used by every time-based rule:
+  - Calendar logic (dates, "today", months) in the time zone Europe/Berlin; times are shown in Europe/Berlin.
+  - Waiting times are elapsed hours: "longer than 3 days" = more than 72 hours; "older than 14 days" = more than 336 hours.
+  - Month arithmetic clamps to the month end: 31 January + 1 month = 28 February (29 in leap years).
+  - Overdue: a maintenance task is overdue once the due date plus 25 % of the interval's actual number of days, rounded up to whole days, has passed (e.g. 12 months = 365 days → 92 days; 1 month from 1 February = 28 days → 7 days).
+  - The clock is injectable (ST-059).
 - **Language setup**: the team UI is German, with wording taken from the `_UI (de)_` lines in `CONTEXT.md`; the visitor pages use message catalogs for German and English.
-- **Automated dependency update** pull requests (security discipline from ADR 0001).
+- **Automated dependency update** pull requests (routine: ST-063).
 
 ## Acceptance Criteria
 - [ ] A lint rule fails when one module imports another module's internals; demonstrated with a deliberate violation.
 - [ ] Test: when a command is rejected, neither the aggregate change nor a journal entry is stored.
-- [ ] Test: a successful command stores exactly its domain events in the journal with type, time, acting person, aggregate reference and machine reference.
+- [ ] Test: a successful command stores exactly its domain events in the journal with type, time, acting person (team member, visitor or system), aggregate reference and machine reference.
 - [ ] Test: a command called without an acting team member (and not allowed for visitors) is rejected in the command layer, independent of any middleware.
 - [ ] Test: of two concurrent commands on the same aggregate version, exactly one succeeds and the other is rejected.
+- [ ] Test: a command submitted without a valid CSRF token is rejected.
+- [ ] The time convention helper has a table of test cases covering at least: Europe/Berlin day boundaries including the summer-time change, 72 h and 336 h boundaries, month-end clamping (31 January + 1 month, leap year), and the 25 % overdue rule for 1, 3 and 12 months.
 - [ ] Team UI texts come from a German message catalog; visitor texts from German and English catalogs.
 - [ ] Automated dependency update pull requests are enabled for the repository.
 
 ## Out of Scope
 - Login and accounts (ST-004, ST-005)
+- CI (ST-059)
 - Any domain command beyond the test command of ST-001
 
 ## Open Questions

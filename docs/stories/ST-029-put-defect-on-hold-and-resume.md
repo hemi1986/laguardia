@@ -3,24 +3,24 @@ id: ST-029
 title: Put a defect on hold and resume it
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-DefectPutOnHold, EVT-DefectResumed]
-depends_on: [ST-028]
+depends_on: [ST-024, ST-028]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story
-As a technician, I want to put a defect on hold with a reason such as "waiting for part" and resume it later, so that everyone sees why an open defect doesn't progress.
+As a team member working on a defect, I want to put a defect on hold with a reason such as "waiting for part" and resume it later, so that everyone sees why an open defect doesn't progress.
 
 ## Context
 Commands `CMD-PutDefectOnHold` and `CMD-ResumeDefect`. Rules and invariants:
 - Only an open defect that is not on hold can be put on hold; only a defect on hold can be resumed.
 - Only technicians or the team member who claimed the defect.
 - A reason is required: *waiting for part*, *waiting for technician* or *other*; a note is optional.
-- Resolving ends any hold (`AGG-Defect`).
+- Resolving ends any hold (`AGG-Defect`). Logging work does not resume a defect on hold.
 The open defects list shows "on hold with reason" and gets the filter "on hold". UI wording (de): Pausiert.
 
 ## Acceptance Criteria
@@ -59,6 +59,12 @@ Scenario: Only a defect on hold can be resumed
   Given "Left flipper weak" is open and not on hold
   When a technician tries to resume it
   Then the action is rejected
+
+Scenario: Logging work does not resume
+  Given "Display flickers" is on hold with the reason waiting for part
+  When a team member logs work on it with "Checked the connector while waiting"
+  Then the work log entry is added
+  And "Display flickers" is still on hold with the reason waiting for part
 
 Scenario: Resolving ends the hold
   Given "Display flickers" is on hold

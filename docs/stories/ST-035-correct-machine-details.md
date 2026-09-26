@@ -3,13 +3,13 @@ id: ST-035
 title: Correct a machine's museum number or serial number
 type: story
 context: BC-Collection
-priority: should
-size: null
-risk: null
+priority: could
+size: M
+risk: medium
 events: [EVT-MachineDetailsCorrected]
 depends_on: [ST-011]
 labels: [collection]
-status: review
+status: ready
 ---
 
 ## Story
@@ -18,7 +18,8 @@ As a technician, I want to correct a mistyped museum number or add a serial numb
 ## Context
 Command `CMD-CorrectMachineDetails` (technicians only, HS-18). Rules:
 - The machine is not retired.
-- A new museum number is unique across all machines, retired ones included; the old museum number stays reserved and is never reused.
+- A new museum number has the format "LG-" plus three digits and is unique in the same set as at registration (ST-007): all museum numbers in use, retired machines included, and all reserved numbers. The old museum number becomes reserved and is never reused (decision D11).
+- A correction and a registration with the same number at the same time never both succeed; the machine store guarantees uniqueness atomically (HS-17).
 - The QR sticker is reprinted after a museum number correction (ST-011).
 - An old QR sticker with the previous museum number keeps leading to the machine – the old number is reserved, so it cannot become ambiguous.
 
@@ -50,6 +51,17 @@ Scenario: Old QR sticker keeps working
 Scenario: New museum number already used
   Given the retired machine "LG-013" exists
   When a technician corrects the museum number of "LG-042" to "LG-013"
+  Then the correction is rejected
+
+Scenario: Correction and registration race for the same number
+  Given no machine has the museum number "LG-060" and it is not reserved
+  When a technician corrects a machine's museum number to "LG-060" while another technician registers a machine with "LG-060"
+  Then exactly one of the two gets "LG-060"
+  And the other action is rejected because the museum number is already used
+
+Scenario: Reserved number cannot be taken by a correction
+  Given "LG-420" is reserved after an earlier correction
+  When a technician corrects the museum number of "LG-043" to "LG-420"
   Then the correction is rejected
 
 Scenario: Retired machines cannot be corrected

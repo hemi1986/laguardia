@@ -3,13 +3,13 @@ id: ST-025
 title: Claim or take over a defect
 type: story
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: S
+risk: low
 events: [EVT-DefectClaimed]
 depends_on: [ST-021]
 labels: [mvp, defect-work]
-status: review
+status: ready
 ---
 
 ## Story
@@ -21,6 +21,7 @@ Command `CMD-ClaimDefect` (any team member). Rules and invariants:
 - A defect has at most one claimant. Claiming a defect claimed by someone else takes it over – allowed for everyone.
 - Helpers can only claim defects suitable for helpers.
 - A claim is only a signal: others may still log work (HS-8).
+- Concurrent claims are guarded by the version check on the defect (ST-003): the second one is rejected, not silently turned into a takeover.
 The open defects list shows "claimed by" and gets the filter "claimed by me".
 
 ## Acceptance Criteria
@@ -42,6 +43,12 @@ Scenario: Helpers can only claim defects suitable for helpers
   When the helper Anna tries to claim it
   Then the claim is rejected
   And "Display flickers" keeps its claimant, if any
+
+Scenario: Two team members claim at the same time
+  Given the open defect "Left flipper weak" is not claimed
+  When Tom and Eva claim it at the same time and Tom's claim is stored first
+  Then "Left flipper weak" is claimed by Tom
+  And Eva is told that the defect has changed and asked to reload before claiming again
 
 Scenario: Resolved defects cannot be claimed
   Given the defect "Coin door jammed" is resolved
