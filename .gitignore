@@ -1,0 +1,4 @@
+.claude/settings.local.json
+.claude/agent-memory-local/
+node_modules/
+.DS_Store

@@ -1,0 +1,12 @@
+version: 1
+domain: Pinball Museum
+actors: []
+external_systems: []
+bounded_contexts: []
+aggregates: []
+events: []
+commands: []
+policies: []
+read_models: []
+hotspots: []
+flows: []
