@@ -15,10 +15,6 @@
       "Bash(git push *)"
     ],
     "deny": [
-      "Edit(docs/domain/event-storming.md)",
-      "Write(docs/domain/event-storming.md)",
-      "Edit(docs/stories/BACKLOG.md)",
-      "Write(docs/stories/BACKLOG.md)"
     ]
   },
   "hooks": {
