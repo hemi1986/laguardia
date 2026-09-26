@@ -12,7 +12,7 @@ actors:
     description: Any helper or technician – used where both may act.
 external_systems: []
 # Machine status lives in Collection (technician decision; Repair only prompts it via policies).
-# Team accounts, roles and last login: a generic "Team" area, not modelled here – see docs/domain/context-map.md (supplier to all contexts).
+# Team accounts, roles and last seen: the generic context BC-Team, not modelled here (no aggregates or events) – see docs/domain/context-map.md (supplier to all contexts).
 # Context relationships: docs/domain/context-map.md. Logical data model: docs/architecture/data-model.md.
 bounded_contexts:
   - id: BC-Collection
@@ -21,6 +21,9 @@ bounded_contexts:
   - id: BC-Repair
     name: Repair
     purpose: From problem reports via triage to defects that are worked on and resolved
+  - id: BC-Team
+    name: Team
+    purpose: Generic, not modelled – team member accounts, roles (helper, technician), login and last seen; supplier to all other contexts
   - id: BC-Maintenance
     name: Maintenance
     purpose: The maintenance plan and keeping every machine's scheduled maintenance up to date
@@ -316,6 +319,7 @@ commands:
     rules:
       - The defect is not resolved
       - The title stays understandable for visitors
+      - Removing the suitable-for-helpers mark while a helper holds the claim releases that claim in the same step
   - id: CMD-ClaimDefect
     aggregate: AGG-Defect
     name: Claim defect
@@ -640,7 +644,7 @@ hotspots:
     question: When is a newly added maintenance task first due – immediately on all machines (flood on go-live) or later?
     refs: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue]
     status: resolved
-    resolution: "When a maintenance task is added, the technician sets a start date that counts as last done; first due one interval later. At go-live realistic last-done dates are entered."
+    resolution: "When a maintenance task is added, the technician sets a start date that counts as last done; first due one interval later. At go-live each maintenance task gets one start date (staggered across tasks), not one per machine."
   - id: HS-13
     question: Can maintenance be recorded on a machine that is Not on display (e.g. full cleaning during restoration)?
     refs: [EVT-MaintenanceRecorded]

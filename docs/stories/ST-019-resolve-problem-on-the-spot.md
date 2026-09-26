@@ -1,0 +1,53 @@
+---
+id: ST-019
+title: Triage – resolve a problem on the spot
+type: story
+context: BC-Repair
+priority: should
+size: null
+risk: null
+events: [EVT-ProblemResolvedOnTheSpot]
+depends_on: [ST-017]
+labels: [mvp, triage]
+status: review
+---
+
+## Story
+As a helper, I want to mark a problem report as resolved on the spot with a short note when I fixed it immediately, so that trivial problems like a stuck ball don't become defects but still show up in the machine's repair history.
+
+## Context
+Command `CMD-ResolveProblemOnTheSpot` (actor: team member – helpers and technicians). Rules:
+- The problem report has not been triaged yet.
+- A note is required.
+Outcome *resolved on the spot* (`CONTEXT.md`): no defect is created; the problem report stays in the repair history (ST-033).
+Helpers use the triage list only for this triage outcome (`RM-TriageList`).
+
+## Acceptance Criteria
+
+Scenario: Helper resolves a problem on the spot
+  Given the visitor problem report "Ball stuck behind the left ramp" for "LG-042" is untriaged
+  When the helper Anna resolves it on the spot with the note "Ball freed, ramp OK"
+  Then the problem report is triaged with the outcome resolved on the spot by Anna with that note
+  And no defect is created
+  And the problem report no longer appears in the triage list
+
+Scenario: Visitor machine page no longer counts it
+  Given the only untriaged problem report of "LG-042" was resolved on the spot
+  When a visitor opens the visitor machine page of "LG-042"
+  Then the page shows no untriaged problem reports
+
+Scenario: A note is required
+  When a team member resolves an untriaged problem report on the spot without a note
+  Then the action is rejected
+  And the problem report stays untriaged
+
+Scenario: Already triaged problem report
+  Given a technician recorded a defect from a problem report a moment ago
+  When a helper tries to resolve the same problem report on the spot
+  Then the action is rejected with the message that it was already triaged
+
+## Out of Scope
+- Showing it in the repair history (ST-033)
+
+## Open Questions
+- none
