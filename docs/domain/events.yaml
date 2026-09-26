@@ -12,7 +12,8 @@ actors:
     description: Any helper or technician – used where both may act.
 external_systems: []
 # Machine status lives in Collection (technician decision; Repair only prompts it via policies).
-# Team accounts, roles and last login: a generic "Team" area, not modelled here – domain-architect adds it to the context map as a supplier.
+# Team accounts, roles and last login: a generic "Team" area, not modelled here – see docs/domain/context-map.md (supplier to all contexts).
+# Context relationships: docs/domain/context-map.md. Logical data model: docs/architecture/data-model.md.
 bounded_contexts:
   - id: BC-Collection
     name: Collection
@@ -27,49 +28,81 @@ aggregates:
   - id: AGG-ProblemReport
     name: Problem report
     context: BC-Repair
+    description: >-
+      The consistency boundary of triage – every triage outcome is decided here, including Record defect,
+      where the problem report creates the new defect (HS-16). Refers to its machine and, once triaged, to its defect by ID only.
     invariants:
+      - A problem report refers to exactly one machine, which never changes
       - A problem report is triaged at most once – exactly one outcome (defect recorded, linked, resolved on the spot, dismissed)
+      - Once triaged, the outcome of a problem report never changes
+      - A problem report with the outcome defect recorded or linked refers to exactly one defect of the same machine
       - A problem report dismissed as spam has no description and no photo
   - id: AGG-Defect
     name: Defect
     context: BC-Repair
-    description: Contains its work log entries.
+    description: >-
+      Contains its work log entries. Created only through triage of a problem report (Record defect, HS-16).
+      Refers to its machine, its originating problem report and team members by ID only.
     invariants:
+      - A defect refers to exactly one machine and to the problem report it was recorded from; neither ever changes
+      - A defect is either open (possibly on hold), resolved, or closed on retirement
       - A resolved defect cannot be claimed, prioritized, put on hold or have work logged – only reopened
+      - A defect closed on retirement is final – it cannot be reopened or changed
       - A defect has at most one claimant
-      - Only defects suitable for helpers can be claimed or resolved by helpers
-      - Only an open defect can be put on hold; only a defect on hold can be resumed
-      - Resolving ends the claim
+      - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers
+      - Only an open defect that is not on hold can be put on hold; only a defect on hold can be resumed
+      - Resolving ends the claim and any hold; a reopened defect is open, not on hold and unclaimed
+      - Work log entries are only added, never changed or removed
   - id: AGG-Machine
     name: Machine
     context: BC-Collection
+    description: >-
+      Owns the machine status (user decision: machine status lives in Collection; Repair only prompts status changes via policies).
+      Refers to its machine model by ID. Museum number uniqueness is a set-based rule of the Collection context,
+      checked by Register machine – not an invariant of a single machine (HS-17).
     invariants:
+      - A machine refers to exactly one machine model
+      - A machine always has exactly one museum number
       - A machine always has exactly one machine status
-      - A retired machine cannot change status
+      - Every machine status change is kept in the machine's status history with previous status, new status, reason and who changed it
+      - A retired machine stays retired and cannot change status
       - Helpers can only set Out of order
   - id: AGG-MachineModel
     name: Machine model
     context: BC-Collection
     invariants:
+      - A machine model always has a title, a manufacturer and exactly one machine category
       - The technology fits the machine category (Pinball – EM, Solid-state, DMD, LCD; Arcade – CRT, LCD; Other – none)
   - id: AGG-File
     name: File
     context: BC-Collection
+    description: >-
+      Manuals, schematics, photos and other documents of a machine or machine model.
+      Photos of problem reports and work log entries are not files – they belong to those aggregates.
     invariants:
-      - A file belongs to exactly one machine or one machine model
+      - A file belongs to exactly one machine or one machine model, which never changes
       - A file has exactly one file category
+      - A removed file stays removed
   - id: AGG-MaintenancePlan
     name: Maintenance plan
     context: BC-Maintenance
+    description: >-
+      One museum-wide aggregate containing the maintenance tasks as entities. Edited rarely and by technicians only,
+      so a single aggregate causes no contention.
     invariants:
       - Every maintenance task has a positive interval and a start date
       - A restriction to a technology fits the restricted machine category
+      - A removed maintenance task never becomes due again; its maintenance records are kept
   - id: AGG-MaintenanceRecord
     name: Maintenance record
     context: BC-Maintenance
-    description: Append-only; one per machine and maintenance task carried out. Due and overdue are derived from records, plan and machine status over time.
+    description: >-
+      Append-only; one per machine and maintenance task carried out. Due and overdue are not stored – they are derived
+      from records, plan and machine status over time (see docs/architecture/data-model.md).
     invariants:
       - A maintenance record refers to exactly one machine and one maintenance task
+      - A maintenance record has exactly one outcome – done or partially done
+      - A maintenance record is never changed or removed
 
 events:
   # --- Problem reports ---
@@ -106,6 +139,10 @@ events:
     aggregate: AGG-Defect
     name: Defect prioritized
     data: [Defect, Priority, Prioritized by]
+  - id: EVT-DefectDetailsChanged
+    name: Defect details changed
+    aggregate: AGG-Defect
+    data: [Defect, Title, Suitable for helpers, Changed by]
   - id: EVT-DefectClaimed
     aggregate: AGG-Defect
     name: Defect claimed
@@ -159,6 +196,19 @@ events:
     name: Machine status changed
     data: [Machine, Previous status, New status, Reason, Changed by]
     description: Technicians only – except helpers, who may set Out of order when a machine is unsafe.
+  - id: EVT-MachineMoved
+    name: Machine moved
+    aggregate: AGG-Machine
+    data: [Machine, Location, Moved by]
+  - id: EVT-MachineDetailsCorrected
+    name: Machine details corrected
+    aggregate: AGG-Machine
+    data: [Machine, Museum number, Serial number, Corrected by]
+    description: A corrected museum number keeps the old one reserved; the QR sticker is reprinted.
+  - id: EVT-MachineModelCorrected
+    name: Machine model corrected
+    aggregate: AGG-MachineModel
+    data: [Machine model, Title, Manufacturer, Year, Machine category, Technology, Corrected by]
   - id: EVT-FileAttached
     aggregate: AGG-File
     name: File attached
@@ -211,13 +261,16 @@ commands:
       - Team members can report for any machine that is not retired
       - Description is required, photo is optional
   - id: CMD-RecordDefect
-    aggregate: AGG-Defect
+    aggregate: AGG-ProblemReport
     name: Record defect
     actor: ACT-Technician
     produces: [EVT-DefectRecorded]
-    description: Triage outcome. The technician may change the machine status in the same step (see POL-DefectMayChangeMachineStatus).
+    description: >-
+      Triage outcome. Handled by the problem report (HS-16): in one step it checks that it is still untriaged,
+      marks itself triaged with the new defect, and creates the defect. The technician may change the machine status
+      in the same step (see POL-DefectMayChangeMachineStatus).
     rules:
-      - The problem report has not been triaged yet
+      - The problem report has not been triaged yet – if another technician triaged it meanwhile, the command is rejected
       - Title is required and understandable for visitors
       - Priority defaults to normal
   - id: CMD-LinkProblemReportToDefect
@@ -255,6 +308,14 @@ commands:
     produces: [EVT-DefectPrioritized]
     rules:
       - The defect is not resolved
+  - id: CMD-ChangeDefectDetails
+    name: Change defect details
+    actor: ACT-Technician
+    aggregate: AGG-Defect
+    produces: [EVT-DefectDetailsChanged]
+    rules:
+      - The defect is not resolved
+      - The title stays understandable for visitors
   - id: CMD-ClaimDefect
     aggregate: AGG-Defect
     name: Claim defect
@@ -332,7 +393,8 @@ commands:
     actor: ACT-Technician
     produces: [EVT-MachineRegistered]
     rules:
-      - The museum number is unique; La Guardia assigns one if none is given
+      - The museum number is unique among all machines, including retired ones – checked by the Collection context across all machines (HS-17)
+      - La Guardia assigns a museum number if none is given (format see HS-19)
       - The machine model exists
   - id: CMD-ChangeMachineStatus
     aggregate: AGG-Machine
@@ -342,6 +404,28 @@ commands:
     rules:
       - The machine is not retired
       - Helpers may only set Out of order, and only when the machine is unsafe; a reason is required
+  - id: CMD-MoveMachine
+    name: Move machine
+    actor: ACT-TeamMember
+    aggregate: AGG-Machine
+    produces: [EVT-MachineMoved]
+    rules:
+      - The machine is not retired
+  - id: CMD-CorrectMachineDetails
+    name: Correct machine details
+    actor: ACT-Technician
+    aggregate: AGG-Machine
+    produces: [EVT-MachineDetailsCorrected]
+    rules:
+      - The machine is not retired
+      - A new museum number is unique across all machines, retired ones included; the old one stays reserved
+  - id: CMD-CorrectMachineModel
+    name: Correct machine model
+    actor: ACT-Technician
+    aggregate: AGG-MachineModel
+    produces: [EVT-MachineModelCorrected]
+    rules:
+      - The technology fits the machine category
   - id: CMD-AttachFile
     aggregate: AGG-File
     name: Attach file
@@ -437,36 +521,36 @@ read_models:
   - id: RM-VisitorMachinePage
     name: Visitor machine page
     description: Opened via the QR code by visitors; German and English. Used to decide whether to report a problem. Deliberately minimal – no storytelling about the machine.
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-MachineModelCorrected, EVT-DefectDetailsChanged]
     used_by: [ACT-Visitor]
     fields: [Machine model title, Manufacturer, Year, Machine status, Titles of open defects, Number of untriaged problem reports, Reporting possible (machine on display)]
   - id: RM-TriageList
     name: Triage list
-    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-MachineRetired]
+    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-MachineRetired, EVT-DefectDetailsChanged]
     used_by: [ACT-Technician, ACT-Helper]
     description: Helpers use it only to resolve problems on the spot.
     fields: [Museum number, Machine model title, Description, Photo, Reporter (visitor or team member), Reported at, Waiting longer than 3 days, Open and recently resolved defects of the machine (for linking)]
   - id: RM-OpenDefects
     name: Open defects
-    fed_by: [EVT-DefectRecorded, EVT-DefectPrioritized, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-ProblemReportLinkedToDefect]
+    fed_by: [EVT-DefectRecorded, EVT-DefectPrioritized, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-ProblemReportLinkedToDefect, EVT-DefectDetailsChanged]
     used_by: [ACT-TeamMember]
     description: Filterable by machine, priority, suitable for helpers, claimed by me, on hold.
     fields: [Museum number, Machine model title, Title, Priority, Suitable for helpers, Claimed by, On hold with reason, Number of linked problem reports, Open since, Last work log entry]
   - id: RM-MachineOverview
     name: Machine overview
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-DefectRecorded, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-DefectRecorded, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected]
     used_by: [ACT-TeamMember]
     description: All active machines at a glance; entry point for searching by museum number or title.
     fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
   - id: RM-MachineRecord
     name: Machine record
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged]
     used_by: [ACT-TeamMember]
     description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
     fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Due and overdue maintenance tasks, Files of the machine and its machine model by file category]
   - id: RM-DueMaintenance
     name: Due maintenance
-    fed_by: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired]
+    fed_by: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-MachineMoved, EVT-MachineModelCorrected]
     used_by: [ACT-TeamMember]
     description: Grouped by maintenance task so the same task can be recorded for several machines at once.
     fields: [Maintenance task, Instruction, Suitable for helpers, Museum number, Machine model title, Location, Last done, Due since, Overdue]
@@ -484,7 +568,7 @@ read_models:
   - id: RM-HelperDashboard
     name: Helper dashboard
     description: Highlights everything new since the viewer's last login.
-    fed_by: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
+    fed_by: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-DefectDetailsChanged]
     used_by: [ACT-Helper]
     fields: [Open defects suitable for helpers, Due maintenance tasks suitable for helpers, My claimed defects and what changed on them (incl. taken over), New since last login]
   - id: RM-RepairTimes
@@ -577,11 +661,60 @@ hotspots:
   - id: HS-16
     question: Record defect creates a Defect but must also mark the Problem report as triaged (two aggregates). How is double triage by two technicians at the same time prevented?
     refs: [CMD-RecordDefect, AGG-ProblemReport, AGG-Defect]
-    status: open
+    status: resolved
+    resolution: >-
+      The problem report is the consistency boundary of triage. Record defect is handled by the problem report: in one step
+      it checks it is still untriaged, marks itself triaged (outcome defect recorded, with the new defect's ID) and creates
+      the defect. Creating a new aggregate cannot conflict with anyone, so the problem report is the only contention point;
+      a concurrent second triage fails the version check on the problem report and is rejected ("already triaged by X") –
+      the second technician can then link to the new defect if needed. Proposed persistence: one transaction (docs/adr/0002-modular-monolith-state-based-persistence.md).
   - id: HS-17
     question: The museum number must be unique across all machines – a rule across Machine aggregates. Where is it enforced?
     refs: [CMD-RegisterMachine, AGG-Machine]
-    status: open
+    status: resolved
+    resolution: >-
+      Not a Machine invariant but a set-based rule of the Collection context: Register machine checks it against all
+      machines including retired ones, and the machine store guarantees it atomically with a uniqueness constraint on the
+      museum number (any transactional store can do this; proposed docs/adr/0003-postgresql.md). Registration is rare and
+      technician-only, so a separate registry aggregate is not worth it. Auto-assignment format: HS-19; corrections: HS-18.
+  # --- Domain architecture (added by domain-architect) ---
+  - id: HS-18
+    question: >-
+      Nothing can be changed after creation: there is no event for moving a machine to another location, correcting a
+      machine model (typo, year), adding a serial number later, correcting a mistyped museum number, or changing a defect's
+      title or its suitable-for-helpers mark. RM-MachineOverview shows the location, but only Machine registered sets it.
+      Which of these changes are needed, and who may make them? Recommendation – add Machine moved (location; any team
+      member, since the location is informational), Machine model corrected, Machine details corrected (serial number,
+      museum number – the old museum number stays reserved and the QR sticker is reprinted) and Defect details changed
+      (title, suitable for helpers) – all technician-only except Machine moved.
+    refs: [EVT-MachineRegistered, EVT-MachineModelCreated, EVT-DefectRecorded, RM-MachineOverview, AGG-Machine, AGG-MachineModel, AGG-Defect]
+    status: resolved
+    resolution: "Accepted as recommended: Machine moved (any team member), Machine details corrected, Machine model corrected and Defect details changed (technicians only). A corrected museum number keeps the old one reserved; the QR sticker is reprinted."
+  - id: HS-19
+    question: >-
+      Which museum number does La Guardia assign when none is given at registration? Recommendation – prefix "LG-" plus
+      three digits, the next number above the highest existing one; numbers of retired machines are never reused
+      (follows from uniqueness across all machines, retired ones included).
+    refs: [CMD-RegisterMachine, EVT-MachineRegistered]
+    status: resolved
+    resolution: "Accepted as recommended: \"LG-\" plus three digits, the next number above the highest existing one; never reused."
+  - id: HS-20
+    question: >-
+      When a machine returns from Not on display (e.g. after a year of restoration), its last done maintenance may be long
+      past. Is every applicable maintenance task then immediately due and overdue, flooding the lists? Recommendation – due
+      immediately (the machine really needs it), but overdue counts from the day it returned to display, not from the
+      last done date.
+    refs: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineStatusChanged]
+    status: resolved
+    resolution: "Accepted as recommended: due immediately on return to display; overdue counts from the day it returned, not from the last done date."
+  - id: HS-21
+    question: >-
+      The dashboards highlight what is new "since the last login". Team members will stay logged in on their phones for
+      weeks, so the last login says little. Is "new" measured since the viewer's previous dashboard visit instead?
+      Recommendation – yes, since the previous visit ("last seen"), recorded by the Team area.
+    refs: [RM-TechnicianDashboard, RM-HelperDashboard]
+    status: resolved
+    resolution: "Accepted as recommended: \"new\" is measured since the viewer's previous dashboard visit (last seen), recorded by the Team area."
 
 flows:
   - id: FLOW-ProblemReportTriage

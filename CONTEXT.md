@@ -54,9 +54,14 @@ _Avoid_: Pinball (for machines in general), game, device, unit, exhibit
 _UI (de)_: Gerät
 
 **Museum number**:
-The museum's unique, short identifier of a machine (e.g. LG-042), printed on its QR sticker.
+The museum's short identifier of a machine (e.g. LG-042), printed on its QR sticker; unique among all machines ever registered, retired ones included, so it is never reused.
 _Avoid_: ID, inventory ID, serial number (that is the manufacturer's)
 _UI (de)_: Museumsnummer
+
+**Serial number**:
+The manufacturer's number of a machine; optional, since many machines (especially EM pinball) have none that is readable.
+_Avoid_: Museum number, inventory number
+_UI (de)_: Seriennummer
 
 **Location**:
 Free-text description of where a machine stands in the museum (e.g. "Hall 2, row 3").
@@ -72,6 +77,16 @@ _UI (de)_: Status (Spielbereit / Eingeschränkt / Außer Betrieb / Nicht ausgest
 A machine becomes part of La Guardia when a technician registers it; it is retired when it leaves the museum, keeping its history but leaving the active lists.
 _Avoid_: Deleted, archived, sold
 _UI (de)_: Erfasst / Ausgemustert
+
+**File**:
+A document or image attached to one machine or one machine model – manual, schematic, photo or other. Photos attached to a problem report or a work log entry are not files; they belong to that report or entry.
+_Avoid_: Attachment, upload (as a noun)
+_UI (de)_: Datei
+
+**File category**:
+The fixed kind of a file: *Manual*, *Schematic*, *Photo* or *Other*.
+_Avoid_: File type, format, tag
+_UI (de)_: Dateikategorie (Handbuch / Schaltplan / Foto / Sonstiges)
 
 ### Repair
 
@@ -109,6 +124,11 @@ _UI (de)_: Übernehmen
 A defect that is open but temporarily cannot progress – waiting for a part, waiting for a technician, or another reason.
 _Avoid_: Paused, blocked, parked
 _UI (de)_: Pausiert
+
+**Closed on retirement**:
+The final end of a defect that was not resolved when its machine was retired; it does not count as resolved.
+_Avoid_: Cancelled, abandoned
+_UI (de)_: Geschlossen (ausgemustert)
 
 **Work log entry**:
 A record of work done on a defect – who, when, what was done, parts used as free text.

@@ -15,6 +15,7 @@ flowchart LR
         CMD_ResolveProblemOnTheSpot["Resolve problem on the spot"]:::cmd
         CMD_DismissProblemReport["Dismiss problem report"]:::cmd
         CMD_PrioritizeDefect["Prioritize defect"]:::cmd
+        CMD_ChangeDefectDetails["Change defect details"]:::cmd
         CMD_ClaimDefect["Claim defect"]:::cmd
         CMD_ReleaseClaim["Release claim"]:::cmd
         CMD_LogWork["Log work"]:::cmd
@@ -29,6 +30,7 @@ flowchart LR
         EVT_ProblemResolvedOnTheSpot["Problem resolved on the spot"]:::evt
         EVT_ProblemReportDismissed["Problem report dismissed"]:::evt
         EVT_DefectPrioritized["Defect prioritized"]:::evt
+        EVT_DefectDetailsChanged["Defect details changed"]:::evt
         EVT_DefectClaimed["Defect claimed"]:::evt
         EVT_DefectClaimReleased["Defect claim released"]:::evt
         EVT_WorkLogged["Work logged"]:::evt
@@ -42,12 +44,18 @@ flowchart LR
         CMD_CreateMachineModel["Create machine model"]:::cmd
         CMD_RegisterMachine["Register machine"]:::cmd
         CMD_ChangeMachineStatus["Change machine status"]:::cmd
+        CMD_MoveMachine["Move machine"]:::cmd
+        CMD_CorrectMachineDetails["Correct machine details"]:::cmd
+        CMD_CorrectMachineModel["Correct machine model"]:::cmd
         CMD_AttachFile["Attach file"]:::cmd
         CMD_RemoveFile["Remove file"]:::cmd
         CMD_RetireMachine["Retire machine"]:::cmd
         EVT_MachineModelCreated["Machine model created"]:::evt
         EVT_MachineRegistered["⭐ Machine registered"]:::evt
         EVT_MachineStatusChanged["⭐ Machine status changed"]:::evt
+        EVT_MachineMoved["Machine moved"]:::evt
+        EVT_MachineDetailsCorrected["Machine details corrected"]:::evt
+        EVT_MachineModelCorrected["Machine model corrected"]:::evt
         EVT_FileAttached["File attached"]:::evt
         EVT_FileRemoved["File removed"]:::evt
         EVT_MachineRetired["⭐ Machine retired"]:::evt
@@ -94,6 +102,8 @@ flowchart LR
     CMD_DismissProblemReport --> EVT_ProblemReportDismissed
     ACT_Technician --> CMD_PrioritizeDefect
     CMD_PrioritizeDefect --> EVT_DefectPrioritized
+    ACT_Technician --> CMD_ChangeDefectDetails
+    CMD_ChangeDefectDetails --> EVT_DefectDetailsChanged
     ACT_TeamMember --> CMD_ClaimDefect
     CMD_ClaimDefect --> EVT_DefectClaimed
     ACT_TeamMember --> CMD_ReleaseClaim
@@ -114,6 +124,12 @@ flowchart LR
     CMD_RegisterMachine --> EVT_MachineRegistered
     ACT_Technician --> CMD_ChangeMachineStatus
     CMD_ChangeMachineStatus --> EVT_MachineStatusChanged
+    ACT_TeamMember --> CMD_MoveMachine
+    CMD_MoveMachine --> EVT_MachineMoved
+    ACT_Technician --> CMD_CorrectMachineDetails
+    CMD_CorrectMachineDetails --> EVT_MachineDetailsCorrected
+    ACT_Technician --> CMD_CorrectMachineModel
+    CMD_CorrectMachineModel --> EVT_MachineModelCorrected
     ACT_TeamMember --> CMD_AttachFile
     CMD_AttachFile --> EVT_FileAttached
     ACT_Technician --> CMD_RemoveFile
@@ -158,6 +174,8 @@ flowchart LR
     EVT_DefectResolved -.-> RM_VisitorMachinePage
     EVT_DefectReopened -.-> RM_VisitorMachinePage
     EVT_DefectClosedOnRetirement -.-> RM_VisitorMachinePage
+    EVT_MachineModelCorrected -.-> RM_VisitorMachinePage
+    EVT_DefectDetailsChanged -.-> RM_VisitorMachinePage
     RM_VisitorMachinePage -.-> ACT_Visitor
     EVT_ProblemReported -.-> RM_TriageList
     EVT_DefectRecorded -.-> RM_TriageList
@@ -165,6 +183,7 @@ flowchart LR
     EVT_ProblemResolvedOnTheSpot -.-> RM_TriageList
     EVT_ProblemReportDismissed -.-> RM_TriageList
     EVT_MachineRetired -.-> RM_TriageList
+    EVT_DefectDetailsChanged -.-> RM_TriageList
     RM_TriageList -.-> ACT_Technician
     RM_TriageList -.-> ACT_Helper
     EVT_DefectRecorded -.-> RM_OpenDefects
@@ -178,6 +197,7 @@ flowchart LR
     EVT_DefectReopened -.-> RM_OpenDefects
     EVT_DefectClosedOnRetirement -.-> RM_OpenDefects
     EVT_ProblemReportLinkedToDefect -.-> RM_OpenDefects
+    EVT_DefectDetailsChanged -.-> RM_OpenDefects
     RM_OpenDefects -.-> ACT_TeamMember
     EVT_MachineModelCreated -.-> RM_MachineOverview
     EVT_MachineRegistered -.-> RM_MachineOverview
@@ -189,6 +209,9 @@ flowchart LR
     EVT_DefectClosedOnRetirement -.-> RM_MachineOverview
     EVT_MaintenanceTaskOverdue -.-> RM_MachineOverview
     EVT_MaintenanceRecorded -.-> RM_MachineOverview
+    EVT_MachineMoved -.-> RM_MachineOverview
+    EVT_MachineDetailsCorrected -.-> RM_MachineOverview
+    EVT_MachineModelCorrected -.-> RM_MachineOverview
     RM_MachineOverview -.-> ACT_TeamMember
     EVT_MachineModelCreated -.-> RM_MachineRecord
     EVT_MachineRegistered -.-> RM_MachineRecord
@@ -206,6 +229,10 @@ flowchart LR
     EVT_ProblemResolvedOnTheSpot -.-> RM_MachineRecord
     EVT_MaintenanceRecorded -.-> RM_MachineRecord
     EVT_MaintenanceTaskDue -.-> RM_MachineRecord
+    EVT_MachineMoved -.-> RM_MachineRecord
+    EVT_MachineDetailsCorrected -.-> RM_MachineRecord
+    EVT_MachineModelCorrected -.-> RM_MachineRecord
+    EVT_DefectDetailsChanged -.-> RM_MachineRecord
     RM_MachineRecord -.-> ACT_TeamMember
     EVT_MaintenancePlanChanged -.-> RM_DueMaintenance
     EVT_MaintenanceTaskDue -.-> RM_DueMaintenance
@@ -214,6 +241,8 @@ flowchart LR
     EVT_MachineRegistered -.-> RM_DueMaintenance
     EVT_MachineStatusChanged -.-> RM_DueMaintenance
     EVT_MachineRetired -.-> RM_DueMaintenance
+    EVT_MachineMoved -.-> RM_DueMaintenance
+    EVT_MachineModelCorrected -.-> RM_DueMaintenance
     RM_DueMaintenance -.-> ACT_TeamMember
     EVT_MaintenancePlanChanged -.-> RM_MaintenancePlan
     RM_MaintenancePlan -.-> ACT_Technician
@@ -239,6 +268,7 @@ flowchart LR
     EVT_MaintenanceTaskDue -.-> RM_HelperDashboard
     EVT_MaintenanceTaskOverdue -.-> RM_HelperDashboard
     EVT_MaintenanceRecorded -.-> RM_HelperDashboard
+    EVT_DefectDetailsChanged -.-> RM_HelperDashboard
     RM_HelperDashboard -.-> ACT_Helper
     EVT_ProblemReported -.-> RM_RepairTimes
     EVT_DefectRecorded -.-> RM_RepairTimes
@@ -376,11 +406,6 @@ flowchart LR
 
 | Context | Purpose | Aggregates | Events |
 |---|---|---|---|
-| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, File | Machine model created, Machine registered, Machine status changed, File attached, File removed, Machine retired |
-| Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
+| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, File | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File attached, File removed, Machine retired |
+| Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect details changed, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
 | Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
-
-## Open Hotspots
-
-- **HS-16** – Record defect creates a Defect but must also mark the Problem report as triaged (two aggregates). How is double triage by two technicians at the same time prevented? _(refs: CMD-RecordDefect, AGG-ProblemReport, AGG-Defect)_
-- **HS-17** – The museum number must be unique across all machines – a rule across Machine aggregates. Where is it enforced? _(refs: CMD-RegisterMachine, AGG-Machine)_
