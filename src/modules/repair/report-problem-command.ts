@@ -1,36 +1,19 @@
-import { defineCommand, type Actor } from "@/platform/command";
-import { saveProblemReported } from "./problem-reports";
-import { reportProblem, type Reporter } from "./report-problem";
+import { aggregateCommand } from "@/platform/command";
+import { problemReports } from "./problem-reports";
+import { reportProblem } from "./report-problem";
 
-/**
- * CMD-ReportProblem through the command layer: visitors and team members report; the reporter is the acting person.
- * Emits EVT-ProblemReported for AGG-ProblemReport.
- */
-export const reportProblemCommand = defineCommand({
+/** CMD-ReportProblem through the command layer: a creating command on AGG-ProblemReport, emits EVT-ProblemReported. */
+export const reportProblemCommand = aggregateCommand({
   id: "CMD-ReportProblem",
   allowedActors: ["visitor", "helper", "technician"],
-  run: async (input: { machineId: string; description: string }, { tx, actor, clock, newId }) => {
-    const outcome = reportProblem({ ...input, reporter: reporterOf(actor) }, { clock, newId });
-    if (!outcome.ok) return outcome;
-    const { event } = outcome;
-    await saveProblemReported(tx, event);
-    return {
-      ok: true as const,
-      result: { problemReportId: event.problemReportId },
-      events: [
-        {
-          type: event.type,
-          aggregate: { type: "AGG-ProblemReport" as const, id: event.problemReportId },
-          machineId: event.machineId,
-          data: {}, // the reporter is the journal's actor; the description stays in the problem report only
-        },
-      ],
-    };
-  },
+  store: problemReports,
+  creates: true,
+  decide: reportProblem,
+  journal: (event) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
+    machineId: event.machineId,
+    data: {}, // the reporter is the journal's actor; the description stays in the problem report only
+  }),
+  result: (report) => ({ problemReportId: report.id }),
 });
-
-function reporterOf(actor: Actor): Reporter {
-  if (actor.kind === "team-member") return { kind: "team-member", teamMemberId: actor.teamMemberId };
-  if (actor.kind === "visitor") return { kind: "visitor" };
-  throw new Error("The system never reports a problem"); // excluded by allowedActors
-}

@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, sql, type SQL } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { asc, eq } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
 import { database, type Database } from "../database";
 import { eventJournal } from "../schema";
+import { NotFound, Rejected, VersionConflict } from "./errors";
 
 /**
  * The command layer (ADR 0002, ST-003) – the one way every command runs:
@@ -11,11 +11,21 @@ import { eventJournal } from "../schema";
  *   2. one database transaction for the command's changes and its journal entries;
  *   3. a rejection or a version conflict rolls everything back – no change, no journal entry.
  * Commands get the clock and the ID generator injected, so they are deterministic in tests.
- * Automatic policies run inside the triggering command's transaction as the system actor: `context.runAsSystem`.
+ * Commands are written with `aggregateCommand` (load → decide → save, `./aggregate.ts`) – the only public way.
+ * Automatic policies run inside the triggering command's transaction as the system actor.
  * All commands are invoked through Server Actions (POST, Origin checked – the CSRF protection, src/proxy.ts).
  */
 
 export type { Database } from "../database";
+export {
+  aggregateCommand,
+  aggregateStore,
+  created,
+  trigger,
+  type AggregateStore,
+  type Decision,
+  type DecisionContext,
+} from "./aggregate";
 
 export type Role = "helper" | "technician";
 
@@ -65,23 +75,7 @@ export type Command<Input, Result, Error extends string> = {
 export type CommandResult<Result, Error extends string> =
   { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "not-found" | "version-conflict" };
 
-export function defineCommand<Input, Result, Error extends string>(
-  command: Command<Input, Result, Error>,
-): Command<Input, Result, Error> {
-  return command;
-}
-
 export type CommandDependencies = { actor: Actor; db?: Database; clock?: Clock; newId?: () => string };
-
-class Rejected extends Error {
-  constructor(readonly reason: string) {
-    super(reason);
-  }
-}
-
-class VersionConflict extends Error {}
-
-class NotFound extends Error {}
 
 export async function executeCommand<Input, Result, Error extends string>(
   command: Command<Input, Result, Error>,
@@ -160,37 +154,6 @@ function journalRow(event: JournalEvent, actor: Actor, occurredAt: Date): Journa
     machineId: event.machineId,
     data: event.data,
   };
-}
-
-type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
-
-/**
- * Optimistic version check (HS-16): changes the aggregate only if it is still at the version the actor saw,
- * and increments the version. Otherwise the whole command is rejected with "version-conflict" – or with
- * "not-found" when no aggregate has that ID.
- * Of two concurrent commands at the same version, PostgreSQL lets the second wait for the first and then
- * finds no row at the old version.
- */
-export async function updateAtVersion<T extends VersionedTable>(
-  tx: Database,
-  table: T,
-  id: string,
-  expectedVersion: number,
-  changes: Partial<T["$inferInsert"]>,
-): Promise<void> {
-  const where: SQL | undefined = and(eq(table.id, id), eq(table.version, expectedVersion));
-  const updated = await tx
-    .update(table)
-    .set({ ...changes, version: sql`${table.version} + 1` } as never)
-    .where(where)
-    .returning({ id: table.id });
-  if (updated.length > 0) return;
-  const [existing] = await tx
-    .select({ id: table.id })
-    .from(table as PgTable)
-    .where(eq(table.id, id))
-    .limit(1);
-  throw existing ? new VersionConflict() : new NotFound();
 }
 
 export type JournalEntry = {
