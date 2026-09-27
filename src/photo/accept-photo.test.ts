@@ -16,6 +16,16 @@ async function phoneJpeg(width: number, height: number): Promise<Buffer> {
     .toBuffer();
 }
 
+/** Random noise compresses badly: a worst case for the stored size (fixed seed, so the test is stable). */
+async function noisyJpeg(width: number, height: number): Promise<Buffer> {
+  const pixels = Buffer.alloc(width * height * 3);
+  let seed = 42;
+  for (let i = 0; i < pixels.length; i++) pixels[i] = (seed = (seed * 1103515245 + 12345) & 0x7fffffff) >> 16;
+  return sharp(pixels, { raw: { width, height, channels: 3 } })
+    .jpeg({ quality: 40 })
+    .toBuffer();
+}
+
 /** EXIF tag 0x8825 points to the GPS IFD (either byte order). */
 function hasGpsIfd(exif: Buffer | undefined): boolean {
   return !!exif && (exif.includes(Buffer.from([0x88, 0x25])) || exif.includes(Buffer.from([0x25, 0x88])));
@@ -50,6 +60,15 @@ describe("acceptPhoto", () => {
     const result = await acceptPhoto(big);
 
     expect(result.ok && [result.photo.width, result.photo.height]).toEqual([PHOTO_LIMITS.maxEdgePx, 1536]);
+  });
+
+  it("stores at most the maximum stored size, even for photos that compress badly", async () => {
+    const noisy = await noisyJpeg(2048, 1536);
+    expect(noisy.byteLength).toBeLessThanOrEqual(PHOTO_LIMITS.maxUploadBytes);
+
+    const result = await acceptPhoto(noisy);
+
+    expect(result.ok && result.photo.bytes.byteLength).toBeLessThanOrEqual(PHOTO_LIMITS.maxStoredBytes);
   });
 
   it("keeps small photos at their size", async () => {

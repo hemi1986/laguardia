@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PhotoNotReadableError, preparePhoto } from "@/photo/prepare-photo";
+import { PHOTO_LIMITS } from "@/photo/limits";
+import { PhotoNotReadableError, PhotoTooLargeError, preparePhoto } from "@/photo/prepare-photo";
 import { uploadPhoto, type UploadPhotoResult } from "./actions";
 
 const errors: Record<Exclude<UploadPhotoResult, { ok: true }>["error"], string> = {
@@ -48,9 +49,11 @@ export function PhotoPicker() {
     } catch (error) {
       setStatus([
         ...lines,
-        error instanceof PhotoNotReadableError
-          ? "Fehler: Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
-          : `Fehler: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof PhotoTooLargeError
+          ? `Fehler: Das Foto ist größer als ${PHOTO_LIMITS.maxOriginalBytes / 1_000_000} MB.`
+          : error instanceof PhotoNotReadableError
+            ? "Fehler: Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
+            : `Fehler: ${error instanceof Error ? error.message : String(error)}`,
       ]);
     }
   }

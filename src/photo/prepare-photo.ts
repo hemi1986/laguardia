@@ -12,6 +12,12 @@ export class PhotoNotReadableError extends Error {
   }
 }
 
+export class PhotoTooLargeError extends Error {
+  constructor() {
+    super("photo-too-large");
+  }
+}
+
 type Decoded = { source: CanvasImageSource; width: number; height: number; close: () => void };
 
 /**
@@ -44,10 +50,11 @@ function toJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
 
 /**
  * Browser half of the photo building block (ST-002): turns a camera or gallery photo into an upright JPEG of at
- * most PHOTO_LIMITS.maxEdgePx on the long edge and PHOTO_LIMITS.clientTargetBytes. The canvas carries no
+ * most PHOTO_LIMITS.maxEdgePx on the long edge and PHOTO_LIMITS.maxStoredBytes. The canvas carries no
  * metadata, so EXIF (incl. GPS) never leaves the phone; the server strips it again anyway.
  */
 export async function preparePhoto(file: Blob): Promise<Blob> {
+  if (file.size > PHOTO_LIMITS.maxOriginalBytes) throw new PhotoTooLargeError();
   const decoded = await decode(file);
   try {
     let maxEdge: number = PHOTO_LIMITS.maxEdgePx;
@@ -59,7 +66,7 @@ export async function preparePhoto(file: Blob): Promise<Blob> {
       canvas.getContext("2d")!.drawImage(decoded.source, 0, 0, width, height);
       for (const quality of [0.85, 0.75, 0.65, 0.5]) {
         const jpeg = await toJpeg(canvas, quality);
-        if (jpeg.size <= PHOTO_LIMITS.clientTargetBytes) return jpeg;
+        if (jpeg.size <= PHOTO_LIMITS.maxStoredBytes) return jpeg;
       }
       maxEdge = Math.round(maxEdge * 0.75);
     }

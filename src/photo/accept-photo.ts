@@ -25,10 +25,19 @@ export async function acceptPhoto(input: Uint8Array): Promise<AcceptPhotoResult>
   }
 
   // sharp drops all metadata unless told to keep it; .rotate() without arguments applies the EXIF orientation.
-  const { data, info } = await sharp(input)
-    .rotate()
-    .resize({ width: PHOTO_LIMITS.maxEdgePx, height: PHOTO_LIMITS.maxEdgePx, fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 82, mozjpeg: true })
-    .toBuffer({ resolveWithObject: true });
-  return { ok: true, photo: { bytes: data, contentType: "image/jpeg", width: info.width, height: info.height } };
+  // Lower the quality, then the size, until the photo fits into maxStoredBytes.
+  let maxEdge: number = PHOTO_LIMITS.maxEdgePx;
+  for (;;) {
+    for (const quality of [82, 72, 62, 50]) {
+      const { data, info } = await sharp(input)
+        .rotate()
+        .resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality, mozjpeg: true })
+        .toBuffer({ resolveWithObject: true });
+      if (data.byteLength <= PHOTO_LIMITS.maxStoredBytes) {
+        return { ok: true, photo: { bytes: data, contentType: "image/jpeg", width: info.width, height: info.height } };
+      }
+    }
+    maxEdge = Math.round(maxEdge * 0.75);
+  }
 }
