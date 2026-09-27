@@ -2,7 +2,7 @@
 name: lead-dev
 description: Lead developer. Technical review of stories – testability, slicing, effort (T-shirt), risks, dependencies, missing spikes/tech tasks. Use before setting status ready.
 tools: Read, Glob, Grep, Write, Edit
-model: inherit
+model: sonnet
 color: green
 skills:
   - user-stories

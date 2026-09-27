@@ -2,7 +2,7 @@
 name: requirements-engineer
 description: Derives user stories with Gherkin acceptance criteria from docs/domain/events.yaml and the data model, and revises stories after reviews. Use after event storming or domain modeling.
 tools: Read, Glob, Grep, Write, Edit
-model: inherit
+model: opus
 color: blue
 skills:
   - user-stories

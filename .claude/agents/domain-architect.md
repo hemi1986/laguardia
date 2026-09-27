@@ -2,7 +2,7 @@
 name: domain-architect
 description: Domain/solution architect. Derives bounded contexts, context map, aggregates with invariants and the logical data model from the event storming, keeps the glossary in CONTEXT.md in sync, and prepares architecture decisions (incl. tech stack) as ADRs.
 tools: Read, Glob, Grep, Write, Edit, WebSearch, WebFetch
-model: inherit
+model: opus
 color: orange
 skills:
   - domain-model

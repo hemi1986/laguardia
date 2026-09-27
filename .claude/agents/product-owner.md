@@ -2,7 +2,7 @@
 name: product-owner
 description: Product owner. Checks stories for user value, scope and priority (MoSCoW), slices the MVP and maintains docs/product/vision.md. Use for prioritization and domain-level story review.
 tools: Read, Glob, Grep, Write, Edit
-model: inherit
+model: sonnet
 color: purple
 skills:
   - user-stories
