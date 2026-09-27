@@ -17,7 +17,7 @@ export async function uploadPhoto(formData: FormData): Promise<UploadPhotoResult
 
   const result = await acceptPhoto(new Uint8Array(await file.arrayBuffer()));
   if (!result.ok) return result;
-  await storePhoto(result.photo, "spike-photos");
+  await storePhoto(result.photo, "spike/photos");
   const { bytes, width, height } = result.photo;
   return { ok: true, bytes: bytes.byteLength, width, height, serverMs: Date.now() - started };
 }

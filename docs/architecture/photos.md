@@ -15,8 +15,8 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 
 | Part | Where | What it does |
 |---|---|---|
-| `preparePhoto(file)` | `src/photo/prepare-photo.ts` (browser) | Rejects originals above 20 MB (`PhotoTooLargeError`). Decodes the photo **upright** (the browser applies the EXIF orientation: `createImageBitmap(…, { imageOrientation: "from-image" })`, fallback `<img>`), draws it onto a canvas with the long edge ≤ 2048 px and encodes JPEG, lowering quality (0.85 → 0.5) and then size until ≤ 1 MB. A canvas carries no metadata, so EXIF (incl. GPS) never leaves the phone. Throws `PhotoNotReadableError` if the browser cannot decode the file. |
-| `acceptPhoto(bytes)` | `src/photo/accept-photo.ts` (server, `sharp`) | Rejects more than 2 MB (`too-large`, checked before decoding), anything that is not an image (`not-an-image`) and formats other than JPEG, PNG, WebP (`unsupported-format`, e.g. HEIC, GIF). Rotates by the EXIF orientation **before** anything else, downscales to ≤ 2048 px, re-encodes as JPEG (mozjpeg, quality 82 → 50, then smaller) until ≤ 1 MB. sharp writes **no metadata** (no EXIF/GPS, no XMP, no ICC, no orientation tag). |
+| `preparePhoto(file)` | `src/photo/prepare-photo.ts` (browser) | Rejects originals above 20 MB (`PhotoTooLargeError`). Decodes the photo **upright** (the browser applies the EXIF orientation: `createImageBitmap(…, { imageOrientation: "from-image" })`, fallback `<img>`), draws it onto a canvas with the long edge ≤ 2048 px and encodes JPEG on a white background (for transparent images), lowering quality (0.85 → 0.5) and then size until ≤ 1 MB. A canvas carries no metadata, so EXIF (incl. GPS) never leaves the phone. Throws `PhotoNotReadableError` if the browser cannot decode the file, `PhotoTooLargeError` if the original is above 20 MB or cannot be brought under 1 MB. |
+| `acceptPhoto(bytes)` | `src/photo/accept-photo.ts` (server, `sharp`) | Rejects more than 2 MB or more than 25 megapixels (`too-large`, both checked before decoding; sharp's `limitInputPixels` enforces the pixel limit again), anything that is not an image or is corrupt (`not-an-image` – never throws for bad input) and formats other than JPEG, PNG, WebP (`unsupported-format`, e.g. HEIC, AVIF, GIF). Rotates by the EXIF orientation **before** anything else, downscales to ≤ 2048 px, puts transparent areas on white, decodes once per size step and re-encodes as JPEG (mozjpeg, quality 82 → 50; at most 4 size steps) until ≤ 1 MB. sharp writes **no metadata** (no EXIF/GPS, no XMP, no ICC, no orientation tag). |
 | `storePhoto(photo, prefix)` | `src/photo/store-photo.ts` (server) | Stores in the private Blob store as `<prefix>/<uuid>.jpg`. The caller authorizes (the command layer, never here). |
 | `photoAddresses(pathnames)` | `src/photo/store-photo.ts` (server) | Presigned GET addresses valid for 5 minutes – only issued after the page's access check. |
 | Limits | `src/photo/limits.ts` (`PHOTO_LIMITS`) | The numbers below, used by both halves. |
@@ -27,7 +27,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 |---|---|---|---|
 | Original photo | **at most 20 MB** | browser | yes – "Das Foto ist größer als 20 MB." (confirms ST-016's user decision) |
 | Stored photo | long edge **at most 2048 px**, **at most 1 MB**, JPEG | browser and server | – |
-| Upload to the server | at most **2 MB** (technical guard; normal uploads are ≤ 1 MB) | server | only for clients that skip the browser step |
+| Upload to the server | at most **2 MB** and **25 megapixels** (technical guards; normal uploads are ≤ 1 MB and ≤ 2048 × 2048) | server | only for clients that skip the browser step |
 | Server action body | 3 MB (`next.config.ts`, room for multipart overhead) | Next.js | – |
 | Accepted formats | JPEG, PNG, WebP (after the browser step: always JPEG) | server | "Dieses Bildformat wird nicht unterstützt" |
 
@@ -48,6 +48,9 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 Portrait and landscape photos from camera and gallery were stored upright on both phones. All six stored photos were downloaded and inspected: JPEG, ≤ 2048 px, no EXIF, no GPS, no XMP, no ICC profile, no orientation tag. Most of the time is the server's Blob write (cold start included); well within the 5-second target.
 
 ## Notes for the stories that use it
+
+- **JavaScript is required** for taking photos: the browser half runs in a client component. Without JavaScript a form would send the original (up to 20 MB), which the server action refuses (3 MB body limit, 2 MB check).
+- **Order of storing:** `storePhoto` runs before the command that references the photo. If the command then fails, the stored photo is orphaned (private, unguessable, never shown). Accepted for now; a stricter order or a clean-up is decided in ST-016 if needed. The caller also sequences `acceptPhoto` → `storePhoto` itself; whether one "receive photo" entry point replaces the two calls is decided in ST-016 (code review ST-002).
 
 - The form sends the **prepared** blob (`preparePhoto`), never the original file, in a server action; the server action authorizes first, then calls `acceptPhoto` and `storePhoto`, and stores the returned pathname with the problem report / work log entry / file.
 - Visitor photos (ST-016) are uploaded without login, so the visitor page's command must apply its own limits (ST-014 rate limits); the building block itself does not authorize.

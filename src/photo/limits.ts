@@ -9,5 +9,7 @@ export const PHOTO_LIMITS = {
   maxEdgePx: 2048,
   maxStoredBytes: 1_000_000,
   maxUploadBytes: 2_000_000,
+  /** Decoding guard (≈ 5000 × 5000); prepared photos are at most 2048 × 2048. */
+  maxInputPixels: 25_000_000,
   acceptedFormats: ["jpeg", "png", "webp"],
 } as const;

@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: laguardia
       POSTGRES_DB: laguardia
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432" # this machine only
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

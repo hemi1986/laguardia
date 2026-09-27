@@ -8,7 +8,7 @@ import { PhotoPicker } from "./photo-picker";
 /** ST-002 spike: take or choose a photo, prepare it in the browser, check and store it on the server. */
 export default async function SpikePhotos() {
   if (!(await hasSpikeAccess())) redirect("/");
-  const { blobs } = await list({ prefix: "spike-photos/" });
+  const { blobs } = await list({ prefix: "spike/photos/" });
   const addresses = await photoAddresses(blobs.map((b) => b.pathname));
 
   return (

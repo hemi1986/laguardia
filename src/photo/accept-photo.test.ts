@@ -77,6 +77,21 @@ describe("acceptPhoto", () => {
     expect(result.ok && [result.photo.width, result.photo.height]).toEqual([640, 480]);
   });
 
+  it("puts transparent images on a white background", async () => {
+    const transparent = await sharp({
+      create: { width: 20, height: 20, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    const result = await acceptPhoto(transparent);
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    const { data } = await sharp(result.photo.bytes).raw().toBuffer({ resolveWithObject: true });
+    expect(Math.min(...data.subarray(0, 3))).toBeGreaterThan(245);
+  });
+
   it("rejects content that is not an image", async () => {
     const pdf = Buffer.from("%PDF-1.4\n1 0 obj << >> endobj\n%%EOF\n");
 
@@ -87,6 +102,28 @@ describe("acceptPhoto", () => {
     const gif = await image(10, 10).gif().toBuffer();
 
     expect(await acceptPhoto(gif)).toEqual({ ok: false, error: "unsupported-format" });
+  });
+
+  it("rejects a corrupt image instead of failing", async () => {
+    const jpeg = await image(400, 300).jpeg().toBuffer();
+    const truncated = jpeg.subarray(0, Math.floor(jpeg.byteLength / 2));
+
+    expect(await acceptPhoto(truncated)).toEqual({ ok: false, error: "not-an-image" });
+  });
+
+  it("rejects HEIF/AVIF, which the server cannot handle for phone photos", async () => {
+    const avif = await image(64, 64).avif().toBuffer();
+
+    expect(await acceptPhoto(avif)).toEqual({ ok: false, error: "unsupported-format" });
+  });
+
+  it("rejects images with more pixels than the maximum before decoding them", async () => {
+    const huge = await sharp({ create: { width: 8000, height: 8000, channels: 3, background: "#fff" } })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    expect(huge.byteLength).toBeLessThanOrEqual(PHOTO_LIMITS.maxUploadBytes);
+
+    expect(await acceptPhoto(huge)).toEqual({ ok: false, error: "too-large" });
   });
 
   it("rejects photos above the maximum upload size before decoding them", async () => {

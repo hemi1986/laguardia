@@ -63,14 +63,17 @@ export async function preparePhoto(file: Blob): Promise<Blob> {
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      canvas.getContext("2d")!.drawImage(decoded.source, 0, 0, width, height);
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = "#ffffff"; // transparent areas become white, as on the server
+      context.fillRect(0, 0, width, height);
+      context.drawImage(decoded.source, 0, 0, width, height);
       for (const quality of [0.85, 0.75, 0.65, 0.5]) {
         const jpeg = await toJpeg(canvas, quality);
         if (jpeg.size <= PHOTO_LIMITS.maxStoredBytes) return jpeg;
       }
       maxEdge = Math.round(maxEdge * 0.75);
     }
-    throw new PhotoNotReadableError();
+    throw new PhotoTooLargeError();
   } finally {
     decoded.close();
   }

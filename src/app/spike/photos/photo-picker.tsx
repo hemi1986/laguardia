@@ -50,7 +50,7 @@ export function PhotoPicker() {
       setStatus([
         ...lines,
         error instanceof PhotoTooLargeError
-          ? `Fehler: Das Foto ist größer als ${PHOTO_LIMITS.maxOriginalBytes / 1_000_000} MB.`
+          ? `Fehler: Das Foto ist zu groß (höchstens ${PHOTO_LIMITS.maxOriginalBytes / 1_000_000} MB).`
           : error instanceof PhotoNotReadableError
             ? "Fehler: Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
             : `Fehler: ${error instanceof Error ? error.message : String(error)}`,
