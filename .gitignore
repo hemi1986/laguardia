@@ -2,3 +2,6 @@
 .claude/agent-memory-local/
 node_modules/
 .DS_Store
+
+# Engineering workflow state (last verify result)
+.claude/state/

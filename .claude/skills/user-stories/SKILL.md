@@ -34,7 +34,11 @@ Template: `templates/story-template.md`. Schema: `schema/story.schema.json`.
 ## Status Workflow
 `draft` (in progress) → `review` (finished, waiting for PO + lead-dev) → `ready` (after user approval; `size` set, no `[OPEN]`) → `in-progress` → `done`.
 
-Discovery ends at `ready`. `in-progress` and `done` are set later by the engineering workflow directly in the story file.
+Discovery ends at `ready`. The engineering workflow (`/implement`) sets `in-progress` and `done` with `node .claude/skills/implement/scripts/story-status.ts`; the validation hook enforces the same rules when the file is edited directly:
+- `in-progress` and `done` need all `depends_on` stories `done`.
+- `done` needs a test titled `ST-NNN: <scenario title>` for every scenario (story), or every checklist item ticked `- [x]` (spike, tech task).
+- A story that turns out wrong during implementation goes from `in-progress` (or `ready`) back to `review`, with `[OPEN]` + an entry in `OPEN_QUESTIONS.md`; it is revised and approved again.
+- `done` is final. A change to finished behaviour is a new story.
 
 ## Body Structure
 ```
@@ -56,6 +60,8 @@ Scenario: <Error or edge case>
 ## Out of Scope
 ## Open Questions
 ```
+Scenario titles are unique within a story and become test titles (`ST-NNN: <scenario title>`). Renaming a scenario of an `in-progress` or `done` story breaks that link – the test must be renamed too (`verify.ts` reports it).
+
 Spikes: `## Question`, `## Timebox`, `## Acceptance Criteria` (checklist `- [ ] …`).
 Tech tasks: `## Task`, `## Acceptance Criteria` (checklist).
 

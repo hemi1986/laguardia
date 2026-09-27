@@ -41,7 +41,7 @@ const KIND_LABEL: Record<string, string> = {
 
 export const STATUSES = ["draft", "review", "ready", "in-progress", "done"] as const;
 /** Statuses that require a finished story: size set, no [OPEN] markers. */
-const COMMITTED = new Set(["ready", "in-progress", "done"]);
+export const COMMITTED = new Set(["ready", "in-progress", "done"]);
 const PRIORITIES = ["must", "should", "could", "wont"];
 
 // --------------------------------------------------------------------------
@@ -189,9 +189,9 @@ export function loadEventsModel(): Obj | null {
   }
 }
 
-type Index = Map<string, Obj>;
+export type Index = Map<string, Obj>;
 
-function indexModel(model: Obj): Index {
+export function indexModel(model: Obj): Index {
   const idx: Index = new Map();
   for (const key of LIST_KEYS) {
     for (const item of items(model, key)) {
@@ -424,9 +424,9 @@ export interface Story {
   body: string;
 }
 
-const storyId = (s: Story): string => (typeof s.meta.id === "string" ? s.meta.id : "");
+export const storyId = (s: Story): string => (typeof s.meta.id === "string" ? s.meta.id : "");
 
-function parseFrontmatter(path: string): { meta: Obj; body: string } {
+export function parseFrontmatter(path: string): { meta: Obj; body: string } {
   const text = readFileSync(path, "utf8").replaceAll("\r\n", "\n");
   if (!text.startsWith("---\n")) throw new Error("YAML frontmatter is missing (file must start with '---')");
   const end = text.indexOf("\n---", 4);
@@ -445,7 +445,7 @@ export function storyFiles(): string[] {
 }
 
 /** Parses all story files; files with broken frontmatter end up in `failures`. */
-function loadStories(): { parsed: Story[]; failures: [string, string][] } {
+export function loadStories(): { parsed: Story[]; failures: [string, string][] } {
   const parsed: Story[] = [];
   const failures: [string, string][] = [];
   for (const path of storyFiles()) {
@@ -458,7 +458,7 @@ function loadStories(): { parsed: Story[]; failures: [string, string][] } {
   return { parsed, failures };
 }
 
-function sections(body: string): Map<string, string> {
+export function sections(body: string): Map<string, string> {
   const out = new Map<string, string>();
   let current: string | null = null;
   for (const line of body.split("\n")) {
@@ -473,12 +473,12 @@ function sections(body: string): Map<string, string> {
   return out;
 }
 
-function section(secs: Map<string, string>, name: string): string | null {
+export function section(secs: Map<string, string>, name: string): string | null {
   for (const [k, v] of secs) if (k.startsWith(name)) return v;
   return null;
 }
 
-const SCENARIO_RE = /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:/m;
+export const SCENARIO_RE = /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:/m;
 
 function checkBody(r: Report, where: string, meta: Obj, body: string): void {
   const secs = sections(body);
@@ -500,6 +500,10 @@ function checkBody(r: Report, where: string, meta: Obj, body: string): void {
     return;
   }
   const scenarios = ac.split(SCENARIO_RE).slice(1);
+  // Scenario titles become test titles (`ST-NNN: <scenario title>`), so they must be unique within a story
+  const titles = scenarios.map((sc) => sc.split("\n")[0].trim().toLowerCase());
+  const dupes = titles.filter((t, n) => t && titles.indexOf(t) !== n);
+  if (dupes.length) r.error(where, `scenario titles must be unique within the story: ${[...new Set(dupes)].join(", ")}`);
   if (type === "story") {
     if (scenarios.length < 2) r.error(where, "at least 2 Gherkin scenarios required (happy path + error/edge case)");
     scenarios.forEach((sc, n) => {
@@ -607,7 +611,7 @@ const STATUS_TITLES: [string, string][] = [
 ];
 
 /** Orders stories by priority, then id – but always after the stories they depend on. */
-function backlogOrder(group: Story[]): Story[] {
+export function backlogOrder(group: Story[]): Story[] {
   const rank = (s: Story) => {
     const p = PRIORITIES.indexOf(s.meta.priority);
     return p === -1 ? PRIORITIES.length : p;
