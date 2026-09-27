@@ -2,31 +2,52 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { reportProblem } from "./report-problem";
 
-const context = { clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };
+const visitor = { kind: "visitor" } as const;
+const context = { actor: visitor, clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };
 
-describe("CMD-ReportProblem", () => {
+describe("CMD-ReportProblem – the decision", () => {
   it("records the problem report with its ID, machine, trimmed description, reporter and time", () => {
-    const result = reportProblem(
-      { machineId: "test-machine", description: "  Left flipper is weak  ", reporter: { kind: "visitor" } },
+    const decision = reportProblem(
+      undefined,
+      { machineId: "test-machine", description: "  Left flipper is weak  " },
       context,
     );
 
-    expect(result).toEqual({
+    const report = {
+      id: "report-1",
+      machineId: "test-machine",
+      description: "Left flipper is weak",
+      reporter: { kind: "visitor" },
+      reportedAt: new Date("2026-09-27T10:00:00Z"),
+    };
+    expect(decision).toEqual({
       ok: true,
-      event: {
-        type: "EVT-ProblemReported",
-        problemReportId: "report-1",
-        machineId: "test-machine",
-        description: "Left flipper is weak",
-        reporter: { kind: "visitor" },
-        reportedAt: new Date("2026-09-27T10:00:00Z"),
-      },
+      state: report,
+      events: [
+        {
+          type: "EVT-ProblemReported",
+          problemReportId: "report-1",
+          machineId: "test-machine",
+          description: "Left flipper is weak",
+          reporter: { kind: "visitor" },
+          reportedAt: new Date("2026-09-27T10:00:00Z"),
+        },
+      ],
     });
   });
 
-  it.each(["", "   ", "\n\t"])("rejects a problem report without a description (%j)", (description) => {
-    const result = reportProblem({ machineId: "test-machine", description, reporter: { kind: "visitor" } }, context);
+  it("takes the acting team member as the reporter", () => {
+    const actor = { kind: "team-member", teamMemberId: "tm-1", role: "helper" } as const;
 
-    expect(result).toEqual({ ok: false, error: "description-required" });
+    const decision = reportProblem(undefined, { machineId: "m-1", description: "Tilt" }, { ...context, actor });
+
+    expect(decision.ok && decision.state.reporter).toEqual({ kind: "team-member", teamMemberId: "tm-1" });
+  });
+
+  it.each(["", "   ", "\n\t"])("rejects a problem report without a description (%j)", (description) => {
+    expect(reportProblem(undefined, { machineId: "test-machine", description }, context)).toEqual({
+      ok: false,
+      error: "description-required",
+    });
   });
 });

@@ -176,6 +176,8 @@ const IGNORED_DIRS = new Set([
 ]);
 const CODE_EXT = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 const TEST_RE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^|\/)(e2e|__tests__)\//;
+// Test stand-ins of a module (engineering conventions): test code, but not tests – they carry no scenario titles.
+const TEST_SUPPORT_RE = /\.test-support\.[cm]?[jt]sx?$/;
 const CATALOG_DIR_RE = /(^|\/)(messages|locales|i18n)\//;
 
 export function projectFiles(): string[] {
@@ -195,6 +197,8 @@ export function projectFiles(): string[] {
 
 export const isCode = (f: string): boolean => CODE_EXT.has(extname(f)) && !f.endsWith(".d.ts");
 export const isTest = (f: string): boolean => isCode(f) && TEST_RE.test(f);
+/** Tests plus test stand-ins – excluded from the domain ID and language checks of application code. */
+export const isTestCode = (f: string): boolean => isTest(f) || (isCode(f) && TEST_SUPPORT_RE.test(f));
 export const isCatalog = (f: string): boolean => extname(f) === ".json" && CATALOG_DIR_RE.test(f);
 const read = (f: string): string => readFileSync(join(d.ROOT, f), "utf8");
 
@@ -221,7 +225,7 @@ export function scenarioCoverage(story: d.Story, titles = testTitles()): { cover
 export function domainIdsInCode(): Map<string, string[]> {
   const out = new Map<string, string[]>();
   const re = /\b(?:ACT|EXT|BC|AGG|EVT|CMD|POL|RM)-[A-Z][A-Za-z0-9]+\b/g;
-  for (const f of projectFiles().filter((f) => isCode(f) && !isTest(f))) {
+  for (const f of projectFiles().filter((f) => isCode(f) && !isTestCode(f))) {
     for (const m of read(f).matchAll(re)) out.set(m[0], [...new Set([...(out.get(m[0]) ?? []), f])]);
   }
   return out;
@@ -274,7 +278,7 @@ const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function avoidedWords(text: string, g: Glossary, inCode: boolean): { word: string; preferred: string }[] {
   let masked = ` ${text.toLowerCase()} `;
   for (const term of [...g.terms].sort((a, b) => b.length - a.length)) {
-    masked = masked.replace(new RegExp(`\\b${esc(term)}\\b`, "g"), " ¤ ");
+    masked = masked.replace(new RegExp(`\\b${esc(term)}s?\\b`, "g"), " ¤ "); // plural too: problemReports
   }
   const hits = g.avoid.filter(({ word }) => {
     if (g.terms.includes(word)) return false; // avoided in one place, the proper term elsewhere
@@ -324,7 +328,7 @@ export function languageFindings(): LanguageFinding[] {
   }
   // Identifiers declared in application code
   const decl = /\b(?:const|let|var|function|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
-  for (const f of files.filter((f) => isCode(f) && !isTest(f))) {
+  for (const f of files.filter((f) => isCode(f) && !isTestCode(f))) {
     const lines = read(f).split("\n");
     lines.forEach((line, n) => {
       if (line.includes("language-ok")) return; // explicit exception, e.g. a third-party `user` object

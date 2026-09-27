@@ -32,9 +32,10 @@ Inside a module (flat until it grows):
 |---|---|
 | `index.ts` | the module's **public interface** – the only file other modules and `src/app/` may import |
 | `schema.ts` | Drizzle tables of the module's aggregates (collected by `drizzle.config.ts`) |
-| `<command>.ts` | the pure domain rule of a command (e.g. `report-problem.ts`) |
-| `<command>-command.ts` | the command definition for the command layer (e.g. `report-problem-command.ts`) |
-| `<aggregate>s.ts` | persistence and read-model queries of an aggregate (e.g. `problem-reports.ts`) |
+| `<command>.ts` | the pure **decision** of a command and the aggregate's state/event types (e.g. `report-problem.ts`) |
+| `<command>-command.ts` | the command definition, `aggregateCommand({ … })` (e.g. `report-problem-command.ts`) |
+| `<aggregate>s.ts` | the aggregate's store (`aggregateStore`, row ↔ state) and its read-model queries (e.g. `problem-reports.ts`) |
+| `*.test-support.ts` | test stand-ins of a module, imported only by its tests |
 | `*.test.ts` / `*.integration.test.ts` | next to the code they test |
 
 **Import rules** (lint, `eslint.config.mjs`, ADR 0002):
@@ -51,43 +52,51 @@ Inside a module (flat until it grows):
 
 ## Writing a command
 
-Two parts: a pure domain rule, and the command definition that the command layer runs.
+Every command has one shape (ST-071, architecture review 2026-09-27, Q2/Q11/Q12/Q14): **load → pure decision → save → journal**. `aggregateCommand` (`src/platform/command/aggregate.ts`) is the only public way to write one; the layer does the loading, saving, version check and journaling.
 
 ```ts
-// report-problem.ts – pure: input + clock/newId in, event or rejection out
-export function reportProblem(input, { clock, newId }: Pick<CommandContext, "clock" | "newId">) {
+// problem-reports.ts – how the aggregate is stored; the version lives only in the store
+export const problemReports = aggregateStore({ type: "AGG-ProblemReport", table: problemReport, toState, toRow });
+
+// report-problem.ts – the pure decision: (state, input, { actor, clock, newId }) → new state + events, or a rejection
+export function reportProblem(_nothingYet: undefined, input, { actor, clock, newId }): Decision<ProblemReport, ProblemReported, "description-required"> {
   const description = input.description.trim();
   if (!description) return { ok: false, error: "description-required" };
-  return { ok: true, event: { type: "EVT-ProblemReported", problemReportId: newId(), …, reportedAt: clock.now() } };
+  const report = { id: newId(), machineId: input.machineId, description, reporter: reporterOf(actor), reportedAt: clock.now() };
+  return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId: report.id, … }] };
 }
 
-// report-problem-command.ts – the command layer's view
-export const reportProblemCommand = defineCommand({
+// report-problem-command.ts – the command
+export const reportProblemCommand = aggregateCommand({
   id: "CMD-ReportProblem",
   allowedActors: ["visitor", "helper", "technician"],
-  run: async (input, { tx, actor, clock, newId }) => {
-    const outcome = reportProblem({ ...input, reporter: reporterOf(actor) }, { clock, newId });
-    if (!outcome.ok) return outcome;                        // rejection → nothing stored
-    await saveProblemReported(tx, outcome.event);           // persistence with the transaction
-    return {
-      ok: true,
-      result: { problemReportId: outcome.event.problemReportId },
-      events: [{ type: "EVT-ProblemReported", aggregate: { type: "AGG-ProblemReport", id: … }, machineId: …, data: {} }],
-    };
-  },
+  store: problemReports,
+  creates: true,                                         // a creating command: no load, saved at version 0
+  decide: reportProblem,
+  journal: (event) => ({ type: event.type, aggregate: { type: "AGG-ProblemReport", id: event.problemReportId }, machineId: event.machineId, data: {} }),
+  result: (report) => ({ problemReportId: report.id }),
 });
+
+// a command on an existing aggregate names it and the version the acting person saw
+aggregateCommand({ …, target: (input) => ({ id: input.problemReportId, version: input.version }), decide: (state, input, context) => … });
 
 // src/app/…/actions.ts – a Server Action only calls it
 const outcome = await executeCommand(reportProblemCommand, { machineId, description }, { actor });
 ```
 
-What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
-1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules inside `run`.
-2. **One transaction** for all changes and journal entries; a returned rejection, a thrown `version-conflict` or `not-found` rolls everything back.
-3. **One point in time**: `clock.now()` is the same for the whole command, its events and its policies.
-4. **Every successful command journals at least one event** – returning `events: []` is a bug and throws.
+Rules:
+- **One aggregate per command** (Q12): a command changes (or creates) the aggregate of its `store`. Its decision may also create **new aggregates of the same module** – `created: [created(defects, newDefect)]` – saved in the same transaction. Anything else (another existing aggregate, another module) goes through a policy or `context.run` (ST-018).
+- **The decision is pure**: no database, no `new Date()`, no `randomUUID()` – the acting person, clock and ID generator come in its context. Rules with many cases get a table test at the decision (seam catalog).
+- **Journal mapping** (`journal`) per command until the event catalogue exists (ST-050) – references and non-personal facts only (see *The event journal*).
+- **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 
-Results: `{ ok: true, result }` or `{ ok: false, error }` where `error` is the command's own reason (kebab-case, shown via the message catalog) or `not-authorized` / `not-found` / `version-conflict`.
+What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
+1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules in the decision.
+2. **One transaction** for all changes and journal entries; a rejection, `version-conflict` or `not-found` rolls everything back.
+3. **One point in time**: `clock.now()` is the same for the whole command, its events and its policies.
+4. **Every successful command journals at least one event** – `events: []` from a command is a bug and throws.
+
+Results: `{ ok: true, result }` or `{ ok: false, error }` where `error` is the decision's own reason (kebab-case, shown via the message catalog) or `not-authorized` / `not-found` / `version-conflict`.
 
 The **actor** is passed by the Server Action today (the spike acts as visitor). From ST-069 on, it comes from the session in one place – never from form data.
 
@@ -101,20 +110,19 @@ The **actor** is passed by the Server Action today (the spike acts as visitor). 
 
 ## Version check (HS-16)
 
-Aggregates that two people can change concurrently have a `version integer not null default 0` column. The page shows the version; the command changes the row with
+Every aggregate table has `version integer not null default 0`; `aggregateStore` is the only place that reads or checks it. A page shows the version it loaded, and a command on an existing aggregate passes it in `target`. The layer then (Q11):
+1. loads the **fresh** state (`not-found` if there is none);
+2. lets the decision run on it – a **domain rejection comes first** ("already triaged by Eva", ST-018), because it explains more than a conflict;
+3. saves at the **version the acting person saw** and increments it – `version-conflict` when someone changed the aggregate in between and nothing domain-specific explains it.
 
-```ts
-await updateAtVersion(tx, problemReport, id, input.version, { …changes });
-```
-
-which increments the version, or rejects the whole command with `version-conflict` (someone else was first) or `not-found`. Required for every triage command and every command on a defect (ST-003). A friendlier message ("already triaged by X") is the command's own concern (ST-018).
+Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise. Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
 
 ## Automatic policies
 
-A policy (`POL-…`) is a command allowed for `"system"` only. The triggering command runs it **in its own transaction**:
+A policy (`POL-…`) is an `aggregateCommand` allowed for `"system"` only. The triggering command declares it; the layer runs it **after saving, in the same transaction**, as the system:
 
 ```ts
-await context.runAsSystem(closeDefectsOnRetirement, { machineId });
+policies: (machine) => [trigger(closeDefectsOnRetirement, { machineId: machine.id })],
 ```
 
 Its events are journaled with the system as actor, after the triggering command's events. A rejected policy rejects the whole command. A policy may journal nothing when there is nothing to do.
@@ -179,8 +187,8 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 
 | Kind of code | Seam | Test type | Example |
 |---|---|---|---|
-| Pure domain rule of a command (validation, invariants, derived values) | the rule's function (`reportProblem(input, { clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
-| Command (authorization, persistence, journal, rejection, version check, policies) | `executeCommand(command, input, { actor, db: testDatabase(), clock: fixedClock(…), newId })` against real PostgreSQL, observed through read models and `journalOf` | integration | `src/platform/command/execute-command.integration.test.ts`, `src/modules/repair/problem-report-version.integration.test.ts` |
+| Decision of a command – only where a rule has many cases (validation, invariants, derived values) | the decision function (`reportProblem(state, input, { actor, clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
+| Command – every command (authorization, load/decide/save, version check, created aggregates, journal, policies) | `executeCommand(command, input, { actor, db: testDatabase(), clock: fixedClock(…), newId })` against real PostgreSQL, observed through read models and `journalOf`; stand-ins for commands that don't exist yet live in the module's `*.test-support.ts` | integration | `src/modules/repair/report-problem-command.integration.test.ts`, `problem-report-version.integration.test.ts`, `problem-report-policies.integration.test.ts` |
 | Read model (query, filtering, sorting, time-based state) | the query function against real PostgreSQL, data set up through commands (or builders + persistence inside the module) | integration | `src/modules/repair/problem-reports.integration.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
@@ -191,7 +199,7 @@ Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks
 ## Before a story is done
 
 - [ ] Scenario tests titled exactly, at the seams above; `npm run verify -- --e2e` green
-- [ ] Commands via `defineCommand`/`executeCommand`, IDs from `events.yaml`, journal `data` without free text
+- [ ] Commands via `aggregateCommand` (load → decide → save), IDs from `events.yaml`, journal `data` without free text
 - [ ] No `new Date()` / `randomUUID()` in domain code; times via `time.ts`
 - [ ] Texts from the catalogs; new glossary terms in `CONTEXT.md` first
 - [ ] Only `index.ts` imported across modules
