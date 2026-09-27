@@ -276,11 +276,11 @@ flowchart LR
     EVT_WorkLogged -.-> RM_RepairTimes
     EVT_DefectResolved -.-> RM_RepairTimes
     RM_RepairTimes -.-> ACT_Technician
-    classDef evt fill:#ffb74d,stroke:#e65100,color:#000
+    classDef evt fill:#a3391f,stroke:#e65100,color:#000
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
-    classDef act fill:#fff176,stroke:#f57f17,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
     classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
     classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
@@ -303,11 +303,11 @@ flowchart LR
     EVT_ProblemReported --> ACT_Technician
     ACT_Technician --> EVT_DefectRecorded
     EVT_DefectRecorded --> EVT_MachineStatusChanged
-    classDef evt fill:#ffb74d,stroke:#e65100,color:#000
+    classDef evt fill:#a3391f,stroke:#e65100,color:#000
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
-    classDef act fill:#fff176,stroke:#f57f17,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
     classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
     classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
@@ -336,11 +336,11 @@ flowchart LR
     EVT_DefectResumed --> EVT_DefectResolved
     EVT_DefectResolved --> EVT_MachineStatusChanged
     EVT_MachineStatusChanged --> EVT_DefectReopened
-    classDef evt fill:#ffb74d,stroke:#e65100,color:#000
+    classDef evt fill:#a3391f,stroke:#e65100,color:#000
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
-    classDef act fill:#fff176,stroke:#f57f17,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
     classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
     classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
@@ -365,11 +365,11 @@ flowchart LR
     EVT_MaintenanceTaskOverdue --> ACT_Helper
     ACT_Helper --> EVT_MaintenanceRecorded
     EVT_MaintenanceRecorded --> EVT_ProblemReported
-    classDef evt fill:#ffb74d,stroke:#e65100,color:#000
+    classDef evt fill:#a3391f,stroke:#e65100,color:#000
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
-    classDef act fill:#fff176,stroke:#f57f17,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
     classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
     classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
@@ -392,11 +392,11 @@ flowchart LR
     EVT_FileAttached --> EVT_MachineStatusChanged
     EVT_MachineStatusChanged --> EVT_MachineRetired
     EVT_MachineRetired --> EVT_DefectClosedOnRetirement
-    classDef evt fill:#ffb74d,stroke:#e65100,color:#000
+    classDef evt fill:#a3391f,stroke:#e65100,color:#000
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
-    classDef act fill:#fff176,stroke:#f57f17,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
     classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
     classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
