@@ -1,14 +1,18 @@
 # ST-059: the quality gate on every push. The job "verify" is the required check for merging into main
-# (branch protection) and the Vercel Deployment Check that holds back the production alias while it is red.
+# (branch protection); a Vercel Deployment Check on it holds back the production alias while it is red.
+# Pushes cover pull requests too – the check shows on the PR's head commit.
 name: CI
 
 on:
   push:
-  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pushes to a branch are cancelled; every commit on main keeps its own result.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
 
 jobs:
   verify:

@@ -74,9 +74,10 @@ export type Machine = {
 
 export function aMachine(overrides: Partial<Machine> = {}): Machine {
   museumNumbers += 1;
+  if (museumNumbers > 999) throw new Error("aMachine: museum numbers LG-001…LG-999 used up – pass museumNumber");
   return {
     id: randomUUID(),
-    museumNumber: `LG-${String(museumNumbers % 1000).padStart(3, "0")}`,
+    museumNumber: `LG-${String(museumNumbers).padStart(3, "0")}`,
     machineModelId: randomUUID(),
     location: "Hall 1, row 1",
     machineStatus: "playable",

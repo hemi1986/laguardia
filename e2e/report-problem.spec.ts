@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("a visitor reports a problem for the test machine on a 360 px phone", async ({ page }) => {
   const description = `Left flipper is weak (browser test ${Date.now()})`;
