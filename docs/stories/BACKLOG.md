@@ -2,15 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**65 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 1 · Done: 0
+**65 stories** · In Progress: 0 · Ready: 63 · In Review: 0 · Draft: 1 · Done: 1
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-001](ST-001-walking-skeleton-vercel-eu.md) | Walking skeleton on Vercel with EU database and object storage | spike | Repair | must | M | high | – |
 
 ## Ready
 
@@ -85,3 +79,9 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
 | [ST-065](ST-065-retire-spike-scaffolding-and-move-to-pro-team.md) | Retire the ST-001 spike scaffolding and move hosting to the museum's Pro team | tech-task | Repair | should | – | – | ST-003, ST-004 |
+
+## Done
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-001](ST-001-walking-skeleton-vercel-eu.md) | Walking skeleton on Vercel with EU database and object storage | spike | Repair | must | M | high | – |
