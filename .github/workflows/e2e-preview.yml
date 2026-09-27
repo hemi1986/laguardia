@@ -1,55 +1,52 @@
-# ST-059: browser tests at 360 px against the preview deployment Vercel just finished.
-# Vercel sends repository_dispatch on every successful deployment; it runs this file from the default branch.
-# Run it by hand for any preview with "Run workflow" and the preview URL.
+# ST-059: browser tests at 360 px against the preview deployment of the pushed commit.
+# Vercel reports each deployment to GitHub (Deployments API); the job waits for the commit's preview
+# and runs the tests against its URL. Production (main) is not tested here – it is gated by "verify".
 name: Browser tests on preview
 
 on:
-  repository_dispatch:
-    types: [vercel.deployment.success]
-  workflow_dispatch:
-    inputs:
-      url:
-        description: Preview URL
-        required: true
-      sha:
-        description: Commit to test (default – the branch the run is started on)
-        required: false
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  statuses: write
+  deployments: read
 
 jobs:
   e2e:
-    if: github.event_name == 'workflow_dispatch' || github.event.client_payload.environment == 'preview'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      BASE_URL: ${{ github.event.client_payload.url || inputs.url }}
-      SHA: ${{ github.event.client_payload.git.sha || inputs.sha || github.sha }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ env.SHA }}
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Wait for the Vercel preview of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 50); do
+            id=$(gh api "repos/${{ github.repository }}/deployments?sha=${{ github.sha }}&environment=Preview" --jq '.[0].id // empty')
+            if [ -n "$id" ]; then
+              read -r state url < <(gh api "repos/${{ github.repository }}/deployments/$id/statuses" --jq '.[0] | "\(.state) \(.environment_url)"')
+              case "$state" in
+                success) echo "BASE_URL=$url" >> "$GITHUB_ENV"; echo "Preview: $url"; exit 0 ;;
+                failure|error) echo "::error::Vercel preview deployment failed"; exit 1 ;;
+              esac
+            fi
+            sleep 10
+          done
+          echo "::error::No successful Vercel preview for ${{ github.sha }} after 500 s"; exit 1
       - run: npm run test:e2e
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           SPIKE_PASSWORD: ${{ secrets.PREVIEW_SPIKE_PASSWORD }}
-      # repository_dispatch runs belong to the default branch – report the result on the tested commit too.
-      - if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
-        run: >-
-          gh api "repos/${{ github.repository }}/statuses/$SHA" -f state="$STATE" -f context="e2e (preview, 360 px)"
-          -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          -f description="Browser tests against $BASE_URL"
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
