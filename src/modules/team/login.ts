@@ -62,6 +62,18 @@ export async function currentPerson({ db, headers = new Headers(), inNext }: Dep
   return { kind: "team-member", teamMemberId: found.user.id, role };
 }
 
+/** The logged-in team member with name and role, for pages – undefined for a visitor. */
+export async function loggedInTeamMember({
+  db,
+  headers = new Headers(),
+  inNext,
+}: Dependencies): Promise<{ id: string; name: string; role: "helper" | "technician" } | undefined> {
+  const person = await currentPerson({ db, headers, inNext });
+  if (person.kind !== "team-member") return undefined;
+  const found = await authFor(db, inNext).api.getSession({ headers });
+  return found ? { id: person.teamMemberId, name: found.user.name, role: person.role } : undefined;
+}
+
 export async function logOut({ db, headers = new Headers(), inNext }: Dependencies): Promise<void> {
   await authFor(db, inNext).api.signOut({ headers });
 }
