@@ -18,6 +18,19 @@ export const teamMessages = {
     Defect: "Defekt",
     "Maintenance task": "Wartungsaufgabe",
   },
+  login: {
+    title: "Anmelden",
+    username: "Benutzername",
+    password: "Passwort",
+    submit: "Anmelden",
+    failed: "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.",
+    locked: "Zu viele fehlgeschlagene Versuche. Bitte in 15 Minuten erneut versuchen.",
+  },
+  team: {
+    start: "La Guardia – Team",
+    loggedInAs: "Angemeldet als",
+    logout: "Abmelden",
+  },
   // The ST-001 spike page – removed with the spike (ST-066).
   spike: {
     password: "Spike-Passwort",

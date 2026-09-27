@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-003, ST-071]
 labels: [mvp, foundation, team]
-status: ready
+status: done
 ---
 
 ## Story

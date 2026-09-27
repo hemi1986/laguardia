@@ -15,6 +15,20 @@
       "when": 1790519103935,
       "tag": "0001_event_journal_and_problem_report_version",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790537446480,
+      "tag": "0002_team_member_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790537530089,
+      "tag": "0003_problem_report_reporter_team_member",
+      "breakpoints": true
     }
   ]
 }

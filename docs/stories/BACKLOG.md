@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 0 of 55 domain stories done** · scenarios 0 of 354
+**Progress: 1 of 55 domain stories done** · scenarios 10 of 354
 
-**72 stories** · In Progress: 0 · Ready: 67 · In Review: 0 · Draft: 0 · Done: 5
+**72 stories** · In Progress: 0 · Ready: 66 · In Review: 0 · Draft: 0 · Done: 6
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003, ST-071 |
 | [ST-005](ST-005-manage-team-member-accounts.md) | Manage team member accounts | story | Team | must | M | low | ST-004 |
 | [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
 | [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | L | medium | ST-071 |
@@ -89,3 +88,4 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-059](ST-059-ci-and-test-harness.md) | CI and test harness | tech-task | Repair | must | M | medium | ST-001 |
 | [ST-003](ST-003-command-layer-and-event-journal.md) | Module structure, command layer, event journal and time convention | tech-task | Team | must | M | medium | ST-059 |
 | [ST-071](ST-071-commands-load-decide-save.md) | Commands as load, decide, save | tech-task | Repair | must | M | medium | ST-003 |
+| [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003, ST-071 |
