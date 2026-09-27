@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { currentPerson, logIn, logOut } from ".";
+import { currentPerson, logIn, logOut, renewedSessionCookie } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
 
 const db = testDatabase();
@@ -102,5 +102,30 @@ describe("logging in", () => {
 
     // The session is gone: the same cookie makes her a visitor, so a team page asks for the login again.
     expect(await currentPerson({ db, headers })).toEqual({ kind: "visitor" });
+  });
+
+  it("keeps a team member logged in while she uses La Guardia – 90 days counted from the last use", async () => {
+    const { id, username, password } = await anna();
+    const start = new Date("2026-09-01T08:00:00Z").getTime();
+    vi.useFakeTimers({ toFake: ["Date"], now: start });
+    const headers = await loggedIn(username, password);
+
+    vi.setSystemTime(start + 60 * DAY); // she uses it on day 60 …
+    expect(await currentPerson({ db, headers })).toMatchObject({ teamMemberId: id });
+    vi.setSystemTime(start + 120 * DAY); // … so on day 120 she is still logged in
+    expect(await currentPerson({ db, headers })).toMatchObject({ teamMemberId: id });
+  });
+
+  it("renews the session cookie in the browser on every request, so it slides like the session", async () => {
+    const { username, password } = await anna();
+    const headers = await loggedIn(username, password);
+
+    const renewed = await renewedSessionCookie({ db, cookieHeader: headers.get("cookie") ?? "" });
+
+    expect(renewed).toMatchObject({
+      value: headers.get("cookie")?.split("=").slice(1).join("="),
+      attributes: { maxAge: 90 * 24 * 60 * 60, httpOnly: true, sameSite: "lax", path: "/" },
+    });
+    expect(await renewedSessionCookie({ db, cookieHeader: "" })).toBeUndefined();
   });
 });
