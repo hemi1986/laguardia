@@ -11,7 +11,7 @@ import type { Clock } from "./clock";
 /** A calendar date in Europe/Berlin, `YYYY-MM-DD`. */
 export type CalendarDate = string;
 
-const berlin = new Intl.DateTimeFormat("en-CA", {
+const berlinDate = new Intl.DateTimeFormat("en", {
   timeZone: "Europe/Berlin",
   year: "numeric",
   month: "2-digit",
@@ -19,7 +19,23 @@ const berlin = new Intl.DateTimeFormat("en-CA", {
 });
 
 export function calendarDate(instant: Date): CalendarDate {
-  return berlin.format(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    berlinDate.formatToParts(instant).find((p) => p.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+const berlinDateTime = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** A point in time as the team and visitors see it: Berlin time, e.g. "15.01.2026, 10:05". */
+export function formatDateTime(instant: Date): string {
+  return berlinDateTime.format(instant);
 }
 
 export function today(clock: Clock): CalendarDate {
@@ -59,12 +75,16 @@ export function addMonths(date: CalendarDate, months: number): CalendarDate {
   return format(new Date(Date.UTC(year, month, Math.min(d.getUTCDate(), lastDayOfMonth))));
 }
 
+/** 25 % of the actual days of an interval starting on `start`, rounded up – the time from due to overdue. */
+export function graceDays(start: CalendarDate, intervalMonths: number): number {
+  return Math.ceil(daysBetween(start, addMonths(start, intervalMonths)) / 4);
+}
+
 /** Due date and first overdue day of a maintenance task last done on `lastDone` with an interval of whole months. */
 export function maintenanceDates(
   lastDone: CalendarDate,
   intervalMonths: number,
 ): { dueDate: CalendarDate; overdueFrom: CalendarDate } {
   const dueDate = addMonths(lastDone, intervalMonths);
-  const graceDays = Math.ceil(daysBetween(lastDone, dueDate) / 4);
-  return { dueDate, overdueFrom: addDays(dueDate, graceDays) };
+  return { dueDate, overdueFrom: addDays(dueDate, graceDays(lastDone, intervalMonths)) };
 }

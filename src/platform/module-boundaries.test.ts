@@ -46,4 +46,23 @@ describe("module boundaries", () => {
     expect(publicInterface).toEqual([]);
     expect(ownInternals).toEqual([]);
   });
+
+  it("reject imports against the direction app → modules → platform", async () => {
+    const platformImportsModule = await boundaryErrors(
+      "src/platform/deliberate-violation.ts",
+      'import { reportProblemCommand } from "@/modules/repair";\nexport const x = reportProblemCommand;\n',
+    );
+    const moduleImportsApp = await boundaryErrors(
+      "src/modules/repair/deliberate-violation.ts",
+      'import { enterSpike } from "@/app/actions";\nexport const x = enterSpike;\n',
+    );
+    const moduleImportsSpike = await boundaryErrors(
+      "src/modules/repair/deliberate-violation.ts",
+      'import { TEST_MACHINE_ID } from "@/spike/test-machine";\nexport const x = TEST_MACHINE_ID;\n',
+    );
+
+    expect(platformImportsModule).toHaveLength(1);
+    expect(moduleImportsApp).toHaveLength(1);
+    expect(moduleImportsSpike).toHaveLength(1);
+  });
 });

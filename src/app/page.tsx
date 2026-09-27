@@ -2,6 +2,7 @@ import Link from "next/link";
 import { database } from "@/platform/database";
 import { problemReportsOfMachine } from "@/modules/repair";
 import { teamMessages, visitorMessages } from "@/platform/messages";
+import { formatDateTime } from "@/platform/time";
 import { hasSpikeAccess } from "@/spike/access";
 import { TEST_MACHINE_ID } from "@/spike/test-machine";
 import { enterSpike, reportProblemForTestMachine } from "./actions";
@@ -42,7 +43,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <ul>
         {reports.map((r) => (
           <li key={r.id}>
-            {r.reportedAt.toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}: {r.description}
+            {formatDateTime(r.reportedAt)}: {r.description}
           </li>
         ))}
       </ul>

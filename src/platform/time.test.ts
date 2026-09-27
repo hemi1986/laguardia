@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "./clock";
-import { addMonths, calendarDate, elapsedMoreThanHours, maintenanceDates, today } from "./time";
+import {
+  addMonths,
+  calendarDate,
+  elapsedMoreThanHours,
+  formatDateTime,
+  graceDays,
+  maintenanceDates,
+  today,
+} from "./time";
 
 describe("time convention", () => {
   describe("calendar dates are in Europe/Berlin", () => {
@@ -72,6 +80,28 @@ describe("time convention", () => {
       ["2027-06-01", 12, "2028-06-01", "2028-09-01"], // 366 days (leap year) → 92 (91.5 rounded up)
     ])("last done %s, every %i month(s): due %s, overdue from %s", (lastDone, months, due, overdueFrom) => {
       expect(maintenanceDates(lastDone, months)).toEqual({ dueDate: due, overdueFrom });
+    });
+  });
+
+  describe("grace period of an interval, counted from any start (e.g. the return to display, ST-056)", () => {
+    it.each([
+      ["2026-02-01", 1, 7],
+      ["2026-05-10", 1, 8], // 31 days
+      ["2026-01-01", 3, 23],
+      ["2025-01-01", 12, 92],
+    ])("from %s, %i month(s): %i days", (start, months, days) => {
+      expect(graceDays(start, months)).toBe(days);
+    });
+  });
+
+  describe("times are shown in Europe/Berlin", () => {
+    it.each([
+      ["2026-01-15T09:05:00Z", "15.01.2026, 10:05"],
+      ["2026-07-15T09:05:00Z", "15.07.2026, 11:05"],
+      ["2026-10-25T00:30:00Z", "25.10.2026, 02:30"],
+      ["2026-10-25T01:30:00Z", "25.10.2026, 02:30"],
+    ])("%s is shown as %s", (instant, shown) => {
+      expect(formatDateTime(new Date(instant))).toBe(shown);
     });
   });
 });
