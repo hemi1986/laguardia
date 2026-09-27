@@ -22,6 +22,8 @@ export default defineConfig({
           name: "integration",
           include: ["src/**/*.integration.test.ts"],
           globalSetup: ["src/test-support/reset-test-database.ts"],
+          // Better Auth needs a secret; tests use a fixed one (production: BETTER_AUTH_SECRET in Vercel).
+          env: { BETTER_AUTH_SECRET: "test-secret-only-for-integration-tests-0123456789" },
         },
       },
     ],
