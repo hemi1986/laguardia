@@ -7,8 +7,8 @@ import { hasSpikeAccess } from "@/spike/access";
 const MAX_BYTES = 110 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadPresignedBody;
   try {
+    const body = (await request.json()) as HandleUploadPresignedBody;
     const json = await handleUploadPresigned({
       body,
       request,

@@ -5,6 +5,7 @@ import { problemReport } from "./schema";
 
 export async function saveProblemReported(db: NodePgDatabase, event: ProblemReported): Promise<void> {
   await db.insert(problemReport).values({
+    id: event.problemReportId,
     machineId: event.machineId,
     description: event.description,
     reporterKind: event.reporter.kind,

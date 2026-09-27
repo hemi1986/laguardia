@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { database } from "@/db/client";
@@ -22,7 +23,7 @@ export async function reportProblemForTestMachine(formData: FormData): Promise<v
       description: String(formData.get("description") ?? ""),
       reporter: { kind: "visitor" },
     },
-    new Date(),
+    { now: new Date(), newId: randomUUID },
   );
   if (!result.ok) redirect("/?error=description-required");
   await saveProblemReported(database(), result.event);

@@ -14,6 +14,7 @@ export type ReportProblemInput = {
 
 export type ProblemReported = {
   type: "EVT-ProblemReported";
+  problemReportId: string;
   machineId: string;
   description: string;
   reporter: Reporter;
@@ -22,13 +23,17 @@ export type ProblemReported = {
 
 export type ReportProblemResult = { ok: true; event: ProblemReported } | { ok: false; error: "description-required" };
 
-export function reportProblem(input: ReportProblemInput, now: Date): ReportProblemResult {
+/** The clock and the ID source are injected so the command stays deterministic in tests. */
+export type CommandContext = { now: Date; newId: () => string };
+
+export function reportProblem(input: ReportProblemInput, { now, newId }: CommandContext): ReportProblemResult {
   const description = input.description.trim();
   if (!description) return { ok: false, error: "description-required" };
   return {
     ok: true,
     event: {
       type: "EVT-ProblemReported",
+      problemReportId: newId(),
       machineId: input.machineId,
       description,
       reporter: input.reporter,
