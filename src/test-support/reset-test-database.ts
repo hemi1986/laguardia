@@ -17,7 +17,9 @@ export default async function resetTestDatabase(): Promise<void> {
   const client = new Client({ connectionString: url.toString() });
   await client.connect();
   try {
-    await client.query("DROP SCHEMA IF EXISTS public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public");
+    await client.query(
+      "DROP SCHEMA IF EXISTS public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public",
+    );
     await migrate(drizzle(client), { migrationsFolder: "drizzle" });
   } finally {
     await client.end();
