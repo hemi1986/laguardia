@@ -74,3 +74,6 @@ Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story who
 After the foundation stories, per finished bounded context or about every 8–10 stories: `/improve-codebase-architecture`.
 
 Anytime: `/grill-me` to stress-test a plan, `/grill-with-docs` to do the same while recording glossary terms and ADRs.
+
+## Next.js
+@AGENTS.md
