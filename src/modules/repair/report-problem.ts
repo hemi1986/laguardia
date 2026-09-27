@@ -1,4 +1,4 @@
-import type { Clock } from "@/clock";
+import type { Clock } from "@/platform/clock";
 
 /**
  * CMD-ReportProblem (AGG-ProblemReport): a visitor or team member reports a problem with a machine.

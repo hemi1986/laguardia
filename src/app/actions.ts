@@ -3,10 +3,9 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { systemClock } from "@/clock";
-import { database } from "@/db/client";
-import { saveProblemReported } from "@/modules/repair/problem-reports";
-import { reportProblem } from "@/modules/repair/report-problem";
+import { systemClock } from "@/platform/clock";
+import { database } from "@/platform/database";
+import { reportProblem, saveProblemReported } from "@/modules/repair";
 import { grantSpikeAccess, hasSpikeAccess } from "@/spike/access";
 import { TEST_MACHINE_ID } from "@/spike/test-machine";
 

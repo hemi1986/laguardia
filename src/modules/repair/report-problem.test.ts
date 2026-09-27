@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixedClock } from "@/clock";
+import { fixedClock } from "@/platform/clock";
 import { reportProblem } from "./report-problem";
 
 const context = { clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };

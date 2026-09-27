@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { database } from "@/db/client";
-import { problemReportsOfMachine } from "@/modules/repair/problem-reports";
+import { database } from "@/platform/database";
+import { problemReportsOfMachine } from "@/modules/repair";
 import { hasSpikeAccess } from "@/spike/access";
 import { TEST_MACHINE_ID } from "@/spike/test-machine";
 import { enterSpike, reportProblemForTestMachine } from "./actions";
