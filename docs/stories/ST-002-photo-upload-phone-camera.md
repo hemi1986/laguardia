@@ -9,7 +9,7 @@ risk: high
 events: [EVT-ProblemReported, EVT-WorkLogged, EVT-FileAttached]
 depends_on: [ST-001]
 labels: [mvp, foundation]
-status: ready
+status: done
 ---
 
 ## Question
@@ -21,15 +21,15 @@ Background: server actions have a small default request body limit (1 MB) while 
 2 days.
 
 ## Acceptance Criteria
-- [ ] Taking a new photo with the camera and choosing an existing photo both work in current iOS Safari and current Android Chrome.
-- [ ] iPhone HEIC photos are handled (converted or rejected with a clear message) – decision documented.
-- [ ] The photo is rotated according to its EXIF orientation **before** the metadata is stripped, so no photo ends up sideways.
-- [ ] Photos are downscaled in the browser before they are uploaded; the target is decided and documented (proposal: long edge at most 2048 px, JPEG or WebP, at most 1 MB).
-- [ ] The server re-encodes every received photo within the documented limits and removes all EXIF metadata; a stored photo is inspected and contains no GPS location.
-- [ ] The server rejects content that is not an image and photos above the maximum size; the limit is documented as a number and used by ST-016, ST-032 and ST-054.
-- [ ] Photos of problem reports and work log entries are only accessible to logged-in team members – checked with a stub login, since real login comes with ST-004; their storage addresses cannot be guessed or listed by visitors.
-- [ ] A downscaled photo uploads in under 5 seconds on a phone over normal Wi-Fi (measured on at least one phone).
-- [ ] The result is a reusable building block for taking and uploading photos plus server-side check, documented for ST-016 (problem reports), ST-032 (work log entries) and ST-054 (photos as files).
+- [x] Taking a new photo with the camera and choosing an existing photo both work in current iOS Safari and current Android Chrome.
+- [x] iPhone HEIC photos are handled (converted or rejected with a clear message) – decision documented.
+- [x] The photo is rotated according to its EXIF orientation **before** the metadata is stripped, so no photo ends up sideways.
+- [x] Photos are downscaled in the browser before they are uploaded; the target is decided and documented (proposal: long edge at most 2048 px, JPEG or WebP, at most 1 MB).
+- [x] The server re-encodes every received photo within the documented limits and removes all EXIF metadata; a stored photo is inspected and contains no GPS location.
+- [x] The server rejects content that is not an image and photos above the maximum size; the limit is documented as a number and used by ST-016, ST-032 and ST-054.
+- [x] Photos of problem reports and work log entries are only accessible to logged-in team members – checked with a stub login, since real login comes with ST-004; their storage addresses cannot be guessed or listed by visitors.
+- [x] A downscaled photo uploads in under 5 seconds on a phone over normal Wi-Fi (measured on at least one phone).
+- [x] The result is a reusable building block for taking and uploading photos plus server-side check, documented for ST-016 (problem reports), ST-032 (work log entries) and ST-054 (photos as files).
 
 ## Out of Scope
 - Uploading large PDF files (ST-001)

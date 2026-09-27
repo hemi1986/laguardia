@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**66 stories** · In Progress: 0 · Ready: 65 · In Review: 0 · Draft: 0 · Done: 1
+**66 stories** · In Progress: 0 · Ready: 64 · In Review: 0 · Draft: 0 · Done: 2
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -10,7 +10,6 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-002](ST-002-photo-upload-phone-camera.md) | Take photos with a phone camera and upload them safely | spike | Repair | must | M | high | ST-001 |
 | [ST-059](ST-059-ci-and-test-harness.md) | CI and test harness | tech-task | Repair | must | M | medium | ST-001 |
 | [ST-003](ST-003-command-layer-and-event-journal.md) | Module structure, command layer, event journal and time convention | tech-task | Team | must | M | medium | ST-059 |
 | [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003 |
@@ -71,7 +70,7 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards highlight what is new since the last visit | story | Repair | should | M | medium | ST-049, ST-058 |
 | [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-028 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | should | XS | low | ST-008, ST-043 |
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007 |
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 and ST-002 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007 |
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |
@@ -81,3 +80,4 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
 | [ST-001](ST-001-walking-skeleton-vercel-eu.md) | Walking skeleton on Vercel with EU database and object storage | spike | Repair | must | M | high | – |
+| [ST-002](ST-002-photo-upload-phone-camera.md) | Take photos with a phone camera and upload them safely | spike | Repair | must | M | high | ST-001 |

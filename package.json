@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "verify": "node .claude/skills/implement/scripts/verify.ts"
+    "verify": "node .claude/skills/implement/scripts/verify.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
@@ -22,7 +24,8 @@
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "sharp": "^0.35.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
