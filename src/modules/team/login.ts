@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { APIError } from "better-auth/api";
+import { and, asc, eq, gt, lt, sql } from "drizzle-orm";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Actor, Database } from "@/platform/command";
 import { authFor } from "./auth";
@@ -23,17 +24,32 @@ export async function logIn(
 ): Promise<LoginOutcome> {
   const username = input.username.trim().toLowerCase();
   const now = clock.now();
-  if (await isLocked(db, username, now)) return { ok: false, error: "login-locked" };
+  // Reserve the attempt as a failure first, one attempt per username at a time: a burst of parallel attempts cannot
+  // all pass the lock check. The short transaction holds no connection while the password is checked.
+  const reservation = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"login:" + username}))`);
+    // Failed logins only matter for the lock – forget them after twice the window.
+    await tx.delete(failedLogin).where(lt(failedLogin.failedAt, new Date(now.getTime() - 2 * WINDOW_MS)));
+    if (await isLocked(tx, username, now)) return undefined;
+    const [row] = await tx.insert(failedLogin).values({ username, failedAt: now }).returning({ id: failedLogin.id });
+    return row.id;
+  });
+  if (!reservation) return { ok: false, error: "login-locked" };
+  const release = () => db.delete(failedLogin).where(eq(failedLogin.id, reservation));
   try {
     const { headers: responseHeaders } = await authFor(db, inNext).api.signInUsername({
       body: { username, password: input.password },
       headers,
       returnHeaders: true,
     });
+    await release();
     return { ok: true, cookies: responseHeaders.getSetCookie() };
-  } catch {
-    // Same answer for an unknown username and a wrong password – nothing reveals which part was wrong.
-    await db.insert(failedLogin).values({ username, failedAt: now });
+  } catch (error) {
+    if (!(error instanceof APIError)) {
+      await release(); // an outage is not a failed login
+      throw error;
+    }
+    // The reservation stays as the failure. Same answer for an unknown username and a wrong password.
     return { ok: false, error: "login-failed" };
   }
 }

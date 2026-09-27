@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { currentPerson, logIn, logOut, renewedSessionCookie } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
+import { failedLogin } from "./schema";
 
 const db = testDatabase();
 const DAY = 24 * 3_600_000;
@@ -127,5 +129,27 @@ describe("logging in", () => {
       attributes: { maxAge: 90 * 24 * 60 * 60, httpOnly: true, sameSite: "lax", path: "/" },
     });
     expect(await renewedSessionCookie({ db, cookieHeader: "" })).toBeUndefined();
+  });
+
+  it("cannot be bypassed by sending many failed logins at the same time", async () => {
+    const { username } = await anna();
+
+    const outcomes = await Promise.all(
+      Array.from({ length: 15 }, () => logIn({ username, password: "not-the-password" }, { db })),
+    );
+
+    expect(outcomes.filter((o) => !o.ok && o.error === "login-failed")).toHaveLength(10);
+    expect(outcomes.filter((o) => !o.ok && o.error === "login-locked")).toHaveLength(5);
+  });
+
+  it("forgets failed logins after 30 minutes – they only matter for the lock", async () => {
+    const { username } = await anna();
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T08:00:00Z") });
+    await logIn({ username, password: "not-the-password" }, { db });
+
+    vi.setSystemTime(new Date("2026-09-01T08:31:00Z"));
+    await logIn({ username: "someone_else", password: "not-the-password" }, { db });
+
+    expect(await db.select().from(failedLogin).where(eq(failedLogin.username, username))).toEqual([]);
   });
 });
