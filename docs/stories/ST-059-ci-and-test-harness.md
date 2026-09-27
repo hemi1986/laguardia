@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-001]
 labels: [mvp, foundation]
-status: ready
+status: in-progress
 ---
 
 ## Task
