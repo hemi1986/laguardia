@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**66 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 0 · Done: 2
+**68 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 2 · Done: 2
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -79,6 +79,13 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |
+
+## Draft
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | should | XS | low | ST-003 |
+| [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | should | S | medium | ST-013, ST-059 |
 
 ## Done
 
