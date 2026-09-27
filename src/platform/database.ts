@@ -1,6 +1,10 @@
 import { attachDatabasePool } from "@vercel/functions";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgDatabase, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import type { PgDatabase } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
+
+/** A database handle or an open transaction – what persistence functions of the modules accept. */
+export type Database = PgDatabase<NodePgQueryResultHKT>;
 
 let db: NodePgDatabase | undefined;
 

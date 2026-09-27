@@ -100,4 +100,69 @@ describe("command layer", () => {
     });
     expect(ran).toBe(false);
   });
+
+  it("runs an automatic policy as the system actor in the same transaction and journals it as the system", async () => {
+    const machineId = randomUUID();
+    const reportWithPolicy = defineCommand({
+      id: "CMD-TestReportWithPolicy",
+      allowedActors: ["technician"],
+      run: async (input: { machineId: string }, context) => {
+        const reported = await reportProblemCommand.run({ ...input, description: "Tilt bob missing" }, context);
+        if (!reported.ok) return reported;
+        await context.runAsSystem(policyForTest, { problemReportId: reported.result.problemReportId });
+        return reported;
+      },
+    });
+
+    const outcome = await executeCommand(reportWithPolicy, { machineId }, deps(technician));
+
+    if (!outcome.ok) throw new Error(outcome.error);
+    expect(
+      (await journalOf(db, { aggregateId: outcome.result.problemReportId })).map((e) => [e.type, e.actor]),
+    ).toEqual([
+      ["EVT-ProblemReported", technician],
+      ["EVT-TestPolicyApplied", { kind: "system" }],
+    ]);
+  });
+
+  it("rejects the whole command, including the triggering change, when its automatic policy is rejected", async () => {
+    const machineId = randomUUID();
+    const reportWithRejectedPolicy = defineCommand({
+      id: "CMD-TestReportWithRejectedPolicy",
+      allowedActors: ["technician"],
+      run: async (input: { machineId: string }, context) => {
+        const reported = await reportProblemCommand.run({ ...input, description: "Tilt bob missing" }, context);
+        if (!reported.ok) return reported;
+        await context.runAsSystem(policyForTest, { problemReportId: reported.result.problemReportId, reject: true });
+        return reported;
+      },
+    });
+
+    const outcome = await executeCommand(reportWithRejectedPolicy, { machineId }, deps(technician));
+
+    expect(outcome).toEqual({ ok: false, error: "policy-rejected" });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(await journalOf(db, { machineId })).toEqual([]);
+  });
+});
+
+/** A stand-in for the automatic policies (e.g. POL-RetirementClosesDefects): allowed for the system only. */
+const policyForTest = defineCommand({
+  id: "CMD-TestPolicy",
+  allowedActors: ["system"],
+  run: async (input: { problemReportId: string; reject?: boolean }) =>
+    input.reject
+      ? { ok: false as const, error: "policy-rejected" }
+      : {
+          ok: true as const,
+          result: undefined,
+          events: [
+            {
+              type: "EVT-TestPolicyApplied" as const,
+              aggregate: { type: "AGG-ProblemReport" as const, id: input.problemReportId },
+              machineId: null,
+              data: {},
+            },
+          ],
+        },
 });

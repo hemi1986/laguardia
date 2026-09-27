@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql, type SQL } from "drizzle-orm";
-import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
-import type { PgDatabase, PgTable, PgColumn } from "drizzle-orm/pg-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { systemClock, type Clock } from "../clock";
-import { database } from "../database";
+import { database, type Database } from "../database";
 import { eventJournal } from "../schema";
 
 /**
@@ -12,11 +11,11 @@ import { eventJournal } from "../schema";
  *   2. one database transaction for the command's changes and its journal entries;
  *   3. a rejection or a version conflict rolls everything back – no change, no journal entry.
  * Commands get the clock and the ID generator injected, so they are deterministic in tests.
- * All commands are invoked through Server Actions (POST, Origin checked by Next.js – the CSRF protection).
+ * Automatic policies run inside the triggering command's transaction as the system actor: `context.runAsSystem`.
+ * All commands are invoked through Server Actions (POST, Origin checked – the CSRF protection, src/proxy.ts).
  */
 
-/** A database handle or an open transaction – what persistence functions of the modules accept. */
-export type Database = PgDatabase<NodePgQueryResultHKT>;
+export type { Database } from "../database";
 
 export type Role = "helper" | "technician";
 
@@ -34,7 +33,20 @@ export type JournalEvent = {
   data: Record<string, unknown>;
 };
 
-export type CommandContext = { tx: Database; actor: Actor; clock: Clock; newId: () => string };
+export type CommandContext = {
+  tx: Database;
+  actor: Actor;
+  clock: Clock;
+  newId: () => string;
+  /**
+   * Runs an automatic policy (a command allowed for the system) in this command's transaction, journaled with
+   * the system as actor. If the policy is rejected, the whole command is rejected with the policy's error.
+   */
+  runAsSystem: <Input, Result, Error extends string>(
+    policy: Command<Input, Result, Error>,
+    input: Input,
+  ) => Promise<Result>;
+};
 
 export type CommandOutcome<Result, Error extends string> =
   { ok: true; result: Result; events: JournalEvent[] } | { ok: false; error: Error };
@@ -46,7 +58,7 @@ export type Command<Input, Result, Error extends string> = {
 };
 
 export type CommandResult<Result, Error extends string> =
-  { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "version-conflict" };
+  { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "not-found" | "version-conflict" };
 
 export function defineCommand<Input, Result, Error extends string>(
   command: Command<Input, Result, Error>,
@@ -64,6 +76,8 @@ class Rejected extends Error {
 
 class VersionConflict extends Error {}
 
+class NotFound extends Error {}
+
 export async function executeCommand<Input, Result, Error extends string>(
   command: Command<Input, Result, Error>,
   input: Input,
@@ -71,32 +85,63 @@ export async function executeCommand<Input, Result, Error extends string>(
 ): Promise<CommandResult<Result, Error>> {
   if (!command.allowedActors.includes(actorKind(actor))) return { ok: false, error: "not-authorized" };
 
-  // One point in time per command: every event and every "… at" of the command carries it.
+  // One point in time per command: every event and every "… at" of the command (and its policies) carries it.
   const now = clock.now();
   const commandClock: Clock = { now: () => new Date(now) };
 
   try {
     const result = await db.transaction(async (tx) => {
-      const outcome = await command.run(input, { tx, actor, clock: commandClock, newId });
-      if (!outcome.ok) throw new Rejected(outcome.error);
-      if (outcome.events.length > 0) {
-        await tx.insert(eventJournal).values(outcome.events.map((event) => journalRow(event, actor, now)));
-      }
-      return outcome.result;
+      const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
+      if (rows.length > 0) await tx.insert(eventJournal).values(rows);
+      return result;
     });
     return { ok: true, result };
   } catch (error) {
     if (error instanceof Rejected) return { ok: false, error: error.reason as Error };
+    if (error instanceof NotFound) return { ok: false, error: "not-found" };
     if (error instanceof VersionConflict) return { ok: false, error: "version-conflict" };
     throw error;
   }
+}
+
+type TransactionScope = { tx: Database; clock: Clock; newId: () => string };
+
+type JournalRow = typeof eventJournal.$inferInsert;
+
+/**
+ * Runs a command inside an open transaction; a rejection throws (and rolls the transaction back).
+ * Returns its journal rows in causal order: the command's own events, then those of the policies it triggered.
+ */
+async function runInTransaction<Input, Result, Error extends string>(
+  command: Command<Input, Result, Error>,
+  input: Input,
+  actor: Actor,
+  scope: TransactionScope,
+): Promise<{ result: Result; rows: JournalRow[] }> {
+  const policyRows: JournalRow[] = [];
+  const outcome = await command.run(input, {
+    ...scope,
+    actor,
+    runAsSystem: async (policy, policyInput) => {
+      if (!policy.allowedActors.includes("system")) throw new Error(`${policy.id} is not an automatic policy`);
+      const { result, rows } = await runInTransaction(policy, policyInput, { kind: "system" }, scope);
+      policyRows.push(...rows);
+      return result;
+    },
+  });
+  if (!outcome.ok) throw new Rejected(outcome.error);
+  const occurredAt = scope.clock.now();
+  return {
+    result: outcome.result,
+    rows: [...outcome.events.map((e) => journalRow(e, actor, occurredAt)), ...policyRows],
+  };
 }
 
 function actorKind(actor: Actor): AllowedActor {
   return actor.kind === "team-member" ? actor.role : actor.kind;
 }
 
-function journalRow(event: JournalEvent, actor: Actor, occurredAt: Date): typeof eventJournal.$inferInsert {
+function journalRow(event: JournalEvent, actor: Actor, occurredAt: Date): JournalRow {
   return {
     type: event.type,
     occurredAt,
@@ -114,7 +159,8 @@ type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
 
 /**
  * Optimistic version check (HS-16): changes the aggregate only if it is still at the version the actor saw,
- * and increments the version. Otherwise the whole command is rejected with "version-conflict".
+ * and increments the version. Otherwise the whole command is rejected with "version-conflict" – or with
+ * "not-found" when no aggregate has that ID.
  * Of two concurrent commands at the same version, PostgreSQL lets the second wait for the first and then
  * finds no row at the old version.
  */
@@ -131,7 +177,13 @@ export async function updateAtVersion<T extends VersionedTable>(
     .set({ ...changes, version: sql`${table.version} + 1` } as never)
     .where(where)
     .returning({ id: table.id });
-  if (updated.length === 0) throw new VersionConflict();
+  if (updated.length > 0) return;
+  const [existing] = await tx
+    .select({ id: table.id })
+    .from(table as PgTable)
+    .where(eq(table.id, id))
+    .limit(1);
+  throw existing ? new VersionConflict() : new NotFound();
 }
 
 export type JournalEntry = {

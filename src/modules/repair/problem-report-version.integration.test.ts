@@ -54,4 +54,14 @@ describe("optimistic version check on the problem report (HS-16)", () => {
       "EVT-TestDescriptionChanged",
     ]);
   });
+
+  it("rejects a change of a problem report that does not exist as not found, not as a version conflict", async () => {
+    const outcome = await executeCommand(
+      changeDescriptionForTest,
+      { problemReportId: randomUUID(), version: 0, description: "A" },
+      deps,
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "not-found" });
+  });
 });
