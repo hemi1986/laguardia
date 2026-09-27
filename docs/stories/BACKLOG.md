@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**70 stories** · In Progress: 0 · Ready: 62 · In Review: 0 · Draft: 4 · Done: 4
+**73 stories** · In Progress: 0 · Ready: 62 · In Review: 0 · Draft: 7 · Done: 4
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -77,9 +77,12 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
+| [ST-071](ST-071-commands-load-decide-save.md) | Commands as load, decide, save – with an event catalogue and a typed acting person | tech-task | Repair | must | L | medium | ST-003 |
+| [ST-072](ST-072-photo-module-with-storage-seam.md) | Photo module with a storage seam – store, run the command, delete on failure | tech-task | Repair | must | M | medium | ST-071 (draft) |
+| [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | M | medium | ST-071 (draft), ST-072 (draft) |
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | should | XS | low | ST-003 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | should | S | medium | ST-013, ST-059 |
-| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | should | S | medium | ST-004 |
+| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | should | S | medium | ST-004, ST-073 (draft) |
 | [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | should | M | medium | ST-003 |
 
 ## Done
