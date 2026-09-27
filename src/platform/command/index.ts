@@ -25,7 +25,12 @@ export type Actor =
 
 export type AllowedActor = Role | "visitor" | "system";
 
-/** A domain event as the command hands it to the journal. The command's clock supplies the time. */
+/**
+ * A domain event as the command hands it to the journal. The command's clock supplies the time.
+ * `data` holds only references and non-personal facts (e.g. a new status or priority) – never free text a person
+ * typed (descriptions, notes, reasons): the journal is append-only, so text there could never be removed
+ * (spam dismissal, personal data). Pages read such text from the aggregate. Decided 2026-09-27 (ST-003 review).
+ */
 export type JournalEvent = {
   type: `EVT-${string}`;
   aggregate: { type: `AGG-${string}`; id: string };

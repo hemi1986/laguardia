@@ -34,10 +34,8 @@ describe("command layer", () => {
         actor: technician,
         aggregate: { type: "AGG-ProblemReport", id: outcome.result.problemReportId },
         machineId,
-        data: {
-          description: "Left flipper is weak",
-          reporter: { kind: "team-member", teamMemberId: technicianId },
-        },
+        // No free text in the journal: the description lives only in the problem report, where it can be removed.
+        data: {},
       },
     ]);
   });

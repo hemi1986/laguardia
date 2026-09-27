@@ -24,7 +24,7 @@ const changeDescriptionForTest = defineCommand({
           type: "EVT-TestDescriptionChanged",
           aggregate: { type: "AGG-ProblemReport", id: input.problemReportId },
           machineId: null,
-          data: { description: input.description },
+          data: {},
         },
       ],
     };

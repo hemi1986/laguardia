@@ -22,7 +22,7 @@ export const reportProblemCommand = defineCommand({
           type: event.type,
           aggregate: { type: "AGG-ProblemReport" as const, id: event.problemReportId },
           machineId: event.machineId,
-          data: { description: event.description, reporter: event.reporter },
+          data: {}, // the reporter is the journal's actor; the description stays in the problem report only
         },
       ],
     };
