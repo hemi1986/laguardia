@@ -9,7 +9,7 @@ risk: high
 events: [EVT-ProblemReported, EVT-WorkLogged, EVT-FileAttached]
 depends_on: [ST-001]
 labels: [mvp, foundation]
-status: in-progress
+status: done
 ---
 
 ## Question

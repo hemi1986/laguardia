@@ -2,15 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**66 stories** · In Progress: 1 · Ready: 64 · In Review: 0 · Draft: 0 · Done: 1
+**66 stories** · In Progress: 0 · Ready: 64 · In Review: 0 · Draft: 0 · Done: 2
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-002](ST-002-photo-upload-phone-camera.md) | Take photos with a phone camera and upload them safely | spike | Repair | must | M | high | ST-001 |
 
 ## Ready
 
@@ -86,3 +80,4 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
 | [ST-001](ST-001-walking-skeleton-vercel-eu.md) | Walking skeleton on Vercel with EU database and object storage | spike | Repair | must | M | high | – |
+| [ST-002](ST-002-photo-upload-phone-camera.md) | Take photos with a phone camera and upload them safely | spike | Repair | must | M | high | ST-001 |
