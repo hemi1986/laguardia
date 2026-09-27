@@ -2,7 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**75 stories** · In Progress: 0 · Ready: 71 · In Review: 0 · Draft: 0 · Done: 4
+**Progress: 0 of 55 domain stories done** · scenarios 0 of 354
+
+**72 stories** · In Progress: 0 · Ready: 68 · In Review: 0 · Draft: 0 · Done: 4
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -14,25 +16,24 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003, ST-071 |
 | [ST-005](ST-005-manage-team-member-accounts.md) | Manage team member accounts | story | Team | must | M | low | ST-004 |
 | [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
-| [ST-072](ST-072-photo-module-with-storage-seam.md) | Photo module with a storage seam – store, run the command, delete on failure | tech-task | Repair | must | M | medium | ST-071 |
-| [ST-074](ST-074-event-catalogue-typed-acting-person-command-composition.md) | Event catalogue, typed acting person and command composition | tech-task | Repair | must | M | medium | ST-071 |
-| [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | M | medium | ST-071, ST-072, ST-074 |
-| [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | M | medium | ST-006, ST-071, ST-073 |
+| [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | L | medium | ST-071 |
+| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | must | S | medium | ST-004, ST-073, ST-005 |
+| [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | M | medium | ST-006, ST-071, ST-073, ST-069 |
 | [ST-008](ST-008-machine-overview.md) | Machine overview with search and machine status filter | story | Collection | must | S | low | ST-007 |
 | [ST-009](ST-009-machine-record.md) | Machine record with machine status history | story | Collection | must | S | low | ST-008 |
 | [ST-010](ST-010-visitor-machine-page.md) | Visitor machine page in German and English | story | Repair | must | M | medium | ST-007 |
 | [ST-060](ST-060-custom-domain-and-qr-address.md) | Custom domain and stable QR address scheme | tech-task | Collection | must | XS | low | ST-001 |
 | [ST-011](ST-011-qr-sticker.md) | QR sticker leads visitors and team members to the machine | story | Collection | must | M | medium | ST-009, ST-010, ST-060 |
-| [ST-012](ST-012-change-machine-status.md) | Change the machine status | story | Collection | must | S | low | ST-009, ST-074 |
+| [ST-012](ST-012-change-machine-status.md) | Change the machine status | story | Collection | must | M | low | ST-009 |
 | [ST-013](ST-013-visitor-reports-problem.md) | Visitor reports a problem at the machine | story | Repair | must | M | medium | ST-010 |
 | [ST-015](ST-015-team-member-reports-problem.md) | Team member reports a problem from the machine record | story | Repair | must | S | low | ST-009, ST-013 |
 | [ST-017](ST-017-triage-list.md) | Triage list of untriaged problem reports | story | Repair | must | S | low | ST-013, ST-015 |
-| [ST-018](ST-018-record-defect.md) | Triage – record a defect, optionally changing the machine status | story | Repair | must | M | medium | ST-012, ST-017 |
+| [ST-018](ST-018-record-defect.md) | Triage – record a defect, optionally changing the machine status | story | Repair | must | L | medium | ST-012, ST-017 |
 | [ST-021](ST-021-open-defects-list.md) | Open defects list and defect details | story | Repair | must | M | low | ST-008, ST-018 |
 | [ST-064](ST-064-legal-pages-visitor.md) | Legal pages for the visitor pages in German and English | story | Repair | must | S | low | ST-010 |
-| [ST-016](ST-016-photo-on-problem-report.md) | Add a photo to a problem report and show it to the team | story | Repair | must | M | high | ST-002, ST-015, ST-017, ST-021, ST-064, ST-072 |
+| [ST-016](ST-016-photo-on-problem-report.md) | Add a photo to a problem report and show it to the team | story | Repair | must | L | high | ST-002, ST-015, ST-017, ST-021, ST-064, ST-073 |
 | [ST-019](ST-019-resolve-problem-on-the-spot.md) | Triage – resolve a problem on the spot | story | Repair | must | S | low | ST-017 |
-| [ST-020](ST-020-dismiss-problem-report.md) | Triage – dismiss a problem report, removing spam content | story | Repair | must | S | low | ST-017 |
+| [ST-020](ST-020-dismiss-problem-report.md) | Triage – dismiss a problem report, removing spam content | story | Repair | must | S | low | ST-017, ST-016 |
 | [ST-022](ST-022-link-problem-report-to-defect.md) | Triage – link a problem report to an open defect | story | Repair | must | S | low | ST-018, ST-021 |
 | [ST-023](ST-023-technician-reports-and-triages.md) | Technician reports a problem and records a defect in the same step | story | Repair | must | M | medium | ST-015, ST-018 |
 | [ST-025](ST-025-claim-defect.md) | Claim or take over a defect | story | Repair | must | S | low | ST-021 |
@@ -50,12 +51,12 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | high | ST-003, ST-007, ST-040 |
 | [ST-044](ST-044-record-maintenance.md) | Record maintenance on a machine | story | Maintenance | must | S | low | ST-043 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | must | XS | low | ST-009, ST-044 |
-| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | must | M | medium | ST-001, ST-009 |
+| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | must | M | medium | ST-001, ST-009, ST-016 |
 | [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | must | S | medium | ST-001 |
 | [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | must | S | medium | ST-061 |
 | [ST-063](ST-063-dependency-and-security-routine.md) | Dependency and security update routine | tech-task | Repair | must | XS | low | ST-059 |
 | [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | must | S | medium | ST-001 |
-| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | must | M | medium | ST-003 |
+| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | must | M | medium | ST-003, ST-013 |
 | [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | must | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070 |
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | must | M | low | ST-044 |
 | [ST-056](ST-056-not-on-display-and-return-to-display.md) | Due maintenance for machines not on display and returning to display | story | Maintenance | must | S | high | ST-012, ST-043 |
@@ -63,17 +64,15 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-048](ST-048-technician-dashboard.md) | Technician dashboard – untriaged problem reports and machines ready to return to play | story | Repair | must | S | low | ST-012, ST-017, ST-028 |
 | [ST-052](ST-052-report-and-link-or-resolve-on-the-spot.md) | Report a problem and link it or resolve it on the spot in the same step | story | Repair | must | S | low | ST-019, ST-022, ST-023 |
 | [ST-053](ST-053-link-reopens-resolved-defect.md) | Linking a problem report to a recently resolved defect reopens it | story | Repair | must | S | medium | ST-022, ST-030 |
-| [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | must | S | low | ST-002, ST-037 |
+| [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | must | S | low | ST-002, ST-037, ST-016 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | must | S | low | ST-039 |
 | [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | must | M | medium | ST-024, ST-026, ST-030, ST-043, ST-048 |
-| [ST-075](ST-075-ci-preview-database-connection-for-seeding.md) | CI obtains the preview database connection for seeding | tech-task | Repair | must | S | medium | ST-059 |
-| [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | S | medium | ST-007, ST-013, ST-059, ST-075 |
-| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | must | S | medium | ST-004, ST-073 |
-| [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | should | S | low | ST-002, ST-024 |
+| [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | M | medium | ST-007, ST-013, ST-059 |
+| [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | should | S | low | ST-002, ST-024, ST-016 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | should | S | low | ST-037 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
 | [ST-049](ST-049-helper-dashboard.md) | Helper dashboard | story | Repair | should | M | low | ST-026, ST-027, ST-029, ST-030, ST-031, ST-043 |
-| [ST-050](ST-050-new-since-last-visit.md) | Dashboards highlight what is new since the last visit | story | Repair | should | M | medium | ST-049, ST-058 |
+| [ST-050](ST-050-new-since-last-visit.md) | Dashboards highlight what is new since the last visit | story | Repair | should | L | medium | ST-049, ST-058 |
 | [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-028 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | should | XS | low | ST-008, ST-043 |
 | [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 and ST-002 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007, ST-068 |

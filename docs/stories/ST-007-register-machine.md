@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: medium
 events: [EVT-MachineRegistered]
-depends_on: [ST-006, ST-071, ST-073]
+depends_on: [ST-006, ST-071, ST-073, ST-069]
 labels: [mvp, collection]
 status: ready
 ---

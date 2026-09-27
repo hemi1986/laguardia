@@ -2,7 +2,7 @@
  * Moves a story to a new status, enforcing the workflow and its preconditions:
  *   in-progress / done – all depends_on are done
  *   done (story)       – every Gherkin scenario has a test titled `ST-NNN: <scenario title>`
- *   done (spike/task)  – every acceptance criterion is ticked (`- [x]`)
+ *   done (all types)   – every checklist item in the acceptance criteria is ticked (`- [x]`) – also a story's foundation checklist
  *   done is final      – changes become a new story
  *
  * Usage: node story-status.ts ST-010 in-progress|done|review

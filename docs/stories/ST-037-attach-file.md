@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: medium
 events: [EVT-FileAttached]
-depends_on: [ST-001, ST-009]
+depends_on: [ST-001, ST-009, ST-016]
 labels: [mvp, files]
 status: ready
 ---

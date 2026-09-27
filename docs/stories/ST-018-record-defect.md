@@ -4,7 +4,7 @@ title: Triage – record a defect, optionally changing the machine status
 type: story
 context: BC-Repair
 priority: must
-size: M
+size: L
 risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
@@ -24,6 +24,8 @@ Rules and invariants:
 - One problem report leads to one defect (HS-4).
 - Manual policy `POL-DefectMayChangeMachineStatus` / HS-3: in the same step the technician may set the machine to *Limited* or *Out of order* – two events, one action, one transaction. Only *Limited* and *Out of order* are offered in this step. The status history entry's reason is a reference to the new defect (its title); no extra input is needed. If the status change is rejected (e.g. the machine was retired meanwhile), the defect is not recorded either and the problem report stays untriaged.
 - The race between two technicians is covered by a real concurrency test (two transactions on the same problem report version), not only by a sequential test.
+
+**Foundation (moved from ST-074 on 2026-09-27).** HS-3 is the first case of one command running another: the status change belongs to `AGG-Machine` in the collection module, and a command belongs to one aggregate (architecture review 2026-09-27, Q12, ST-071). This story therefore builds `context.run(command, input)` (architecture review 2026-09-27, decision **Q6**): it runs another command – also another module's, imported through its `index.ts` – in the same transaction, as the same acting person, including that command's authorization check. A rejection of the inner command rejects everything; the inner command's error type becomes part of the outer command's result type. `context.runAsSystem` stays for automatic policies.
 
 ## Acceptance Criteria
 
@@ -75,6 +77,13 @@ Scenario: Helpers cannot record defects
   Given a helper is logged in
   When the helper tries to record a defect from a problem report
   Then the action is rejected
+
+### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q6)
+- [ ] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
+- [ ] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
+- [ ] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
+- [ ] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
+- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
 
 ## Out of Scope
 - Changing priority or details later (ST-027, ST-031)

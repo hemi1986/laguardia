@@ -4,10 +4,10 @@ title: Browser test of the real visitor problem report flow
 type: tech-task
 context: BC-Repair
 priority: must
-size: S
+size: M
 risk: medium
 events: []
-depends_on: [ST-007, ST-013, ST-059, ST-075]
+depends_on: [ST-007, ST-013, ST-059]
 labels: [follow-up, foundation]
 status: ready
 ---
@@ -19,21 +19,33 @@ The only browser test, `e2e/report-problem.spec.ts`, drives the ST-001 spike tes
 
 Replace the spike browser test with a browser test of the real visitor flow from ST-010 and ST-013, run against the commit's Vercel preview by the existing workflow `.github/workflows/e2e-preview.yml`: a visitor opens the visitor machine page of a machine by its museum number and reports a problem. This task must be done before or together with ST-066, so at least one browser test keeps running at all times.
 
-The test needs a machine that is on display in the preview's database. Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2): a seed step in the browser-test workflow registers the machine through `CMD-RegisterMachine` (ST-007) in the preview's Neon database branch, so the event journal stays consistent, with a fixed museum number reserved for tests. It runs only against preview database branches, never production; the connection comes from the CI step of ST-075.
+The test needs a machine that is on display in the preview's database. Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2): a seed step in the browser-test workflow registers the machine through `CMD-RegisterMachine` (ST-007) in the preview's Neon database branch, so the event journal stays consistent, with a fixed museum number reserved for tests. It runs only against preview database branches, never production; the connection comes from the CI step built by this task (below).
+
+**Preview database connection (moved from ST-075 on 2026-09-27).** Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2) as a separate task, merged back into this one by the backlog restructuring of 2026-09-27. The seed step needs a step in `.github/workflows/e2e-preview.yml` that obtains the database connection of the Neon branch belonging to the pushed commit's Vercel preview (`docs/adr/0006-hosting-verified-vercel-pro-neon-private-blob.md`) and hands it to the following steps. How the connection is obtained – through the Vercel/Neon integration, the Vercel API or the Neon API – is left to engineering; the criteria below hold for any mechanism.
 
 ## Acceptance Criteria
-- [ ] A seed step in `.github/workflows/e2e-preview.yml`, run before the browser test, registers a machine with the fixed test museum number (a valid given museum number, "LG-" plus three digits, ST-007) and the initial machine status *Playable* through `CMD-RegisterMachine` in the preview's database branch, using the connection from ST-075; the machine model it needs is created through `CMD-CreateMachineModel` (ST-006) if it does not exist yet; both are journaled like any other command (`EVT-MachineModelCreated`, `EVT-MachineRegistered`).
+- [ ] A seed step in `.github/workflows/e2e-preview.yml`, run before the browser test, registers a machine with the fixed test museum number (a valid given museum number, "LG-" plus three digits, ST-007) and the initial machine status *Playable* through `CMD-RegisterMachine` in the preview's database branch, using the connection from the step below; the machine model it needs is created through `CMD-CreateMachineModel` (ST-006) if it does not exist yet; both are journaled like any other command (`EVT-MachineModelCreated`, `EVT-MachineRegistered`).
 - [ ] The seed step is repeatable: when the machine model or the machine with the test museum number already exists in the preview's database branch, the step leaves it as it is and succeeds.
-- [ ] The seed step runs only against a preview database branch: it relies on ST-075's production guard and never receives a production connection.
+- [ ] The seed step runs only against a preview database branch: it relies on the production guard of the connection step below and never receives a production connection.
 - [ ] A browser test at 360 px width opens the visitor machine page of a machine that is on display, reports a problem with a description, and sees the confirmation in the visitor's language.
 - [ ] The same test asserts that the visitor machine page and the report form have no horizontal scrolling at 360 px width (page width ≤ 360 px).
 - [ ] The test runs in `.github/workflows/e2e-preview.yml` against the commit's Vercel preview and is green there; the run is linked as evidence.
-- [ ] The test uses neither the spike password nor the machine `"test-machine"`; the browser test needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`, and the seed step none other than those of ST-075.
+- [ ] The test uses neither the spike password nor the machine `"test-machine"`; the browser test needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`, and the seed step none other than those of the connection step below.
 - [ ] The test does not depend on data left behind by earlier runs: a second run against the same preview is green as well.
 - [ ] `e2e/report-problem.spec.ts` (the spike test) is removed or rewritten, so no browser test references the spike page any more.
 - [ ] The browser test job still finishes in under 10 minutes including waiting for the preview (ST-059).
 
+### Foundation (moved from ST-075 on 2026-09-27 – preview database connection, story review decision 2)
+- [ ] After the existing "Wait for the Vercel preview of this commit" step, a step in `.github/workflows/e2e-preview.yml` makes the database connection of the Neon branch used by that commit's preview deployment available to the following steps of the same job (e.g. as a masked environment variable).
+- [ ] The connection belongs to the same preview the browser tests run against: a following step that reads a row written through that preview (or the Neon branch name/ID reported for the preview deployment) confirms it; the run is linked as evidence.
+- [ ] The step never yields the production database: when the connection it obtains points to the production branch, the step fails before any later step uses it; demonstrated with a deliberate change (e.g. pointing it at the production branch's ID) and then reverted.
+- [ ] When the preview's database branch cannot be found or the API call fails, the step retries within the job's time limit and then fails with a message that names the reason; it never falls back to another branch.
+- [ ] The connection string and every token the step needs never appear in the job log (masked); the step prints at most the branch name or ID.
+- [ ] Every token the step needs is stored as a GitHub Actions secret and, so that Dependabot branches run the workflow as well, as a Dependabot secret with the same name; the token's scope is as narrow as the provider allows (read access to the project's preview branches), and its name and purpose are documented in `.env.example` next to `VERCEL_AUTOMATION_BYPASS_SECRET`.
+- [ ] The workflow's `permissions` stay minimal (no new GitHub permission beyond what the step needs).
+
 ## Out of Scope
+- The separate Blob store and other preview environment settings (ST-061)
 - Removing the spike scaffolding itself (ST-066)
 - Making "Browser tests on preview" a required check for merging into `main` (`docs/reviews/ST-059-code-review.md` finding #16, to be decided e.g. in ST-061)
 - Browser tests for further flows (team login, triage, maintenance)

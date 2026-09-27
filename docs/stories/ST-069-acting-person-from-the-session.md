@@ -7,7 +7,7 @@ priority: must
 size: S
 risk: medium
 events: []
-depends_on: [ST-004, ST-073]
+depends_on: [ST-004, ST-073, ST-005]
 labels: [follow-up, security]
 status: ready
 ---
@@ -24,7 +24,7 @@ Follow-up of ST-003 (module structure, command layer, event journal): `docs/revi
 
 A deactivated account (ST-005) must not act: a command sent with the session of a deactivated account is rejected and stores nothing – also when the command allows visitors (e.g. `CMD-ReportProblem`); the login is requested. A deactivated team member never acts in that request, not even anonymously; after the session has ended they can report as a visitor (answer of the story review 2026-09-27, `docs/reviews/2026-09-27-story-review-st-067-073.md`).
 
-**Ordering.** Right after ST-004 and before ST-005, so ST-005's Server Actions already get the acting person from the runner's `currentPerson()`. The deactivated-account criterion is tested with an account marked deactivated in the test data; if the deactivated state only arrives with ST-005, ST-005 carries that check through the runner's `currentPerson()`.
+**Ordering.** Right after ST-073 (the runner it builds on) and before ST-007, so the first team form that registers machines already gets the acting person from the session through the runner's `currentPerson()`. Revised on 2026-09-27 (`docs/reviews/2026-09-27-workflow-retrospective.md`): the earlier answer "right after ST-004, before ST-005" no longer holds, because ST-073 now comes after ST-006. ST-005 exists by then, so the deactivated-account criterion is tested with a deactivated account from ST-005.
 
 The runner, its signature and its lint rule stay as ST-073 built them. Tests keep calling `executeCommand` with an explicit actor.
 
@@ -47,4 +47,4 @@ The runner, its signature and its lint rule stay as ST-073 built them. Tests kee
 - Branded ID types (`docs/reviews/ST-003-code-review.md` finding #11)
 
 ## Open Questions
-- none – both questions (deactivated account with a visitor-allowed command; order relative to ST-005) were answered as recommended in the story review of 2026-09-27 (see Task).
+- none – both questions (deactivated account with a visitor-allowed command; order) were answered in the story review of 2026-09-27; the order was revised the same day in the workflow retrospective (see Task).

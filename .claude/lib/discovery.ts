@@ -652,6 +652,18 @@ export function renderBacklog(stories: Story[], model: Obj | null): string {
   }
 
   const counts = STATUS_TITLES.map(([st, title]) => [title, stories.filter((s) => s.meta.status === st).length] as const);
+  // Progress is measured in domain stories and their scenarios, not in the total number of stories (CLAUDE.md).
+  const domain = stories.filter((s) => s.meta.type === "story");
+  const scenarioCount = (s: Story) =>
+    (section(sections(s.body), "acceptance criteria") ?? "")
+      .split("\n")
+      .filter((line) => /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:/.test(line)).length;
+  const doneDomain = domain.filter((s) => s.meta.status === "done");
+  out.push(
+    `**Progress: ${doneDomain.length} of ${domain.length} domain stories done** · ` +
+      `scenarios ${doneDomain.reduce((n, s) => n + scenarioCount(s), 0)} of ${domain.reduce((n, s) => n + scenarioCount(s), 0)}`,
+    "",
+  );
   out.push(
     `**${stories.length} ${stories.length === 1 ? "story" : "stories"}** · ` +
       counts.map(([title, n]) => `${title}: ${n}`).join(" · "),
