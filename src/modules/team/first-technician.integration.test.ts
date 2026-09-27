@@ -44,14 +44,34 @@ describe("setting up the first technician", () => {
     const outcome = await setUpFirstTechnician(db, { name: "Eva", username: "eva", password: "eva-secret-10" });
 
     expect(outcome).toEqual({ ok: false, error: "accounts-exist" });
-    const { rows } = await db.execute<{ username: string }>(sql`SELECT username FROM setup_test.team_member`);
-    expect(rows).toEqual([{ username: "tom" }]);
+    const { rows } = await db.execute<{ username: string; name: string; role: string }>(
+      sql`SELECT username, name, role FROM setup_test.team_member`,
+    );
+    expect(rows).toEqual([{ username: "tom", name: "Tom", role: "technician" }]);
   });
 
   it("refuses a password shorter than 10 characters", async () => {
     expect(await setUpFirstTechnician(db, { name: "Zoe", username: "zoe", password: "short" })).toEqual({
       ok: false,
       error: "password-too-short",
+    });
+  });
+
+  it.each([
+    ["a space", "Tom Weber"],
+    ["too short", "to"],
+    ["an umlaut", "jürgen"],
+  ])("refuses a username that could never log in (%s)", async (_, username) => {
+    expect(await setUpFirstTechnician(db, { name: "Tom", username, password: "tom-secret-10" })).toEqual({
+      ok: false,
+      error: "username-invalid",
+    });
+  });
+
+  it("refuses an empty name", async () => {
+    expect(await setUpFirstTechnician(db, { name: "  ", username: "tom", password: "tom-secret-10" })).toEqual({
+      ok: false,
+      error: "name-required",
     });
   });
 });

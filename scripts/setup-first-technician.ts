@@ -40,9 +40,12 @@ async function main() {
     process.exit(0);
   }
   console.error(
-    outcome.error === "accounts-exist"
-      ? "Team member accounts exist already – nothing was created or changed."
-      : "The password must have at least 10 characters – nothing was created.",
+    {
+      "name-required": "The name must not be empty – nothing was created.",
+      "username-invalid": "The username needs 3–30 characters: letters a–z, digits, _ and . – nothing was created.",
+      "password-too-short": "The password must have at least 10 characters – nothing was created.",
+      "accounts-exist": "Team member accounts exist already – nothing was created or changed.",
+    }[outcome.error],
   );
   process.exit(1);
 }

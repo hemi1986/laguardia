@@ -87,7 +87,7 @@ describe("logging in", () => {
     // Rejected even with the correct password – the password is not checked while the username is locked.
     expect(await logIn({ username, password }, { db })).toEqual({ ok: false, error: "login-locked" });
 
-    vi.setSystemTime(new Date("2026-09-01T08:30:00Z")); // 15 minutes after the last attempt
+    vi.setSystemTime(new Date("2026-09-01T08:30:00Z")); // more than 15 minutes after the 10th failure (08:09)
     const later = await logIn({ username, password }, { db });
     expect(later.ok).toBe(true);
     if (later.ok) {

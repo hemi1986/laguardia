@@ -70,24 +70,22 @@ async function isLocked(db: Database, username: string, now: Date): Promise<bool
 }
 
 /** The acting person of a request: the logged-in team member with the role stored now, or a visitor. */
-export async function currentPerson({ db, headers = new Headers(), inNext }: Dependencies): Promise<Actor> {
-  const found = await authFor(db, inNext).api.getSession({ headers });
-  if (!found || found.user.banned) return { kind: "visitor" };
-  const role = found.user.role;
-  if (role !== "helper" && role !== "technician") throw new Error(`Team member ${found.user.id} has no valid role`);
-  return { kind: "team-member", teamMemberId: found.user.id, role };
+export async function currentPerson(dependencies: Dependencies): Promise<Actor> {
+  const member = await loggedInTeamMember(dependencies);
+  return member ? { kind: "team-member", teamMemberId: member.id, role: member.role } : { kind: "visitor" };
 }
 
-/** The logged-in team member with name and role, for pages – undefined for a visitor. */
+/** The logged-in team member with name and role, for pages – undefined for a visitor. One session lookup. */
 export async function loggedInTeamMember({
   db,
   headers = new Headers(),
   inNext,
 }: Dependencies): Promise<{ id: string; name: string; role: "helper" | "technician" } | undefined> {
-  const person = await currentPerson({ db, headers, inNext });
-  if (person.kind !== "team-member") return undefined;
   const found = await authFor(db, inNext).api.getSession({ headers });
-  return found ? { id: person.teamMemberId, name: found.user.name, role: person.role } : undefined;
+  if (!found || found.user.banned) return undefined; // a deactivated account acts as nobody (ST-005, ST-069)
+  const role = found.user.role;
+  if (role !== "helper" && role !== "technician") throw new Error(`Team member ${found.user.id} has no valid role`);
+  return { id: found.user.id, name: found.user.name, role };
 }
 
 export async function logOut({ db, headers = new Headers(), inNext }: Dependencies): Promise<void> {

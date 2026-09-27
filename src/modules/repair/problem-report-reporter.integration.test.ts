@@ -9,7 +9,8 @@ const db = testDatabase();
 
 async function columnType(table: string, column: string): Promise<string> {
   const { rows } = await db.execute<{ data_type: string }>(
-    sql`SELECT data_type FROM information_schema.columns WHERE table_name = ${table} AND column_name = ${column}`,
+    sql`SELECT data_type FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = ${table} AND column_name = ${column}`,
   );
   return rows[0]?.data_type ?? "missing";
 }
@@ -24,7 +25,7 @@ describe("the reporting team member of a problem report", () => {
     const withoutAccount = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     await expect(
       executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { actor: withoutAccount, db }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ cause: { code: "23503" } }); // foreign_key_violation
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
   });
 });

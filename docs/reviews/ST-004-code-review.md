@@ -26,3 +26,8 @@ Confirmed as correct: throttling window arithmetic (30-minute query window, lock
 
 fix blockers first
 Most important: the session cookie keeps its 90-day Max-Age from login because Server Component renders can't re-issue it (#1), so daily users are logged out after 90 days although the rule is "90 days without use".
+
+## Resolution (main session, 2026-09-27)
+- **Fixed:** #1 blocker – `src/proxy.ts` renews the session cookie on every page request (`renewedSessionCookie`, test); #2 test "use on day 60, still logged in on day 120"; #3 attempts are reserved as failures under a per-username advisory lock (test with 15 parallel attempts: exactly 10 failed, 5 locked); #4 setup refuses an empty name and usernames Better Auth would not accept at login (tests); #5 failed logins older than 30 minutes are deleted (test); #6 conventions (security/login, seam catalog, test data, cross-module foreign keys, `scripts/`); #8 only Better Auth's rejections count as failed logins; #9 one session lookup per call; #11 the FK test expects `23503` and filters on the schema; #12 "or changed" checked; #13 comment corrected.
+- **Skipped minors (below the follow-up hurdle):** #7 the `clock` parameter stays – the conventions inject clocks, though Better Auth itself reads the global `Date`; #10 raw SQL test accounts in `src/test-support/team-members.ts` until ST-005 provides account commands; #14 a deactivated account acting as a visitor – ST-069 decides rejecting it (its open question was answered that way).
+
