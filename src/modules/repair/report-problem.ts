@@ -42,15 +42,8 @@ export function reportProblem(
     reporter: reporterOf(actor),
     reportedAt: clock.now(),
   };
-  return {
-    ok: true,
-    state: report,
-    events: [{ type: "EVT-ProblemReported", problemReportId: report.id, ...rest(report) }],
-  };
-}
-
-function rest({ machineId, description, reporter, reportedAt }: ProblemReport) {
-  return { machineId, description, reporter, reportedAt };
+  const { id: problemReportId, ...reported } = report;
+  return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId, ...reported }] };
 }
 
 /** The reporter is the acting person; the command allows visitors and team members only. */

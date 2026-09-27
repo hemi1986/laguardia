@@ -11,7 +11,7 @@ const visitor: Actor = { kind: "visitor" };
 const deps = { actor: visitor, db, clock: fixedClock("2026-09-27T10:00:00Z"), newId: randomUUID };
 
 describe("CMD-ReportProblem as a creating command", () => {
-  it("stores the new problem report at version 0 without loading anything", async () => {
+  it("stores the new problem report at version 0", async () => {
     const machineId = randomUUID();
 
     const reported = await executeCommand(

@@ -66,13 +66,13 @@ export function created<State extends { id: string }>(store: AggregateStore<Stat
 }
 
 /** An automatic policy the command triggers after saving; it runs as the system in the same transaction. */
-export type PolicyCall = { policy: Command<unknown, unknown, string>; input: unknown };
+export type PolicyCall<Error extends string = string> = { policy: Command<unknown, unknown, Error>; input: unknown };
 
 export function trigger<Input, Result, Error extends string>(
   policy: Command<Input, Result, Error>,
   input: Input,
-): PolicyCall {
-  return { policy: policy as unknown as Command<unknown, unknown, string>, input };
+): PolicyCall<Error> {
+  return { policy: policy as unknown as Command<unknown, unknown, Error>, input };
 }
 
 export type DecisionContext = { actor: Actor; clock: Clock; newId: () => string };
@@ -80,7 +80,7 @@ export type DecisionContext = { actor: Actor; clock: Clock; newId: () => string 
 export type Decision<State, Event, Error extends string> =
   { ok: true; state: State; events: Event[]; created?: Created[] } | { ok: false; error: Error };
 
-type Common<State extends { id: string }, Event, Result> = {
+type Common<State extends { id: string }, Event, Result, PolicyError extends string> = {
   id: `CMD-${string}`;
   allowedActors: readonly AllowedActor[];
   store: AggregateStore<State>;
@@ -88,36 +88,52 @@ type Common<State extends { id: string }, Event, Result> = {
   journal: (event: Event, state: State) => JournalEvent;
   result: (state: State) => Result;
   /** Automatic policies to run after saving, as the system, in the same transaction. */
-  policies?: (state: State, events: Event[]) => PolicyCall[];
+  policies?: (state: State, events: Event[]) => PolicyCall<PolicyError>[];
 };
 
 /** A creating command (Q14): no load, no version check – the new aggregate is saved at version 0. */
-type Creating<Input, State extends { id: string }, Event, Result, Error extends string> = Common<
-  State,
+type Creating<
+  Input,
+  State extends { id: string },
   Event,
-  Result
-> & {
+  Result,
+  Error extends string,
+  PolicyError extends string,
+> = Common<State, Event, Result, PolicyError> & {
   creates: true;
   decide: (state: undefined, input: Input, context: DecisionContext) => Decision<State, Event, Error>;
 };
 
 /**
- * A command on an existing aggregate: `target` names it and the version the acting person saw
- * (policies may leave the version out – then the freshly loaded one is used).
+ * A command on an existing aggregate: `target` names it and the version the acting person saw. Only a command run
+ * by the system (a policy) may leave the version out – the row is then loaded with a lock.
  */
-type Changing<Input, State extends { id: string }, Event, Result, Error extends string> = Common<
-  State,
+type Changing<
+  Input,
+  State extends { id: string },
   Event,
-  Result
-> & {
+  Result,
+  Error extends string,
+  PolicyError extends string,
+> = Common<State, Event, Result, PolicyError> & {
   creates?: false;
   target: (input: Input) => { id: string; version?: number };
   decide: (state: State, input: Input, context: DecisionContext) => Decision<State, Event, Error>;
 };
 
-export function aggregateCommand<Input, State extends { id: string }, Event, Result, Error extends string>(
-  definition: Creating<Input, State, Event, Result, Error> | Changing<Input, State, Event, Result, Error>,
-): Command<Input, Result, Error> {
+/** The command's result type includes the errors of the policies it triggers – a rejected policy rejects it. */
+export function aggregateCommand<
+  Input,
+  State extends { id: string },
+  Event,
+  Result,
+  Error extends string,
+  PolicyError extends string = never,
+>(
+  definition:
+    | Creating<Input, State, Event, Result, Error, PolicyError>
+    | Changing<Input, State, Event, Result, Error, PolicyError>,
+): Command<Input, Result, Error | PolicyError> {
   return {
     id: definition.id,
     allowedActors: definition.allowedActors,
@@ -132,12 +148,27 @@ export function aggregateCommand<Input, State extends { id: string }, Event, Res
         decision = definition.decide(undefined, input, decisionContext);
       } else {
         const target = definition.target(input);
+        if (target.version === undefined && actor.kind !== "system") {
+          // A decision on a screen the person saw earlier must not silently overwrite a newer change (HS-16).
+          throw new Error(
+            `${definition.id}: a command of a person needs the version the acting person saw (target.version)`,
+          );
+        }
         // Without a version the acting person saw (a policy), lock the row: nobody saw a version to conflict with.
         const loaded = await store.load(tx, target.id, { lock: target.version === undefined });
         if (!loaded) throw new NotFound();
         // Decide on the fresh state first: a domain rejection explains more than a version conflict (Q11).
         decision = definition.decide(loaded.state, input, decisionContext);
         expectedVersion = target.version ?? loaded.version;
+        if (decision.ok && decision.state.id !== target.id)
+          throw new Error(`${definition.id}: a decision must not change the aggregate's ID`);
+        if (
+          decision.ok &&
+          decision.events.length === 0 &&
+          (decision.state !== loaded.state || decision.created?.length)
+        ) {
+          throw new Error(`${definition.id}: a decision without events must return the loaded state unchanged`);
+        }
       }
       if (!decision.ok) return decision;
       // No events: nothing happened – nothing is saved and the version stays (e.g. a policy with nothing to do).

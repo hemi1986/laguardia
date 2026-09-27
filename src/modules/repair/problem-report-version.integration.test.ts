@@ -4,7 +4,12 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
-import { changeDescriptionForTest, splitForTest } from "./problem-report-stand-ins.test-support";
+import {
+  changeDescriptionForTest,
+  changeWithoutVersionForTest,
+  splitForTest,
+} from "./problem-report-stand-ins.test-support";
+import { problemReports } from "./problem-reports";
 
 const db = testDatabase();
 const technician: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" };
@@ -85,5 +90,32 @@ describe("commands on an existing problem report: load, decide, save (HS-16)", (
 
     expect(outcome).toEqual({ ok: false, error: "version-conflict" });
     expect((await problemReportsOfMachine(db, machineId)).map((r) => r.description)).toEqual(["Display dark"]);
+  });
+
+  it("keeps the fields the decision did not change when it saves", async () => {
+    const reportedBy: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" };
+    const created = await executeCommand(
+      reportProblemCommand,
+      { machineId: randomUUID(), description: "Display flickers" },
+      { ...deps, actor: reportedBy },
+    );
+    if (!created.ok) throw new Error(created.error);
+    const { problemReportId } = created.result;
+    const before = await problemReports.load(db, problemReportId);
+
+    await change(problemReportId, 0, "Display dark");
+
+    expect(await problemReports.load(db, problemReportId)).toEqual({
+      state: { ...before!.state, description: "Display dark" },
+      version: 1,
+    });
+  });
+
+  it("refuses a team command that does not pass the version the acting person saw", async () => {
+    const { problemReportId } = await reportedProblem();
+
+    await expect(
+      executeCommand(changeWithoutVersionForTest, { problemReportId, description: "Display dark" }, deps),
+    ).rejects.toThrow(/version the acting person saw/);
   });
 });

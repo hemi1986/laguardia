@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -11,6 +11,7 @@ import {
   reportWithPolicyForTest,
   reportWithRejectedPolicyForTest,
 } from "./problem-report-stand-ins.test-support";
+import { problemReports } from "./problem-reports";
 
 const db = testDatabase();
 const technician: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" };
@@ -43,6 +44,11 @@ describe("automatic policies triggered by a command", () => {
     );
 
     expect(outcome).toEqual({ ok: false, error: "policy-rejected" });
+    // The policy's error is part of the triggering command's result type.
+    if (!outcome.ok)
+      expectTypeOf(outcome.error).toEqualTypeOf<
+        "description-required" | "policy-rejected" | "not-authorized" | "not-found" | "version-conflict"
+      >();
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await journalOf(db, { machineId })).toEqual([]);
   });
@@ -81,5 +87,10 @@ describe("automatic policies triggered by a command", () => {
     );
 
     expect(outcomes).toEqual(Array.from({ length: 6 }, () => ({ ok: true, result: undefined })));
+    expect((await journalOf(db, { aggregateId: problemReportId })).map((e) => e.type)).toEqual([
+      "EVT-ProblemReported",
+      ...Array.from({ length: 6 }, () => "EVT-TestPolicyApplied"),
+    ]);
+    expect((await problemReports.load(db, problemReportId))?.version).toBe(6);
   });
 });

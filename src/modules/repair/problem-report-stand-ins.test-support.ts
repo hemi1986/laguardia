@@ -134,3 +134,23 @@ export const reportWithIdlePolicyForTest = aggregateCommand({
   policies: (state) => [trigger(policyForTest, { problemReportId: state.id, idle: true })],
   result: (state) => ({ problemReportId: state.id }),
 });
+
+/** A team command that forgets to pass the version the technician saw – the layer must refuse it. */
+export const changeWithoutVersionForTest = aggregateCommand({
+  id: "CMD-TestChangeWithoutVersion",
+  allowedActors: ["technician"],
+  store: problemReports,
+  target: (input: { problemReportId: string; description: string }) => ({ id: input.problemReportId }),
+  decide: (state, input) => ({
+    ok: true as const,
+    state: { ...state, description: input.description },
+    events: [{ type: "EVT-TestDescriptionChanged" as const, problemReportId: state.id }],
+  }),
+  journal: (event, state) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
+    machineId: state.machineId,
+    data: {},
+  }),
+  result: () => undefined,
+});
