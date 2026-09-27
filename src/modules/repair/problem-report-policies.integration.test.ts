@@ -4,7 +4,13 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine } from ".";
-import { reportWithPolicyForTest, reportWithRejectedPolicyForTest } from "./problem-report-stand-ins.test-support";
+import {
+  changeDescriptionForTest,
+  policyForTest,
+  reportWithIdlePolicyForTest,
+  reportWithPolicyForTest,
+  reportWithRejectedPolicyForTest,
+} from "./problem-report-stand-ins.test-support";
 
 const db = testDatabase();
 const technician: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" };
@@ -39,5 +45,41 @@ describe("automatic policies triggered by a command", () => {
     expect(outcome).toEqual({ ok: false, error: "policy-rejected" });
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await journalOf(db, { machineId })).toEqual([]);
+  });
+
+  it("saves nothing and keeps the version when a policy has nothing to do", async () => {
+    const reported = await executeCommand(
+      reportWithIdlePolicyForTest,
+      { machineId: randomUUID(), description: "Tilt bob missing" },
+      deps,
+    );
+    if (!reported.ok) throw new Error(reported.error);
+    const { problemReportId } = reported.result;
+
+    // The problem report is still at version 0: a change at version 0 is accepted.
+    expect(
+      await executeCommand(changeDescriptionForTest, { problemReportId, version: 0, description: "Tilt" }, deps),
+    ).toEqual({ ok: true, result: undefined });
+    expect((await journalOf(db, { aggregateId: problemReportId })).map((e) => e.type)).toEqual([
+      "EVT-ProblemReported",
+      "EVT-TestDescriptionChanged",
+    ]);
+  });
+
+  it("lets concurrent policies on the same aggregate both succeed – a policy saw no version to conflict with", async () => {
+    const reported = await executeCommand(
+      reportWithIdlePolicyForTest,
+      { machineId: randomUUID(), description: "Tilt bob missing" },
+      deps,
+    );
+    if (!reported.ok) throw new Error(reported.error);
+    const { problemReportId } = reported.result;
+    const asSystem = { ...deps, actor: { kind: "system" } as const };
+
+    const outcomes = await Promise.all(
+      Array.from({ length: 6 }, () => executeCommand(policyForTest, { problemReportId }, asSystem)),
+    );
+
+    expect(outcomes).toEqual(Array.from({ length: 6 }, () => ({ ok: true, result: undefined })));
   });
 });

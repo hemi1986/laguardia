@@ -68,11 +68,13 @@ export const policyForTest = aggregateCommand({
   id: "CMD-TestPolicy",
   allowedActors: ["system"],
   store: problemReports,
-  target: (input: { problemReportId: string; reject?: boolean }) => ({ id: input.problemReportId }),
+  target: (input: { problemReportId: string; reject?: boolean; idle?: boolean }) => ({ id: input.problemReportId }),
   decide: (state, input) =>
     input.reject
       ? { ok: false as const, error: "policy-rejected" as const }
-      : { ok: true as const, state, events: [{ type: "EVT-TestPolicyApplied" as const, problemReportId: state.id }] },
+      : input.idle
+        ? { ok: true as const, state, events: [] } // nothing to do
+        : { ok: true as const, state, events: [{ type: "EVT-TestPolicyApplied" as const, problemReportId: state.id }] },
   journal: (event, state) => ({
     type: event.type,
     aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
@@ -113,5 +115,22 @@ export const reportWithRejectedPolicyForTest = aggregateCommand({
     data: {},
   }),
   policies: (state) => [trigger(policyForTest, { problemReportId: state.id, reject: true })],
+  result: (state) => ({ problemReportId: state.id }),
+});
+
+/** Like reportWithPolicyForTest, but the triggered policy has nothing to do. */
+export const reportWithIdlePolicyForTest = aggregateCommand({
+  id: "CMD-TestReportWithIdlePolicy",
+  allowedActors: ["technician"],
+  store: problemReports,
+  creates: true,
+  decide: reportProblem,
+  journal: (event) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
+    machineId: event.machineId,
+    data: {},
+  }),
+  policies: (state) => [trigger(policyForTest, { problemReportId: state.id, idle: true })],
   result: (state) => ({ problemReportId: state.id }),
 });

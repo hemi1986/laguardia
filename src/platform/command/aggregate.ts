@@ -15,7 +15,8 @@ import type { Actor, AllowedActor, Command, CommandContext, JournalEvent } from 
 /** How a module stores one kind of aggregate. `aggregateStore` builds it; the version check lives only here. */
 export type AggregateStore<State extends { id: string }> = {
   type: `AGG-${string}`;
-  load(tx: Database, id: string): Promise<{ state: State; version: number } | undefined>;
+  /** `lock`: hold the row until the transaction ends (for a policy, which has no version of its own to check). */
+  load(tx: Database, id: string, options?: { lock?: boolean }): Promise<{ state: State; version: number } | undefined>;
   insert(tx: Database, state: State): Promise<void>;
   /** Saves at the expected version and increments it; false when the stored version differs. */
   update(tx: Database, state: State, expectedVersion: number): Promise<boolean>;
@@ -33,12 +34,13 @@ export function aggregateStore<State extends { id: string }, T extends Versioned
   const { type, table, toState, toRow } = definition;
   return {
     type,
-    async load(tx, id) {
-      const [row] = await tx
+    async load(tx, id, options) {
+      const query = tx
         .select()
         .from(table as PgTable)
         .where(eq(table.id, id))
         .limit(1);
+      const [row] = options?.lock ? await query.for("update") : await query;
       if (!row) return undefined;
       return { state: toState(row as T["$inferSelect"]), version: (row as { version: number }).version };
     },
@@ -130,13 +132,16 @@ export function aggregateCommand<Input, State extends { id: string }, Event, Res
         decision = definition.decide(undefined, input, decisionContext);
       } else {
         const target = definition.target(input);
-        const loaded = await store.load(tx, target.id);
+        // Without a version the acting person saw (a policy), lock the row: nobody saw a version to conflict with.
+        const loaded = await store.load(tx, target.id, { lock: target.version === undefined });
         if (!loaded) throw new NotFound();
         // Decide on the fresh state first: a domain rejection explains more than a version conflict (Q11).
         decision = definition.decide(loaded.state, input, decisionContext);
         expectedVersion = target.version ?? loaded.version;
       }
       if (!decision.ok) return decision;
+      // No events: nothing happened – nothing is saved and the version stays (e.g. a policy with nothing to do).
+      if (decision.events.length === 0) return { ok: true, result: definition.result(decision.state), events: [] };
 
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
       for (const c of decision.created ?? []) await c.store.insert(tx, c.state);

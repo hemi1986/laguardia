@@ -115,7 +115,7 @@ Every aggregate table has `version integer not null default 0`; `aggregateStore`
 2. lets the decision run on it – a **domain rejection comes first** ("already triaged by Eva", ST-018), because it explains more than a conflict;
 3. saves at the **version the acting person saw** and increments it – `version-conflict` when someone changed the aggregate in between and nothing domain-specific explains it.
 
-Creating commands save at version 0. Policies may leave the version out of `target` – then the freshly loaded one is used. Required for every triage command and every command on a defect (ST-003).
+Creating commands save at version 0. Policies may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
 
 ## Automatic policies
 

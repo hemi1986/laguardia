@@ -10,6 +10,6 @@ let db: NodePgDatabase | undefined;
 
 /** The database of integration tests – never DATABASE_URL, so a test run can't touch a real environment. */
 export function testDatabase(): NodePgDatabase {
-  db ??= drizzle(new Pool({ connectionString: testDatabaseUrl(), max: 2 }));
+  db ??= drizzle(new Pool({ connectionString: testDatabaseUrl(), max: 8 }));
   return db;
 }
