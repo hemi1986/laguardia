@@ -175,7 +175,8 @@ const IGNORED_DIRS = new Set([
   "playwright-report", "test-results", "public",
 ]);
 const CODE_EXT = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
-const TEST_RE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^|\/)(e2e|__tests__)\//;
+// Test code: test files, test stand-ins of a module (`*.test-support.ts`, engineering conventions) and browser tests.
+const TEST_RE = /(\.(test|spec|test-support)\.[cm]?[jt]sx?$)|(^|\/)(e2e|__tests__)\//;
 const CATALOG_DIR_RE = /(^|\/)(messages|locales|i18n)\//;
 
 export function projectFiles(): string[] {
