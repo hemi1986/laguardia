@@ -23,6 +23,7 @@ As a team member, I want to log in once on my phone with my personal username an
 - Login throttling: after 10 failed attempts within 15 minutes, a username is locked for 15 minutes. That someone could lock out a known username on purpose is a consciously accepted risk (technicians are on site).
 - The first technician account is created by a one-off command-line setup script.
 - Team pages require login; the visitor machine page, the legal pages and *Report problem* for visitors stay public.
+- Schema alignment (story review `docs/reviews/2026-09-27-story-review.md`, decision 3; `docs/reviews/ST-001-code-review.md` finding #2): the `TeamMemberId` is the account ID that Better Auth assigns (its `user` table, ADR 0006). Check Better Auth's ID format, align `problem_report.reporter_team_member_id` (created as `text` by the ST-001 spike) with it, and add the foreign key from that column to the team member account table.
 
 ## Acceptance Criteria
 
@@ -75,6 +76,12 @@ Scenario: Setup cannot be repeated once accounts exist
   Given at least one team member account exists
   When the setup script is run again
   Then no account is created or changed
+
+Scenario: Problem reports refer to existing team member accounts
+  Given the ID format of team member accounts in the authentication library has been checked
+  When the migration for team member accounts is applied
+  Then the reporting team member reference of a problem report has the same type as a team member's ID
+  And a problem report can only name a reporting team member that has an account
 
 ## Out of Scope
 - Creating, changing and deactivating accounts (ST-005)

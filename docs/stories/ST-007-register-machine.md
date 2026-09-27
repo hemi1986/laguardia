@@ -26,6 +26,8 @@ Command `CMD-RegisterMachine` (technicians only). Rules:
 - The serial number is optional; the location (free text) is required (`docs/architecture/data-model.md`).
 - The initial machine status (*Playable*, *Limited*, *Out of order*, *Not on display*) is the first entry of the machine's status history (reason: registration).
 
+Schema clean-up (story review `docs/reviews/2026-09-27-story-review.md`, decision 3; `docs/reviews/ST-001-code-review.md` finding #2): the migration that creates the `machine` table also deletes the ST-001 spike rows of `problem_report` (`machine_id = 'test-machine'`), aligns `problem_report.machine_id` with the machine ID type (ID convention of ST-003) and adds the foreign key from `problem_report.machine_id` to the machine – all in one migration.
+
 ## Acceptance Criteria
 
 Scenario: Technician registers a machine with an assigned museum number
@@ -83,6 +85,13 @@ Scenario: Helpers cannot register machines
   Given a helper is logged in
   When the helper tries to register a machine
   Then the action is rejected
+
+Scenario: Spike problem reports are removed and problem reports refer to registered machines
+  Given problem reports from the ST-001 spike exist for the machine "test-machine"
+  When the migration that creates the machine store is applied in one step
+  Then no problem report for "test-machine" remains
+  And the machine reference of a problem report has the machine ID type of the ID convention
+  And a problem report can only be stored for a registered machine
 
 ## Out of Scope
 - Correcting museum number or serial number later (ST-035)
