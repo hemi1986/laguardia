@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { currentPerson, logIn } from ".";
+import { currentPerson, logIn, logOut } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
 
 const db = testDatabase();
@@ -92,5 +92,15 @@ describe("logging in", () => {
       const headers = new Headers({ cookie: cookieHeader(later.cookies) });
       expect(await currentPerson({ db, headers })).toMatchObject({ teamMemberId: id });
     }
+  });
+
+  it("ST-004: Team member logs out", async () => {
+    const { username, password } = await anna();
+    const headers = await loggedIn(username, password);
+
+    await logOut({ db, headers });
+
+    // The session is gone: the same cookie makes her a visitor, so a team page asks for the login again.
+    expect(await currentPerson({ db, headers })).toEqual({ kind: "visitor" });
   });
 });

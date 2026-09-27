@@ -24,7 +24,7 @@ export function createAuth(db: Database, options: { inNext: boolean }) {
   if (!secret) throw new Error("BETTER_AUTH_SECRET is not set – see .env.example");
   return betterAuth({
     secret,
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: baseURL(),
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: { team_member: teamMember, session, account, verification },
@@ -52,14 +52,26 @@ export function createAuth(db: Database, options: { inNext: boolean }) {
 
 export type Auth = ReturnType<typeof createAuth>;
 
-const instances = new WeakMap<object, Auth>();
+/**
+ * The origin of La Guardia – https on Vercel (so the session cookie is `Secure`), localhost in development.
+ * BETTER_AUTH_URL overrides it (e.g. the custom domain, ST-060).
+ */
+function baseURL(): string {
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
+  const host =
+    process.env.VERCEL_ENV === "production" ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL;
+  return host ? `https://${host}` : "http://localhost:3000";
+}
 
-/** One Better Auth instance per database handle. `inNext` adds the plugin that lets Server Actions set cookies. */
+const instances = { plain: new WeakMap<object, Auth>(), inNext: new WeakMap<object, Auth>() };
+
+/** One Better Auth instance per database handle; `inNext` adds the plugin that lets Server Actions set cookies. */
 export function authFor(db: Database, inNext = false): Auth {
-  let auth = instances.get(db);
+  const cache = inNext ? instances.inNext : instances.plain;
+  let auth = cache.get(db);
   if (!auth) {
     auth = createAuth(db, { inNext });
-    instances.set(db, auth);
+    cache.set(db, auth);
   }
   return auth;
 }
