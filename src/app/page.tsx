@@ -43,6 +43,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         ))}
       </ul>
       <Link href="/spike/files">Dateien (Spike)</Link>
+      <Link href="/spike/photos">Fotos (Spike)</Link>
     </main>
   );
 }

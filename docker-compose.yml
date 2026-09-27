@@ -1,0 +1,19 @@
+# Local development database (ADR 0003: PostgreSQL). Production and previews use Neon (ADR 0006).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: laguardia
+      POSTGRES_PASSWORD: laguardia
+      POSTGRES_DB: laguardia
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laguardia"]
+      interval: 2s
+      retries: 15
+
+volumes:
+  db-data:
