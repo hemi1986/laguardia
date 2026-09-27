@@ -291,7 +291,7 @@ export function validateEvents(report: Report): Obj | null {
 // --------------------------------------------------------------------------
 // Mermaid rendering
 // --------------------------------------------------------------------------
-const CLASSDEFS = `    classDef evt fill:#a3391f,stroke:#e65100,color:#000
+const CLASSDEFS = `    classDef evt fill:#a3391f,stroke:#e65100,color:#fff
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
     classDef rm fill:#81c784,stroke:#1b5e20,color:#000
