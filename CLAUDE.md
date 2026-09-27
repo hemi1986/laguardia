@@ -67,11 +67,11 @@ Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story who
 2. Test plan – scenario → seam → test; **the user approves**
 3. Red → green per scenario (`tdd`)
 4. `verify.ts` – lint, module boundaries, types, tests, traceability
-5. Review in parallel – `@code-reviewer`, `@acceptance-tester`, `/code-review`, `/security-review` where it applies
-6. Refactor – fix findings; bigger ones become follow-up stories
+5. Review in parallel, scaled to the story – `@code-reviewer` and `@acceptance-tester` always; `/code-review` for L/XL or shared platform code; `/security-review` for visitor, login/roles, uploads, files
+6. Refactor – fix findings in the story; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
 7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**
 
-After the foundation stories, per finished bounded context or about every 8–10 stories: `/improve-codebase-architecture`.
+After the foundation stories, per finished bounded context or about every 8–10 **domain** stories: `/improve-codebase-architecture` – not in between. Progress is measured in done domain stories and scenarios (`docs/stories/BACKLOG.md`), not in the total number of stories. Technical groundwork is pulled in just in time: into the first story that needs it.
 
 Anytime: `/grill-me` to stress-test a plan, `/grill-with-docs` to do the same while recording glossary terms and ADRs.
 

@@ -7,7 +7,7 @@ priority: must
 size: S
 risk: low
 events: [EVT-ProblemReportDismissed]
-depends_on: [ST-017]
+depends_on: [ST-017, ST-016]
 labels: [mvp, triage]
 status: ready
 ---

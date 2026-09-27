@@ -126,11 +126,12 @@ export function transitionErrors(story: d.Story, from: string, to: string, stori
       if (cov.missing.length) {
         errs.push(`scenarios without a test titled '${d.storyId(story)}: <scenario title>': ${cov.missing.map((m) => `"${m}"`).join(", ")}`);
       }
-    } else {
-      const open = checklist(story).filter((c) => !c.done);
-      const short = (t: string) => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
-      if (open.length) errs.push(`${open.length} unticked acceptance criteria: ${open.map((c) => `"${short(c.text)}"`).join(", ")}`);
     }
+    // Every checklist item must be ticked – for spikes and tech tasks, and for the foundation checklists a story
+    // takes over just in time (e.g. "Foundation (moved from ST-074 …)").
+    const open = checklist(story).filter((c) => !c.done);
+    const short = (t: string) => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
+    if (open.length) errs.push(`${open.length} unticked acceptance criteria: ${open.map((c) => `"${short(c.text)}"`).join(", ")}`);
   }
   return errs;
 }

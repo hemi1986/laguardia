@@ -40,15 +40,24 @@ The user's approval is the "confirmed seams" the tdd skill requires.
 ## 4. Verify
 `node .claude/skills/implement/scripts/verify.ts` (with `--e2e` when browser tests exist) must be green: lint incl. module boundaries, type check, tests, events and stories valid, scenario ↔ test and domain ID traceability. Language warnings: fix or justify.
 
-## 5. Review (in parallel)
+## 5. Review (in parallel, scaled to the story)
 Push the branch (`git push -u origin st-NNN-<slug>`) so a preview deployment exists. Then start in **one** message:
-- `code-reviewer` – task: story ID, base ref `main`, the context pack command. Writes `docs/reviews/ST-NNN-code-review.md`.
-- `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known). Writes `docs/reviews/ST-NNN-acceptance.md`.
-- The Skill tool for `code-review` (bugs in the diff) – and for `security-review` when the story has the label `visitor`, touches login/roles, uploads or files.
+- Always: `code-reviewer` – task: story ID, base ref `main`, the context pack command. Writes `docs/reviews/ST-NNN-code-review.md`.
+- Always: `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known). Writes `docs/reviews/ST-NNN-acceptance.md`.
+- Only for size **L/XL** or a story that changes the command layer or other shared platform code: the Skill tool for `code-review` (bugs in the diff).
+- Only when the story has the label `visitor`, touches login/roles, uploads or files: the Skill tool for `security-review`.
+
+Tell the reviewers the follow-up hurdle below, so they grade findings with it in mind.
 
 ## 6. Refactor
-- Fix all blockers and majors, and the minors you agree with; say which minors you skip and why.
-- **Follow-ups** too big for this story: delegate to `requirements-engineer` as new tech-task stories (`status: draft`, label `follow-up`), referencing the review file. They go through `/review-stories` like any story.
+- Fix all blockers and majors **inside this story**, and the minors you agree with; say which minors you skip and why.
+- **Follow-up hurdle** – a finding becomes a new story only if all of these hold:
+  1. it is a security or data-loss risk, or it blocks a *named* upcoming story;
+  2. it cannot be fixed in this story within about an hour;
+  3. no existing story can take it (check the stories that will first touch that code – prefer adding a checklist item there, via `requirements-engineer`, over a new story).
+  Otherwise it stays a line in the review file ("skipped minor" or "revisit when …") – no story. Say for each follow-up why it passes the hurdle.
+- Follow-ups that pass: delegate to `requirements-engineer` as new tech-task stories (`status: draft`, label `follow-up`), referencing the review file. They go through `/review-stories` like any story.
+- **Foundation just in time**: technical groundwork goes into the first story that needs it, not into a separate tech task ahead of the domain stories – a `must` tech task with met dependencies jumps ahead of every domain story in the backlog order.
 - Refactor only with green tests; the tests must not change unless they were wrong (then say so). Run `node .claude/skills/implement/scripts/verify.ts` again.
 
 ## 7. Acceptance and merge → user checkpoint

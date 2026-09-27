@@ -15,16 +15,16 @@ status: ready
 ## Task
 Implements the core command shape decided in the architecture review 2026-09-27 (decisions Q1–Q22, grilling session with `/improve-codebase-architecture`): **Q2, Q11, Q12, Q14, Q22**. Cross-cutting; filed under `BC-Repair` like the other foundation tasks (ST-001, ST-059, ST-003).
 
-**Split.** The story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 1) split the original task in two. This task keeps the core shape. ST-074 builds on it with the event catalogue and its check against `events.yaml`, the typed acting person, `context.run` and the history helper (Q3–Q6, Q13, Q15, Q20).
+**Split.** The story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 1) split the original task in two. This task keeps the core shape. The other half, ST-074, was dissolved in the backlog restructuring of 2026-09-27 (foundation work pulled in just in time); its parts follow in the stories that first need them: the typed acting person and the test-seam rules in ST-073 (Q3, Q5, Q20), the insert-only history helper in ST-012 (Q13), `context.run` in ST-018 (Q6), the event catalogue and its check against `events.yaml` in ST-050 (Q4, Q15).
 
 **Ordering.** This task comes right after ST-003 and before ST-004. ST-004, ST-007 and ST-018 – the first stories with real commands on team members, machines and triage – follow it and are built on the shape described here (their files are not changed by this task).
 
 Today every command (`src/platform/command/index.ts`, `src/modules/repair/report-problem-command.ts`) is a free-form `run` function that validates, writes rows, calls `updateAtVersion` and assembles journal rows by hand (`JournalEvent` with an untyped `data`). The review decided one shape for all commands instead:
 
-- **Q2 – load → decide → save.** Each aggregate module runs its commands as: load the current state of the aggregate (with its version) → a pure decision `decide(state, input, { clock, newId })` that returns the new state plus domain events, or a domain rejection → save (with the version check) → the command layer journals the events. State-based persistence, no event sourcing (`docs/adr/0002-modular-monolith-state-based-persistence.md`). Until ST-074 adds the event catalogue, each command maps its domain events to journal entries itself, following the rule that the journal holds no free text a person typed (rule of 2026-09-27, `OPEN_QUESTIONS.md`, ST-003).
+- **Q2 – load → decide → save.** Each aggregate module runs its commands as: load the current state of the aggregate (with its version) → a pure decision `decide(state, input, { clock, newId })` that returns the new state plus domain events, or a domain rejection → save (with the version check) → the command layer journals the events. State-based persistence, no event sourcing (`docs/adr/0002-modular-monolith-state-based-persistence.md`). Until ST-050 adds the event catalogue, each command maps its domain events to journal entries itself, following the rule that the journal holds no free text a person typed (rule of 2026-09-27, `OPEN_QUESTIONS.md`, ST-003).
 - **Q14 – creating commands** use the same shape with "no state yet": no load, no version check; the new aggregate is saved at version 0.
 - **Q11 – rejections before conflicts.** The decision runs on the freshly loaded state, so a domain rejection (e.g. "already triaged by Eva", ST-018) is returned first; saving then checks the version the user saw. `version-conflict` is returned only when nothing domain-specific explains the difference.
-- **Q12 – one aggregate per command.** A command belongs to one aggregate. Its decision may also create new aggregates of the same module (e.g. recording a defect during triage), saved in the same transaction. Anything else goes through `context.run` (ST-074) or a policy.
+- **Q12 – one aggregate per command.** A command belongs to one aggregate. Its decision may also create new aggregates of the same module (e.g. recording a defect during triage), saved in the same transaction. Anything else goes through `context.run` (ST-018) or a policy.
 - **Q22 – conversion.** Converts CMD-ReportProblem, the test stand-in commands (`src/platform/command/execute-command.integration.test.ts`, `src/modules/repair/problem-report-version.integration.test.ts`) and their tests. `updateAtVersion` is replaced by the save step with the version check.
 
 What `executeCommand` already guarantees (authorization first, one transaction, one point in time, at least one journaled event per successful command) stays unchanged.
@@ -43,13 +43,13 @@ What `executeCommand` already guarantees (authorization first, one transaction, 
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" (load → decide → save, creating commands, one aggregate per command), "Version check" (rejection before conflict), and the seam catalog rows for commands and decisions.
 
 ## Out of Scope
-- The event catalogue, its check against `events.yaml`, the typed acting person, `context.run`, the history helper and the test-seam rules for read models (ST-074)
+- The typed acting person and the test-seam rules for read models (ST-073), the history helper (ST-012), `context.run` (ST-018), the event catalogue and its check against `events.yaml` (ST-050) – all moved from the dissolved ST-074
 - Login and the acting person from the session (ST-004, ST-069)
 - The Server Action runner and `currentPerson()` (ST-073)
-- The photo module and the storage seam (ST-072)
+- The photo module and the storage seam (ST-016, moved from the dissolved ST-072)
 - Event sourcing, replaying the journal, projections (ADR 0002)
 - Branded ID types beyond `TeamMemberId` for "… by" (`docs/reviews/ST-003-code-review.md` finding #11)
 - Cross-module read models (decided with ST-008)
 
 ## Open Questions
-- none – the question on the history helper (Q13) was answered in the story review of 2026-09-27 and moved with the helper to ST-074.
+- none – the question on the history helper (Q13) was answered in the story review of 2026-09-27 and moved with the helper to ST-074, and on 2026-09-27 with the dissolution of ST-074 to ST-012.

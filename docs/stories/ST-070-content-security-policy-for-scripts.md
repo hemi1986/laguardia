@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: medium
 events: []
-depends_on: [ST-003]
+depends_on: [ST-003, ST-013]
 labels: [follow-up, security]
 status: ready
 ---
@@ -26,7 +26,7 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 - Vercel injects its toolbar script into preview deployments; the policy may block it on previews. That is acceptable – the browser tests must not rely on the toolbar, and CSP violations caused only by the toolbar are not counted as failures.
 - `style-src` allows `'self'` and the nonce for `<style>` elements. `'unsafe-inline'` is added for styles only if pages or libraries (e.g. the authentication UI) need `style` attributes, which a nonce does not cover; scripts stay strict (answer of the story review 2026-09-27, `docs/reviews/2026-09-27-story-review-st-067-073.md`).
 
-**Ordering.** This task is not a precondition for building the visitor pages (ST-010, ST-013, ST-064), but it must be done before visitor problem reports are live in production – the same gate as ST-065 – because from then on visitor free text reaches the team pages. Decided in the story review of 2026-09-27: ST-010 and ST-013 do not depend on this task; the gate is ST-042 (go-live readiness), which depends on ST-065 and this task. Doing it before ST-010 has the added benefit that every later page is built under the policy from the start.
+**Ordering.** This task is not a precondition for building the visitor pages (ST-010, ST-013, ST-064), but it must be done before visitor problem reports are live in production – the same gate as ST-065 – because from then on visitor free text reaches the team pages. Decided in the story review of 2026-09-27: ST-010 and ST-013 do not depend on this task; the gate is ST-042 (go-live readiness), which depends on ST-065 and this task. The backlog restructuring of 2026-09-27 (workflow retrospective: foundation work is pulled in just in time) makes this task depend on ST-013, the first page that shows visitor text, so it is built when there is visitor free text to protect; it still gates go-live via ST-042.
 
 ## Acceptance Criteria
 - [ ] Every page response – visitor machine page, report form, legal pages, login and team pages that exist when this task is done – carries exactly one `Content-Security-Policy` header whose `script-src` contains a `'nonce-…'` source and `'strict-dynamic'` and neither `'unsafe-inline'` nor `'unsafe-eval'`; asserted by the browser test in `e2e/security.spec.ts` against the commit's Vercel preview.
