@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: high
 events: [EVT-ProblemReported]
-depends_on: [ST-002, ST-015, ST-017, ST-021, ST-064]
+depends_on: [ST-002, ST-015, ST-017, ST-021, ST-064, ST-072]
 labels: [mvp, visitor, triage]
 status: ready
 ---

@@ -7,7 +7,7 @@ priority: must
 size: S
 risk: low
 events: [EVT-MachineStatusChanged]
-depends_on: [ST-009]
+depends_on: [ST-009, ST-074]
 labels: [mvp, collection]
 status: ready
 ---

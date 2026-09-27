@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: low
 events: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MaintenancePlanChanged]
-depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064]
+depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070]
 labels: [mvp, maintenance, collection]
 status: ready
 ---

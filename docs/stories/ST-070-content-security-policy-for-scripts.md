@@ -3,13 +3,13 @@ id: ST-070
 title: Full Content Security Policy for scripts
 type: tech-task
 context: BC-Repair
-priority: should
+priority: must
 size: M
 risk: medium
 events: []
 depends_on: [ST-003]
 labels: [follow-up, security]
-status: draft
+status: ready
 ---
 
 ## Task
@@ -24,13 +24,14 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 - The `frame-ancestors`-only CSP in `next.config.ts` is replaced, so every response carries exactly one CSP (two CSP headers would be combined by the browser). The other headers in `next.config.ts` stay.
 - Nonces need dynamic rendering: every page is rendered per request (the guide notes that static rendering, ISR and Partial Prerendering do not work with nonces). The visitor machine page is never served from a shared cache anyway (ST-010); the legal pages (ST-064) become dynamic as well.
 - Vercel injects its toolbar script into preview deployments; the policy may block it on previews. That is acceptable – the browser tests must not rely on the toolbar, and CSP violations caused only by the toolbar are not counted as failures.
-- [OPEN] `style-src`: whether styles also get the nonce or keep `'unsafe-inline'` is not decided – see Open Questions.
+- `style-src` allows `'self'` and the nonce for `<style>` elements. `'unsafe-inline'` is added for styles only if pages or libraries (e.g. the authentication UI) need `style` attributes, which a nonce does not cover; scripts stay strict (answer of the story review 2026-09-27, `docs/reviews/2026-09-27-story-review-st-067-073.md`).
 
-**Ordering.** This task is not a precondition for building the visitor pages (ST-010, ST-013, ST-064), but it should be done before visitor problem reports are live in production – the same gate as ST-065 – because from then on visitor free text reaches the team pages. Doing it before ST-010 has the added benefit that every later page is built under the policy from the start. [OPEN] Whether ST-010/ST-013 should formally depend on this task is for the PO and lead dev to decide in the story review.
+**Ordering.** This task is not a precondition for building the visitor pages (ST-010, ST-013, ST-064), but it must be done before visitor problem reports are live in production – the same gate as ST-065 – because from then on visitor free text reaches the team pages. Decided in the story review of 2026-09-27: ST-010 and ST-013 do not depend on this task; the gate is ST-042 (go-live readiness), which depends on ST-065 and this task. Doing it before ST-010 has the added benefit that every later page is built under the policy from the start.
 
 ## Acceptance Criteria
 - [ ] Every page response – visitor machine page, report form, legal pages, login and team pages that exist when this task is done – carries exactly one `Content-Security-Policy` header whose `script-src` contains a `'nonce-…'` source and `'strict-dynamic'` and neither `'unsafe-inline'` nor `'unsafe-eval'`; asserted by the browser test in `e2e/security.spec.ts` against the commit's Vercel preview.
-- [ ] Two consecutive requests for the same page get different nonces, and each nonce has at least 128 bits of randomness.
+- [ ] Each nonce is generated with `crypto.randomBytes(16)` and base64-encoded (128 bits of randomness; not `randomUUID()`, which has about 122); two consecutive requests for the same page get different nonces.
+- [ ] `style-src` contains `'self'` and the nonce; `'unsafe-inline'` appears in `style-src` only if a page or library needs `style` attributes (named in the pull request), and never in `script-src`.
 - [ ] The policy still contains `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` and `form-action 'self'`; the other ST-003 security headers are unchanged (existing header check stays green).
 - [ ] An inline script without the nonce, injected into a page in a browser test, does not run, and the browser reports a CSP violation for it.
 - [ ] All existing browser tests (including the 360 px checks: page width ≤ 360 px) pass on the preview under the policy, and no CSP violation is reported in the browser console during them.
@@ -47,5 +48,4 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 - The separate Blob store for previews (ST-061)
 
 ## Open Questions
-- [OPEN] `style-src`: nonce for styles as well, or `'unsafe-inline'` for styles only? A nonce does not cover `style` attributes, so any inline `style={…}` in components (or in libraries such as the authentication UI) would break. Recommendation: `'self'` plus the nonce for style elements; check the pages for `style` attributes during implementation and, if needed, allow `'unsafe-inline'` for styles only – scripts are the real risk.
-- [OPEN] Should ST-010 and ST-013 depend on ST-070, so the visitor pages cannot go live without the script policy? Recommendation: no hard dependency for building them, but ST-070 done before visitor problem reports are live in production (together with ST-065).
+- none – `style-src` and the dependency question were answered as recommended in the story review of 2026-09-27 (see Task).
