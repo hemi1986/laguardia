@@ -5,3 +5,20 @@ node_modules/
 
 # Engineering workflow state (last verify result)
 .claude/state/
+
+# Next.js / build
+/.next/
+/out/
+/build
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+*.pem
+npm-debug.log*
+
+# env files (secrets – pulled with `vercel env pull`)
+.env*
+!.env.example
+
+# vercel
+.vercel
