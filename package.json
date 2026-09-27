@@ -15,7 +15,8 @@
     "verify": "node .claude/skills/implement/scripts/verify.ts",
     "db:up": "docker compose up -d --wait",
     "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "setup:first-technician": "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/setup-first-technician.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
@@ -43,6 +44,7 @@
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.2"
   },
