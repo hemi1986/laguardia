@@ -1,3 +1,5 @@
+import type { Clock } from "@/clock";
+
 /**
  * CMD-ReportProblem (AGG-ProblemReport): a visitor or team member reports a problem with a machine.
  * Pure domain rule – persistence lives in `problem-reports.ts`. The rules on who may report for which machine
@@ -24,9 +26,9 @@ export type ProblemReported = {
 export type ReportProblemResult = { ok: true; event: ProblemReported } | { ok: false; error: "description-required" };
 
 /** The clock and the ID source are injected so the command stays deterministic in tests. */
-export type CommandContext = { now: Date; newId: () => string };
+export type CommandContext = { clock: Clock; newId: () => string };
 
-export function reportProblem(input: ReportProblemInput, { now, newId }: CommandContext): ReportProblemResult {
+export function reportProblem(input: ReportProblemInput, { clock, newId }: CommandContext): ReportProblemResult {
   const description = input.description.trim();
   if (!description) return { ok: false, error: "description-required" };
   return {
@@ -37,7 +39,7 @@ export function reportProblem(input: ReportProblemInput, { now, newId }: Command
       machineId: input.machineId,
       description,
       reporter: input.reporter,
-      reportedAt: now,
+      reportedAt: clock.now(),
     },
   };
 }

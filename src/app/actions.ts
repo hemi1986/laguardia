@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { systemClock } from "@/clock";
 import { database } from "@/db/client";
 import { saveProblemReported } from "@/modules/repair/problem-reports";
 import { reportProblem } from "@/modules/repair/report-problem";
@@ -23,7 +24,7 @@ export async function reportProblemForTestMachine(formData: FormData): Promise<v
       description: String(formData.get("description") ?? ""),
       reporter: { kind: "visitor" },
     },
-    { now: new Date(), newId: randomUUID },
+    { clock: systemClock, newId: randomUUID },
   );
   if (!result.ok) redirect("/?error=description-required");
   await saveProblemReported(database(), result.event);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { fixedClock } from "@/clock";
 import { reportProblem } from "./report-problem";
 
-const context = { now: new Date("2026-09-27T10:00:00Z"), newId: () => "report-1" };
+const context = { clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };
 
 describe("CMD-ReportProblem", () => {
   it("records the problem report with its ID, machine, trimmed description, reporter and time", () => {
