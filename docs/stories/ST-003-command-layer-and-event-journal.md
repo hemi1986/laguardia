@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-059]
 labels: [mvp, foundation]
-status: ready
+status: done
 ---
 
 ## Task
@@ -30,16 +30,16 @@ Set up the application skeleton from ST-001 as the modular monolith of `docs/adr
 - **Automated dependency update** pull requests (routine: ST-063).
 
 ## Acceptance Criteria
-- [ ] A lint rule fails when one module imports another module's internals; demonstrated with a deliberate violation.
-- [ ] Test: when a command is rejected, neither the aggregate change nor a journal entry is stored.
-- [ ] Test: a successful command stores exactly its domain events in the journal with type, time, acting person (team member, visitor or system), aggregate reference and machine reference.
-- [ ] Test: a command called without an acting team member (and not allowed for visitors) is rejected in the command layer, independent of any middleware.
-- [ ] Test: a command that creates an aggregate gets its opaque ID (a UUID) from the injected ID generator; with a fixed ID generator in the test, the stored aggregate and its journal entry carry exactly the expected ID.
-- [ ] Test: of two concurrent commands on the same aggregate version, exactly one succeeds and the other is rejected.
-- [ ] Test: a command submitted without a valid CSRF token is rejected.
-- [ ] The time convention helper has a table of test cases covering at least: Europe/Berlin day boundaries including the summer-time change, 72 h and 336 h boundaries, month-end clamping (31 January + 1 month, leap year), and the 25 % overdue rule for 1, 3 and 12 months.
-- [ ] Team UI texts come from a German message catalog; visitor texts from German and English catalogs.
-- [ ] Automated dependency update pull requests are enabled for the repository.
+- [x] A lint rule fails when one module imports another module's internals; demonstrated with a deliberate violation. – `eslint-plugin-boundaries` in `eslint.config.mjs` (a module is imported only through its `index.ts`); `src/platform/module-boundaries.test.ts` lints deliberate violations by alias and by relative path, from a module and from the app. On introduction it found three real violations in `src/app/`, fixed.
+- [x] Test: when a command is rejected, neither the aggregate change nor a journal entry is stored. – `src/platform/command/execute-command.integration.test.ts` – a rejection before and after writing (one transaction, rolled back).
+- [x] Test: a successful command stores exactly its domain events in the journal with type, time, acting person (team member, visitor or system), aggregate reference and machine reference. – same file; table `event_journal` (append-only, a trigger refuses UPDATE/DELETE/TRUNCATE), migration `drizzle/0001_…`.
+- [x] Test: a command called without an acting team member (and not allowed for visitors) is rejected in the command layer, independent of any middleware. – same file – `executeCommand` checks the command's `allowedActors` before it runs; visitor and system are rejected with `not-authorized`.
+- [x] Test: a command that creates an aggregate gets its opaque ID (a UUID) from the injected ID generator; with a fixed ID generator in the test, the stored aggregate and its journal entry carry exactly the expected ID. – same file, with CMD-ReportProblem.
+- [x] Test: of two concurrent commands on the same aggregate version, exactly one succeeds and the other is rejected. – `src/modules/repair/problem-report-version.integration.test.ts` – `updateAtVersion` on the new `problem_report.version` column (HS-16), two parallel transactions.
+- [x] Test: a command submitted without a valid CSRF token is rejected. – `e2e/security.spec.ts` – a forged form post with a foreign and with a missing Origin is rejected and stores nothing. Protection by Origin check instead of a token (Next.js Server Actions plus `src/proxy.ts` for a missing Origin), decided 2026-09-27 (`OPEN_QUESTIONS.md`). Security headers in `next.config.ts`, checked by the same spec; output encoding by React's escaping (no `dangerouslySetInnerHTML`).
+- [x] The time convention helper has a table of test cases covering at least: Europe/Berlin day boundaries including the summer-time change, 72 h and 336 h boundaries, month-end clamping (31 January + 1 month, leap year), and the 25 % overdue rule for 1, 3 and 12 months. – `src/platform/time.ts`, `src/platform/time.test.ts` (28 cases, incl. `today()` from the injected clock – the first time-based rule using it, see ST-059).
+- [x] Team UI texts come from a German message catalog; visitor texts from German and English catalogs. – `src/platform/messages/` – team terms in the glossary's `_UI (de)_` wording (a test compares them with `CONTEXT.md`), visitor catalogs `de`/`en` with the same keys (type and test); the home page uses them.
+- [x] Automated dependency update pull requests are enabled for the repository. – `.github/dependabot.yml` – weekly for npm (app and `.claude/`) and GitHub Actions, minor/patch grouped.
 
 ## Out of Scope
 - Login and accounts (ST-004, ST-005)

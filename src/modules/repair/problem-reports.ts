@@ -1,9 +1,9 @@
 import { desc, eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { Database } from "@/platform/command";
 import type { ProblemReported } from "./report-problem";
 import { problemReport } from "./schema";
 
-export async function saveProblemReported(db: NodePgDatabase, event: ProblemReported): Promise<void> {
+export async function saveProblemReported(db: Database, event: ProblemReported): Promise<void> {
   await db.insert(problemReport).values({
     id: event.problemReportId,
     machineId: event.machineId,
@@ -14,7 +14,7 @@ export async function saveProblemReported(db: NodePgDatabase, event: ProblemRepo
   });
 }
 
-export async function problemReportsOfMachine(db: NodePgDatabase, machineId: string) {
+export async function problemReportsOfMachine(db: Database, machineId: string) {
   return db
     .select({ id: problemReport.id, description: problemReport.description, reportedAt: problemReport.reportedAt })
     .from(problemReport)

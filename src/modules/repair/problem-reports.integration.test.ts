@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { fixedClock } from "@/clock";
+import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, saveProblemReported } from "./problem-reports";
 import { reportProblem } from "./report-problem";

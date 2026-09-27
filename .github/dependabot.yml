@@ -1,0 +1,37 @@
+# ST-003: automated dependency update pull requests (the routine around them: ST-063).
+# Each pull request runs CI (verify + e2e) like any other; the user reviews and merges.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for all minor and patch updates; majors (e.g. Next.js) come one by one.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Workflow tooling (validators, hooks) in .claude/
+  - package-ecosystem: npm
+    directory: /.claude
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    groups:
+      tooling:
+        update-types: [minor, patch]
+
+  # GitHub Actions used by the workflows (ST-059 code review: keep action versions current)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    groups:
+      actions:
+        patterns: ["*"]

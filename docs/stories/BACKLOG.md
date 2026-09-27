@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**68 stories** · In Progress: 0 · Ready: 63 · In Review: 0 · Draft: 2 · Done: 3
+**70 stories** · In Progress: 0 · Ready: 62 · In Review: 0 · Draft: 4 · Done: 4
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -10,7 +10,6 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-003](ST-003-command-layer-and-event-journal.md) | Module structure, command layer, event journal and time convention | tech-task | Team | must | M | medium | ST-059 |
 | [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003 |
 | [ST-005](ST-005-manage-team-member-accounts.md) | Manage team member accounts | story | Team | must | M | low | ST-004 |
 | [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
@@ -80,6 +79,8 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 |---|---|---|---|---|---|---|---|
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | should | XS | low | ST-003 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | should | S | medium | ST-013, ST-059 |
+| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | should | S | medium | ST-004 |
+| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | should | M | medium | ST-003 |
 
 ## Done
 
@@ -88,3 +89,4 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-001](ST-001-walking-skeleton-vercel-eu.md) | Walking skeleton on Vercel with EU database and object storage | spike | Repair | must | M | high | – |
 | [ST-002](ST-002-photo-upload-phone-camera.md) | Take photos with a phone camera and upload them safely | spike | Repair | must | M | high | ST-001 |
 | [ST-059](ST-059-ci-and-test-harness.md) | CI and test harness | tech-task | Repair | must | M | medium | ST-001 |
+| [ST-003](ST-003-command-layer-and-event-journal.md) | Module structure, command layer, event journal and time convention | tech-task | Team | must | M | medium | ST-059 |
