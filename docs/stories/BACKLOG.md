@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**68 stories** · In Progress: 1 · Ready: 62 · In Review: 0 · Draft: 2 · Done: 3
+**70 stories** · In Progress: 1 · Ready: 62 · In Review: 0 · Draft: 4 · Done: 3
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -85,6 +85,8 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 |---|---|---|---|---|---|---|---|
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | should | XS | low | ST-003 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | should | S | medium | ST-013, ST-059 |
+| [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | should | S | medium | ST-004 |
+| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | should | M | medium | ST-003 |
 
 ## Done
 
