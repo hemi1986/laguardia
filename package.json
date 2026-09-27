@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "verify": "node .claude/skills/implement/scripts/verify.ts",
     "db:up": "docker compose up -d --wait",
-    "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",
@@ -28,6 +29,7 @@
     "sharp": "^0.35.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.0",
     "@types/pg": "^8.23.1",

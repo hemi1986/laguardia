@@ -1,0 +1,52 @@
+# ST-059: browser tests at 360 px against the preview deployment of the pushed commit.
+# Vercel reports each deployment to GitHub (Deployments API); the job waits for the commit's preview
+# and runs the tests against its URL. Production (main) is not tested here – it is gated by "verify".
+name: Browser tests on preview
+
+on:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Wait for the Vercel preview of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 50); do
+            # A failed API call (502, rate limit) is retried in the next round instead of ending the wait.
+            id=$(gh api "repos/$REPO/deployments?sha=$SHA&environment=Preview" --jq '.[0].id // empty' || true)
+            if [ -n "$id" ]; then
+              read -r state url < <(gh api "repos/$REPO/deployments/$id/statuses" --jq '.[0] | "\(.state) \(.environment_url)"') || true
+              case "$state" in
+                success) echo "BASE_URL=$url" >> "$GITHUB_ENV"; echo "Preview: $url"; exit 0 ;;
+                failure|error) echo "::error::Vercel preview deployment failed"; exit 1 ;;
+              esac
+            fi
+            sleep 10
+          done
+          echo "::error::No successful Vercel preview for $SHA after 500 s"; exit 1
+      - run: npm run test:e2e
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SPIKE_PASSWORD: ${{ secrets.PREVIEW_SPIKE_PASSWORD }}
