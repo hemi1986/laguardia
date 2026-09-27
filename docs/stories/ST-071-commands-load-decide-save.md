@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-003]
 labels: [foundation, architecture]
-status: ready
+status: in-progress
 ---
 
 ## Task
