@@ -275,7 +275,7 @@ const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function avoidedWords(text: string, g: Glossary, inCode: boolean): { word: string; preferred: string }[] {
   let masked = ` ${text.toLowerCase()} `;
   for (const term of [...g.terms].sort((a, b) => b.length - a.length)) {
-    masked = masked.replace(new RegExp(`\\b${esc(term)}\\b`, "g"), " ¤ ");
+    masked = masked.replace(new RegExp(`\\b${esc(term)}s?\\b`, "g"), " ¤ "); // plural too: problemReports
   }
   const hits = g.avoid.filter(({ word }) => {
     if (g.terms.includes(word)) return false; // avoided in one place, the proper term elsewhere
