@@ -1,16 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
+import { anExistingTeamMember } from "@/test-support/team-members";
 import { aggregateCommand, executeCommand, journalOf, type Actor, type AggregateStore } from ".";
 
 const db = testDatabase();
 const clock = fixedClock("2026-09-27T10:00:00Z");
 const visitor: Actor = { kind: "visitor" };
 const technicianId = randomUUID();
-const technician: Actor = { kind: "team-member", teamMemberId: technicianId, role: "technician" };
+const technician = { kind: "team-member", teamMemberId: technicianId, role: "technician" } as const;
+beforeAll(() => anExistingTeamMember(db, technician));
 
 function deps(actor: Actor, newId: () => string = randomUUID) {
   return { actor, db, clock, newId };

@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
+import { anExistingTeamMember } from "@/test-support/team-members";
 import { problemReportsOfMachine } from ".";
 import {
   changeDescriptionForTest,
@@ -14,7 +15,8 @@ import {
 import { problemReports } from "./problem-reports";
 
 const db = testDatabase();
-const technician: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" };
+const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+beforeAll(() => anExistingTeamMember(db, technician));
 const deps = { actor: technician, db, clock: fixedClock("2026-09-27T10:00:00Z"), newId: randomUUID };
 
 describe("automatic policies triggered by a command", () => {

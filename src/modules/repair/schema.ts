@@ -6,7 +6,8 @@ export const problemReport = pgTable("problem_report", {
   machineId: text("machine_id").notNull(),
   description: text("description").notNull(),
   reporterKind: text("reporter_kind", { enum: ["visitor", "team-member"] }).notNull(),
-  reporterTeamMemberId: text("reporter_team_member_id"),
+  /** TeamMemberId (UUID from Better Auth); foreign key to team_member.id is added in the migration (ADR 0002: modules share IDs, not tables). */
+  reporterTeamMemberId: uuid("reporter_team_member_id"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
   /** Optimistic version check (HS-16): the problem report is the consistency boundary of triage. */
   version: integer("version").notNull().default(0),

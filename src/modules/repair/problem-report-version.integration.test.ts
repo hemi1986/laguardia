@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
+import { anExistingTeamMember } from "@/test-support/team-members";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
 import {
   changeDescriptionForTest,
@@ -12,7 +13,8 @@ import {
 import { problemReports } from "./problem-reports";
 
 const db = testDatabase();
-const technician: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" };
+const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+beforeAll(() => anExistingTeamMember(db, technician));
 const deps = { actor: technician, db, clock: fixedClock("2026-09-27T10:00:00Z"), newId: randomUUID };
 
 async function reportedProblem(machineId = randomUUID()) {
@@ -93,7 +95,8 @@ describe("commands on an existing problem report: load, decide, save (HS-16)", (
   });
 
   it("keeps the fields the decision did not change when it saves", async () => {
-    const reportedBy: Actor = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" };
+    const reportedBy = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, reportedBy);
     const created = await executeCommand(
       reportProblemCommand,
       { machineId: randomUUID(), description: "Display flickers" },
