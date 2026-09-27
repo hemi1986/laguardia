@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Triage columns follow with ST-018 ff. */
 export const problemReport = pgTable("problem_report", {
@@ -8,4 +8,6 @@ export const problemReport = pgTable("problem_report", {
   reporterKind: text("reporter_kind", { enum: ["visitor", "team-member"] }).notNull(),
   reporterTeamMemberId: text("reporter_team_member_id"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+  /** Optimistic version check (HS-16): the problem report is the consistency boundary of triage. */
+  version: integer("version").notNull().default(0),
 });

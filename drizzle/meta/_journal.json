@@ -8,6 +8,13 @@
       "when": 1790505793460,
       "tag": "0000_problem_report",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790519103935,
+      "tag": "0001_event_journal_and_problem_report_version",
+      "breakpoints": true
     }
   ]
 }

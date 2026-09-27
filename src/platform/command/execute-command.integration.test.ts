@@ -1,0 +1,103 @@
+import { randomUUID } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
+import { fixedClock } from "@/platform/clock";
+import { testDatabase } from "@/test-support/database";
+import { defineCommand, executeCommand, journalOf, type Actor } from ".";
+
+const db = testDatabase();
+const clock = fixedClock("2026-09-27T10:00:00Z");
+const visitor: Actor = { kind: "visitor" };
+const technicianId = randomUUID();
+const technician: Actor = { kind: "team-member", teamMemberId: technicianId, role: "technician" };
+
+function deps(actor: Actor, newId: () => string = randomUUID) {
+  return { actor, db, clock, newId };
+}
+
+describe("command layer", () => {
+  it("stores exactly the command's domain events in the journal with type, time, actor, aggregate and machine", async () => {
+    const machineId = randomUUID();
+
+    const outcome = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Left flipper is weak" },
+      deps(technician),
+    );
+
+    if (!outcome.ok) throw new Error(outcome.error);
+    expect(await journalOf(db, { aggregateId: outcome.result.problemReportId })).toEqual([
+      {
+        type: "EVT-ProblemReported",
+        occurredAt: new Date("2026-09-27T10:00:00Z"),
+        actor: technician,
+        aggregate: { type: "AGG-ProblemReport", id: outcome.result.problemReportId },
+        machineId,
+        data: {
+          description: "Left flipper is weak",
+          reporter: { kind: "team-member", teamMemberId: technicianId },
+        },
+      },
+    ]);
+  });
+
+  it("gives a created aggregate and its journal entry exactly the ID of the injected ID generator", async () => {
+    const machineId = randomUUID();
+    const expectedId = "0b4f8a52-6c1e-4b8e-9d0a-3f2c1e7d9a11";
+
+    const outcome = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Coin door jammed" },
+      deps(visitor, () => expectedId),
+    );
+
+    expect(outcome).toEqual({ ok: true, result: { problemReportId: expectedId } });
+    expect((await problemReportsOfMachine(db, machineId)).map((r) => r.id)).toEqual([expectedId]);
+    expect((await journalOf(db, { aggregateId: expectedId })).map((e) => e.aggregate)).toEqual([
+      { type: "AGG-ProblemReport", id: expectedId },
+    ]);
+  });
+
+  it("stores neither the aggregate change nor a journal entry when a command is rejected", async () => {
+    const machineId = randomUUID();
+    const reportThenReject = defineCommand({
+      id: "CMD-TestReportThenReject",
+      allowedActors: ["visitor"],
+      run: async (_input: void, context) => {
+        const written = await reportProblemCommand.run(
+          { machineId, description: "written before the rejection" },
+          context,
+        );
+        if (!written.ok) throw new Error(written.error);
+        return { ok: false as const, error: "rejected-after-writing" };
+      },
+    });
+
+    const empty = await executeCommand(reportProblemCommand, { machineId, description: "  " }, deps(visitor));
+    const afterWriting = await executeCommand(reportThenReject, undefined, deps(visitor));
+
+    expect(empty).toEqual({ ok: false, error: "description-required" });
+    expect(afterWriting).toEqual({ ok: false, error: "rejected-after-writing" });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(await journalOf(db, { machineId })).toEqual([]);
+  });
+
+  it("rejects a command for team members called without an acting team member, before it runs", async () => {
+    let ran = false;
+    const teamOnly = defineCommand({
+      id: "CMD-TestTeamOnly",
+      allowedActors: ["helper", "technician"],
+      run: async () => {
+        ran = true;
+        return { ok: true as const, result: undefined, events: [] };
+      },
+    });
+
+    expect(await executeCommand(teamOnly, undefined, deps(visitor))).toEqual({ ok: false, error: "not-authorized" });
+    expect(await executeCommand(teamOnly, undefined, deps({ kind: "system" }))).toEqual({
+      ok: false,
+      error: "not-authorized",
+    });
+    expect(ran).toBe(false);
+  });
+});

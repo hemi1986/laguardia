@@ -36,7 +36,7 @@ describe("module boundaries", () => {
   it("allow another module's public interface and a module's own internals", async () => {
     const publicInterface = await boundaryErrors(
       "src/modules/collection/allowed.ts",
-      'import { reportProblem } from "@/modules/repair";\nexport const x = reportProblem;\n',
+      'import { reportProblemCommand } from "@/modules/repair";\nexport const x = reportProblemCommand;\n',
     );
     const ownInternals = await boundaryErrors(
       "src/modules/repair/allowed.ts",
