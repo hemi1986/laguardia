@@ -35,5 +35,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            .claude/package-lock.json
       - run: npm ci
+      # The workflow tooling in .claude/ (validators, traceability checks) has its own dependencies.
+      - run: npm ci --prefix .claude
       - run: npm run verify
