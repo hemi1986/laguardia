@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-003]
 labels: [follow-up, foundation]
-status: draft
+status: ready
 ---
 
 ## Task

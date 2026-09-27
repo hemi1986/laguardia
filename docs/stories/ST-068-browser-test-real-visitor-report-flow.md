@@ -3,13 +3,13 @@ id: ST-068
 title: Browser test of the real visitor problem report flow
 type: tech-task
 context: BC-Repair
-priority: should
+priority: must
 size: S
 risk: medium
 events: []
-depends_on: [ST-013, ST-059]
+depends_on: [ST-007, ST-013, ST-059, ST-075]
 labels: [follow-up, foundation]
-status: draft
+status: ready
 ---
 
 ## Task
@@ -19,13 +19,16 @@ The only browser test, `e2e/report-problem.spec.ts`, drives the ST-001 spike tes
 
 Replace the spike browser test with a browser test of the real visitor flow from ST-010 and ST-013, run against the commit's Vercel preview by the existing workflow `.github/workflows/e2e-preview.yml`: a visitor opens the visitor machine page of a machine by its museum number and reports a problem. This task must be done before or together with ST-066, so at least one browser test keeps running at all times.
 
-The test needs a machine that is on display in the preview's database. [OPEN] How the preview gets that machine is not decided (see Open Questions).
+The test needs a machine that is on display in the preview's database. Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2): a seed step in the browser-test workflow registers the machine through `CMD-RegisterMachine` (ST-007) in the preview's Neon database branch, so the event journal stays consistent, with a fixed museum number reserved for tests. It runs only against preview database branches, never production; the connection comes from the CI step of ST-075.
 
 ## Acceptance Criteria
+- [ ] A seed step in `.github/workflows/e2e-preview.yml`, run before the browser test, registers a machine with the fixed test museum number (a valid given museum number, "LG-" plus three digits, ST-007) and the initial machine status *Playable* through `CMD-RegisterMachine` in the preview's database branch, using the connection from ST-075; the machine model it needs is created through `CMD-CreateMachineModel` (ST-006) if it does not exist yet; both are journaled like any other command (`EVT-MachineModelCreated`, `EVT-MachineRegistered`).
+- [ ] The seed step is repeatable: when the machine model or the machine with the test museum number already exists in the preview's database branch, the step leaves it as it is and succeeds.
+- [ ] The seed step runs only against a preview database branch: it relies on ST-075's production guard and never receives a production connection.
 - [ ] A browser test at 360 px width opens the visitor machine page of a machine that is on display, reports a problem with a description, and sees the confirmation in the visitor's language.
 - [ ] The same test asserts that the visitor machine page and the report form have no horizontal scrolling at 360 px width (page width ≤ 360 px).
 - [ ] The test runs in `.github/workflows/e2e-preview.yml` against the commit's Vercel preview and is green there; the run is linked as evidence.
-- [ ] The test uses neither the spike password nor the machine `"test-machine"`, and needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`.
+- [ ] The test uses neither the spike password nor the machine `"test-machine"`; the browser test needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`, and the seed step none other than those of ST-075.
 - [ ] The test does not depend on data left behind by earlier runs: a second run against the same preview is green as well.
 - [ ] `e2e/report-problem.spec.ts` (the spike test) is removed or rewritten, so no browser test references the spike page any more.
 - [ ] The browser test job still finishes in under 10 minutes including waiting for the preview (ST-059).
@@ -37,4 +40,7 @@ The test needs a machine that is on display in the preview's database. [OPEN] Ho
 - Photos on problem reports (ST-016)
 
 ## Open Questions
-- [OPEN] How does the preview get a machine that is on display for the browser test? Options: (a) the browser test signs in as a technician with a preview-only test account and registers a machine through the team UI (ST-007) – needs ST-004 and ST-007 and a further secret; (b) a seed step in the preview workflow registers a machine through `CMD-RegisterMachine` in the preview database branch, so the event journal stays consistent; (c) the test relies on machines already copied into the preview database branch from production – couples the test to production data. Recommendation: (b), with a fixed museum number reserved for tests, only ever run against preview database branches, never production.
+- none – how the preview gets a machine on display was answered in the story review of 2026-09-27: seeded through `CMD-RegisterMachine` with a fixed test museum number, preview branches only, never production (see Task).
+
+## Notes
+- The acting person of the seed step (`CMD-RegisterMachine` is for technicians only) is decided in this story's test plan, when login (ST-004) and account management (ST-005) exist – user decision in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 6).

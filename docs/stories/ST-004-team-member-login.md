@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: medium
 events: []
-depends_on: [ST-003]
+depends_on: [ST-003, ST-071]
 labels: [mvp, foundation, team]
 status: ready
 ---

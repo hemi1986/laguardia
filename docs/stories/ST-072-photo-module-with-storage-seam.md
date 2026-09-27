@@ -9,13 +9,13 @@ risk: medium
 events: []
 depends_on: [ST-071]
 labels: [foundation, architecture]
-status: draft
+status: ready
 ---
 
 ## Task
-Implements the photo and storage decisions of the architecture review 2026-09-27 (decisions Q1–Q22, grilling session with `/improve-codebase-architecture`): **Q7, Q8, Q16, Q17, Q22**, plus the review's findings on photo IDs and times, deletion, error vocabulary and the public interface. The decision record is `docs/adr/0007-photo-and-file-storage-consistency.md` (status proposed). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
+Implements the photo and storage decisions of the architecture review 2026-09-27 (decisions Q1–Q22, grilling session with `/improve-codebase-architecture`): **Q7, Q8, Q16, Q17, Q22**, plus the review's findings on photo IDs and times, deletion, error vocabulary and the public interface. The decision record is `docs/adr/0007-photo-and-file-storage-consistency.md` (accepted). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
-**Ordering.** Before ST-016 (photo on a problem report), the first story that stores a photo for an aggregate; ST-020 (spam dismissal), ST-032 and ST-054 use the same module (their files are not changed by this task). It depends on ST-071 because "run this command" wraps `executeCommand`, whose command shape, result types and injected dependencies ST-071 reworks – building the photo flow on the old `run` shape would have to be redone.
+**Ordering.** Before ST-016 (photo on a problem report), the first story that stores a photo for an aggregate; ST-020 (spam dismissal), ST-032 and ST-054 use the same module (their files are not changed by this task). It depends on ST-071 because "run this command" wraps `executeCommand`, whose command shape, result types and injected dependencies ST-071 reworks – building the photo flow on the old `run` shape would have to be redone. It does not depend on ST-074: the operation only wraps `executeCommand` and its result type, and is tested with a test stand-in command – it needs neither the event catalogue, the typed acting person nor `context.run`.
 
 Today (`src/photo/*`, `docs/architecture/photos.md`) the caller sequences `acceptPhoto` → `storePhoto` → command itself, `storePhoto` names the photo with `randomUUID()` and calls Vercel Blob directly, `photoAddresses` computes validity with `Date.now()`, a photo can never be deleted, and a rejected command leaves an orphaned photo ("accepted for now; decided in ST-016"). The review decided:
 
@@ -26,7 +26,8 @@ Today (`src/photo/*`, `docs/architecture/photos.md`) the caller sequences `accep
 - **Q22 – conversion.** Converts `src/photo/*`. The spike photo page (`src/app/spike/photos/`) stays its only user until ST-066 removes it.
 
 ## Acceptance Criteria
-- [ ] A storage seam in `src/platform/` offers write, delete and a short-lived view address; it has a Vercel Blob adapter and an in-memory adapter, and domain code reaches Blob only through it (evidence: `@vercel/blob` imported only by the Blob adapter – search result in the pull request).
+- [ ] A storage seam in `src/platform/` offers write, delete and a short-lived view address; it has a Vercel Blob adapter and an in-memory adapter, and domain code reaches Blob only through it.
+- [ ] `@vercel/blob` may be imported only by the Blob adapter: a deliberate import of `@vercel/blob` from any other file under `src/` makes `npm run verify` fail (lint rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
 - [ ] The storage adapter is injected like the clock and the ID generator; integration tests use the in-memory adapter and never reach Vercel Blob.
 - [ ] The photo module has an `index.ts`; other code imports only it (module boundary rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
 - [ ] The photo module's "store, run, delete on failure": with an accepted command the photo is stored and the command received exactly its reference (integration test with a test stand-in command, in-memory adapter – the problem report gets its photo reference only with ST-016).

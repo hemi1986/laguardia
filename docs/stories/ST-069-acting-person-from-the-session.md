@@ -3,13 +3,13 @@ id: ST-069
 title: The acting person comes from the session in one place
 type: tech-task
 context: BC-Team
-priority: should
+priority: must
 size: S
 risk: medium
 events: []
 depends_on: [ST-004, ST-073]
 labels: [follow-up, security]
-status: draft
+status: ready
 ---
 
 ## Task
@@ -22,7 +22,9 @@ Follow-up of ST-003 (module structure, command layer, event journal): `docs/revi
 - no session, or a session that is expired, unknown or forged → a visitor;
 - the system actor is never built from a session; automatic policies keep running only through `context.runAsSystem` (ST-003).
 
-A deactivated account (ST-005) must not act: a command sent with the session of a deactivated account is rejected and stores nothing. [OPEN] Whether such a command is rejected outright or runs as a visitor (e.g. a visitor-allowed command like `CMD-ReportProblem`) is not decided – see Open Questions.
+A deactivated account (ST-005) must not act: a command sent with the session of a deactivated account is rejected and stores nothing – also when the command allows visitors (e.g. `CMD-ReportProblem`); the login is requested. A deactivated team member never acts in that request, not even anonymously; after the session has ended they can report as a visitor (answer of the story review 2026-09-27, `docs/reviews/2026-09-27-story-review-st-067-073.md`).
+
+**Ordering.** Right after ST-004 and before ST-005, so ST-005's Server Actions already get the acting person from the runner's `currentPerson()`. The deactivated-account criterion is tested with an account marked deactivated in the test data; if the deactivated state only arrives with ST-005, ST-005 carries that check through the runner's `currentPerson()`.
 
 The runner, its signature and its lint rule stay as ST-073 built them. Tests keep calling `executeCommand` with an explicit actor.
 
@@ -33,7 +35,7 @@ The runner, its signature and its lint rule stay as ST-073 built them. Tests kee
 - [ ] Without a session the actor is a visitor: a visitor-allowed command is journaled with the actor visitor, and a command allowed only for team members is rejected with `not-authorized` and stores neither a change nor a journal entry.
 - [ ] An expired, unknown or tampered session cookie is treated like no session (actor visitor); the rejection reveals nothing about the session.
 - [ ] After a technician changes a helper's role to technician, the helper's next command through the runner acts with the role technician, without logging in again.
-- [ ] A command sent with the session of a deactivated account stores neither a change nor a journal entry (behaviour for visitor-allowed commands per the answer to the open question).
+- [ ] A command sent with the session of a deactivated account is rejected and stores neither a change nor a journal entry – also a visitor-allowed command such as `CMD-ReportProblem`, which is not run as a visitor (integration test with an account marked deactivated in the test data).
 - [ ] A forged Server Action post by a signed-in helper that adds form fields such as `role=technician` or another team member's ID is still run as that helper: a technician-only command is rejected with `not-authorized` (browser or integration test).
 - [ ] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that `currentPerson()` reads the session and that the system actor never comes from a session.
 
@@ -45,5 +47,4 @@ The runner, its signature and its lint rule stay as ST-073 built them. Tests kee
 - Branded ID types (`docs/reviews/ST-003-code-review.md` finding #11)
 
 ## Open Questions
-- [OPEN] What happens to a command sent with the session of a deactivated account when the command also allows visitors (e.g. `CMD-ReportProblem` from the visitor machine page)? Options: (a) rejected like every other command, the login is requested; (b) the session is ended and the command runs as a visitor. Recommendation: (a) – a deactivated team member never acts, not even anonymously in that request; they can still report as a visitor after the session has ended.
-- [OPEN] ST-004 does not say whether an account can already be marked deactivated before ST-005 exists. Should this task be done right after ST-004 and before ST-005 (so ST-005's Server Actions already use the entry point, and the deactivated-account item is tested with an account marked deactivated in the test data), or after ST-005 (then `depends_on: [ST-004, ST-005]`)? Recommendation: right after ST-004, before ST-005; if the deactivated state only arrives with ST-005, ST-005 carries the deactivated-account check through the entry point.
+- none – both questions (deactivated account with a visitor-allowed command; order relative to ST-005) were answered as recommended in the story review of 2026-09-27 (see Task).
