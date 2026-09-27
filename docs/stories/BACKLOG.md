@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**64 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 0 · Done: 0
+**65 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 1 · Done: 0
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -79,3 +79,9 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |
+
+## Draft
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-065](ST-065-retire-spike-scaffolding-and-move-to-pro-team.md) | Retire the ST-001 spike scaffolding and move hosting to the museum's Pro team | tech-task | Repair | should | – | – | ST-003, ST-004 |
