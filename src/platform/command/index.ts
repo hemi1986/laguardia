@@ -92,7 +92,9 @@ export async function executeCommand<Input, Result, Error extends string>(
   try {
     const result = await db.transaction(async (tx) => {
       const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
-      if (rows.length > 0) await tx.insert(eventJournal).values(rows);
+      // Every command writes its journal entry (Definition of Done); only a policy may have nothing to do.
+      if (rows.length === 0) throw new Error(`${command.id} succeeded but journals no event`);
+      await tx.insert(eventJournal).values(rows);
       return result;
     });
     return { ok: true, result };

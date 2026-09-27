@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
@@ -143,6 +144,27 @@ describe("command layer", () => {
     expect(outcome).toEqual({ ok: false, error: "policy-rejected" });
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await journalOf(db, { machineId })).toEqual([]);
+  });
+
+  it("refuses a successful command that journals no event", async () => {
+    const silent = defineCommand({
+      id: "CMD-TestSilent",
+      allowedActors: ["visitor"],
+      run: async () => ({ ok: true as const, result: undefined, events: [] }),
+    });
+
+    await expect(executeCommand(silent, undefined, deps(visitor))).rejects.toThrow(/journals no event/);
+  });
+
+  it("keeps the journal append-only: changing or deleting entries is refused by the database", async () => {
+    const machineId = randomUUID();
+    await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, deps(visitor));
+
+    await expect(
+      db.execute(sql`UPDATE event_journal SET type = 'X' WHERE machine_id = ${machineId}`),
+    ).rejects.toThrow();
+    await expect(db.execute(sql`DELETE FROM event_journal WHERE machine_id = ${machineId}`)).rejects.toThrow();
+    expect(await journalOf(db, { machineId })).toHaveLength(1);
   });
 });
 

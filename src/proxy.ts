@@ -8,6 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export function proxy(request: NextRequest) {
   if (request.method !== "POST") return NextResponse.next();
+  // x-forwarded-host is set by Vercel's edge (as Next.js's own Server Action check uses it); a forged cross-site
+  // request from a victim's browser can set neither it nor the Origin.
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const origin = request.headers.get("origin");
   if (!origin || !host || originHost(origin) !== host) {
