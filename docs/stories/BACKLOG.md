@@ -76,7 +76,7 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards highlight what is new since the last visit | story | Repair | should | M | medium | ST-049, ST-058 |
 | [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-028 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | should | XS | low | ST-008, ST-043 |
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007 |
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 and ST-002 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007 |
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |

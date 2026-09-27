@@ -33,7 +33,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 
 ## Decisions
 
-- **HEIC (iPhone):** converted, never stored. iOS Safari hands a HEIC photo to a page with `accept="image/*"` as JPEG (measured: "Original: image/jpeg" for camera and gallery photos); Safari can also decode HEIC on a canvas. The server's `sharp` has no HEIC decoder and rejects HEIC as `unsupported-format`; a browser that cannot decode a photo shows "Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
+- **HEIC (iPhone):** converted, never stored. iOS Safari hands a HEIC photo to a page with `accept="image/*"` as JPEG (measured: "Original: image/jpeg" for camera and gallery photos); Safari can also decode HEIC on a canvas. The server's `sharp` has no HEIC (HEVC) decoder, so a HEIC file is rejected – as `unsupported-format` (tested with AVIF, the same HEIF container) or as `not-an-image`; a real HEIC fixture cannot be generated with sharp; a browser that cannot decode a photo shows "Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
 - **Two inputs:** "Foto aufnehmen" (`accept="image/*" capture="environment"` – opens the camera directly) and "Foto auswählen" (`accept="image/*"` – camera or gallery). Both work in iOS Safari and Android Chrome.
 - **Rotation before stripping:** both halves rotate by the EXIF orientation first; the stored JPEG has the pixels upright and no orientation tag.
 - **Access:** photos are in the private store under random UUID names; there is no public listing; reading needs a signature (unsigned address → 403). Team-only visibility is enforced by the page/command that issues the 5-minute addresses (stub login in the spike, team login from ST-004).
