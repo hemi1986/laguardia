@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 
 /**
@@ -8,6 +9,10 @@ import { defineConfig } from "@playwright/test";
  * No traces, screenshots or videos in CI: the repository is public and they would contain the bypass secret
  * and the spike password. Locally, failed tests keep a trace.
  */
+// The one local settings file (also read by `npm run dev` and the scripts) – E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD
+// live there. Absent in CI, where the variables come from the environment.
+if (existsSync(".env.development.local")) process.loadEnvFile(".env.development.local");
+
 const baseURL = process.env.BASE_URL;
 
 export default defineConfig({
