@@ -9,13 +9,13 @@ describe("CMD-ReportProblem – the decision", () => {
   it("records the problem report with its ID, machine, trimmed description, reporter and time", () => {
     const decision = reportProblem(
       undefined,
-      { machineId: "test-machine", description: "  Left flipper is weak  " },
+      { machineId: "m-1", description: "  Left flipper is weak  " },
       context,
     );
 
     const report = {
       id: "report-1",
-      machineId: "test-machine",
+      machineId: "m-1",
       description: "Left flipper is weak",
       reporter: { kind: "visitor" },
       reportedAt: new Date("2026-09-27T10:00:00Z"),
@@ -27,7 +27,7 @@ describe("CMD-ReportProblem – the decision", () => {
         {
           type: "EVT-ProblemReported",
           problemReportId: "report-1",
-          machineId: "test-machine",
+          machineId: "m-1",
           description: "Left flipper is weak",
           reporter: { kind: "visitor" },
           reportedAt: new Date("2026-09-27T10:00:00Z"),
@@ -45,7 +45,7 @@ describe("CMD-ReportProblem – the decision", () => {
   });
 
   it.each(["", "   ", "\n\t"])("rejects a problem report without a description (%j)", (description) => {
-    expect(reportProblem(undefined, { machineId: "test-machine", description }, context)).toEqual({
+    expect(reportProblem(undefined, { machineId: "m-1", description }, context)).toEqual({
       ok: false,
       error: "description-required",
     });

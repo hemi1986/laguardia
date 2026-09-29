@@ -29,7 +29,7 @@ describe("message catalogs", () => {
 
   it("visitor texts exist in German and English with the same keys", () => {
     expect(keysOf(visitorMessages("en")).sort()).toEqual(keysOf(visitorMessages("de")).sort());
-    expect(visitorMessages("de").problemReport.submit).toBe("Melden");
-    expect(visitorMessages("en").problemReport.submit).toBe("Report");
+    expect(visitorMessages("de").home.teamLogin).toBe("Anmeldung fürs Team");
+    expect(visitorMessages("en").home.teamLogin).toBe("Team login");
   });
 });

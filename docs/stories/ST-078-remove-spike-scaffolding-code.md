@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-004, ST-073]
 labels: [foundation, follow-up]
-status: ready
+status: in-progress
 ---
 
 ## Task
@@ -42,17 +42,17 @@ Two consequences are the reason this was not done earlier, and both must be hand
 **The written build order is not a dependency for ST-073.** ST-073 only `depends_on: [ST-071]` and touches none of the team pages, so it can run **in parallel** with ST-076 and ST-077 – nobody should block ST-073 on the UI stories. Only this story waits for ST-073.
 
 ## Acceptance Criteria
-- [ ] The files `src/spike/*`, `src/app/spike/files/*`, `src/app/spike/photos/*` and `src/app/api/spike/upload/route.ts` no longer exist, and no file under `src/`, `e2e/`, `scripts/` or the repository's configuration references `test-machine`, `SPIKE_PASSWORD`, `@/spike/`, `/spike/` or the `spike` message block – an automated check in `npm run verify` (or a test) fails when such a reference is added again.
-- [ ] `/` no longer shows the passphrase gate, the *Report problem* form for `"test-machine"`, the list of its problem reports or the links "Dateien (Spike)" and "Fotos (Spike)"; `/spike`, `/spike/files`, `/spike/photos`, `/api/spike` and `/api/spike/upload` return 404 on the branch's preview deployment.
-- [ ] `/` shows a minimal placeholder page with the museum's name and a link to the team login, with its texts from the message catalogs (and the shared components of ST-076 where they already exist); it is publicly reachable **without a redirect**, so the scenario test "ST-004: Team pages require login" (`e2e/team-login.spec.ts`) stays green unchanged.
-- [ ] The photo building block `src/photo/*` still exists unchanged and its tests pass.
-- [ ] The `spike` block is gone from `src/platform/messages/team.de.ts` and the message catalog test still passes (no key without a use, no term missing).
-- [ ] `e2e/security.spec.ts` proves the same protection on a page that still has a Server Action (e.g. `/login`): a forged cross-site POST carrying that page's Server Action ID – once with a foreign `Origin`, once with no `Origin` – is rejected with a status of 400 or more, sets no session cookie, and afterwards `/team` still redirects to `/login` (no session was created). Both variants stay, and the test needs no account and no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`.
-- [ ] The "pages are served with the security headers" test of the same file asserts the same headers on that page and is green against the preview.
-- [ ] `e2e/security.spec.ts` runs against the commit's Vercel preview in `.github/workflows/e2e-preview.yml` without `SPIKE_PASSWORD` and is green there; the run is linked as evidence.
-- [ ] `e2e/report-problem.spec.ts` is deleted, and the story's pull request states that no browser test covers the visitor problem report flow until ST-068 (which needs ST-007 and ST-013); the same sentence is recorded in ST-068 so the gap is visible where it is closed.
-- [ ] The import rules still hold without the `spike` element: `eslint.config.mjs` and `src/platform/module-boundaries.test.ts` keep proving "the platform must not depend on modules or the app" and "a module must not depend on the app" with cases that do not use spike code, and a deliberate violation still fails the check.
-- [ ] `npm run verify -- --e2e` is green, no other test is weakened or deleted, and `npm run build` succeeds without `SPIKE_PASSWORD` being set.
+- [x] The files `src/spike/*`, `src/app/spike/files/*`, `src/app/spike/photos/*` and `src/app/api/spike/upload/route.ts` no longer exist, and no file under `src/`, `e2e/`, `scripts/` or the repository's configuration references `test-machine`, `SPIKE_PASSWORD`, `@/spike/`, `/spike/` or the `spike` message block – an automated check in `npm run verify` (or a test) fails when such a reference is added again.
+- [x] `/` no longer shows the passphrase gate, the *Report problem* form for `"test-machine"`, the list of its problem reports or the links "Dateien (Spike)" and "Fotos (Spike)"; `/spike`, `/spike/files`, `/spike/photos`, `/api/spike` and `/api/spike/upload` return 404 on the branch's preview deployment.
+- [x] `/` shows a minimal placeholder page with the museum's name and a link to the team login, with its texts from the message catalogs (and the shared components of ST-076 where they already exist); it is publicly reachable **without a redirect**, so the scenario test "ST-004: Team pages require login" (`e2e/team-login.spec.ts`) stays green unchanged.
+- [x] The photo building block `src/photo/*` still exists unchanged and its tests pass.
+- [x] The `spike` block is gone from `src/platform/messages/team.de.ts` and the message catalog test still passes (no key without a use, no term missing).
+- [x] `e2e/security.spec.ts` proves the same protection on a page that still has a Server Action (e.g. `/login`): a forged cross-site POST carrying that page's Server Action ID – once with a foreign `Origin`, once with no `Origin` – is rejected with a status of 400 or more, sets no session cookie, and afterwards `/team` still redirects to `/login` (no session was created). Both variants stay, and the test needs no account and no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`.
+- [x] The "pages are served with the security headers" test of the same file asserts the same headers on that page and is green against the preview.
+- [x] `e2e/security.spec.ts` runs against the commit's Vercel preview in `.github/workflows/e2e-preview.yml` without `SPIKE_PASSWORD` and is green there; the run is linked as evidence.
+- [x] `e2e/report-problem.spec.ts` is deleted, and the story's pull request states that no browser test covers the visitor problem report flow until ST-068 (which needs ST-007 and ST-013); the same sentence is recorded in ST-068 so the gap is visible where it is closed.
+- [x] The import rules still hold without the `spike` element: `eslint.config.mjs` and `src/platform/module-boundaries.test.ts` keep proving "the platform must not depend on modules or the app" and "a module must not depend on the app" with cases that do not use spike code, and a deliberate violation still fails the check.
+- [x] `npm run verify -- --e2e` is green, no other test is weakened or deleted, and `npm run build` succeeds without `SPIKE_PASSWORD` being set.
 
 ## Out of Scope
 - Removing `SPIKE_PASSWORD` from the Vercel environments, deleting the blobs under the `spike/` prefix and the defensive checks for leftovers in production and in preview database branches (ST-066)

@@ -22,7 +22,6 @@ src/
   lib/              `cn` re-export, the alias shadcn's components import
   platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs
   photo/            photo building block (ST-002)
-  spike/            ST-001 spike – removed by ST-066
   test-support/     test data builders, test database – only for tests (ST-067 enforces it)
   proxy.ts          CSRF check for every POST to a page; renews the session cookie on every page request
 scripts/            one-off command-line scripts (e.g. `npm run setup:first-technician`), run with tsx
@@ -44,7 +43,7 @@ Inside a module (flat until it grows):
 
 **Import rules** (lint, `eslint.config.mjs`, ADR 0002):
 - A module is used only through its `index.ts`. Inside a module, import freely.
-- Direction: `app` → `modules` → `platform`. The platform imports no module, page or spike code (its tests may drive a module command); a module imports no page or spike code.
+- Direction: `app` → `modules` → `platform`. The platform imports no module or page code (its tests may drive a module command); a module imports no page code.
 - A module's `index.ts` exports commands and read-model queries – **never** its persistence functions or tables. Other modules change its data only through its commands.
 
 ## Shared UI components (ST-076)
@@ -57,7 +56,7 @@ copied in, not a dependency that is upgraded – so a copied file may be edited 
   components import it straight from the `cn` package.
 - **A component carries no domain logic and no texts.** It receives its texts as props – the message catalogs
   stay in the pages. `eslint.config.mjs` enforces it with the `ui` boundary element and its own disallow policy
-  (a component may not import a module, the platform, the app or the spike); `src/platform/module-boundaries.test.ts`
+  (a component may not import a module, the platform or the app); `src/platform/module-boundaries.test.ts`
   proves it with a deliberate violation. The element needs its **own** policy – being listed as an element is
   not enough, because `default: "allow"` lets anything through that no policy names.
 - **Adding one:** `npx shadcn@latest add <name>`, then read the copied file before committing it – it lands in
@@ -240,7 +239,7 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **Time:** `fixedClock(…)` for every command and rule; `BUILDER_TIME` is the builders' default.
 - **Acting team members exist:** a test actor `{ kind: "team-member", teamMemberId }` must exist as an account (foreign keys, ST-004): `anExistingTeamMember(db, actor)` from `src/test-support/team-members.ts`; accounts with a password come from the Team module's own test support.
 - **Isolation:** integration tests share one database per run – give each test its own machine (`randomUUID()`) and assert on that, never on table counts.
-- **Browser tests** must run against the preview too: no reliance on local data, unique texts per run, the spike password from `SPIKE_PASSWORD`.
+- **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
 - Never weaken or delete a test to get green.
 
 ## Seam catalog
@@ -252,12 +251,13 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Decision of a command – **only** where a rule has many cases (validation, invariants, derived values); everything else is tested at the command seam (Q3) | the decision function (`reportProblem(state, input, { actor, clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
 | Command – every command (authorization, load/decide/save, version check, created aggregates, journal, policies) | `executeCommand(command, input, { actor, db: testDatabase(), clock: fixedClock(…), newId })` against real PostgreSQL, observed through read models and `journalOf`; stand-ins for commands that don't exist yet live in the module's `*.test-support.ts` | integration | `src/modules/repair/report-problem-command.integration.test.ts`, `problem-report-version.integration.test.ts`, `problem-report-policies.integration.test.ts` |
 | Read model (query, filtering, sorting, time-based state) | the query function against real PostgreSQL, **data set up through commands** (`executeCommand`, Q3) – not through persistence functions | integration | `src/modules/repair/problem-reports.integration.test.ts` |
-| Server Action runner and its forms – acting person, `{ error, values }`, forged fields | `formRunner({ currentPerson, db, clock, newId })` against real PostgreSQL, observed through `journalOf` and read models; the input function of an action at its own seam | integration / unit | `src/app/_actions/form-runner.integration.test.ts`, `src/app/report-problem-input.test.ts` |
+| Server Action runner and its forms – acting person, `{ error, values }`, forged fields | `formRunner({ currentPerson, db, clock, newId })` against real PostgreSQL, observed through `journalOf` and read models; the input function of an action at its own seam | integration / unit | `src/app/_actions/form-runner.integration.test.ts`, `src/app/_actions/stand-in-input.test.ts` |
 | Type rules (acting person per `allowedActors`, error codes with a text) | `expectTypeOf` / `@ts-expect-error`, checked by `tsc` | unit (types) | `src/platform/command/actor-types.test.ts` |
+| A rule over the whole repository that neither lint nor the type check reads (config, workflows, browser tests) – e.g. no spike leftovers (ST-078) | a scan of `git ls-files` (tracked and new files; `docs/`, `.claude/`, `drizzle/` excluded) with a self-test on sample lines | unit | `src/platform/spike-leftovers.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
-| Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the dev server and the preview | e2e | `e2e/report-problem.spec.ts`, `e2e/security.spec.ts` |
+| Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the dev server and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |
 | Shared UI component without domain logic (ST-076) | the pages that use it, in the browser at 360 px – no unit or snapshot test of its own, unless the component carries logic itself | e2e | `e2e/team-accounts.spec.ts` |
 
 Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks of the database or of the command layer.

@@ -64,18 +64,18 @@ describe("module boundaries", () => {
       "src/platform/deliberate-violation.ts",
       'import { reportProblemCommand } from "@/modules/repair";\nexport const x = reportProblemCommand;\n',
     );
+    const platformImportsApp = await boundaryErrors(
+      "src/platform/deliberate-violation.ts",
+      'import { requireTeamMember } from "@/app/team-session";\nexport const x = requireTeamMember;\n',
+    );
     const moduleImportsApp = await boundaryErrors(
       "src/modules/repair/deliberate-violation.ts",
-      'import { enterSpike } from "@/app/actions";\nexport const x = enterSpike;\n',
-    );
-    const moduleImportsSpike = await boundaryErrors(
-      "src/modules/repair/deliberate-violation.ts",
-      'import { TEST_MACHINE_ID } from "@/spike/test-machine";\nexport const x = TEST_MACHINE_ID;\n',
+      'import { requireTeamMember } from "@/app/team-session";\nexport const x = requireTeamMember;\n',
     );
 
-    expect(platformImportsModule).toHaveLength(1);
-    expect(moduleImportsApp).toHaveLength(1);
-    expect(moduleImportsSpike).toHaveLength(1);
+    expect(platformImportsModule).toEqual([expect.stringContaining("The platform must not depend on modules")]);
+    expect(platformImportsApp).toEqual([expect.stringContaining("The platform must not depend on modules")]);
+    expect(moduleImportsApp).toEqual([expect.stringContaining("A module must not depend on the app")]);
   });
 
   it("reject a UI component reaching into the domain – and allow a page to use it", async () => {

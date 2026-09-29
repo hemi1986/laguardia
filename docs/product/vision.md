@@ -2,6 +2,8 @@
 
 > **Why the name?** In 1942, New York mayor Fiorello La Guardia banned pinball, had thousands of machines confiscated and smashed them with a sledgehammer for the press. La Guardia – the software – does the opposite: it keeps the museum's pinball machines alive.
 
+**The museum:** Flipper- & Arcade Museum Eschbach (user, 2026-09-29) – the name visitors see, e.g. on the start page.
+
 ## Problem
 Total chaos today:
 - Defects get lost, forgotten or reported twice.

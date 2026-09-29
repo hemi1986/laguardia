@@ -96,6 +96,9 @@ Scenario: Spike problem reports are removed and problem reports refer to registe
 ### Foundation (from the ST-073 code review on 2026-09-29 – findings #7, #3)
 - [ ] The team catalogue gets a `commandErrors` section and `commandErrorText` accepts it: every error code of CMD-RegisterMachine (and `not-authorized`, `not-found`, `version-conflict`) has a German text (unit test like `src/platform/messages/command-errors.test.ts`); the stand-in-only `machine-required` text of the visitor catalogues is reused or removed (ST-073 code review #7, #3).
 
+### Foundation (from ST-078 on 2026-09-29 – the runner's browser proof)
+- [ ] The register-machine form proves the Server Action runner in the browser (ST-073): a rejected registration shows the catalogue text of its error code and keeps the typed input, at 360 px and with JavaScript disabled (browser tests). These proofs ran on the spike's problem report form until ST-078 removed it.
+
 ## Out of Scope
 - Correcting museum number or serial number later (ST-035)
 - Printing the QR sticker (ST-011)
