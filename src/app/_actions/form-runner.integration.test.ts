@@ -7,7 +7,7 @@ import { commandErrorText, visitorMessages } from "@/platform/messages";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { formRunner } from "./form-runner";
-import { reportWithUrgencyFields, reportWithUrgencyForTest, reportWithUrgencyInput } from "./stand-in.test-support";
+import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
 
 /**
  * The Server Action runner (ST-073, architecture review Q9/Q10/Q19): the one way from a form to a command. Tested
@@ -87,15 +87,15 @@ describe("the Server Action runner", () => {
   });
 
   it("rejects a post without the ID and enumeration fields through the command's decision, not an exception", async () => {
-    const action = runnerActingAs({ kind: "visitor" })(reportWithUrgencyForTest, {
-      fields: reportWithUrgencyFields,
-      input: reportWithUrgencyInput,
+    const action = runnerActingAs({ kind: "visitor" })(reportWithPriorityForTest, {
+      fields: reportWithPriorityFields,
+      input: reportWithPriorityInput,
       onSuccess: async () => {},
     });
 
     const state = await action(null, post({}));
 
-    expect(state).toEqual({ error: "machine-required", values: { machineId: "", urgency: "" } });
+    expect(state).toEqual({ error: "machine-required", values: { machineId: "", priority: "" } });
     expect(commandErrorText(visitorMessages("de"), state!.error)).toMatch(/\S/);
   });
 

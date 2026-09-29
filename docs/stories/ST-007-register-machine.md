@@ -93,6 +93,9 @@ Scenario: Spike problem reports are removed and problem reports refer to registe
   And the machine reference of a problem report has the machine ID type of the ID convention
   And a problem report can only be stored for a registered machine
 
+### Foundation (from the ST-073 code review on 2026-09-29 – findings #7, #3)
+- [ ] The team catalogue gets a `commandErrors` section and `commandErrorText` accepts it: every error code of CMD-RegisterMachine (and `not-authorized`, `not-found`, `version-conflict`) has a German text (unit test like `src/platform/messages/command-errors.test.ts`); the stand-in-only `machine-required` text of the visitor catalogues is reused or removed (ST-073 code review #7, #3).
+
 ## Out of Scope
 - Correcting museum number or serial number later (ST-035)
 - Printing the QR sticker (ST-011)
