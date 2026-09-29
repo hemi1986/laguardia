@@ -12,6 +12,7 @@ Written from the code as it stands after ST-003 (2026-09-27). The ADRs decide *w
 ```
 src/
   app/              Next.js pages and Server Actions – thin: parse the form, call a command or a read model, render
+    _actions/       the Server Action runner (ST-073): `formAction`, `currentPerson()` – a private folder, not a route
   modules/
     collection/     BC-Collection – machines, machine models, files
     repair/         BC-Repair – problem reports, defects
@@ -89,7 +90,7 @@ Every command has one shape (ST-071, architecture review 2026-09-27, Q2/Q11/Q12/
 export const problemReports = aggregateStore({ type: "AGG-ProblemReport", table: problemReport, toState, toRow });
 
 // report-problem.ts – the pure decision: (state, input, { actor, clock, newId }) → new state + events, or a rejection
-export function reportProblem(_nothingYet: undefined, input, { actor, clock, newId }): Decision<ProblemReport, ProblemReported, "description-required"> {
+export function reportProblem(_nothingYet: undefined, input, { actor, clock, newId }: DecisionContext<ReportingPerson>): Decision<ProblemReport, ProblemReported, "description-required"> {
   const description = input.description.trim();
   if (!description) return { ok: false, error: "description-required" };
   const report = { id: newId(), machineId: input.machineId, description, reporter: reporterOf(actor), reportedAt: clock.now() };
@@ -99,7 +100,7 @@ export function reportProblem(_nothingYet: undefined, input, { actor, clock, new
 // report-problem-command.ts – the command
 export const reportProblemCommand = aggregateCommand({
   id: "CMD-ReportProblem",
-  allowedActors: ["visitor", "helper", "technician"],
+  allowedActors: reportingActors,                        // ["visitor", "helper", "technician"] as const
   store: problemReports,
   creates: true,                                         // a creating command: no load, saved at version 0
   decide: reportProblem,
@@ -110,14 +111,15 @@ export const reportProblemCommand = aggregateCommand({
 // a command on an existing aggregate names it and the version the acting person saw
 aggregateCommand({ …, target: (input) => ({ id: input.problemReportId, version: input.version }), decide: (state, input, context) => … });
 
-// src/app/…/actions.ts – a Server Action only calls it
-const outcome = await executeCommand(reportProblemCommand, { machineId, description }, { actor });
+// src/app/…/actions.ts – a Server Action only calls the runner (see *Server Actions and forms*)
+const reportProblem = formAction(reportProblemCommand, { fields, input, onSuccess });
 ```
 
 Rules:
 - **One aggregate per command** (Q12): a command changes (or creates) the aggregate of its `store`. Its decision may also create **new aggregates of the same module** – `created: [created(defects, newDefect)]` – saved in the same transaction. Anything else (another existing aggregate, another module) goes through a policy or `context.run` (ST-018).
 - **The decision is pure**: no database, no `new Date()`, no `randomUUID()` – the acting person, clock and ID generator come in its context. Rules with many cases get a table test at the decision (seam catalog).
 - **Journal mapping** (`journal`) per command until the event catalogue exists (ST-050) – references and non-personal facts only (see *The event journal*).
+- **The acting person's type follows from `allowedActors`** (Q5/Q20): `aggregateCommand` infers the literal list, and the decision gets `DecisionContext<ActorOf<…>>` – a command for `["helper", "technician"]` gets `{ kind: "team-member"; teamMemberId: TeamMemberId; role: Role }` without narrowing; one that also allows visitors gets the union. Write the list once as `as const` next to the decision when the decision names it. `Actor` stays the technical type; `Role` (command layer) and `Reporter` (problem report, derived from the acting person in `reporterOf` only) are defined once – lint refuses a second definition. Every "… by" is a `TeamMemberId`.
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 
 What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
@@ -128,7 +130,34 @@ What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-
 
 Results: `{ ok: true, result }` or `{ ok: false, error }` where `error` is the decision's own reason (kebab-case, shown via the message catalog) or `not-authorized` / `not-found` / `version-conflict`.
 
-The **actor** comes from the login session: `actingPerson()` in `src/app/team-session.ts` (visitor when nobody is logged in). From ST-069 on, the Server Action runner (ST-073) takes it from the session in one place – never from form data.
+The **actor** comes only from `currentPerson()` in `src/app/_actions/current-person.ts` – the login session (ST-004), a visitor when nobody is logged in; never from form data. ST-069 changes only that function (a deactivated account is rejected). Tests call `executeCommand` with an explicit actor.
+
+## Server Actions and forms
+
+The Server Action runner (ST-073, architecture review Q9/Q10/Q18/Q19) is the only way from a form to a command.
+
+```ts
+// src/app/…/actions.ts ("use server") – exports only async functions, so the runner goes into a local constant
+const registerMachine = formAction(registerMachineCommand, {
+  fields: registerMachineFields,                           // the form's own fields – only these are read and echoed
+  input: registerMachineInput,                             // FormFields → command input
+  onSuccess: async ({ machineId }) => { revalidatePath(…); redirect(`/team/machines/${machineId}`); },
+});
+export async function registerMachineAction(previous: RegisterMachineState, formData: FormData) {
+  await requireTechnician();                               // the page's access check – before the runner
+  return registerMachine(previous, formData);
+}
+
+// the form – a client component
+const [state, action, pending] = useActionState(registerMachineAction, null);
+// state: null, or { error, values } after a rejection → commandErrorText(messages, state.error), defaultValue={state.values.x}
+```
+
+- **A Server Action only calls the runner.** `formAction` (`src/app/_actions/form-action.ts`) takes the acting person from `currentPerson()`; it has no parameter for an actor, a role or a team member ID, and form fields named `actor`/`role`/`teamMemberId` are never read. Lint refuses `executeCommand` and the factory `formRunner` anywhere under `src/app/` outside `_actions/` (tests excepted).
+- **`{ error, values }` with `useActionState`**: on a rejection the action returns the error code and the typed values of the declared fields; the form shows the catalogue text and keeps the input. Success goes through `onSuccess` (usually `revalidatePath` + `redirect`), which also empties the form. It works without JavaScript – key the field on the state so React's form reset does not drop the kept value.
+- **One small typed input function per action** (Q19), no schema library: it reads and converts the fields, domain validation stays in the decision. **The empty-field rule:** a missing or empty field becomes "no value given" and the decision decides – a text field an empty string; a field that is not free text `undefined`. Example ST-007: a missing machine model becomes "no machine model given", which CMD-RegisterMachine rejects ("Machine model and location are required"); a missing museum number – optional there – becomes "no museum number given" and the command assigns one. The input function **never fills in a default** and never throws; an unknown enumeration value is "no value given" too.
+- Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
+- Forms with a photo ("store, run, delete on failure") come with ST-016.
 
 ## The event journal
 
@@ -182,7 +211,7 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 
 - No text literals in pages. Team pages: `teamMessages` (German, `src/platform/messages/team.de.ts`); domain terms under `terms`, keyed by the glossary term, in the `_UI (de)_` wording – a test compares them with `CONTEXT.md`. Add a term when a page first needs it.
 - Visitor pages: `visitorMessages(locale)` – `visitor.de.ts` and `visitor.en.ts` have the same keys (type and test). Choosing the locale comes with ST-010.
-- Command errors map to catalog texts by their kebab-case code.
+- Command errors map to catalog texts by their kebab-case code: the `commandErrors` section of the visitor catalogues, read with `commandErrorText(messages, code)`. A command whose error codes (including `not-authorized`, `not-found`, `version-conflict`) are not all there fails the type check. A team catalogue section follows with the first team form (ST-007).
 
 ## Security
 
@@ -219,13 +248,15 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 
 | Kind of code | Seam | Test type | Example |
 |---|---|---|---|
-| Decision of a command – only where a rule has many cases (validation, invariants, derived values) | the decision function (`reportProblem(state, input, { actor, clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
+| Decision of a command – **only** where a rule has many cases (validation, invariants, derived values); everything else is tested at the command seam (Q3) | the decision function (`reportProblem(state, input, { actor, clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
 | Command – every command (authorization, load/decide/save, version check, created aggregates, journal, policies) | `executeCommand(command, input, { actor, db: testDatabase(), clock: fixedClock(…), newId })` against real PostgreSQL, observed through read models and `journalOf`; stand-ins for commands that don't exist yet live in the module's `*.test-support.ts` | integration | `src/modules/repair/report-problem-command.integration.test.ts`, `problem-report-version.integration.test.ts`, `problem-report-policies.integration.test.ts` |
-| Read model (query, filtering, sorting, time-based state) | the query function against real PostgreSQL, data set up through commands (or builders + persistence inside the module) | integration | `src/modules/repair/problem-reports.integration.test.ts` |
+| Read model (query, filtering, sorting, time-based state) | the query function against real PostgreSQL, **data set up through commands** (`executeCommand`, Q3) – not through persistence functions | integration | `src/modules/repair/problem-reports.integration.test.ts` |
+| Server Action runner and its forms – acting person, `{ error, values }`, forged fields | `formRunner({ currentPerson, db, clock, newId })` against real PostgreSQL, observed through `journalOf` and read models; the input function of an action at its own seam | integration / unit | `src/app/_actions/form-runner.integration.test.ts`, `src/app/report-problem-input.test.ts` |
+| Type rules (acting person per `allowedActors`, error codes with a text) | `expectTypeOf` / `@ts-expect-error`, checked by `tsc` | unit (types) | `src/platform/command/actor-types.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
-| Page flow, phone layout, security of requests (CSRF, headers) | the browser at 360 px against the dev server and the preview | e2e | `e2e/report-problem.spec.ts`, `e2e/security.spec.ts` |
+| Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the dev server and the preview | e2e | `e2e/report-problem.spec.ts`, `e2e/security.spec.ts` |
 | Shared UI component without domain logic (ST-076) | the pages that use it, in the browser at 360 px – no unit or snapshot test of its own, unless the component carries logic itself | e2e | `e2e/team-accounts.spec.ts` |
 
 Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks of the database or of the command layer.
@@ -235,6 +266,7 @@ Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks
 - [ ] Scenario tests titled exactly, at the seams above; `npm run verify -- --e2e` green
 - [ ] Commands via `aggregateCommand` (load → decide → save), IDs from `events.yaml`, journal `data` without free text
 - [ ] No `new Date()` / `randomUUID()` in domain code; times via `time.ts`
+- [ ] Server Actions only through `formAction`; the actor only from `currentPerson()`
 - [ ] Texts from the catalogs; new glossary terms in `CONTEXT.md` first
 - [ ] Only `index.ts` imported across modules
 - [ ] Migration generated and committed when `schema.ts` changed
