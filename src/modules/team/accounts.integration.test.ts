@@ -135,4 +135,26 @@ describe("managing team member accounts", () => {
       active: false,
     });
   });
+
+  it("ST-005: Helpers cannot manage accounts", async () => {
+    const technician = await aTechnician();
+    const { id, username } = await anna(technician);
+    const helper: Actor = { kind: "team-member", teamMemberId: id, role: "helper" };
+    const newUsername = aUsername("berta");
+
+    const attempts = [
+      await createAccount(
+        { name: "Berta", username: newUsername, password: "berta-secret-10", role: "helper" },
+        { db, actor: helper },
+      ),
+      await changeRole({ teamMemberId: id, role: "technician" }, { db, actor: helper }),
+      await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, actor: helper }),
+      await deactivateAccount({ teamMemberId: id }, { db, actor: helper }),
+    ];
+
+    expect(attempts).toEqual(Array(4).fill({ ok: false, error: "not-authorized" }));
+    const accounts = await teamMemberAccounts(db);
+    expect(accounts.find((account) => account.username === newUsername)).toBeUndefined();
+    expect(accounts.find((account) => account.username === username)).toMatchObject({ role: "helper", active: true });
+  });
 });
