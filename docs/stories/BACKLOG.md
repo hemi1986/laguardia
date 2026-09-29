@@ -4,9 +4,15 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**75 stories** · In Progress: 0 · Ready: 68 · In Review: 0 · Draft: 0 · Done: 7
+**75 stories** · In Progress: 1 · Ready: 67 · In Review: 0 · Draft: 0 · Done: 7
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 
 ## Ready
 
@@ -67,7 +73,6 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | must | S | low | ST-039 |
 | [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | must | M | medium | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | M | medium | ST-007, ST-013, ST-059 |
-| [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | should | S | low | ST-002, ST-024, ST-016 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | should | S | low | ST-037 |
