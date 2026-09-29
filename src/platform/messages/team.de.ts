@@ -73,13 +73,4 @@ export const teamMessages = {
     "last-technician": "Die letzte aktive Techniker:in muss bleiben – sonst kommt niemand mehr an die Verwaltung.",
     "current-password-wrong": "Das aktuelle Passwort stimmt nicht.",
   },
-  // The ST-001 spike page – removed with the spike (ST-066).
-  spike: {
-    password: "Spike-Passwort",
-    enter: "Weiter",
-    wrongPassword: "Falsches Passwort.",
-    testMachineTitle: "La Guardia – Testgerät",
-    files: "Dateien (Spike)",
-    photos: "Fotos (Spike)",
-  },
 } as const;

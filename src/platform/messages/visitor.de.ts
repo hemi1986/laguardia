@@ -1,8 +1,9 @@
 /** German texts of the visitor pages; `visitor.en.ts` has the same keys. */
 export const visitorDe = {
-  problemReport: {
-    label: "Problem melden",
-    submit: "Melden",
+  /** The start page – a placeholder until the visitor machine page (ST-010) and the legal pages (ST-064), ST-078. */
+  home: {
+    museum: "Flipper- & Arcade Museum Eschbach",
+    teamLogin: "Anmeldung fürs Team",
   },
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {

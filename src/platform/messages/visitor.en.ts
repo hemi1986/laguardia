@@ -2,9 +2,9 @@ import type { VisitorMessages } from "./visitor.de";
 
 /** English texts of the visitor pages – the same keys as `visitor.de.ts`. */
 export const visitorEn: VisitorMessages = {
-  problemReport: {
-    label: "Report a problem",
-    submit: "Report",
+  home: {
+    museum: "Flipper- & Arcade Museum Eschbach",
+    teamLogin: "Team login",
   },
   commandErrors: {
     "description-required": "Please describe the problem.",
