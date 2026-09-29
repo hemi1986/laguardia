@@ -11,8 +11,8 @@ import { session, teamMember } from "./schema";
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError = AccountRuleError | "not-authorized" | "username-taken" | "not-found" | "last-technician"
-  | "current-password-wrong";
+export type AccountError =
+  AccountRuleError | "not-authorized" | "username-taken" | "not-found" | "last-technician" | "current-password-wrong";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -176,8 +176,10 @@ async function activeTechnicianCount(db: Database): Promise<number> {
   return active;
 }
 
-/** Read model: every account with its role, for the technicians' account list (ST-005). */
-export async function teamMemberAccounts(db: Database) {
+export type TeamMemberAccount = { id: string; name: string; username: string; role: Role; active: boolean };
+
+/** Read model: every account with its role, for the technicians' account list (ST-005). Deactivated ones stay. */
+export async function teamMemberAccounts(db: Database): Promise<TeamMemberAccount[]> {
   const rows = await db
     .select({
       id: teamMember.id,
@@ -188,5 +190,20 @@ export async function teamMemberAccounts(db: Database) {
     })
     .from(teamMember)
     .orderBy(asc(teamMember.name));
-  return rows.map(({ banned, ...account }) => ({ ...account, active: !banned }));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    username: row.username ?? missing("username", row.id),
+    role: roleOf(row),
+    active: !row.banned,
+  }));
+}
+
+function roleOf(row: { id: string; role: string | null }): Role {
+  if (row.role !== "helper" && row.role !== "technician") return missing("role", row.id);
+  return row.role;
+}
+
+function missing(column: string, id: string): never {
+  throw new Error(`team_member ${id}: ${column} is missing`);
 }

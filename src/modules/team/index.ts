@@ -6,7 +6,10 @@ export {
   deactivateAccount,
   resetPassword,
   teamMemberAccounts,
-  type AccountError, type AccountOutcome } from "./accounts";
+  type AccountError,
+  type AccountOutcome,
+  type TeamMemberAccount,
+} from "./accounts";
 export { currentPerson, loggedInTeamMember, logIn, logOut, type LoginOutcome } from "./login";
 export { setUpFirstTechnician, type FirstTechnicianOutcome } from "./first-technician";
 export { renewedSessionCookie } from "./session-cookie";

@@ -18,3 +18,10 @@ export async function requireTeamMember() {
   if (!member) redirect("/login");
   return member;
 }
+
+/** For pages only technicians may open (ST-005): helpers are sent back to the team start page. */
+export async function requireTechnician() {
+  const member = await requireTeamMember();
+  if (member.role !== "technician") redirect("/team");
+  return member;
+}
