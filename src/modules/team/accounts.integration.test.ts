@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { changeRole, createAccount, currentPerson, deactivateAccount, logIn, resetPassword, teamMemberAccounts } from ".";
+import {
+  changeRole,
+  createAccount,
+  currentPerson,
+  deactivateAccount,
+  logIn,
+  resetPassword,
+  teamMemberAccounts,
+} from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
 
 const db = testDatabase();
@@ -211,4 +219,3 @@ describe("rejections no scenario names", () => {
     expect((await teamMemberAccounts(db)).filter((a) => a.username === username)).toHaveLength(1);
   });
 });
-

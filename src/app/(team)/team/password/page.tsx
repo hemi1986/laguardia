@@ -1,9 +1,9 @@
-import Link from "next/link";
+import { Confirmation, Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
 import { changeOwnPasswordAction } from "./actions";
 
-const { ownPassword, accountErrors, accounts, team } = teamMessages;
+const { ownPassword, accountErrors, accounts } = teamMessages;
 
 /** Every team member can change their own password – a technician resets a forgotten one (ADR 0004, ST-005). */
 export default async function OwnPasswordPage({ searchParams }: PageProps<"/team/password">) {
@@ -15,9 +15,9 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
     <main className="mx-auto flex max-w-sm flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">{ownPassword.title}</h1>
       {rejection && Object.hasOwn(accountErrors, rejection) && (
-        <p role="alert">{accountErrors[rejection as keyof typeof accountErrors]}</p>
+        <Rejection>{accountErrors[rejection as keyof typeof accountErrors]}</Rejection>
       )}
-      {done === "changed" && <p role="status">{ownPassword.changed}</p>}
+      {done === "changed" && <Confirmation>{ownPassword.changed}</Confirmation>}
       <form action={changeOwnPasswordAction} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1">
           {ownPassword.current}
@@ -38,9 +38,6 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
           {ownPassword.submit}
         </button>
       </form>
-      <Link href="/team" className="underline">
-        {team.start}
-      </Link>
     </main>
   );
 }

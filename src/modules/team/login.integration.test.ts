@@ -121,5 +121,4 @@ describe("logging in", () => {
     expect(outcomes.filter((o) => !o.ok && o.error === "login-failed")).toHaveLength(10);
     expect(outcomes.filter((o) => !o.ok && o.error === "login-locked")).toHaveLength(5);
   });
-
 });

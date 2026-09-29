@@ -1,11 +1,12 @@
-import Link from "next/link";
+import { Confirmation, Rejection } from "@/components/ui/message";
+import { NativeSelect } from "@/components/ui/native-select";
 import { teamMemberAccounts, type TeamMemberAccount } from "@/modules/team";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
 import { changeRoleAction, createAccountAction, deactivateAccountAction, resetPasswordAction } from "./actions";
 
-const { accounts: texts, accountErrors, terms, team } = teamMessages;
+const { accounts: texts, accountErrors, terms } = teamMessages;
 
 const confirmations: Record<string, string> = {
   created: texts.created,
@@ -31,9 +32,9 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
     <main className="flex flex-col gap-6 p-4">
       <h1 className="text-xl font-semibold">{texts.title}</h1>
       {rejection && Object.hasOwn(accountErrors, rejection) && (
-        <p role="alert">{accountErrors[rejection as keyof typeof accountErrors]}</p>
+        <Rejection>{accountErrors[rejection as keyof typeof accountErrors]}</Rejection>
       )}
-      {confirmation && <p role="status">{confirmation}</p>}
+      {confirmation && <Confirmation>{confirmation}</Confirmation>}
 
       <ul className="flex flex-col gap-4">
         {accounts.map((account) => (
@@ -61,20 +62,16 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
           </label>
           <label className="flex flex-col gap-1">
             {texts.role}
-            <select name="role" defaultValue="helper" className="border p-2">
+            <NativeSelect name="role" defaultValue="helper">
               <option value="helper">{terms.Helper}</option>
               <option value="technician">{terms.Technician}</option>
-            </select>
+            </NativeSelect>
           </label>
           <button type="submit" className="border p-2">
             {texts.create}
           </button>
         </form>
       </section>
-
-      <Link href="/team" className="underline">
-        {team.start}
-      </Link>
     </main>
   );
 }
