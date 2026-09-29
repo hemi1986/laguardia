@@ -4,9 +4,15 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**75 stories** · In Progress: 0 · Ready: 67 · In Review: 0 · Draft: 0 · Done: 8
+**75 stories** · In Progress: 1 · Ready: 66 · In Review: 0 · Draft: 0 · Done: 8
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 
 ## Ready
 
@@ -67,7 +73,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | must | S | low | ST-039 |
 | [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | must | M | medium | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | M | medium | ST-007, ST-013, ST-059 |
-| [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | should | S | low | ST-002, ST-024, ST-016 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | should | S | low | ST-037 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
