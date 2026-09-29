@@ -4,7 +4,7 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**72 stories** · In Progress: 0 · Ready: 65 · In Review: 0 · Draft: 0 · Done: 7
+**75 stories** · In Progress: 0 · Ready: 64 · In Review: 4 · Draft: 0 · Done: 7
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -72,11 +72,19 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards highlight what is new since the last visit | story | Repair | should | L | medium | ST-049, ST-058 |
 | [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-028 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | should | XS | low | ST-008, ST-043 |
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the ST-001 and ST-002 spike scaffolding | tech-task | Repair | should | S | low | ST-004, ST-007, ST-068 |
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | should | XS | low | ST-003 |
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |
+
+## In Review
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | should | – | – | ST-004, ST-073 |
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | should | S | low | ST-004, ST-007, ST-078 (review) |
+| [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | should | – | – | ST-004, ST-005 |
+| [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | should | – | – | ST-076 (review) |
 
 ## Done
 
