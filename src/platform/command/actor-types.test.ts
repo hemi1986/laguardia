@@ -1,5 +1,13 @@
 import { describe, expectTypeOf, it } from "vitest";
-import { aggregateCommand, type ActorOf, type AggregateStore, type DecisionContext, type Role, type TeamMemberId } from ".";
+import {
+  aggregateCommand,
+  type ActorOf,
+  type AggregateStore,
+  type Decision,
+  type DecisionContext,
+  type Role,
+  type TeamMemberId,
+} from ".";
 
 /**
  * Architecture review 2026-09-27, Q5/Q20: the acting person a decision gets follows from the command's
@@ -44,11 +52,11 @@ describe("the acting person's type follows from the allowed actors", () => {
   });
 
   it("a decision written for team members only does not fit a command that allows visitors", () => {
-    const teamOnly = (_state: undefined, _input: undefined, _context: DecisionContext<ActorOf<"technician">>) => ({
-      ok: true as const,
-      state: { id: "x" },
-      events: [],
-    });
+    const teamOnly: (
+      state: undefined,
+      input: undefined,
+      context: DecisionContext<ActorOf<"technician">>,
+    ) => Decision<Thing, never, never> = () => ({ ok: true, state: { id: "x" }, events: [] });
     aggregateCommand({
       id: "CMD-TestMismatch",
       allowedActors: ["visitor", "technician"],
