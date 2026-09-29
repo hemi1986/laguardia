@@ -61,6 +61,10 @@ copied in, not a dependency that is upgraded – so a copied file may be edited 
   not enough, because `default: "allow"` lets anything through that no policy names.
 - **Adding one:** `npx shadcn@latest add <name>`, then read the copied file before committing it – it lands in
   the repository and is ours from then on.
+- **Deviation from ADR 0001, recorded in ST-076:** the ADR expects copied components to mean "no UI library
+  upgrades". This shadcn version only copies the wrappers – they import `@base-ui/react` at runtime, and
+  `globals.css` imports `shadcn/tailwind.css`. So there *are* two UI packages to keep an eye on; what the ADR
+  buys is that the markup and the classes are ours to change.
 - **The 360 px rules live in `Page`** (single column, padding, maximum width, word wrapping). A page sets no
   padding, width or column layout of its own.
 - **Select: use the native `NativeSelect`, not shadcn's `select`.** shadcn's select (Base UI) renders a

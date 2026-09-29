@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { pageWidth } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
@@ -14,7 +15,7 @@ const { team } = teamMessages;
 export function TeamNavigation({ role }: { role: Role }) {
   return (
     <nav aria-label={team.menu} className="border-b">
-      <div className="mx-auto flex w-full max-w-sm flex-wrap items-center gap-x-4 gap-y-2 p-4">
+      <div className={`${pageWidth} flex flex-wrap items-center gap-x-4 gap-y-2`}>
         <Link href="/team" className="text-sm font-medium underline-offset-4 hover:underline">
           {team.home}
         </Link>

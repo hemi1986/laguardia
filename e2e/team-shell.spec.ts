@@ -32,6 +32,11 @@ test("every team page carries the same navigation, once per destination, with lo
     await expect(page.getByRole("link", { name: "Passwort ändern" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Abmelden" })).toBeVisible();
   }
+
+  // The navigation is walkable by keyboard, in the order it is written.
+  await page.getByRole("link", { name: "Start" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeFocused();
 });
 
 test("login and the team start page stay within 360 px, with the rejection inside main", async ({ page }) => {

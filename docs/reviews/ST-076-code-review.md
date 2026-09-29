@@ -29,3 +29,40 @@ Reviewed `git diff main...HEAD` (26 files, `package-lock.json` skimmed only). No
 
 Verdict: **ready to merge** – no blockers; the four majors are all deletions or one paragraph of documentation and should land in this story.
 Most important finding: the Geist font is both out of scope and inert – `body { font-family: system-ui }` overrides it, so the story ships a build-time Google Fonts dependency for a typeface that is never rendered.
+
+## Resolution (main session, 2026-09-29)
+
+**Fixed in this story – the four majors:**
+
+| # | Done |
+|---|---|
+| 1 | **Geist removed.** The finding is confirmed: an *unlayered* `body { font-family: system-ui, sans-serif }` (globals.css) beat both the `font-sans` utility and `@layer base { html { @apply font-sans } }`, so the font the CLI installed was never rendered. Since typography is Out of Scope for ST-076, the font goes rather than gets repaired: `next/font/google` and the `font-sans` class are out of `layout.tsx`, the self-referential `--font-sans`/`--font-heading` theme entries and the `html { @apply font-sans }` rule are out of `globals.css` – and the stray `body { font-family }` with them, which was create-next-app leftover that AC 17 claimed to have removed. |
+| 2 | **`lucide-react` removed** – no import anywhere. |
+| 3 | **ADR 0001 deviation recorded** in the "Shared UI components" section of the engineering conventions: the copied files are only wrappers, they import `@base-ui/react` at runtime and `globals.css` imports `shadcn/tailwind.css`, so there are two UI packages to watch; what the ADR buys is that markup and classes are ours. |
+| 4 | **`Field`'s `hint` prop removed** – it had no caller, and inside the `<label>` it would have landed in the accessible name. The doc comment now says a description belongs next to the field, not in it. |
+
+**Minors fixed:** the navigation no longer re-implements the page container – `pageWidth` is exported from
+`src/components/page.tsx` and used by both (minor 5); `src/lib/utils.ts` deleted, it was an uncalled one-line
+re-export (minor 6); `shadcn` moved to `devDependencies` – it is only needed while the CSS builds, confirmed
+with a full `npm run build` (minor 7); the keyboard clause of AC 6 and AC 14 is now actually tested – the no-JS
+test tabs to the select and asserts focus, the shell test tabs from one navigation link to the next (minor 9);
+the Prettier formatting the shadcn CLI wrote past the format hook is committed (minor 12).
+
+**Skipped, with reasons:**
+
+- *Stale role in the shell (diff review).* `(team)/layout.tsx` reads the role once and layouts do not re-run on
+  client navigation, so after a demotion the "Teammitglieder" link can linger until a full load. It is a
+  cosmetic link, not access: the page and the Team module check the role on every request, which the unchanged
+  browser test "a helper cannot reach the account pages" proves with a real navigation. The same caveat is
+  already recorded for the auth check in ST-004.
+- *`/team/members` and `/team/password` still hand-roll their layout (minor).* Those pages are **ST-077**, the
+  very next story, which rebuilds their forms. This story only removed their back links and swapped the select
+  and the two message elements, both named in the pull request.
+- *"Radix" wording in the story text (acceptance review nit).* The story was written before the install showed
+  this shadcn version builds on Base UI. The code comments and the conventions now say Base UI; a `done` story's
+  text is not rewritten afterwards.
+- *Boundary policy governs local elements only (minor 11), and the "allow" half of the boundary test cannot
+  fail under `default: "allow"` (minor 15).* Both are properties of `eslint-plugin-boundaries` as configured
+  for every element here, not something ST-076 introduced.
+
+`npm run verify -- --e2e` green after the fixes: 135 tests, 13 browser tests, and `npm run build` succeeds.

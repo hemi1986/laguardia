@@ -25,6 +25,9 @@ test("a technician creates a technician account with JavaScript disabled", async
   await page.getByLabel("Name", { exact: true }).fill(`No JS ${newUsername}`);
   await page.getByLabel("Benutzername").fill(newUsername);
   await page.getByLabel("Anfangspasswort").fill("nojs-secret-10");
+  // Reachable by keyboard, not only by mouse – the point of a native control.
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Rolle")).toBeFocused();
   await page.getByLabel("Rolle").selectOption("technician");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
 
