@@ -13,3 +13,11 @@ export type VisitorLocale = "de" | "en";
 export function visitorMessages(locale: VisitorLocale): VisitorMessages {
   return locale === "en" ? visitorEn : visitorDe;
 }
+
+/** The error codes a visitor page can show – a command whose errors are not all here fails the type check. */
+export type CommandErrorCode = keyof VisitorMessages["commandErrors"];
+
+/** "Command errors map to catalog texts by their kebab-case code" (ST-003, ST-073). */
+export function commandErrorText(messages: VisitorMessages, code: CommandErrorCode): string {
+  return messages.commandErrors[code];
+}

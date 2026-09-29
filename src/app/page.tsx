@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { database } from "@/platform/database";
 import { problemReportsOfMachine } from "@/modules/repair";
-import { teamMessages, visitorMessages } from "@/platform/messages";
+import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { hasSpikeAccess } from "@/spike/access";
 import { TEST_MACHINE_ID } from "@/spike/test-machine";
 import { enterSpike, reportProblemForTestMachine } from "./actions";
 
 const { spike } = teamMessages;
-const { problemReport } = visitorMessages("de");
+const visitor = visitorMessages("de");
+const { problemReport } = visitor;
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const { denied, error } = await searchParams;
@@ -37,7 +38,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           {problemReport.label}
           <textarea name="description" required className="block w-full border" />
         </label>
-        {error === "description-required" && <p>{problemReport.descriptionRequired}</p>}
+        {error === "description-required" && <p>{commandErrorText(visitor, error)}</p>}
         <button type="submit">{problemReport.submit}</button>
       </form>
       <ul>

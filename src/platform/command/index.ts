@@ -75,6 +75,11 @@ export type Command<Input, Result, Error extends string> = {
 export type CommandResult<Result, Error extends string> =
   { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "not-found" | "version-conflict" };
 
+/** Every error a command can end with: its decision's own codes and those of the command layer. */
+export type CommandError<C> = C extends Command<never, unknown, infer Error> ? CommandFailure<Error> : never;
+
+type CommandFailure<Error extends string> = Extract<CommandResult<unknown, Error>, { ok: false }>["error"];
+
 export type CommandDependencies = { actor: Actor; db?: Database; clock?: Clock; newId?: () => string };
 
 export async function executeCommand<Input, Result, Error extends string>(
