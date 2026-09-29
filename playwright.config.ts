@@ -7,8 +7,7 @@ import { defineConfig } from "@playwright/test";
  * without it they run against a local dev server. Previews sit behind Vercel's deployment protection –
  * the automation bypass secret lets the tests through (sent only to the preview, see e2e/fixtures.ts).
  *
- * No traces, screenshots or videos in CI: the repository is public and they would contain the bypass secret
- * and the spike password. Locally, failed tests keep a trace.
+ * No traces, screenshots or videos in CI: the repository is public and they would contain the bypass secret. Locally, failed tests keep a trace.
  */
 // The one local settings file (also read by `npm run dev` and the scripts) – E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD
 // live there. Absent in CI, where the variables come from the environment. Resolved next to this config, like testDir.
