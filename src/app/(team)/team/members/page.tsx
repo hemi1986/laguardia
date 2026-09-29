@@ -1,3 +1,8 @@
+import { Page } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { teamMemberAccounts, type TeamMemberAccount } from "@/modules/team";
@@ -29,8 +34,7 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
   const confirmation = Object.hasOwn(confirmations, confirmedStep) ? confirmations[confirmedStep] : undefined;
 
   return (
-    <main className="flex flex-col gap-6 p-4">
-      <h1 className="text-xl font-semibold">{texts.title}</h1>
+    <Page title={texts.title}>
       {rejection && Object.hasOwn(accountErrors, rejection) && (
         <Rejection>{accountErrors[rejection as keyof typeof accountErrors]}</Rejection>
       )}
@@ -44,35 +48,28 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
         ))}
       </ul>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-semibold">{texts.newAccount}</h2>
-        <form action={createAccountAction} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            {texts.name}
-            <input name="name" required className="border p-2" />
-          </label>
-          <label className="flex flex-col gap-1">
-            {texts.username}
-            <input name="username" autoCapitalize="none" required className="border p-2" />
-          </label>
-          <label className="flex flex-col gap-1">
-            {texts.initialPassword}
-            <input name="password" type="password" autoComplete="new-password" required className="border p-2" />
-            <span className="text-sm">{texts.passwordHint}</span>
-          </label>
-          <label className="flex flex-col gap-1">
-            {texts.role}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-base font-medium">{texts.newAccount}</h2>
+        <form action={createAccountAction} className="flex flex-col gap-4">
+          <Field label={texts.name}>
+            <Input name="name" required />
+          </Field>
+          <Field label={texts.username}>
+            <Input name="username" autoCapitalize="none" required />
+          </Field>
+          <Field label={texts.initialPassword} description={texts.passwordHint}>
+            <Input name="password" type="password" autoComplete="new-password" required />
+          </Field>
+          <Field label={texts.role}>
             <NativeSelect name="role" defaultValue="helper">
               <option value="helper">{terms.Helper}</option>
               <option value="technician">{terms.Technician}</option>
             </NativeSelect>
-          </label>
-          <button type="submit" className="border p-2">
-            {texts.create}
-          </button>
+          </Field>
+          <Button type="submit">{texts.create}</Button>
         </form>
       </section>
-    </main>
+    </Page>
   );
 }
 
@@ -82,46 +79,46 @@ function Account({ account }: { account: TeamMemberAccount }) {
   const otherRole = account.role === "technician" ? "helper" : "technician";
 
   return (
-    <article className="flex flex-col gap-2 border p-3">
-      <h2 className="font-semibold">{account.name}</h2>
-      <p>
-        {account.username} · {roleName}
-        {!account.active && ` · ${texts.deactivated}`}
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>{account.name}</CardTitle>
+        <CardDescription>
+          {account.username} · {roleName}
+          {!account.active && ` · ${texts.deactivated}`}
+        </CardDescription>
+      </CardHeader>
       {account.active && (
-        <>
+        <CardContent>
           <form action={changeRoleAction}>
             <input type="hidden" name="teamMemberId" value={account.id} />
             <input type="hidden" name="role" value={otherRole} />
-            <button type="submit" className="border p-2">
+            <Button type="submit" variant="outline">
               {otherRole === "technician" ? texts.makeTechnician : texts.makeHelper}
-            </button>
+            </Button>
           </form>
           <form action={resetPasswordAction} className="flex flex-col gap-2">
             <input type="hidden" name="teamMemberId" value={account.id} />
-            <label className="flex flex-col gap-1">
-              {texts.newPassword}
-              <input
+            <Field label={texts.newPassword}>
+              <Input
                 name="password"
                 type="password"
                 autoComplete="new-password"
                 required
                 aria-label={`${texts.newPassword} – ${account.name}`}
-                className="border p-2"
               />
-            </label>
-            <button type="submit" className="border p-2">
+            </Field>
+            <Button type="submit" variant="outline">
               {texts.resetPassword}
-            </button>
+            </Button>
           </form>
           <form action={deactivateAccountAction}>
             <input type="hidden" name="teamMemberId" value={account.id} />
-            <button type="submit" className="border p-2">
+            <Button type="submit" variant="destructive">
               {texts.deactivate}
-            </button>
+            </Button>
           </form>
-        </>
+        </CardContent>
       )}
-    </article>
+    </Card>
   );
 }
