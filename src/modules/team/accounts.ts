@@ -1,9 +1,9 @@
 import "server-only";
 import { APIError } from "better-auth/api";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
 import { authFor } from "./auth";
-import { teamMember } from "./schema";
+import { session, teamMember } from "./schema";
 
 /**
  * Managing team member accounts (ST-005, ADR 0004): technicians create accounts, set the role, reset passwords and
@@ -89,4 +89,40 @@ export async function resetPassword(
     throw error;
   }
   return { ok: true, teamMemberId: input.teamMemberId };
+}
+
+/**
+ * Deactivates an account: it can no longer log in and its open sessions end at the next action. The team member's
+ * name stays on everything they did – accounts are never deleted (ST-005, Out of Scope).
+ */
+export async function deactivateAccount(
+  input: { teamMemberId: string },
+  { db, actor }: Dependencies,
+): Promise<AccountOutcome> {
+  if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  return db.transaction(async (tx) => {
+    const [deactivated] = await tx
+      .update(teamMember)
+      .set({ banned: true })
+      .where(eq(teamMember.id, input.teamMemberId))
+      .returning({ id: teamMember.id });
+    if (!deactivated) return { ok: false, error: "not-found" };
+    await tx.delete(session).where(eq(session.userId, input.teamMemberId));
+    return { ok: true, teamMemberId: deactivated.id };
+  });
+}
+
+/** Read model: every account with its role, for the technicians' account list (ST-005). */
+export async function teamMemberAccounts(db: Database) {
+  const rows = await db
+    .select({
+      id: teamMember.id,
+      name: teamMember.name,
+      username: teamMember.username,
+      role: teamMember.role,
+      banned: teamMember.banned,
+    })
+    .from(teamMember)
+    .orderBy(asc(teamMember.name));
+  return rows.map(({ banned, ...account }) => ({ ...account, active: !banned }));
 }

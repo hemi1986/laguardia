@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import type { Actor } from "@/platform/command";
+import { reportProblemCommand } from "@/modules/repair";
+import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { changeRole, createAccount, currentPerson, logIn, resetPassword } from ".";
+import { changeRole, createAccount, currentPerson, deactivateAccount, logIn, resetPassword, teamMemberAccounts } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
 
 const db = testDatabase();
@@ -107,5 +108,31 @@ describe("managing team member accounts", () => {
     expect(outcome).toEqual({ ok: true, teamMemberId: id });
     expect(await personBehind(username, "anna-forgot-10")).toMatchObject({ teamMemberId: id });
     expect(await logIn({ username, password }, { db })).toEqual({ ok: false, error: "login-failed" });
+  });
+
+  it("ST-005: Deactivating an account ends its sessions", async () => {
+    const technician = await aTechnician();
+    const { id, username, password } = await anna(technician);
+    const herPhone = await sessionOf(username, password);
+    // What she did stays hers: the work log (ST-020 ff.) is not built yet – a problem report she wrote stands in.
+    const machineId = randomUUID();
+    const her = await currentPerson({ db, headers: herPhone });
+    await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { actor: her, db });
+
+    const outcome = await deactivateAccount({ teamMemberId: id }, { db, ...technician });
+
+    expect(outcome).toEqual({ ok: true, teamMemberId: id });
+    expect(await currentPerson({ db, headers: herPhone })).toEqual({ kind: "visitor" });
+    expect(await logIn({ username, password }, { db })).toEqual({ ok: false, error: "login-failed" });
+    expect((await journalOf(db, { machineId })).map((entry) => entry.actor)).toEqual([
+      { kind: "team-member", teamMemberId: id, role: "helper" },
+    ]);
+    expect((await teamMemberAccounts(db)).find((account) => account.id === id)).toEqual({
+      id,
+      name: "Anna Berger",
+      username,
+      role: "helper",
+      active: false,
+    });
   });
 });
