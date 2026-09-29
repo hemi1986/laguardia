@@ -29,26 +29,26 @@ Today the spike's Server Action (`src/app/actions.ts`) calls `executeCommand` wi
 - **Q22 – conversion.** Converts the spike's problem report form (`src/app/page.tsx`, `src/app/actions.ts`, CMD-ReportProblem). The spike photo page is not converted; ST-066 removes it.
 
 ## Acceptance Criteria
-- [ ] The spike's problem report form runs CMD-ReportProblem through the runner; a report with a description is stored and shown in the list (existing browser test `e2e/report-problem.spec.ts` stays green).
-- [ ] A rejected command shows the catalogue text for its error code and keeps the typed description in the field: a description of only spaces shows the `description-required` text of the visitor catalogue (browser test at 360 px).
-- [ ] The same rejection works without JavaScript: with JavaScript disabled, the page after submitting shows the catalogue text and the typed input (browser test with JavaScript disabled).
-- [ ] The action result is `{ error, values }` on rejection; `not-authorized`, `not-found` and `version-conflict` also map to catalogue texts (unit test over the mapping; every error code of the converted command has a text).
-- [ ] The runner has no parameter for an actor, a role or a team member ID; the acting person comes only from `currentPerson()`, which delegates to the session lookup of ST-004 – without a session the journal entry of a report through the runner has the actor visitor (type check, and an integration test of the runner with the acting person it is given).
-- [ ] A Server Action cannot pass its own actor: a deliberate call of `executeCommand` from a file under `src/app/` outside `src/app/_actions/` makes `npm run verify` fail with a message that names the runner; demonstrated and then removed (case in `src/platform/module-boundaries.test.ts`). Test files may still call `executeCommand` directly.
-- [ ] Extra form fields do not change who acts: a forged post that adds `actor`, `role` or `teamMemberId` fields is still run as the person from `currentPerson()` (integration test of the action).
-- [ ] Form data becomes command input through a typed function per action; a missing field becomes an empty value that the command's decision rejects, not an exception (unit test of the report form's function).
-- [ ] The same holds for a field that is not free text: an input function of a test stand-in action with an enum field and an ID field turns a post without those fields into input with "no value given" for both – no default value, no exception – and the stand-in command's decision rejects it with an error code that has a catalogue text (unit test of the function, integration test of the action).
-- [ ] The engineering conventions state the empty-field rule with the non-string example of ST-007 (a missing machine model becomes "no machine model given" and is rejected by CMD-RegisterMachine; the input function never fills in a default).
-- [ ] The runner lives in `src/app/_actions/`; the lint rules treat it as part of the app element (`src/platform/module-boundaries.test.ts`).
-- [ ] The converted form is usable at 360 px width: page width ≤ 360 px, error text and input visible without horizontal scrolling (browser test).
-- [ ] Converts the existing code (no test weakened); `npm run verify -- --e2e` is green.
+- [x] The spike's problem report form runs CMD-ReportProblem through the runner; a report with a description is stored and shown in the list (existing browser test `e2e/report-problem.spec.ts` stays green).
+- [x] A rejected command shows the catalogue text for its error code and keeps the typed description in the field: a description of only spaces shows the `description-required` text of the visitor catalogue (browser test at 360 px).
+- [x] The same rejection works without JavaScript: with JavaScript disabled, the page after submitting shows the catalogue text and the typed input (browser test with JavaScript disabled).
+- [x] The action result is `{ error, values }` on rejection; `not-authorized`, `not-found` and `version-conflict` also map to catalogue texts (unit test over the mapping; every error code of the converted command has a text).
+- [x] The runner has no parameter for an actor, a role or a team member ID; the acting person comes only from `currentPerson()`, which delegates to the session lookup of ST-004 – without a session the journal entry of a report through the runner has the actor visitor (type check, and an integration test of the runner with the acting person it is given).
+- [x] A Server Action cannot pass its own actor: a deliberate call of `executeCommand` from a file under `src/app/` outside `src/app/_actions/` makes `npm run verify` fail with a message that names the runner; demonstrated and then removed (case in `src/platform/module-boundaries.test.ts`). Test files may still call `executeCommand` directly.
+- [x] Extra form fields do not change who acts: a forged post that adds `actor`, `role` or `teamMemberId` fields is still run as the person from `currentPerson()` (integration test of the action).
+- [x] Form data becomes command input through a typed function per action; a missing field becomes an empty value that the command's decision rejects, not an exception (unit test of the report form's function).
+- [x] The same holds for a field that is not free text: an input function of a test stand-in action with an enum field and an ID field turns a post without those fields into input with "no value given" for both – no default value, no exception – and the stand-in command's decision rejects it with an error code that has a catalogue text (unit test of the function, integration test of the action).
+- [x] The engineering conventions state the empty-field rule with the non-string example of ST-007 (a missing machine model becomes "no machine model given" and is rejected by CMD-RegisterMachine; the input function never fills in a default).
+- [x] The runner lives in `src/app/_actions/`; the lint rules treat it as part of the app element (`src/platform/module-boundaries.test.ts`).
+- [x] The converted form is usable at 360 px width: page width ≤ 360 px, error text and input visible without horizontal scrolling (browser test).
+- [x] Converts the existing code (no test weakened); `npm run verify -- --e2e` is green.
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "a Server Action only calls the runner", `currentPerson()`, `{ error, values }` with `useActionState`, the per-action input function, the `src/app/_actions/` location, and the seam catalog row for Server Actions.
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q3, Q5/Q20)
-- [ ] A command allowed for `helper` and `technician` only gets a team member with `teamMemberId: TeamMemberId` and `role` in its decision without narrowing (type test); a command that also allows visitors gets the union.
-- [ ] `Role` and `Reporter` are each defined exactly once under `src/`, and `Reporter` is derived from the acting person in exactly one function: an automated check in `npm run verify` fails when a second type definition named `Role` or `Reporter` is added under `src/`; demonstrated with a deliberate duplicate and then removed.
-- [ ] `src/modules/repair/problem-reports.integration.test.ts` sets up its problem reports through `executeCommand(reportProblemCommand, …)`, not through persistence functions (Q3).
-- [ ] Every behaviour asserted by an existing test is still asserted – moved to the command seam where Q3 says so; no assertion is dropped (evidence: list old test → new test in the pull request). No test weakened.
+- [x] A command allowed for `helper` and `technician` only gets a team member with `teamMemberId: TeamMemberId` and `role` in its decision without narrowing (type test); a command that also allows visitors gets the union.
+- [x] `Role` and `Reporter` are each defined exactly once under `src/`, and `Reporter` is derived from the acting person in exactly one function: an automated check in `npm run verify` fails when a second type definition named `Role` or `Reporter` is added under `src/`; demonstrated with a deliberate duplicate and then removed.
+- [x] `src/modules/repair/problem-reports.integration.test.ts` sets up its problem reports through `executeCommand(reportProblemCommand, …)`, not through persistence functions (Q3).
+- [x] Every behaviour asserted by an existing test is still asserted – moved to the command seam where Q3 says so; no assertion is dropped (evidence: list old test → new test in the pull request). No test weakened.
 - [ ] The engineering conventions update above also covers the acting person's type (Q5/Q20) and the seam catalog rows for commands, decisions and read models (Q3).
 
 ## Out of Scope
