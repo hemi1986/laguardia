@@ -2,6 +2,7 @@ import "server-only";
 import { APIError } from "better-auth/api";
 import { asc, eq } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
+import { newAccountRejection, passwordRejection, type AccountRuleError } from "./account-rules";
 import { authFor } from "./auth";
 import { session, teamMember } from "./schema";
 
@@ -10,7 +11,7 @@ import { session, teamMember } from "./schema";
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError = "not-authorized" | "username-taken" | "not-found";
+export type AccountError = AccountRuleError | "not-authorized" | "username-taken" | "not-found";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -29,6 +30,8 @@ export async function createAccount(
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  const rejection = newAccountRejection(input);
+  if (rejection) return { ok: false, error: rejection };
   const username = input.username.trim().toLowerCase();
   if (await usernameTaken(db, username)) return { ok: false, error: "username-taken" };
   try {
@@ -44,7 +47,7 @@ export async function createAccount(
     return { ok: true, teamMemberId: user.id };
   } catch (error) {
     // Two technicians creating the same username at the same time: the unique index decides, the loser is told.
-    if (error instanceof APIError || isUniqueViolation(error)) return { ok: false, error: "username-taken" };
+    if (isUniqueViolation(error) || isAlreadyTaken(error)) return { ok: false, error: "username-taken" };
     throw error;
   }
 }
@@ -56,6 +59,11 @@ async function usernameTaken(db: Database, username: string): Promise<boolean> {
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
+/** Better Auth's own duplicate check – the e-mail it rejects is `<username>@users.invalid` (ADR 0006). */
+function isAlreadyTaken(error: unknown): boolean {
+  return error instanceof APIError && error.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
 }
 
 /** Sets a team member's role. The role is read again on every request (ST-004), so it applies to the next action. */
@@ -79,6 +87,8 @@ export async function resetPassword(
   { db, actor, headers, inNext }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  const rejection = passwordRejection(input.password);
+  if (rejection) return { ok: false, error: rejection };
   try {
     await authFor(db, inNext).api.setUserPassword({
       body: { userId: input.teamMemberId, newPassword: input.password },

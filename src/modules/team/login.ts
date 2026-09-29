@@ -28,8 +28,11 @@ export async function logIn(
   // all pass the lock check. The short transaction holds no connection while the password is checked.
   const reservation = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"login:" + username}))`);
-    // Failed logins only matter for the lock – forget them after twice the window.
-    await tx.delete(failedLogin).where(lt(failedLogin.failedAt, new Date(now.getTime() - 2 * WINDOW_MS)));
+    // Failed logins only matter for the lock – forget this username's after twice the window. Scoped to the
+    // username under the lock: an attempt must not touch what another username's attempts recorded.
+    await tx
+      .delete(failedLogin)
+      .where(and(eq(failedLogin.username, username), lt(failedLogin.failedAt, new Date(now.getTime() - 2 * WINDOW_MS))));
     if (await isLocked(tx, username, now)) return undefined;
     const [row] = await tx.insert(failedLogin).values({ username, failedAt: now }).returning({ id: failedLogin.id });
     return row.id;

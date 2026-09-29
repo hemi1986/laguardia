@@ -157,4 +157,22 @@ describe("managing team member accounts", () => {
     expect(accounts.find((account) => account.username === newUsername)).toBeUndefined();
     expect(accounts.find((account) => account.username === username)).toMatchObject({ role: "helper", active: true });
   });
+
+  it("ST-005: Passwords need at least 10 characters", async () => {
+    const technician = await aTechnician();
+    const { id } = await anna(technician);
+    const nineCharacters = "short-one";
+    expect(nineCharacters).toHaveLength(9);
+    const username = aUsername("berta");
+
+    const created = await createAccount(
+      { name: "Berta", username, password: nineCharacters, role: "helper" },
+      { db, ...technician },
+    );
+    const reset = await resetPassword({ teamMemberId: id, password: nineCharacters }, { db, ...technician });
+
+    expect(created).toEqual({ ok: false, error: "password-too-short" });
+    expect(reset).toEqual({ ok: false, error: "password-too-short" });
+    expect((await teamMemberAccounts(db)).find((account) => account.username === username)).toBeUndefined();
+  });
 });

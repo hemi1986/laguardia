@@ -147,9 +147,15 @@ describe("logging in", () => {
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T08:00:00Z") });
     await logIn({ username, password: "not-the-password" }, { db });
 
+    // Another username's attempt leaves them alone: an attempt only touches what it holds the lock for (ST-005).
     vi.setSystemTime(new Date("2026-09-01T08:31:00Z"));
     await logIn({ username: "someone_else", password: "not-the-password" }, { db });
+    expect(await db.select().from(failedLogin).where(eq(failedLogin.username, username))).toHaveLength(1);
 
-    expect(await db.select().from(failedLogin).where(eq(failedLogin.username, username))).toEqual([]);
+    // The next attempt for this username forgets everything older than twice the window.
+    await logIn({ username, password: "not-the-password" }, { db });
+    expect(await db.select().from(failedLogin).where(eq(failedLogin.username, username))).toEqual([
+      expect.objectContaining({ username, failedAt: new Date("2026-09-01T08:31:00Z") }),
+    ]);
   });
 });
