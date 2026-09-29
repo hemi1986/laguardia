@@ -52,6 +52,12 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 - Subagents don't know this conversation: when delegating, always pass file paths and a clear task.
 - At most 3 questions to the user at once – **except in grilling rounds**, which ask the whole frontier, each question with a recommended answer.
 
+## Tool Access
+`gh` and the Vercel MCP server (`vercel` in `.mcp.json`) are optional – the `session-start` hook reports what is missing, `README.md` says how to set it up.
+- With `gh` (scope `repo`) `/implement` opens the pull request itself; without it, push and hand the user the compare URL from `git push`.
+- With Vercel MCP you look up the branch's preview deployment, its state and its build/runtime logs; without it, ask the user for the preview URL.
+- Never work around a missing access silently (no token in a file, no login in the background) – report it and let the user decide.
+
 ## Workflow
 Initial discovery:
 1. `/event-storming` – grills the vision, then big picture; afterwards `/event-storming <process>` for detailed flows

@@ -41,7 +41,7 @@ The user's approval is the "confirmed seams" the tdd skill requires.
 `node .claude/skills/implement/scripts/verify.ts` (with `--e2e` when browser tests exist) must be green: lint incl. module boundaries, type check, tests, events and stories valid, scenario ↔ test and domain ID traceability. Language warnings: fix or justify.
 
 ## 5. Review (in parallel, scaled to the story)
-Push the branch (`git push -u origin st-NNN-<slug>`) so a preview deployment exists. Then start in **one** message:
+Push the branch (`git push -u origin st-NNN-<slug>`) so a preview deployment exists (Vercel MCP: `list_deployments` filtered by `branch` gives its URL and state; otherwise ask the user). Then start in **one** message:
 - Always: `code-reviewer` – task: story ID, base ref `main`, the context pack command. Writes `docs/reviews/ST-NNN-code-review.md`.
 - Always: `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known). Writes `docs/reviews/ST-NNN-acceptance.md`.
 - Only for size **L/XL** or a story that changes the command layer or other shared platform code: the Skill tool for `code-review` (bugs in the diff).
@@ -61,7 +61,7 @@ Tell the reviewers the follow-up hurdle below, so they grade findings with it in
 - Refactor only with green tests; the tests must not change unless they were wrong (then say so). Run `node .claude/skills/implement/scripts/verify.ts` again.
 
 ## 7. Acceptance and merge → user checkpoint
-1. Open a pull request: title `ST-NNN: <story title>`, body = the scenarios as a checklist, links to the story and both review files, the preview URL, remaining minors. (No `gh` CLI: push and give the user the compare URL `git push` prints.)
+1. Open a pull request: title `ST-NNN: <story title>`, body = the scenarios as a checklist, links to the story and both review files, the preview URL, remaining minors. (No `gh` CLI, or it isn't authenticated: push and give the user the compare URL `git push` prints.)
 2. The user checks the preview on a phone (360 px) and accepts.
 3. `node .claude/skills/implement/scripts/story-status.ts ST-NNN done` – refuses unless every scenario has its test (story) or every checklist item is ticked (spike/tech task) and all dependencies are done. Commit `ST-NNN: done`, push.
 4. **The user merges.** Afterwards: `git switch main && git pull`.
