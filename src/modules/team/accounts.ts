@@ -10,7 +10,7 @@ import { teamMember } from "./schema";
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError = "not-authorized" | "username-taken";
+export type AccountError = "not-authorized" | "username-taken" | "not-found";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -52,4 +52,19 @@ async function usernameTaken(db: Database, username: string): Promise<boolean> {
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
+/** Sets a team member's role. The role is read again on every request (ST-004), so it applies to the next action. */
+export async function changeRole(
+  input: { teamMemberId: string; role: Role },
+  { db, actor }: Dependencies,
+): Promise<AccountOutcome> {
+  if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  const [changed] = await db
+    .update(teamMember)
+    .set({ role: input.role })
+    .where(eq(teamMember.id, input.teamMemberId))
+    .returning({ id: teamMember.id });
+  if (!changed) return { ok: false, error: "not-found" };
+  return { ok: true, teamMemberId: changed.id };
 }
