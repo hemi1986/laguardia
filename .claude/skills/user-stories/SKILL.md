@@ -31,6 +31,28 @@ Template: `templates/story-template.md`. Schema: `schema/story.schema.json`.
 | `labels` | no | anyone (lowercase, e.g. `mvp`) |
 | `status` | yes | see workflow |
 
+## Backlog Order
+
+`docs/stories/BACKLOG.md` is generated (`scripts/render-backlog.ts`) and the order is **derived on every render,
+never stored**. `backlogOrder` in `.claude/lib/discovery.ts` sorts:
+
+1. by `priority` – `must`, `should`, `could`, `wont`;
+2. within the same priority **by story ID, ascending**;
+3. then dependencies first – a story that a listed story depends on is pulled in front of it.
+
+What follows from that, and has caught us out before (story review 2026-09-29):
+
+- **Numbers decide within a priority.** A story with a higher ID never overtakes a lower one, so a new tech task
+  always lands *behind* the older stories it is meant to precede. Raising it to `must` does not help when those
+  are `must` too.
+- **`depends_on` is the only thing that really moves a story forward** – and it is for real dependencies, not
+  for planning wishes. Do not invent one to force an order.
+- **So say it out loud when a story is built out of turn**: `/implement ST-NNN` with the ID, never the bare
+  `/implement` (which follows this very order via `next-story.ts`), and record the intended order in the
+  story's Notes so the next person sees why.
+
+There is no script that re-sorts the backlog, because there is nothing to sort – only story files and this rule.
+
 ## Status Workflow
 `draft` (in progress) → `review` (finished, waiting for PO + lead-dev) → `ready` (after user approval; `size` set, no `[OPEN]`) → `in-progress` → `done`.
 
