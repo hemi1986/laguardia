@@ -52,3 +52,24 @@ The single most important finding: **#1 – scoping the `failed_login` sweep to 
 | 14 | note | Carried into the audit-trail feature: `createAccount` runs in no transaction, so appending an event there needs Better Auth on a transaction-scoped handle or a split create. Recorded in `docs/stories/OPEN_QUESTIONS.md` together with the audit-trail decision. |
 
 `npm run verify` green after the fixes: 134 tests, ST-004 10/10 and ST-005 11/11 scenarios covered.
+
+## Found by the browser tests after the reviews (2026-09-29)
+
+Running the browser tests for the first time (with a local technician account) turned up a **blocker that no
+test at any other seam could see**: every Server Action that resolves the acting person got
+`{ kind: "visitor" }`, so creating an account, changing a role, resetting a password and changing your own
+password all answered "Das dürfen nur Techniker:innen." – while the very same check passed when the page was
+rendered.
+
+Cause (ST-004 code, `src/modules/team/session-cookie.ts`): `renewedSessionCookie` takes the session token out of
+the `Cookie` header, where it is percent-encoded (the signature ends in `=`), and the proxy hands it to
+`response.cookies.set`, which encodes it again – `%3D` becomes `%253D`, and Better Auth can no longer verify the
+signature. Fixed by decoding the value before it is handed back; the unit-level test now asserts the real
+contract (`encodeURIComponent(renewed.value)` is what the browser sent) instead of comparing raw strings, which
+had frozen the bug in place.
+
+This also means ST-004's own browser test (`a team member logs in and out on a 360 px phone`) had never actually
+run – it skips without `E2E_TEAM_USERNAME`/`E2E_TEAM_PASSWORD`, and CI runs the e2e suite only against the
+preview, whose database has no account until ST-068. It passes now.
+
+`npm run verify --e2e`: green – 134 tests and 9 browser tests, ST-004 10/10 and ST-005 11/11 scenarios covered.

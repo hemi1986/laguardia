@@ -101,10 +101,13 @@ describe("logging in", () => {
 
     const renewed = await renewedSessionCookie({ db, cookieHeader: headers.get("cookie") ?? "" });
 
+    // What the browser gets back must be exactly what it sent: the renewed value is encoded again on the way
+    // out, so it is handed over decoded. Sending it on encoded double-encodes it (ST-005).
+    const sent = headers.get("cookie")?.split("=").slice(1).join("=");
     expect(renewed).toMatchObject({
-      value: headers.get("cookie")?.split("=").slice(1).join("="),
       attributes: { maxAge: 90 * 24 * 60 * 60, httpOnly: true, sameSite: "lax", path: "/" },
     });
+    expect(encodeURIComponent(renewed?.value ?? "")).toBe(sent);
     expect(await renewedSessionCookie({ db, cookieHeader: "" })).toBeUndefined();
   });
 

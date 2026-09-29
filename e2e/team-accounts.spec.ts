@@ -23,26 +23,26 @@ test("a technician creates, changes and deactivates an account on a 360 px phone
   await page.getByRole("link", { name: "Teammitglieder" }).click();
   await expect(page).toHaveURL(/\/team\/members$/);
 
-  await page.getByLabel("Name").fill(`E2E ${newUsername}`);
+  await page.getByLabel("Name", { exact: true }).fill(`E2E ${newUsername}`);
   await page.getByLabel("Benutzername").fill(newUsername);
   await page.getByLabel("Anfangspasswort").fill("e2e-secret-10");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
 
-  await expect(page.getByRole("status")).toHaveText("Konto angelegt.");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
   const account = page.getByRole("article").filter({ hasText: newUsername });
   await expect(account.getByRole("heading", { name: `E2E ${newUsername}` })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 
   await account.getByLabel(`Neues Passwort – E2E ${newUsername}`).fill("e2e-second-10");
   await account.getByRole("button", { name: "Passwort zurücksetzen" }).click();
-  await expect(page.getByRole("status")).toHaveText("Passwort neu gesetzt.");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Passwort neu gesetzt.");
 
   await page
     .getByRole("article")
     .filter({ hasText: newUsername })
     .getByRole("button", { name: "Deaktivieren" })
     .click();
-  await expect(page.getByRole("status")).toHaveText("Konto deaktiviert.");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto deaktiviert.");
   await expect(page.getByRole("article").filter({ hasText: newUsername })).toContainText("deaktiviert");
 });
 
@@ -51,11 +51,11 @@ test("a helper cannot reach the account pages", async ({ page }) => {
 
   // The technician creates the helper account this test then logs in with.
   await page.goto("/team/members");
-  await page.getByLabel("Name").fill(`E2E ${helper}`);
+  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper}`);
   await page.getByLabel("Benutzername").fill(helper);
   await page.getByLabel("Anfangspasswort").fill("helper-secret-10");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("status")).toHaveText("Konto angelegt.");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
 
   await page.goto("/team");
   await page.getByRole("button", { name: "Abmelden" }).click();
@@ -77,6 +77,6 @@ test("a team member changes their own password and a wrong current password is r
   await page.getByLabel("Neues Passwort").fill("does-not-matter-10");
   await page.getByRole("button", { name: "Speichern" }).click();
 
-  await expect(page.getByRole("alert")).toHaveText("Das aktuelle Passwort stimmt nicht.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Das aktuelle Passwort stimmt nicht.");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });
