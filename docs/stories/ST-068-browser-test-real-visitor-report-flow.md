@@ -15,9 +15,11 @@ status: ready
 ## Task
 Follow-up of ST-059 (CI and test harness): `docs/reviews/ST-059-code-review.md` finding #15 (follow-up section) and `docs/reviews/ST-059-acceptance.md` ("Edge cases not covered by the story": the one browser test is coupled to the throwaway spike page). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
-The only browser test, `e2e/report-problem.spec.ts`, drives the ST-001 spike test page: it enters the spike password (`SPIKE_PASSWORD`) and reports a problem for the hard-coded machine `"test-machine"`. ST-066 removes that page, the password and the test machine. Without a replacement, the pipeline would be left with no browser test at 360 px, and the ST-059 criterion "at least one browser test runs at 360 px width against a deployed preview" would no longer hold.
+The only browser test, `e2e/report-problem.spec.ts`, drives the ST-001 spike test page: it enters the spike password (`SPIKE_PASSWORD`) and reports a problem for the hard-coded machine `"test-machine"`. **ST-078** removes the spike **code** – that page, its Server Action and the browser test itself – and deletes `e2e/report-problem.spec.ts`; ST-066 then removes the spike configuration and data (the `SPIKE_PASSWORD` variables and the blobs). Without a replacement, the pipeline is left with no browser test of the visitor flow, and the ST-059 criterion "at least one browser test runs at 360 px width against a deployed preview" is carried by `e2e/security.spec.ts` alone, which ST-078 re-points at `/login`.
 
-Replace the spike browser test with a browser test of the real visitor flow from ST-010 and ST-013, run against the commit's Vercel preview by the existing workflow `.github/workflows/e2e-preview.yml`: a visitor opens the visitor machine page of a machine by its museum number and reports a problem. This task must be done before or together with ST-066, so at least one browser test keeps running at all times.
+Replace the spike browser test with a browser test of the real visitor flow from ST-010 and ST-013, run against the commit's Vercel preview by the existing workflow `.github/workflows/e2e-preview.yml`: a visitor opens the visitor machine page of a machine by its museum number and reports a problem.
+
+**Coverage gap, recorded in the story review of 2026-09-29:** from ST-078 until this story is done, no browser test covers the visitor problem report flow – the flow stays covered by integration tests of `CMD-ReportProblem` only. This story closes that gap; the earlier requirement to run "before or together with ST-066" no longer applies in that form, because the deletion happens in ST-078 and is not blocked on this story.
 
 The test needs a machine that is on display in the preview's database. Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2): a seed step in the browser-test workflow registers the machine through `CMD-RegisterMachine` (ST-007) in the preview's Neon database branch, so the event journal stays consistent, with a fixed museum number reserved for tests. It runs only against preview database branches, never production; the connection comes from the CI step built by this task (below).
 
@@ -32,7 +34,7 @@ The test needs a machine that is on display in the preview's database. Decided i
 - [ ] The test runs in `.github/workflows/e2e-preview.yml` against the commit's Vercel preview and is green there; the run is linked as evidence.
 - [ ] The test uses neither the spike password nor the machine `"test-machine"`; the browser test needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`, and the seed step none other than those of the connection step below.
 - [ ] The test does not depend on data left behind by earlier runs: a second run against the same preview is green as well.
-- [ ] `e2e/report-problem.spec.ts` (the spike test) is removed or rewritten, so no browser test references the spike page any more.
+- [ ] The new browser test closes the gap ST-078 opened: it is the first browser test of the visitor problem report flow since ST-078 deleted `e2e/report-problem.spec.ts` (that deletion belongs to ST-078, not to this story), and no browser test references the spike page any more.
 - [ ] The browser test job still finishes in under 10 minutes including waiting for the preview (ST-059).
 
 ### Foundation (moved from ST-075 on 2026-09-27 – preview database connection, story review decision 2)
@@ -46,7 +48,7 @@ The test needs a machine that is on display in the preview's database. Decided i
 
 ## Out of Scope
 - The separate Blob store and other preview environment settings (ST-061)
-- Removing the spike scaffolding itself (ST-066)
+- Removing the spike scaffolding itself: the spike **code**, the test page on `/` and the deletion of `e2e/report-problem.spec.ts` (ST-078); the spike **configuration and data** (ST-066)
 - Making "Browser tests on preview" a required check for merging into `main` (`docs/reviews/ST-059-code-review.md` finding #16, to be decided e.g. in ST-061)
 - Browser tests for further flows (team login, triage, maintenance)
 - Photos on problem reports (ST-016)

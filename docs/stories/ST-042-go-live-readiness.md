@@ -7,7 +7,7 @@ priority: must
 size: M
 risk: low
 events: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MaintenancePlanChanged]
-depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070]
+depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-066, ST-070, ST-078]
 labels: [mvp, maintenance, collection]
 status: ready
 ---
@@ -24,6 +24,7 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
    - Because a machine registered after a task's start date counts as last done on its registration date (HS-20 resolution, D5), the machines are entered first and the tasks' start dates are chosen on or after the day the machines were entered – otherwise the staggering is lost.
    - The technicians write a one or two sentence instruction per task; where none is written yet, the task name is used.
 5. **Operations**: environments, monitoring, backups and the update routine are in place (ST-061, ST-062, ST-063); the legal texts from the museum are online (ST-064).
+6. **No spike scaffolding is left** (story review 2026-09-29): the spike code, the password-gated test page on `/` and the spike pages are gone (ST-078), and the spike configuration and data are gone (ST-066). This is a go-live blocker, not housekeeping: the blobs under the `spike/` prefix may show identifiable people and must not remain without a DPA (ADR 0006), and a password-gated test page must not be reachable in production on the museum's first day.
 
 ## Acceptance Criteria
 - [ ] Every team member who takes part in the trial can log in with a personal account and the right role.
