@@ -11,12 +11,8 @@ import { session, teamMember } from "./schema";
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError =
-  | AccountRuleError
-  | "not-authorized"
-  | "username-taken"
-  | "not-found"
-  | "last-technician";
+export type AccountError = AccountRuleError | "not-authorized" | "username-taken" | "not-found" | "last-technician"
+  | "current-password-wrong";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -98,6 +94,30 @@ export async function resetPassword(
     throw error;
   }
   return { ok: true, teamMemberId: input.teamMemberId };
+}
+
+/**
+ * A team member changes their own password, proving the current one – the only password change that is not a
+ * technician's reset (ST-005). Better Auth checks the current password against the session behind `headers`.
+ */
+export async function changeOwnPassword(
+  input: { currentPassword: string; newPassword: string },
+  { db, actor, headers, inNext }: Dependencies,
+): Promise<AccountOutcome> {
+  if (actor.kind !== "team-member") return { ok: false, error: "not-authorized" };
+  const rejection = passwordRejection(input.newPassword);
+  if (rejection) return { ok: false, error: rejection };
+  try {
+    await authFor(db, inNext).api.changePassword({
+      body: { currentPassword: input.currentPassword, newPassword: input.newPassword },
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof APIError && error.body?.code === "INVALID_PASSWORD")
+      return { ok: false, error: "current-password-wrong" };
+    throw error;
+  }
+  return { ok: true, teamMemberId: actor.teamMemberId };
 }
 
 /**
