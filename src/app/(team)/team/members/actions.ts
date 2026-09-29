@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { changeRole, createAccount, deactivateAccount, resetPassword, type AccountOutcome } from "@/modules/team";
 import type { Role } from "@/platform/command";
 import { database } from "@/platform/database";
-import { actingPerson } from "../../../team-session";
+import { currentPerson } from "@/app/_actions/current-person";
 
 /**
  * Managing team member accounts (ST-005). The acting person comes from the login session, never from the form –
@@ -14,7 +14,7 @@ import { actingPerson } from "../../../team-session";
 const MEMBERS = "/team/members";
 
 async function dependencies() {
-  return { db: database(), actor: await actingPerson(), headers: await headers(), inNext: true };
+  return { db: database(), actor: await currentPerson(), headers: await headers(), inNext: true };
 }
 
 function back(outcome: AccountOutcome, done: string): never {
