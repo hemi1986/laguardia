@@ -3,7 +3,7 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Clock } from "../clock";
 import type { Database } from "../database";
 import { NotFound, VersionConflict } from "./errors";
-import type { Actor, AllowedActor, Command, CommandContext, JournalEvent } from "./index";
+import type { Actor, ActorOf, AllowedActor, Command, CommandContext, JournalEvent } from "./index";
 
 /**
  * The one shape of a command (ST-071, architecture review 2026-09-27, Q2/Q11/Q12/Q14):
@@ -75,14 +75,22 @@ export function trigger<Input, Result, Error extends string>(
   return { policy: policy as unknown as Command<unknown, unknown, Error>, input };
 }
 
-export type DecisionContext = { actor: Actor; clock: Clock; newId: () => string };
+/**
+ * What a decision gets besides state and input. `aggregateCommand` narrows the acting person to the command's allowed
+ * actors (`ActorOf`), so a decision for team members only gets a team member.
+ */
+export type DecisionContext<ActingPerson extends Actor = Actor> = {
+  actor: ActingPerson;
+  clock: Clock;
+  newId: () => string;
+};
 
 export type Decision<State, Event, Error extends string> =
   { ok: true; state: State; events: Event[]; created?: Created[] } | { ok: false; error: Error };
 
-type Common<State extends { id: string }, Event, Result, PolicyError extends string> = {
+type Common<Allowed extends AllowedActor, State extends { id: string }, Event, Result, PolicyError extends string> = {
   id: `CMD-${string}`;
-  allowedActors: readonly AllowedActor[];
+  allowedActors: readonly Allowed[];
   store: AggregateStore<State>;
   /** Maps a domain event onto its journal entry – references and non-personal facts only, never free text. */
   journal: (event: Event, state: State) => JournalEvent;
@@ -99,9 +107,10 @@ type Creating<
   Result,
   Error extends string,
   PolicyError extends string,
-> = Common<State, Event, Result, PolicyError> & {
+  Allowed extends AllowedActor,
+> = Common<Allowed, State, Event, Result, PolicyError> & {
   creates: true;
-  decide: (state: undefined, input: Input, context: DecisionContext) => Decision<State, Event, Error>;
+  decide: (state: undefined, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
 };
 
 /**
@@ -115,10 +124,11 @@ type Changing<
   Result,
   Error extends string,
   PolicyError extends string,
-> = Common<State, Event, Result, PolicyError> & {
+  Allowed extends AllowedActor,
+> = Common<Allowed, State, Event, Result, PolicyError> & {
   creates?: false;
   target: (input: Input) => { id: string; version?: number };
-  decide: (state: State, input: Input, context: DecisionContext) => Decision<State, Event, Error>;
+  decide: (state: State, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
 };
 
 /** The command's result type includes the errors of the policies it triggers – a rejected policy rejects it. */
@@ -129,17 +139,19 @@ export function aggregateCommand<
   Result,
   Error extends string,
   PolicyError extends string = never,
+  const Allowed extends AllowedActor = AllowedActor,
 >(
   definition:
-    | Creating<Input, State, Event, Result, Error, PolicyError>
-    | Changing<Input, State, Event, Result, Error, PolicyError>,
+    | Creating<Input, State, Event, Result, Error, PolicyError, Allowed>
+    | Changing<Input, State, Event, Result, Error, PolicyError, Allowed>,
 ): Command<Input, Result, Error | PolicyError> {
   return {
     id: definition.id,
     allowedActors: definition.allowedActors,
     run: async (input: Input, context: CommandContext) => {
       const { tx, actor, clock, newId } = context;
-      const decisionContext = { actor, clock, newId };
+      // executeCommand runs a command only for an actor in its allowedActors (policies: only as the system).
+      const decisionContext = { actor: actor as ActorOf<Allowed>, clock, newId };
       const { store } = definition;
 
       let decision: Decision<State, Event, Error>;

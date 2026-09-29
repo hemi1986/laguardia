@@ -29,11 +29,24 @@ export {
 
 export type Role = "helper" | "technician";
 
-/** Who acts: a team member with their role, an anonymous visitor, or the system (automatic policies). */
-export type Actor =
-  { kind: "team-member"; teamMemberId: string; role: Role } | { kind: "visitor" } | { kind: "system" };
+/** The ID of a team member account – every "… by" of the domain (docs/architecture/data-model.md). */
+export type TeamMemberId = string;
 
 export type AllowedActor = Role | "visitor" | "system";
+
+/**
+ * The acting person a command with these allowed actors can get (Q5/Q20): `ActorOf<"helper" | "technician">` is a
+ * team member with ID and role, without narrowing; `ActorOf<"visitor" | "technician">` also a visitor.
+ */
+export type ActorOf<Allowed extends AllowedActor> =
+  | ([Extract<Allowed, Role>] extends [never]
+      ? never
+      : { kind: "team-member"; teamMemberId: TeamMemberId; role: Extract<Allowed, Role> })
+  | ("visitor" extends Allowed ? { kind: "visitor" } : never)
+  | ("system" extends Allowed ? { kind: "system" } : never);
+
+/** Who acts: a team member with their role, an anonymous visitor, or the system (automatic policies). */
+export type Actor = ActorOf<AllowedActor>;
 
 /**
  * A domain event as the command hands it to the journal. The command's clock supplies the time.

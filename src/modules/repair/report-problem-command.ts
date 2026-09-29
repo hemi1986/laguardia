@@ -1,11 +1,11 @@
 import { aggregateCommand } from "@/platform/command";
 import { problemReports } from "./problem-reports";
-import { reportProblem } from "./report-problem";
+import { reportProblem, reportingActors } from "./report-problem";
 
 /** CMD-ReportProblem through the command layer: a creating command on AGG-ProblemReport, emits EVT-ProblemReported. */
 export const reportProblemCommand = aggregateCommand({
   id: "CMD-ReportProblem",
-  allowedActors: ["visitor", "helper", "technician"],
+  allowedActors: reportingActors,
   store: problemReports,
   creates: true,
   decide: reportProblem,
