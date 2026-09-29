@@ -4,6 +4,12 @@ import { describe, expect, it } from "vitest";
 /** ADR 0002: a module is used only through its public interface (`index.ts`), never through its internals. */
 const eslint = new ESLint({ cwd: process.cwd() });
 
+/** Messages of the rule that keeps Role and Reporter defined once (architecture review Q5/Q20, ST-073). */
+async function ruleErrors(filePath: string, code: string): Promise<string[]> {
+  const [result] = await eslint.lintText(code, { filePath });
+  return result.messages.filter((m) => m.ruleId === "no-restricted-syntax").map((m) => m.message);
+}
+
 async function boundaryErrors(filePath: string, code: string): Promise<string[]> {
   const [result] = await eslint.lintText(code, { filePath });
   return result.messages.filter((m) => m.ruleId?.startsWith("boundaries/")).map((m) => m.message);
@@ -83,5 +89,29 @@ describe("module boundaries", () => {
     expect(intoAModule).toHaveLength(1);
     expect(intoTheCatalogs).toHaveLength(1);
     expect(pageUsingAComponent).toHaveLength(0);
+  });
+
+  it("reject a second definition of Role or Reporter under src/ – and allow their one home", async () => {
+    const secondRole = await ruleErrors(
+      "src/modules/team/deliberate-duplicate.ts",
+      "export type Role = \"helper\" | \"technician\";\n",
+    );
+    const secondReporter = await ruleErrors(
+      "src/app/deliberate-duplicate.ts",
+      "export interface Reporter {\n  kind: string;\n}\n",
+    );
+    const roleAtHome = await ruleErrors(
+      "src/platform/command/index.ts",
+      "export type Role = \"helper\" | \"technician\";\n",
+    );
+    const reporterAtHome = await ruleErrors(
+      "src/modules/repair/report-problem.ts",
+      "export type Reporter = { kind: \"visitor\" };\n",
+    );
+
+    expect(secondRole).toEqual([expect.stringContaining("src/platform/command")]);
+    expect(secondReporter).toEqual([expect.stringContaining("src/modules/repair/report-problem.ts")]);
+    expect(roleAtHome).toEqual([]);
+    expect(reporterAtHome).toEqual([]);
   });
 });

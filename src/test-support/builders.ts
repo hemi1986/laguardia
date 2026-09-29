@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Role } from "@/platform/command";
 
 /**
  * Test-data builders for every aggregate of docs/architecture/data-model.md and for team members of each role.
@@ -18,7 +19,6 @@ let museumNumbers = 0;
 export type MachineStatus = "playable" | "limited" | "out-of-order" | "not-on-display";
 export type MachineCategory = "pinball" | "arcade" | "other";
 export type Technology = "em" | "solid-state" | "dmd" | "lcd" | "crt";
-export type Role = "helper" | "technician";
 
 export type TeamMember = { id: string; name: string; role: Role; lastSeen?: Date };
 

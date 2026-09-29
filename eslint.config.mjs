@@ -56,6 +56,27 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Architecture review Q5/Q20 (ST-073): one definition each – the role in the command layer, the reporter in
+    // the problem report, derived from the acting person in one place.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/platform/command/index.ts", "src/modules/repair/report-problem.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: ":matches(TSTypeAliasDeclaration, TSInterfaceDeclaration)[id.name='Role']",
+          message:
+            "Role is defined once, in src/platform/command/index.ts – import it from @/platform/command (ST-073)",
+        },
+        {
+          selector: ":matches(TSTypeAliasDeclaration, TSInterfaceDeclaration)[id.name='Reporter']",
+          message:
+            "Reporter is defined once, in src/modules/repair/report-problem.ts – import it from @/modules/repair (ST-073)",
+        },
+      ],
+    },
+  },
   globalIgnores([
     ".next/**",
     "test-results/**",
