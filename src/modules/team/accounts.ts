@@ -1,13 +1,16 @@
 import "server-only";
+import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
 import { authFor } from "./auth";
+import { teamMember } from "./schema";
 
 /**
  * Managing team member accounts (ST-005, ADR 0004): technicians create accounts, set the role, reset passwords and
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError = "not-authorized";
+export type AccountError = "not-authorized" | "username-taken";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -23,14 +26,30 @@ export async function createAccount(
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
   const username = input.username.trim().toLowerCase();
-  const { user } = await authFor(db).api.createUser({
-    body: {
-      name: input.name.trim(),
-      email: `${username}@users.invalid`, // required by Better Auth, never shown or used (ADR 0006)
-      password: input.password,
-      role: input.role,
-      data: { username },
-    },
-  });
-  return { ok: true, teamMemberId: user.id };
+  if (await usernameTaken(db, username)) return { ok: false, error: "username-taken" };
+  try {
+    const { user } = await authFor(db).api.createUser({
+      body: {
+        name: input.name.trim(),
+        email: `${username}@users.invalid`, // required by Better Auth, never shown or used (ADR 0006)
+        password: input.password,
+        role: input.role,
+        data: { username },
+      },
+    });
+    return { ok: true, teamMemberId: user.id };
+  } catch (error) {
+    // Two technicians creating the same username at the same time: the unique index decides, the loser is told.
+    if (error instanceof APIError || isUniqueViolation(error)) return { ok: false, error: "username-taken" };
+    throw error;
+  }
+}
+
+async function usernameTaken(db: Database, username: string): Promise<boolean> {
+  const [found] = await db.select({ id: teamMember.id }).from(teamMember).where(eq(teamMember.username, username));
+  return found !== undefined;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
 }

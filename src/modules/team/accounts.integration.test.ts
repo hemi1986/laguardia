@@ -45,4 +45,21 @@ describe("managing team member accounts", () => {
       role: "helper",
     });
   });
+
+  it("ST-005: Username must be unique", async () => {
+    const technician = await aTechnician();
+    const username = aUsername("anna");
+    const taken = await createAccount(
+      { name: "Anna Berger", username, password: "anna-secret-10", role: "helper" },
+      { db, actor: technician },
+    );
+    expect(taken.ok).toBe(true);
+
+    const outcome = await createAccount(
+      { name: "Anna Bauer", username, password: "other-secret-10", role: "helper" },
+      { db, actor: technician },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "username-taken" });
+  });
 });
