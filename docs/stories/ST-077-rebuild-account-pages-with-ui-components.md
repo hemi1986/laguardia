@@ -3,13 +3,13 @@ id: ST-077
 title: Rebuild the account pages with the shared UI components
 type: tech-task
 context: BC-Repair
-priority: should
-size: null
-risk: null
+priority: must
+size: M
+risk: medium
 events: []
 depends_on: [ST-076]
 labels: [foundation, ui]
-status: review
+status: ready
 ---
 
 ## Task
@@ -29,7 +29,7 @@ The texts stay in the catalogs – no text literal in a page or a component.
 - [ ] Every field keeps a programmatically associated label, and on each page every label text resolves to exactly one field: `getByLabel("Name", { exact: true })`, `"Benutzername"`, `"Anfangspasswort"` and the role field on `/team/members`, `"Aktuelles Passwort"` and `"Neues Passwort"` on `/team/password` (browser test, Playwright strict mode).
 - [ ] Each account stays one `article` with the account's name as its heading, and the role change, password reset and deactivate controls of an account stay inside that account's `article` – `page.getByRole("article").filter({ hasText: username })` keeps selecting exactly one account with its own controls.
 - [ ] The per-account password field keeps its unique accessible name `Neues Passwort – <name>`, so the fields of two accounts are still told apart.
-- [ ] The role select keeps a label and both options in the `_UI (de)_` wording of `CONTEXT.md` (Helfer:in, Techniker:in), submits the chosen role with the form, and does so **without JavaScript** as well (browser test with JavaScript disabled) – the forms are Server Actions and must keep working without it.
+- [ ] The role field uses the select component ST-076 established for fields that must submit without JavaScript – whichever of the two ST-076 arrived at (the shadcn/Radix component or a Tailwind-styled native `<select>`); this story chooses nothing here, it consumes that decision. The field keeps a label and both options in the `_UI (de)_` wording of `CONTEXT.md` (Helfer:in, Techniker:in) and submits the chosen role with the form, without JavaScript as well (browser test with JavaScript disabled) – the forms are Server Actions and must keep working without it.
 - [ ] Rejections keep `role="alert"` and confirmations `role="status"`, both inside the page's `<main>` landmark, with exactly one of each visible at a time: creating an account shows "Konto angelegt.", a wrong current password shows "Das aktuelle Passwort stimmt nicht." (`e2e/team-accounts.spec.ts` stays green unchanged).
 - [ ] A deactivated account is still recognisable as deactivated on the list, and its controls stay hidden (ST-005).
 - [ ] 360 px: a browser test asserts `document.documentElement.scrollWidth <= 360` on `/team/members` (with at least one account listed) and on `/team/password` (with a rejection shown).
@@ -39,6 +39,7 @@ The texts stay in the catalogs – no text literal in a page or a component.
 
 ## Out of Scope
 - Initialising shadcn/ui, the component set, the shared phone container and the team shell with its navigation (ST-076)
+- Deciding which select component works without JavaScript and the `ui` boundary element with its lint policy (ST-076)
 - New behaviour on the account pages – this story changes how they look, not what they do (ST-005 is `done`; a change to its behaviour would be a new story)
 - An audit trail of account changes (its own feature after ST-005, `docs/stories/OPEN_QUESTIONS.md`)
 - `useActionState` and the `{ error, values }` form state (ST-073) – the pages keep the `?error=…` / `?done=…` flow they have today
@@ -48,5 +49,7 @@ The texts stay in the catalogs – no text literal in a page or a component.
 - none
 
 ## Notes
-- Requirements engineer's estimate: **S**, risk **low** – no new component kind, no new behaviour; the work is markup plus the browser-test contract. The lead dev sets `size` and `risk` in the story review.
+- Requirements engineer's estimate: **S**, risk **low** – no new component kind, no new behaviour; the work is markup plus the browser-test contract. Lead dev in the story review of 2026-09-29: **M / medium** – these two pages carry the most markup, and the browser-test contract of ST-005 has to survive it unchanged.
+- The product owner accepted the slice but warned that the interim state after ST-076 alone – the new shell and navigation around still-raw account forms – should not sit long; this story follows close behind.
 - **Order.** Directly after ST-076 and, like it, before ST-006 (user decision of 2026-09-29), so that no later story writes markup that is rewritten afterwards.
+- **Priority `must`** (user, 2026-09-29): `BACKLOG.md` is generated in priority order, so at `should` this story would sort behind ST-006 and every other `must` – the opposite of that decision.

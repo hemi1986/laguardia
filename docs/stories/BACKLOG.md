@@ -4,7 +4,7 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**75 stories** · In Progress: 0 · Ready: 64 · In Review: 4 · Draft: 0 · Done: 7
+**75 stories** · In Progress: 0 · Ready: 68 · In Review: 0 · Draft: 0 · Done: 7
 
 Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -53,8 +53,10 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | must | S | medium | ST-061 |
 | [ST-063](ST-063-dependency-and-security-routine.md) | Dependency and security update routine | tech-task | Repair | must | XS | low | ST-059 |
 | [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | must | S | medium | ST-001 |
+| [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | must | S | medium | ST-004, ST-073 |
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | must | S | low | ST-004, ST-007, ST-078 |
 | [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | must | M | medium | ST-003, ST-013 |
-| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | must | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070 |
+| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | must | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-066, ST-070, ST-078 |
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | must | M | low | ST-044 |
 | [ST-056](ST-056-not-on-display-and-return-to-display.md) | Due maintenance for machines not on display and returning to display | story | Maintenance | must | S | high | ST-012, ST-043 |
 | [ST-047](ST-047-maintenance-on-machine-record-and-overview.md) | Maintenance on the machine record | story | Maintenance | must | S | low | ST-009, ST-044, ST-056 |
@@ -65,6 +67,8 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | must | S | low | ST-039 |
 | [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | must | M | medium | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | M | medium | ST-007, ST-013, ST-059 |
+| [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
+| [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | should | S | low | ST-002, ST-024, ST-016 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | should | S | low | ST-037 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
@@ -76,15 +80,6 @@ Within each section: ordered by priority, dependencies first. Open questions: [O
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | M | medium | ST-011 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | could | XS | low | ST-015, ST-044 |
-
-## In Review
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | should | – | – | ST-004, ST-073 |
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | should | S | low | ST-004, ST-007, ST-078 (review) |
-| [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | should | – | – | ST-004, ST-005 |
-| [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | should | – | – | ST-076 (review) |
 
 ## Done
 

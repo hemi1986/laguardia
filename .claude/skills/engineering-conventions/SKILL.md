@@ -197,6 +197,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
 | Page flow, phone layout, security of requests (CSRF, headers) | the browser at 360 px against the dev server and the preview | e2e | `e2e/report-problem.spec.ts`, `e2e/security.spec.ts` |
+| Shared UI component without domain logic (ST-076) | the pages that use it, in the browser at 360 px – no unit or snapshot test of its own, unless the component carries logic itself | e2e | `e2e/team-accounts.spec.ts` |
 
 Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks of the database or of the command layer.
 

@@ -3,13 +3,13 @@ id: ST-066
 title: Remove the spike configuration and data
 type: tech-task
 context: BC-Repair
-priority: should
+priority: must
 size: S
 risk: low
 events: []
 depends_on: [ST-004, ST-007, ST-078]
 labels: [follow-up, foundation]
-status: review
+status: ready
 ---
 
 ## Task
@@ -47,4 +47,6 @@ Where practical, the checks are scripted (e.g. with the post-deploy smoke toolin
 - none
 
 ## Notes
+- Raised to `must` and made a go-live blocker in the story review of 2026-09-29 (user decision): the blobs under `spike/` may show identifiable people and sit on the Hobby account without a DPA (ADR 0006), so this is a compliance gap, not a cleanup. `ST-042` (go-live readiness) now depends on this story and on ST-078. Priority also carries the ordering: `BACKLOG.md` is generated in priority order, so at `should` the story would sort behind every `must`.
+- Lead dev in the story review of 2026-09-29: **S / low**, unchanged.
 - Back to `review` on 2026-09-29 because the story was split: the code removal moved to ST-078, and `depends_on` changed from `[ST-004, ST-007, ST-068]` to `[ST-004, ST-007, ST-078]` – ST-068 was only needed because the code removal took the spike browser test with it, which is now ST-078's concern.
