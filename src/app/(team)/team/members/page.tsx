@@ -24,12 +24,13 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
   const { error, done } = await searchParams;
   const accounts = await teamMemberAccounts(database());
   const rejection = only(error);
-  const confirmation = confirmations[only(done) ?? ""];
+  const confirmedStep = only(done) ?? "";
+  const confirmation = Object.hasOwn(confirmations, confirmedStep) ? confirmations[confirmedStep] : undefined;
 
   return (
     <main className="flex flex-col gap-6 p-4">
       <h1 className="text-xl font-semibold">{texts.title}</h1>
-      {rejection && rejection in accountErrors && (
+      {rejection && Object.hasOwn(accountErrors, rejection) && (
         <p role="alert">{accountErrors[rejection as keyof typeof accountErrors]}</p>
       )}
       {confirmation && <p role="status">{confirmation}</p>}

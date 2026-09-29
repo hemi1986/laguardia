@@ -102,10 +102,13 @@ describe("managing team member accounts", () => {
   it("ST-005: Technician resets a password", async () => {
     const technician = await aTechnician();
     const { id, username, password } = await anna(technician);
+    const herOldPhone = await sessionOf(username, password);
 
     const outcome = await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, ...technician });
 
     expect(outcome).toEqual({ ok: true, teamMemberId: id });
+    // A reset is the remedy for a lost phone: whoever held the old session is logged out with the old password.
+    expect(await currentPerson({ db, headers: herOldPhone })).toEqual({ kind: "visitor" });
     expect(await personBehind(username, "anna-forgot-10")).toMatchObject({ teamMemberId: id });
     expect(await logIn({ username, password }, { db })).toEqual({ ok: false, error: "login-failed" });
   });

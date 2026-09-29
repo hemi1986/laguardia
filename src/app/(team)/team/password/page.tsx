@@ -14,7 +14,7 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
   return (
     <main className="mx-auto flex max-w-sm flex-col gap-4 p-4">
       <h1 className="text-xl font-semibold">{ownPassword.title}</h1>
-      {rejection && rejection in accountErrors && (
+      {rejection && Object.hasOwn(accountErrors, rejection) && (
         <p role="alert">{accountErrors[rejection as keyof typeof accountErrors]}</p>
       )}
       {done === "changed" && <p role="status">{ownPassword.changed}</p>}

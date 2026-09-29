@@ -76,7 +76,11 @@ export async function changeRole(
   return applyChange(db, input.teamMemberId, { role: input.role });
 }
 
-/** Sets a new password for a team member's account – a technician resets it on site, no e-mail (ADR 0004). */
+/**
+ * Sets a new password for a team member's account – a technician resets it on site, no e-mail (ADR 0004).
+ * The account's open sessions end with it: a reset is the remedy for a lost phone or a password someone else
+ * learned, and sessions live for 90 days (ST-004), so leaving them open would leave the old holder logged in.
+ */
 export async function resetPassword(
   input: { teamMemberId: string; password: string },
   { db, actor, headers, inNext }: Dependencies,
@@ -93,6 +97,7 @@ export async function resetPassword(
     if (error instanceof APIError && error.status === "NOT_FOUND") return { ok: false, error: "not-found" };
     throw error;
   }
+  await db.delete(session).where(eq(session.userId, input.teamMemberId));
   return { ok: true, teamMemberId: input.teamMemberId };
 }
 
@@ -109,7 +114,9 @@ export async function changeOwnPassword(
   if (rejection) return { ok: false, error: rejection };
   try {
     await authFor(db, inNext).api.changePassword({
-      body: { currentPassword: input.currentPassword, newPassword: input.newPassword },
+      // Other devices are logged out: someone who changes their password because it leaked expects exactly that.
+      // Better Auth issues a fresh session for this request, so the person changing it stays logged in.
+      body: { currentPassword: input.currentPassword, newPassword: input.newPassword, revokeOtherSessions: true },
       headers,
     });
   } catch (error) {

@@ -38,12 +38,16 @@ describe("changing your own password", () => {
   it("ST-005: Team member changes their own password", async () => {
     const anna = await annaOnHerPhone();
 
+    const herOtherPhone = await sessionOf(anna.username, anna.password);
+
     const outcome = await changeOwnPassword(
       { currentPassword: anna.password, newPassword: "anna-chose-this" },
       { db, actor: anna.actor, headers: anna.headers },
     );
 
     expect(outcome).toEqual({ ok: true, teamMemberId: anna.id });
+    // Changing your password logs your other devices out – the reason to change it is usually that it leaked.
+    expect(await currentPerson({ db, headers: herOtherPhone })).toEqual({ kind: "visitor" });
     expect(await currentPerson({ db, headers: await sessionOf(anna.username, "anna-chose-this") })).toMatchObject({
       teamMemberId: anna.id,
     });
