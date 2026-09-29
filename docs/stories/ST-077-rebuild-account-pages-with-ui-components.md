@@ -35,7 +35,7 @@ The texts stay in the catalogs – no text literal in a page or a component.
 - [x] 360 px: a browser test asserts `document.documentElement.scrollWidth <= 360` on `/team/members` (with at least one account listed) and on `/team/password` (with a rejection shown).
 - [x] A long account name does not break the phone layout: with an account whose name is 60 characters without spaces, `/team/members` still has `document.documentElement.scrollWidth <= 360` (browser test; the risk was raised in `docs/reviews/ST-005-acceptance.md`).
 - [x] Every text comes from `src/platform/messages/team.de.ts`; a text a component needs is passed in as a prop, and a new text is added to the catalog first.
-- [ ] No existing test is weakened or deleted: `npm run verify -- --e2e` is green, and every selector change in `e2e/*.spec.ts` is named in the pull request with the reason.
+- [x] No existing test is weakened or deleted: `npm run verify -- --e2e` is green, and every selector change in `e2e/*.spec.ts` is named in the pull request with the reason.
 
 ## Out of Scope
 - Initialising shadcn/ui, the component set, the shared phone container and the team shell with its navigation (ST-076)
