@@ -1,6 +1,6 @@
 import "server-only";
 import { APIError } from "better-auth/api";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
 import { newAccountRejection, passwordRejection, type AccountRuleError } from "./account-rules";
 import { authFor } from "./auth";
@@ -11,7 +11,12 @@ import { session, teamMember } from "./schema";
  * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
-export type AccountError = AccountRuleError | "not-authorized" | "username-taken" | "not-found";
+export type AccountError =
+  | AccountRuleError
+  | "not-authorized"
+  | "username-taken"
+  | "not-found"
+  | "last-technician";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
@@ -72,13 +77,7 @@ export async function changeRole(
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
-  const [changed] = await db
-    .update(teamMember)
-    .set({ role: input.role })
-    .where(eq(teamMember.id, input.teamMemberId))
-    .returning({ id: teamMember.id });
-  if (!changed) return { ok: false, error: "not-found" };
-  return { ok: true, teamMemberId: changed.id };
+  return applyChange(db, input.teamMemberId, { role: input.role });
 }
 
 /** Sets a new password for a team member's account – a technician resets it on site, no e-mail (ADR 0004). */
@@ -110,16 +109,51 @@ export async function deactivateAccount(
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  return applyChange(db, input.teamMemberId, { deactivate: true });
+}
+
+/** What a change does to an account: a new role, or deactivation. Both can take an active technician away. */
+type Change = { role: Role } | { deactivate: true };
+
+/**
+ * The invariant of BC-Team: at least one active technician always remains, so the team can never lock itself out.
+ * Every change that could take one away is serialized on one advisory lock, so two technicians demoting each other
+ * at the same time wait for each other and the second one sees the first one's result – exactly one gets through.
+ */
+const ACTIVE_TECHNICIANS_LOCK = "team:active-technicians";
+
+async function applyChange(db: Database, teamMemberId: string, change: Change): Promise<AccountOutcome> {
   return db.transaction(async (tx) => {
-    const [deactivated] = await tx
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ACTIVE_TECHNICIANS_LOCK}))`);
+    const [target] = await tx
+      .select({ role: teamMember.role, banned: teamMember.banned })
+      .from(teamMember)
+      .where(eq(teamMember.id, teamMemberId));
+    if (!target) return { ok: false, error: "not-found" };
+    if (takesAnActiveTechnicianAway(target, change) && (await activeTechnicianCount(tx)) <= 1)
+      return { ok: false, error: "last-technician" };
+
+    await tx
       .update(teamMember)
-      .set({ banned: true })
-      .where(eq(teamMember.id, input.teamMemberId))
-      .returning({ id: teamMember.id });
-    if (!deactivated) return { ok: false, error: "not-found" };
-    await tx.delete(session).where(eq(session.userId, input.teamMemberId));
-    return { ok: true, teamMemberId: deactivated.id };
+      .set("role" in change ? { role: change.role } : { banned: true })
+      .where(eq(teamMember.id, teamMemberId));
+    // A deactivated account acts as nobody from now on – its open sessions end at the next action (ST-004).
+    if ("deactivate" in change) await tx.delete(session).where(eq(session.userId, teamMemberId));
+    return { ok: true, teamMemberId };
   });
+}
+
+function takesAnActiveTechnicianAway(target: { role: string | null; banned: boolean | null }, change: Change): boolean {
+  const isActiveTechnician = target.role === "technician" && !target.banned;
+  return isActiveTechnician && ("deactivate" in change || change.role !== "technician");
+}
+
+async function activeTechnicianCount(db: Database): Promise<number> {
+  const [{ active }] = await db
+    .select({ active: count() })
+    .from(teamMember)
+    .where(and(eq(teamMember.role, "technician"), sql`coalesce(${teamMember.banned}, false) = false`));
+  return active;
 }
 
 /** Read model: every account with its role, for the technicians' account list (ST-005). */
