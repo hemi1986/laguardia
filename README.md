@@ -13,10 +13,22 @@ The application itself (a Next.js monolith, `docs/adr/0001-tech-stack.md`) lives
 
 ```bash
 npm install --prefix .claude   # yaml (+ typescript/@types/node for the type check)
+npm install                    # the application itself
 claude                         # confirm folder trust (required for agent hooks)
 ```
 
-Requirement: Node.js ≥ 22.18 in the PATH. The `.ts` tooling runs directly via Node's type stripping – no build step. Optional: the GitHub CLI (`gh`) so `/implement` can open pull requests itself.
+Requirement: Node.js ≥ 22.18 in the PATH. The `.ts` tooling runs directly via Node's type stripping – no build step.
+
+Two accesses make the engineering workflow a lot smoother – both are optional, `/implement` degrades gracefully without them:
+
+| Access | Set up with | What it buys |
+|---|---|---|
+| GitHub CLI (`gh`), scope `repo` | `gh auth login` (`gh auth refresh -s repo` for the scope) | `/implement` opens the pull request itself; without it you get the compare URL from `git push` |
+| Vercel MCP server (`vercel` in `.mcp.json`) | approve the project server on the first start, then `/mcp` to authenticate | preview deployment status, build and runtime logs for the acceptance step; without it, name the preview URL yourself |
+
+Local development and the integration tests need a database: copy the values from `.env.example` into `.env.development.local`, then `npm run db:up` (PostgreSQL in Docker) and `npm run db:migrate:dev`. Environment values from Vercel come with `npx vercel env pull`.
+
+You don't have to remember any of this: the `session-start` hook checks all of it at the start of every session and reports only what is missing.
 
 ## Flow at a glance
 
@@ -124,6 +136,7 @@ Discovery ends at `ready`. `/implement` sets `in-progress` and `done` via `story
 
 ```
 CLAUDE.md                      project context, rules, workflow (loaded every session)
+.mcp.json                      MCP servers for everyone working in this repo (Vercel)
 CONTEXT.md                     glossary – the ubiquitous language (Matt Pocock's format)
 docs/                          all other artifacts (source of truth): product, domain, architecture, adr, stories, reviews
 .claude/
@@ -157,7 +170,7 @@ docs/                          all other artifacts (source of truth): product, d
     bash-guard.ts              PreToolUse: blocks force push, prod deploy, destructive DB commands
     path-guard.ts              PreToolUse (per agent): only allows writes in the agent's own folders
     stop-gate.ts               Stop: type check + related tests when app code changed
-    session-start.ts           SessionStart: branch, story in progress, next story, last verify result
+    session-start.ts           SessionStart: missing setup (deps, gh, Vercel MCP, database) + branch, story in progress, next story, last verify result
   lib/
     discovery.ts               shared logic for the discovery artifacts
     engineering.ts             shared logic for stories ↔ code (status workflow, traceability)
