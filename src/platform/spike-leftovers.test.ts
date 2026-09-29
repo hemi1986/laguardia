@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -13,40 +13,17 @@ const leftovers: { name: string; pattern: RegExp }[] = [
   { name: "the spike message block", pattern: /\bspike\s*:\s*\{|\.spike\b|\{\s*spike\s*\}/ },
 ];
 
-const directories = ["src", "e2e", "scripts"];
-const configuration = [
-  ".env.example",
-  "eslint.config.mjs",
-  "playwright.config.ts",
-  "vitest.config.ts",
-  "next.config.ts",
-  "drizzle.config.ts",
-  "package.json",
-  "tsconfig.json",
-  "components.json",
-  "vercel.json",
-  "vercel.ts",
-];
-const workflows = ".github/workflows";
-
+/** Everything in the repository but the discovery artifacts, the tooling and the generated migrations. */
+const notScanned = /^(docs|\.claude|drizzle)\/|\.(png|jpe?g|ico|webp|svg|woff2?)$/;
 /** The 404 checks must name the removed addresses to prove they are gone. */
 const allowed: Record<string, string[]> = { "e2e/home.spec.ts": ["a spike address or import"] };
 const thisFile = "src/platform/spike-leftovers.test.ts";
 
-function filesUnder(directory: string): string[] {
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory).flatMap((entry) => {
-    const path = join(directory, entry);
-    return statSync(path).isDirectory() ? filesUnder(path) : [path];
-  });
-}
-
+/** Tracked files and new ones not yet added – the ignored ones (.env files, node_modules, .next) excluded. */
 function repositoryFiles(): string[] {
-  return [
-    ...directories.flatMap(filesUnder),
-    ...configuration.filter((file) => existsSync(file)),
-    ...filesUnder(workflows),
-  ].filter((file) => file !== thisFile && !/\.(png|jpe?g|ico|webp)$/.test(file));
+  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" })
+    .split("\n")
+    .filter((file) => file && file !== thisFile && !notScanned.test(file));
 }
 
 function leftoversIn(file: string, text: string): string[] {

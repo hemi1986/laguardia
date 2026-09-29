@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
+import { buttonVariants } from "@/components/ui/button";
 import { visitorMessages } from "@/platform/messages";
 
 const { home } = visitorMessages("de");
@@ -11,7 +12,7 @@ const { home } = visitorMessages("de");
 export default function Home() {
   return (
     <Page title={home.museum}>
-      <Link href="/login" className="text-sm font-medium underline underline-offset-4">
+      <Link href="/login" className={buttonVariants({ variant: "link", className: "self-start px-0" })}>
         {home.teamLogin}
       </Link>
     </Page>

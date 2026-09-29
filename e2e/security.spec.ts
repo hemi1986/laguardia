@@ -40,6 +40,7 @@ for (const [name, origin] of [
 test("the same Server Action submitted from the page's own origin reaches the action", async ({ page, baseURL }) => {
   const html = await (await page.request.get("/login")).text();
   const actionField = html.match(/name="(\$ACTION_ID_[0-9a-f]+)"/)?.[1];
+  expect(actionField).toBeDefined();
 
   const response = await page.request.post("/login", {
     multipart: { [actionField!]: "", username: `nobody_${Date.now().toString(36)}`, password: "wrong-password-1" },
@@ -47,7 +48,9 @@ test("the same Server Action submitted from the page's own origin reaches the ac
     maxRedirects: 0,
   });
 
-  expect(response.status()).toBeLessThan(400);
+  // The login action ran: an unknown account is sent back to the login page with the error code.
+  expect(response.status()).toBe(303);
+  expect(response.headers()["location"]).toContain("/login?error=");
 });
 
 test("pages are served with the security headers", async ({ page }) => {
