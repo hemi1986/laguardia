@@ -9,6 +9,11 @@ const VALID_USERNAME = /^[a-zA-Z0-9_.]{3,30}$/;
 
 export type AccountRuleError = "name-required" | "username-invalid" | "password-too-short";
 
+/** What makes two spellings the same username – used wherever one is created, checked or logged in with. */
+export function normalizedUsername(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
 /** The reason a new account is rejected, or undefined when name, username and password are fine. */
 export function newAccountRejection(input: {
   name: string;
@@ -16,7 +21,7 @@ export function newAccountRejection(input: {
   password: string;
 }): AccountRuleError | undefined {
   if (!input.name.trim()) return "name-required";
-  if (!VALID_USERNAME.test(input.username.trim().toLowerCase())) return "username-invalid";
+  if (!VALID_USERNAME.test(normalizedUsername(input.username))) return "username-invalid";
   return passwordRejection(input.password);
 }
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { count } from "drizzle-orm";
 import type { Database } from "@/platform/command";
-import { newAccountRejection, type AccountRuleError } from "./account-rules";
+import { newAccountRejection, normalizedUsername, type AccountRuleError } from "./account-rules";
 import { authFor } from "./auth";
 import { teamMember } from "./schema";
 
@@ -18,7 +18,7 @@ export async function setUpFirstTechnician(
   const rejection = newAccountRejection(input);
   if (rejection) return { ok: false, error: rejection };
   const name = input.name.trim();
-  const username = input.username.trim().toLowerCase();
+  const username = normalizedUsername(input.username);
   const [{ accounts }] = await db.select({ accounts: count() }).from(teamMember);
   if (accounts > 0) return { ok: false, error: "accounts-exist" };
   await authFor(db).api.createUser({

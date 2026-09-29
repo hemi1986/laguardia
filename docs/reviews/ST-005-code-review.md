@@ -31,3 +31,24 @@ Reviewed against the context pack (`node .claude/skills/implement/scripts/story-
 **ready to merge** – no blockers: the scenarios are enforced server-side, the last-technician invariant is genuinely safe under concurrency, and authorization is checked in the module for every function. Finding #1 should still be fixed before `done`, inside this story.
 
 The single most important finding: **#1 – scoping the `failed_login` sweep to one username leaves failed attempts for never-repeated usernames in the table forever, and nothing else ever deletes them** (no cron by ADR 0002), which turns a login-attempt spray into unbounded table growth.
+
+## Resolution (main session, 2026-09-29)
+
+| # | Severity | Done |
+|---|---|---|
+| 1 | major | **Fixed – reverted.** The global sweep in `logIn` is back, with a comment saying why it must stay global (it is the only cleanup `failed_login` has, and `isLocked` never reads a row that old). The reviewer's argument is right: the rows are provably irrelevant to every lock decision, so there was no correctness problem to fix. What *was* real is the test-isolation problem that made me change it: the ST-004 throttling tests fake the clock four weeks into the past, so any test logging in at the real time sweeps their rows. That is now solved where it belongs – those two tests moved to `src/modules/team/login-throttling.integration.test.ts` with their own PostgreSQL schema. |
+| 2 | minor | **Gone with #1** – ST-004's behaviour is unchanged again, so there is no decision to record. The original test is restored verbatim in the new file. |
+| 3 | minor | **Fixed.** `changeOwnPassword` no longer takes an `actor`; it derives the person from the session (`loggedInTeamMember`) and returns that id, so there is one identity and a deactivated account is rejected on the way. |
+| 4 | minor | **Fixed.** `Dependencies` no longer carries an optional `headers`; `resetPassword` takes `Dependencies & WithSession` and `changeOwnPassword` takes `{ db } & WithSession`, so the compiler demands the headers exactly where Better Auth needs them. |
+| 5 | minor | Fixed during the review (`Object.hasOwn` in both pages). |
+| 6 | minor | Fixed during the review (both password paths end the old sessions). **The remaining nit is fixed too**: `resetPassword` now deletes the sessions *before* setting the password, so a failure in between logs the old holder out and leaves the old password working – the safe way round. The two cannot share a transaction because Better Auth writes on its own connection. |
+| 7 | minor | **Skipped, noted.** Deactivation stays a single tap: the story does not ask for a confirmation, and adding one is a UI decision for the story that brings reactivation (which ST-005 puts out of scope). Worth raising there. |
+| 8 | minor | **Skipped, kept on purpose.** The Then is "work log entries Anna wrote still show her name"; the `teamMemberAccounts` assertion alone only proves the account survived, not that it is still attached to something she did. The problem report is the only thing a team member can write today, it goes through the Repair module's public `index.ts`, and the acceptance review judged it an honest substitute. To be revisited by the story that builds the work log (ST-020 ff.). |
+| 9 | minor | **Skipped, noted.** The hard-coded table list follows the existing `first-technician.integration.test.ts`; deriving it from the Drizzle schema is worth doing once, for all three private-schema tests together, not in this story. |
+| 10 | minor | **Fixed.** One `normalizedUsername(raw)` in `account-rules.ts`, used by `createAccount`, `setUpFirstTechnician`, `logIn` and the rule check. |
+| 11 | minor | **Skipped.** The uniform `AccountOutcome` keeps the four functions interchangeable for the pages and the coming Server Action runner (ST-073); splitting the result type buys little and touches every call site. |
+| 12 | minor | **Skipped, noted.** `CONTEXT.md` holds only the singular "Teammitglied"; adding a plural is a glossary change, which belongs to the domain-model skill, not to a code fix here. |
+| 13 | minor | **Fixed** before this review landed: `e2e/team-accounts.spec.ts` now logs in as a helper (created in the test) and checks that `/team/members` redirects away and the nav link is absent. |
+| 14 | note | Carried into the audit-trail feature: `createAccount` runs in no transaction, so appending an event there needs Better Auth on a transaction-scoped handle or a split create. Recorded in `docs/stories/OPEN_QUESTIONS.md` together with the audit-trail decision. |
+
+`npm run verify` green after the fixes: 134 tests, ST-004 10/10 and ST-005 11/11 scenarios covered.

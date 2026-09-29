@@ -2,8 +2,9 @@ import "server-only";
 import { APIError } from "better-auth/api";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
-import { newAccountRejection, passwordRejection, type AccountRuleError } from "./account-rules";
+import { newAccountRejection, normalizedUsername, passwordRejection, type AccountRuleError } from "./account-rules";
 import { authFor } from "./auth";
+import { loggedInTeamMember } from "./login";
 import { session, teamMember } from "./schema";
 
 /**
@@ -16,11 +17,13 @@ export type AccountError =
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
+type Dependencies = { db: Database; actor: Actor };
+
 /**
- * `headers` are the request headers of the acting technician: Better Auth checks the session behind a password
- * change itself, so setting a password needs them (the other functions ignore them).
+ * Setting a password goes through Better Auth, which checks the session behind the request itself – so those
+ * functions need the request headers, and the type demands them where they are used.
  */
-type Dependencies = { db: Database; actor: Actor; headers?: Headers; inNext?: boolean };
+type WithSession = { headers: Headers; inNext?: boolean };
 
 function isTechnician(actor: Actor): boolean {
   return actor.kind === "team-member" && actor.role === "technician";
@@ -33,7 +36,7 @@ export async function createAccount(
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
   const rejection = newAccountRejection(input);
   if (rejection) return { ok: false, error: rejection };
-  const username = input.username.trim().toLowerCase();
+  const username = normalizedUsername(input.username);
   if (await usernameTaken(db, username)) return { ok: false, error: "username-taken" };
   try {
     const { user } = await authFor(db).api.createUser({
@@ -83,11 +86,15 @@ export async function changeRole(
  */
 export async function resetPassword(
   input: { teamMemberId: string; password: string },
-  { db, actor, headers, inNext }: Dependencies,
+  { db, actor, headers, inNext }: Dependencies & WithSession,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
   const rejection = passwordRejection(input.password);
   if (rejection) return { ok: false, error: rejection };
+  // The sessions go first: if setting the password then fails, the old holder is logged out and the old
+  // password still works – the safe way round. Better Auth writes on its own connection, so the two cannot
+  // share one transaction.
+  await db.delete(session).where(eq(session.userId, input.teamMemberId));
   try {
     await authFor(db, inNext).api.setUserPassword({
       body: { userId: input.teamMemberId, newPassword: input.password },
@@ -97,7 +104,6 @@ export async function resetPassword(
     if (error instanceof APIError && error.status === "NOT_FOUND") return { ok: false, error: "not-found" };
     throw error;
   }
-  await db.delete(session).where(eq(session.userId, input.teamMemberId));
   return { ok: true, teamMemberId: input.teamMemberId };
 }
 
@@ -107,9 +113,11 @@ export async function resetPassword(
  */
 export async function changeOwnPassword(
   input: { currentPassword: string; newPassword: string },
-  { db, actor, headers, inNext }: Dependencies,
+  { db, headers, inNext }: { db: Database } & WithSession,
 ): Promise<AccountOutcome> {
-  if (actor.kind !== "team-member") return { ok: false, error: "not-authorized" };
+  // Only the session decides whose password changes – an actor passed in beside it could name someone else.
+  const member = await loggedInTeamMember({ db, headers, inNext });
+  if (!member) return { ok: false, error: "not-authorized" };
   const rejection = passwordRejection(input.newPassword);
   if (rejection) return { ok: false, error: rejection };
   try {
@@ -124,7 +132,7 @@ export async function changeOwnPassword(
       return { ok: false, error: "current-password-wrong" };
     throw error;
   }
-  return { ok: true, teamMemberId: actor.teamMemberId };
+  return { ok: true, teamMemberId: member.id };
 }
 
 /**

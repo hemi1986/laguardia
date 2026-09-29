@@ -42,7 +42,7 @@ describe("changing your own password", () => {
 
     const outcome = await changeOwnPassword(
       { currentPassword: anna.password, newPassword: "anna-chose-this" },
-      { db, actor: anna.actor, headers: anna.headers },
+      { db, headers: anna.headers },
     );
 
     expect(outcome).toEqual({ ok: true, teamMemberId: anna.id });
@@ -62,7 +62,7 @@ describe("changing your own password", () => {
 
     const outcome = await changeOwnPassword(
       { currentPassword: "not-her-password", newPassword: "anna-chose-this" },
-      { db, actor: anna.actor, headers: anna.headers },
+      { db, headers: anna.headers },
     );
 
     expect(outcome).toEqual({ ok: false, error: "current-password-wrong" });
