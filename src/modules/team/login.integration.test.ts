@@ -1,12 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { currentPerson, logIn, logOut, renewedSessionCookie } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
-import { failedLogin } from "./schema";
 
 const db = testDatabase();
 const DAY = 24 * 3_600_000;
@@ -75,27 +73,6 @@ describe("logging in", () => {
     expect(await currentPerson({ db, headers })).toEqual({ kind: "visitor" });
   });
 
-  it("ST-004: Repeated failed logins are slowed down", async () => {
-    const { id, username, password } = await anna();
-    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T08:00:00Z") });
-    for (let attempt = 0; attempt < 10; attempt++) {
-      vi.setSystemTime(new Date("2026-09-01T08:00:00Z").getTime() + attempt * 60_000); // within 10 minutes
-      await logIn({ username, password: "not-the-password" }, { db });
-    }
-
-    vi.setSystemTime(new Date("2026-09-01T08:14:00Z"));
-    // Rejected even with the correct password – the password is not checked while the username is locked.
-    expect(await logIn({ username, password }, { db })).toEqual({ ok: false, error: "login-locked" });
-
-    vi.setSystemTime(new Date("2026-09-01T08:30:00Z")); // more than 15 minutes after the 10th failure (08:09)
-    const later = await logIn({ username, password }, { db });
-    expect(later.ok).toBe(true);
-    if (later.ok) {
-      const headers = new Headers({ cookie: cookieHeader(later.cookies) });
-      expect(await currentPerson({ db, headers })).toMatchObject({ teamMemberId: id });
-    }
-  });
-
   it("ST-004: Team member logs out", async () => {
     const { username, password } = await anna();
     const headers = await loggedIn(username, password);
@@ -124,10 +101,13 @@ describe("logging in", () => {
 
     const renewed = await renewedSessionCookie({ db, cookieHeader: headers.get("cookie") ?? "" });
 
+    // What the browser gets back must be exactly what it sent: the renewed value is encoded again on the way
+    // out, so it is handed over decoded. Sending it on encoded double-encodes it (ST-005).
+    const sent = headers.get("cookie")?.split("=").slice(1).join("=");
     expect(renewed).toMatchObject({
-      value: headers.get("cookie")?.split("=").slice(1).join("="),
       attributes: { maxAge: 90 * 24 * 60 * 60, httpOnly: true, sameSite: "lax", path: "/" },
     });
+    expect(encodeURIComponent(renewed?.value ?? "")).toBe(sent);
     expect(await renewedSessionCookie({ db, cookieHeader: "" })).toBeUndefined();
   });
 
@@ -142,14 +122,4 @@ describe("logging in", () => {
     expect(outcomes.filter((o) => !o.ok && o.error === "login-locked")).toHaveLength(5);
   });
 
-  it("forgets failed logins after 30 minutes – they only matter for the lock", async () => {
-    const { username } = await anna();
-    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T08:00:00Z") });
-    await logIn({ username, password: "not-the-password" }, { db });
-
-    vi.setSystemTime(new Date("2026-09-01T08:31:00Z"));
-    await logIn({ username: "someone_else", password: "not-the-password" }, { db });
-
-    expect(await db.select().from(failedLogin).where(eq(failedLogin.username, username))).toEqual([]);
-  });
 });

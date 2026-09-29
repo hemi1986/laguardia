@@ -3,6 +3,7 @@ import { APIError } from "better-auth/api";
 import { and, asc, eq, gt, lt, sql } from "drizzle-orm";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Actor, Database } from "@/platform/command";
+import { normalizedUsername } from "./account-rules";
 import { authFor } from "./auth";
 import { failedLogin } from "./schema";
 
@@ -22,13 +23,15 @@ export async function logIn(
   input: { username: string; password: string },
   { db, headers = new Headers(), clock = systemClock, inNext }: Dependencies,
 ): Promise<LoginOutcome> {
-  const username = input.username.trim().toLowerCase();
+  const username = normalizedUsername(input.username);
   const now = clock.now();
   // Reserve the attempt as a failure first, one attempt per username at a time: a burst of parallel attempts cannot
   // all pass the lock check. The short transaction holds no connection while the password is checked.
   const reservation = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"login:" + username}))`);
-    // Failed logins only matter for the lock – forget them after twice the window.
+    // Failed logins only matter for the lock – forget them after twice the window. The sweep is global on
+    // purpose: it is the only cleanup this table has (no scheduler, ADR 0002), and `isLocked` never reads a row
+    // older than that, so sweeping another username's stale rows cannot change any lock decision.
     await tx.delete(failedLogin).where(lt(failedLogin.failedAt, new Date(now.getTime() - 2 * WINDOW_MS)));
     if (await isLocked(tx, username, now)) return undefined;
     const [row] = await tx.insert(failedLogin).values({ username, failedAt: now }).returning({ id: failedLogin.id });

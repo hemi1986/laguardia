@@ -22,5 +22,8 @@ export async function renewedSessionCookie({
     .map((part) => part.trim())
     .find((part) => part.startsWith(`${name}=`))
     ?.slice(name.length + 1);
-  return value ? { name, value, attributes } : undefined;
+  // The value in the Cookie header is percent-encoded (the signature ends in "="); whoever sends it back encodes
+  // it again, so it has to be decoded here. Sending it on as it stands turns "%3D" into "%253D" and Better Auth
+  // can no longer verify the signature – which made every Server Action see a visitor (found in ST-005).
+  return value ? { name, value: decodeURIComponent(value), attributes } : undefined;
 }
