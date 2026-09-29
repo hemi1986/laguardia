@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
 /**
@@ -10,8 +11,9 @@ import { defineConfig } from "@playwright/test";
  * and the spike password. Locally, failed tests keep a trace.
  */
 // The one local settings file (also read by `npm run dev` and the scripts) – E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD
-// live there. Absent in CI, where the variables come from the environment.
-if (existsSync(".env.development.local")) process.loadEnvFile(".env.development.local");
+// live there. Absent in CI, where the variables come from the environment. Resolved next to this config, like testDir.
+const localSettings = join(__dirname, ".env.development.local");
+if (existsSync(localSettings)) process.loadEnvFile(localSettings);
 
 const baseURL = process.env.BASE_URL;
 

@@ -1,18 +1,26 @@
-import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from "react";
+import { cloneElement, useId, type ReactElement, type ReactNode } from "react";
+
+type Control = ReactElement<{ "aria-describedby"?: string }>;
 
 /**
  * A form field: its label wraps the control, so the label is programmatically associated without an id
  * (`getByLabel` finds the control). Anything else inside the label would become part of the accessible name,
  * so a description (e.g. a password hint) is rendered next to the label and linked to the control with
- * `aria-describedby` – the control is then the one element `children`.
+ * `aria-describedby` – with a description, `children` must be the one control element (the type demands it).
  * Texts come in as props – the message catalogs stay in the pages (engineering conventions, "UI texts").
  */
-export function Field({ label, description, children }: { label: string; description?: string; children: ReactNode }) {
+export function Field(
+  props:
+    | { label: string; description?: undefined; children: ReactNode }
+    | { label: string; description: string; children: Control },
+) {
   const descriptionId = useId();
-  const control =
-    description && isValidElement(children)
-      ? cloneElement(children as ReactElement<{ "aria-describedby"?: string }>, { "aria-describedby": descriptionId })
-      : children;
+  const { label, description, children } = props;
+  const control = description
+    ? cloneElement(children as Control, {
+        "aria-describedby": [(children as Control).props["aria-describedby"], descriptionId].filter(Boolean).join(" "),
+      })
+    : children;
 
   return (
     <div className="flex flex-col gap-1.5">
