@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-071]
 labels: [foundation, architecture]
-status: in-progress
+status: done
 ---
 
 ## Task
@@ -42,14 +42,14 @@ Today the spike's Server Action (`src/app/actions.ts`) calls `executeCommand` wi
 - [x] The runner lives in `src/app/_actions/`; the lint rules treat it as part of the app element (`src/platform/module-boundaries.test.ts`).
 - [x] The converted form is usable at 360 px width: page width ≤ 360 px, error text and input visible without horizontal scrolling (browser test).
 - [x] Converts the existing code (no test weakened); `npm run verify -- --e2e` is green.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "a Server Action only calls the runner", `currentPerson()`, `{ error, values }` with `useActionState`, the per-action input function, the `src/app/_actions/` location, and the seam catalog row for Server Actions.
+- [x] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "a Server Action only calls the runner", `currentPerson()`, `{ error, values }` with `useActionState`, the per-action input function, the `src/app/_actions/` location, and the seam catalog row for Server Actions.
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q3, Q5/Q20)
 - [x] A command allowed for `helper` and `technician` only gets a team member with `teamMemberId: TeamMemberId` and `role` in its decision without narrowing (type test); a command that also allows visitors gets the union.
 - [x] `Role` and `Reporter` are each defined exactly once under `src/`, and `Reporter` is derived from the acting person in exactly one function: an automated check in `npm run verify` fails when a second type definition named `Role` or `Reporter` is added under `src/`; demonstrated with a deliberate duplicate and then removed.
 - [x] `src/modules/repair/problem-reports.integration.test.ts` sets up its problem reports through `executeCommand(reportProblemCommand, …)`, not through persistence functions (Q3).
 - [x] Every behaviour asserted by an existing test is still asserted – moved to the command seam where Q3 says so; no assertion is dropped (evidence: list old test → new test in the pull request). No test weakened.
-- [ ] The engineering conventions update above also covers the acting person's type (Q5/Q20) and the seam catalog rows for commands, decisions and read models (Q3).
+- [x] The engineering conventions update above also covers the acting person's type (Q5/Q20) and the seam catalog rows for commands, decisions and read models (Q3).
 
 ## Out of Scope
 - Rejecting a deactivated account's command and the session-based tests of the acting person (ST-069)

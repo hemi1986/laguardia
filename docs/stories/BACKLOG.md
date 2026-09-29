@@ -4,15 +4,9 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**75 stories** · In Progress: 1 · Ready: 65 · In Review: 0 · Draft: 0 · Done: 9
+**75 stories** · In Progress: 0 · Ready: 65 · In Review: 0 · Draft: 0 · Done: 10
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | L | medium | ST-071 |
 
 ## Ready
 
@@ -95,5 +89,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-071](ST-071-commands-load-decide-save.md) | Commands as load, decide, save | tech-task | Repair | must | M | medium | ST-003 |
 | [ST-004](ST-004-team-member-login.md) | Log in as a team member | story | Team | must | M | medium | ST-003, ST-071 |
 | [ST-005](ST-005-manage-team-member-accounts.md) | Manage team member accounts | story | Team | must | M | low | ST-004 |
+| [ST-073](ST-073-server-action-runner.md) | Server Action runner – the one way from a form to a command | tech-task | Repair | must | L | medium | ST-071 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
