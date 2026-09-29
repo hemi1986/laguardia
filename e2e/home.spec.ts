@@ -23,6 +23,7 @@ test("the start page shows the museum's name and a link to the team login, witho
 
 for (const path of ["/spike", "/spike/files", "/spike/photos", "/api/spike", "/api/spike/upload"]) {
   test(`the removed spike address ${path} is not found`, async ({ page }) => {
+    await page.goto("/"); // on the preview, sets the deployment-protection bypass cookie that page.request sends
     const response = await page.request.get(path, { maxRedirects: 0 });
 
     expect(response.status()).toBe(404);
