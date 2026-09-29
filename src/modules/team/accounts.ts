@@ -14,7 +14,11 @@ export type AccountError = "not-authorized" | "username-taken" | "not-found";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
 
-type Dependencies = { db: Database; actor: Actor };
+/**
+ * `headers` are the request headers of the acting technician: Better Auth checks the session behind a password
+ * change itself, so setting a password needs them (the other functions ignore them).
+ */
+type Dependencies = { db: Database; actor: Actor; headers?: Headers; inNext?: boolean };
 
 function isTechnician(actor: Actor): boolean {
   return actor.kind === "team-member" && actor.role === "technician";
@@ -67,4 +71,22 @@ export async function changeRole(
     .returning({ id: teamMember.id });
   if (!changed) return { ok: false, error: "not-found" };
   return { ok: true, teamMemberId: changed.id };
+}
+
+/** Sets a new password for a team member's account – a technician resets it on site, no e-mail (ADR 0004). */
+export async function resetPassword(
+  input: { teamMemberId: string; password: string },
+  { db, actor, headers, inNext }: Dependencies,
+): Promise<AccountOutcome> {
+  if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
+  try {
+    await authFor(db, inNext).api.setUserPassword({
+      body: { userId: input.teamMemberId, newPassword: input.password },
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof APIError && error.status === "NOT_FOUND") return { ok: false, error: "not-found" };
+    throw error;
+  }
+  return { ok: true, teamMemberId: input.teamMemberId };
 }
