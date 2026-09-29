@@ -10,6 +10,12 @@ async function ruleErrors(filePath: string, code: string): Promise<string[]> {
   return result.messages.filter((m) => m.ruleId === "no-restricted-syntax").map((m) => m.message);
 }
 
+/** Messages of the import restrictions of the Server Action runner (architecture review Q10, ST-073). */
+async function importErrors(filePath: string, code: string): Promise<string[]> {
+  const [result] = await eslint.lintText(code, { filePath });
+  return result.messages.filter((m) => m.ruleId === "no-restricted-imports").map((m) => m.message);
+}
+
 async function boundaryErrors(filePath: string, code: string): Promise<string[]> {
   const [result] = await eslint.lintText(code, { filePath });
   return result.messages.filter((m) => m.ruleId?.startsWith("boundaries/")).map((m) => m.message);
@@ -113,5 +119,51 @@ describe("module boundaries", () => {
     expect(secondReporter).toEqual([expect.stringContaining("src/modules/repair/report-problem.ts")]);
     expect(roleAtHome).toEqual([]);
     expect(reporterAtHome).toEqual([]);
+  });
+
+  it("reject executeCommand in the app outside the Server Action runner – by alias and by relative path", async () => {
+    const importing = "import { executeCommand } from \"@/platform/command\";\nexport const x = executeCommand;\n";
+    const byAlias = await importErrors("src/app/(team)/team/deliberate-violation/actions.ts", importing);
+    const byRelativePath = await importErrors(
+      "src/app/deliberate-violation.ts",
+      "import { executeCommand } from \"../platform/command\";\nexport const x = executeCommand;\n",
+    );
+    const inTheRunner = await importErrors("src/app/_actions/allowed.ts", importing);
+    const inATest = await importErrors("src/app/allowed.integration.test.ts", importing);
+    const otherNames = await importErrors(
+      "src/app/allowed.ts",
+      "import { journalOf } from \"@/platform/command\";\nexport const x = journalOf;\n",
+    );
+
+    expect(byAlias).toEqual([expect.stringContaining("src/app/_actions/")]);
+    expect(byRelativePath).toEqual([expect.stringContaining("src/app/_actions/")]);
+    expect(inTheRunner).toEqual([]);
+    expect(inATest).toEqual([]);
+    expect(otherNames).toEqual([]);
+  });
+
+  it("reject building a runner with an own acting person outside the runner and its tests", async () => {
+    const importing =
+      "import { formRunner } from \"@/app/_actions/form-runner\";\nexport const x = formRunner;\n";
+
+    expect(await importErrors("src/app/deliberate-violation/actions.ts", importing)).toEqual([
+      expect.stringContaining("formAction"),
+    ]);
+    expect(await importErrors("src/app/_actions/run-form.ts", importing)).toEqual([]);
+    expect(await importErrors("src/app/_actions/form-runner.integration.test.ts", importing)).toEqual([]);
+  });
+
+  it("treat the Server Action runner as part of the app element", async () => {
+    const runnerIntoInternals = await boundaryErrors(
+      "src/app/_actions/deliberate-violation.ts",
+      "import { problemReport } from \"@/modules/repair/schema\";\nexport const x = problemReport;\n",
+    );
+    const moduleIntoRunner = await boundaryErrors(
+      "src/modules/repair/deliberate-violation.ts",
+      "import { currentPerson } from \"@/app/_actions/current-person\";\nexport const x = currentPerson;\n",
+    );
+
+    expect(runnerIntoInternals).toHaveLength(1);
+    expect(moduleIntoRunner).toEqual([expect.stringContaining("app")]);
   });
 });

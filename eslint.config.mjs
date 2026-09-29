@@ -77,6 +77,32 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Architecture review Q10 (ST-073): the Server Action runner in src/app/_actions/ is the only way from a form
+    // to a command – it takes the acting person from currentPerson(), so no Server Action can pass its own actor.
+    files: ["src/app/**/*.{ts,tsx}"],
+    ignores: ["src/app/_actions/**", "src/**/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/platform/command", "**/platform/command", "**/platform/command/index"],
+              importNames: ["executeCommand"],
+              message:
+                "A Server Action runs a command only through the runner in src/app/_actions/ (formAction) – it takes the acting person from currentPerson() (ST-073)",
+            },
+            {
+              group: ["@/app/_actions/form-runner", "**/_actions/form-runner"],
+              message:
+                "Use formAction from src/app/_actions/ – formRunner takes an own acting person and is only for the runner and its tests (ST-073)",
+            },
+          ],
+        },
+      ],
+    },
+  },
   globalIgnores([
     ".next/**",
     "test-results/**",
