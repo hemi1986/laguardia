@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-004]
 labels: [mvp, foundation, team]
-status: in-progress
+status: done
 ---
 
 ## Story
