@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-076]
 labels: [foundation, ui]
-status: ready
+status: done
 ---
 
 ## Task
@@ -25,17 +25,17 @@ No new kind of component is created here: the pages use the components from ST-0
 The texts stay in the catalogs – no text literal in a page or a component.
 
 ## Acceptance Criteria
-- [ ] `/team/members` and `/team/password` are built from the shared components and the shared page container of ST-076: no input, select or button on them carries ad-hoc utility classes such as `border p-2`, and neither page sets its own padding, width or column layout.
-- [ ] Every field keeps a programmatically associated label, and on each page every label text resolves to exactly one field: `getByLabel("Name", { exact: true })`, `"Benutzername"`, `"Anfangspasswort"` and the role field on `/team/members`, `"Aktuelles Passwort"` and `"Neues Passwort"` on `/team/password` (browser test, Playwright strict mode).
-- [ ] Each account stays one `article` with the account's name as its heading, and the role change, password reset and deactivate controls of an account stay inside that account's `article` – `page.getByRole("article").filter({ hasText: username })` keeps selecting exactly one account with its own controls.
-- [ ] The per-account password field keeps its unique accessible name `Neues Passwort – <name>`, so the fields of two accounts are still told apart.
-- [ ] The role field uses the select component ST-076 established for fields that must submit without JavaScript – whichever of the two ST-076 arrived at (the shadcn/Radix component or a Tailwind-styled native `<select>`); this story chooses nothing here, it consumes that decision. The field keeps a label and both options in the `_UI (de)_` wording of `CONTEXT.md` (Helfer:in, Techniker:in) and submits the chosen role with the form, without JavaScript as well (browser test with JavaScript disabled) – the forms are Server Actions and must keep working without it.
-- [ ] Rejections keep `role="alert"` and confirmations `role="status"`, both inside the page's `<main>` landmark, with exactly one of each visible at a time: creating an account shows "Konto angelegt.", a wrong current password shows "Das aktuelle Passwort stimmt nicht." (`e2e/team-accounts.spec.ts` stays green unchanged).
-- [ ] A deactivated account is still recognisable as deactivated on the list, and its controls stay hidden (ST-005).
-- [ ] 360 px: a browser test asserts `document.documentElement.scrollWidth <= 360` on `/team/members` (with at least one account listed) and on `/team/password` (with a rejection shown).
-- [ ] A long account name does not break the phone layout: with an account whose name is 60 characters without spaces, `/team/members` still has `document.documentElement.scrollWidth <= 360` (browser test; the risk was raised in `docs/reviews/ST-005-acceptance.md`).
-- [ ] Every text comes from `src/platform/messages/team.de.ts`; a text a component needs is passed in as a prop, and a new text is added to the catalog first.
-- [ ] No existing test is weakened or deleted: `npm run verify -- --e2e` is green, and every selector change in `e2e/*.spec.ts` is named in the pull request with the reason.
+- [x] `/team/members` and `/team/password` are built from the shared components and the shared page container of ST-076: no input, select or button on them carries ad-hoc utility classes such as `border p-2`, and neither page sets its own padding, width or column layout.
+- [x] Every field keeps a programmatically associated label, and on each page every label text resolves to exactly one field: `getByLabel("Name", { exact: true })`, `"Benutzername"`, `"Anfangspasswort"` and the role field on `/team/members`, `"Aktuelles Passwort"` and `"Neues Passwort"` on `/team/password` (browser test, Playwright strict mode).
+- [x] Each account stays one `article` with the account's name as its heading, and the role change, password reset and deactivate controls of an account stay inside that account's `article` – `page.getByRole("article").filter({ hasText: username })` keeps selecting exactly one account with its own controls.
+- [x] The per-account password field keeps its unique accessible name `Neues Passwort – <name>`, so the fields of two accounts are still told apart.
+- [x] The role field uses the select component ST-076 established for fields that must submit without JavaScript – whichever of the two ST-076 arrived at (the shadcn/Radix component or a Tailwind-styled native `<select>`); this story chooses nothing here, it consumes that decision. The field keeps a label and both options in the `_UI (de)_` wording of `CONTEXT.md` (Helfer:in, Techniker:in) and submits the chosen role with the form, without JavaScript as well (browser test with JavaScript disabled) – the forms are Server Actions and must keep working without it.
+- [x] Rejections keep `role="alert"` and confirmations `role="status"`, both inside the page's `<main>` landmark, with exactly one of each visible at a time: creating an account shows "Konto angelegt.", a wrong current password shows "Das aktuelle Passwort stimmt nicht." (`e2e/team-accounts.spec.ts` stays green unchanged).
+- [x] A deactivated account is still recognisable as deactivated on the list, and its controls stay hidden (ST-005).
+- [x] 360 px: a browser test asserts `document.documentElement.scrollWidth <= 360` on `/team/members` (with at least one account listed) and on `/team/password` (with a rejection shown).
+- [x] A long account name does not break the phone layout: with an account whose name is 60 characters without spaces, `/team/members` still has `document.documentElement.scrollWidth <= 360` (browser test; the risk was raised in `docs/reviews/ST-005-acceptance.md`).
+- [x] Every text comes from `src/platform/messages/team.de.ts`; a text a component needs is passed in as a prop, and a new text is added to the catalog first.
+- [x] No existing test is weakened or deleted: `npm run verify -- --e2e` is green, and every selector change in `e2e/*.spec.ts` is named in the pull request with the reason.
 
 ## Out of Scope
 - Initialising shadcn/ui, the component set, the shared phone container and the team shell with its navigation (ST-076)

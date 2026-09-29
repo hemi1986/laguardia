@@ -1,3 +1,7 @@
+import { Page } from "@/components/page";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
@@ -12,32 +16,20 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
   const rejection = Array.isArray(error) ? error[0] : error;
 
   return (
-    <main className="mx-auto flex max-w-sm flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold">{ownPassword.title}</h1>
+    <Page title={ownPassword.title}>
       {rejection && Object.hasOwn(accountErrors, rejection) && (
         <Rejection>{accountErrors[rejection as keyof typeof accountErrors]}</Rejection>
       )}
       {done === "changed" && <Confirmation>{ownPassword.changed}</Confirmation>}
-      <form action={changeOwnPasswordAction} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1">
-          {ownPassword.current}
-          <input
-            name="currentPassword"
-            type="password"
-            autoComplete="current-password"
-            required
-            className="border p-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          {ownPassword.new}
-          <input name="newPassword" type="password" autoComplete="new-password" required className="border p-2" />
-          <span className="text-sm">{accounts.passwordHint}</span>
-        </label>
-        <button type="submit" className="border p-2">
-          {ownPassword.submit}
-        </button>
+      <form action={changeOwnPasswordAction} className="flex flex-col gap-4">
+        <Field label={ownPassword.current}>
+          <Input name="currentPassword" type="password" autoComplete="current-password" required />
+        </Field>
+        <Field label={ownPassword.new} description={accounts.passwordHint}>
+          <Input name="newPassword" type="password" autoComplete="new-password" required />
+        </Field>
+        <Button type="submit">{ownPassword.submit}</Button>
       </form>
-    </main>
+    </Page>
   );
 }
