@@ -29,11 +29,24 @@ export {
 
 export type Role = "helper" | "technician";
 
-/** Who acts: a team member with their role, an anonymous visitor, or the system (automatic policies). */
-export type Actor =
-  { kind: "team-member"; teamMemberId: string; role: Role } | { kind: "visitor" } | { kind: "system" };
+/** The ID of a team member account – every "… by" of the domain (docs/architecture/data-model.md). */
+export type TeamMemberId = string;
 
 export type AllowedActor = Role | "visitor" | "system";
+
+/**
+ * The acting person a command with these allowed actors can get (Q5/Q20): `ActorOf<"helper" | "technician">` is a
+ * team member with ID and role, without narrowing; `ActorOf<"visitor" | "technician">` also a visitor.
+ */
+export type ActorOf<Allowed extends AllowedActor> =
+  | ([Extract<Allowed, Role>] extends [never]
+      ? never
+      : { kind: "team-member"; teamMemberId: TeamMemberId; role: Extract<Allowed, Role> })
+  | ("visitor" extends Allowed ? { kind: "visitor" } : never)
+  | ("system" extends Allowed ? { kind: "system" } : never);
+
+/** Who acts: a team member with their role, an anonymous visitor, or the system (automatic policies). */
+export type Actor = ActorOf<AllowedActor>;
 
 /**
  * A domain event as the command hands it to the journal. The command's clock supplies the time.
@@ -74,6 +87,11 @@ export type Command<Input, Result, Error extends string> = {
 
 export type CommandResult<Result, Error extends string> =
   { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "not-found" | "version-conflict" };
+
+/** Every error a command can end with: its decision's own codes and those of the command layer. */
+export type CommandError<C> = C extends Command<never, unknown, infer Error> ? CommandFailure<Error> : never;
+
+type CommandFailure<Error extends string> = Extract<CommandResult<unknown, Error>, { ok: false }>["error"];
 
 export type CommandDependencies = { actor: Actor; db?: Database; clock?: Clock; newId?: () => string };
 

@@ -3,7 +3,14 @@ export const visitorDe = {
   problemReport: {
     label: "Problem melden",
     submit: "Melden",
-    descriptionRequired: "Bitte beschreibe das Problem.",
+  },
+  /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
+  commandErrors: {
+    "description-required": "Bitte beschreibe das Problem.",
+    "machine-required": "Bitte wähle ein Gerät.",
+    "not-authorized": "Das darfst du nicht.",
+    "not-found": "Das gibt es nicht mehr.",
+    "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
   },
 };
 
