@@ -668,7 +668,7 @@ export function renderBacklog(stories: Story[], model: Obj | null): string {
     `**${stories.length} ${stories.length === 1 ? "story" : "stories"}** · ` +
       counts.map(([title, n]) => `${title}: ${n}`).join(" · "),
     "",
-    "Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)",
+    "Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)",
     "",
   );
 

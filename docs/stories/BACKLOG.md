@@ -6,7 +6,7 @@
 
 **75 stories** · In Progress: 0 · Ready: 67 · In Review: 0 · Draft: 0 · Done: 8
 
-Within each section: ordered by priority, dependencies first. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
 ## Ready
 
