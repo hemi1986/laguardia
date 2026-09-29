@@ -176,3 +176,35 @@ describe("managing team member accounts", () => {
     expect((await teamMemberAccounts(db)).find((account) => account.username === username)).toBeUndefined();
   });
 });
+
+describe("rejections no scenario names", () => {
+  it("does not find an account that does not exist", async () => {
+    const technician = await aTechnician();
+    const unknown = randomUUID();
+
+    expect(await changeRole({ teamMemberId: unknown, role: "helper" }, { db, ...technician })).toEqual({
+      ok: false,
+      error: "not-found",
+    });
+    expect(await resetPassword({ teamMemberId: unknown, password: "long-enough-10" }, { db, ...technician })).toEqual({
+      ok: false,
+      error: "not-found",
+    });
+  });
+
+  it("lets only one of two technicians take the same username at the same time", async () => {
+    const [tom, eva] = [await aTechnician(), await aTechnician()];
+    const username = aUsername("anna");
+    const account = { name: "Anna Berger", username, password: "anna-secret-10", role: "helper" } as const;
+
+    const outcomes = await Promise.all([
+      createAccount(account, { db, ...tom }),
+      createAccount(account, { db, ...eva }),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([{ ok: false, error: "username-taken" }]);
+    expect((await teamMemberAccounts(db)).filter((a) => a.username === username)).toHaveLength(1);
+  });
+});
+
