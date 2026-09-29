@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import "./globals.css";
 import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
+import "./globals.css";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+/** The font shadcn's init added; `--font-sans` is what the theme tokens in globals.css refer to. */
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "La Guardia",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="de" className={cn("h-full antialiased", "font-sans", geist.variable)}>
+    <html lang="de" className={`h-full font-sans antialiased ${geist.variable}`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

@@ -37,6 +37,7 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
         <button type="submit" className="border p-2">
           {ownPassword.submit}
         </button>
-      </form>    </main>
+      </form>
+    </main>
   );
 }

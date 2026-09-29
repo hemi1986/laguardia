@@ -85,4 +85,3 @@ describe("module boundaries", () => {
     expect(pageUsingAComponent).toHaveLength(0);
   });
 });
-
