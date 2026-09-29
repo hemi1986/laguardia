@@ -82,7 +82,7 @@ test("a deactivated account stays recognisable and offers no controls", async ({
   const account = page.getByRole("article").filter({ hasText: accountUsername });
   await expect(account).toContainText("deaktiviert");
   await expect(account.getByRole("button")).toHaveCount(0);
-  await expect(account.getByRole("textbox")).toHaveCount(0);
+  await expect(account.locator("input:not([type=hidden]), select")).toHaveCount(0);
 });
 
 test("a 60-character name without spaces keeps the account list within 360 px", async ({ page }) => {
