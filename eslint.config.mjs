@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
         { type: "platform", pattern: "src/platform" },
         { type: "app", pattern: "src/app" },
         { type: "spike", pattern: "src/spike" },
+        { type: "ui", pattern: "src/(components|lib)" },
         { type: "shared", pattern: "src/(photo|test-support)" },
       ],
     },
@@ -42,6 +43,13 @@ const eslintConfig = defineConfig([
               from: { element: { type: "module" } },
               disallow: { to: { element: { type: ["app", "spike"] } } },
               message: "A module must not depend on the app or the spike – ADR 0002",
+            },
+            {
+              // Shared UI components (ST-076) carry no domain logic: a page may use them, they know nothing of
+              // the domain. Their texts come in as props, so they never read a message catalog either.
+              from: { element: { type: "ui" } },
+              disallow: { to: { element: { type: ["module", "platform", "app", "spike"] } } },
+              message: "A UI component must not depend on a module, the platform, the app or the spike – ST-076",
             },
           ],
         },

@@ -27,6 +27,8 @@ export const teamMessages = {
     locked: "Zu viele fehlgeschlagene Versuche. Bitte in 15 Minuten erneut versuchen.",
   },
   team: {
+    menu: "Navigation",
+    home: "Start",
     start: "La Guardia – Team",
     loggedInAs: "Angemeldet als",
     logout: "Abmelden",

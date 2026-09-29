@@ -65,4 +65,24 @@ describe("module boundaries", () => {
     expect(moduleImportsApp).toHaveLength(1);
     expect(moduleImportsSpike).toHaveLength(1);
   });
+
+  it("reject a UI component reaching into the domain – and allow a page to use it", async () => {
+    const intoAModule = await boundaryErrors(
+      "src/components/ui/deliberate-violation.tsx",
+      'import { logIn } from "@/modules/team";\nexport const x = logIn;\n',
+    );
+    const intoTheCatalogs = await boundaryErrors(
+      "src/components/ui/deliberate-violation.tsx",
+      'import { teamMessages } from "@/platform/messages";\nexport const x = teamMessages;\n',
+    );
+    const pageUsingAComponent = await boundaryErrors(
+      "src/app/allowed.tsx",
+      'import { Field } from "@/components/ui/field";\nexport const x = Field;\n',
+    );
+
+    expect(intoAModule).toHaveLength(1);
+    expect(intoTheCatalogs).toHaveLength(1);
+    expect(pageUsingAComponent).toHaveLength(0);
+  });
 });
+

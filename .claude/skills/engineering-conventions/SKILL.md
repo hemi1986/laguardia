@@ -17,6 +17,8 @@ src/
     repair/         BC-Repair – problem reports, defects
     maintenance/    BC-Maintenance – maintenance plan, maintenance records
     team/           BC-Team – team members, roles
+  components/       shared UI (ST-076): `page.tsx` (the 360 px page container), `ui/` the shadcn components
+  lib/              `cn` re-export, the alias shadcn's components import
   platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs
   photo/            photo building block (ST-002)
   spike/            ST-001 spike – removed by ST-066
@@ -43,6 +45,29 @@ Inside a module (flat until it grows):
 - A module is used only through its `index.ts`. Inside a module, import freely.
 - Direction: `app` → `modules` → `platform`. The platform imports no module, page or spike code (its tests may drive a module command); a module imports no page or spike code.
 - A module's `index.ts` exports commands and read-model queries – **never** its persistence functions or tables. Other modules change its data only through its commands.
+
+## Shared UI components (ST-076)
+
+shadcn/ui on Tailwind v4 (`components.json`, ADR 0001). The components are **owned in the repository** – they are
+copied in, not a dependency that is upgraded – so a copied file may be edited like any other source file.
+
+- **Where:** `src/components/ui/<component>.tsx`; the page container with the phone rules is
+  `src/components/page.tsx`. The `cn` helper lives at `src/lib/utils.ts` (shadcn's alias target); the copied
+  components import it straight from the `cn` package.
+- **A component carries no domain logic and no texts.** It receives its texts as props – the message catalogs
+  stay in the pages. `eslint.config.mjs` enforces it with the `ui` boundary element and its own disallow policy
+  (a component may not import a module, the platform, the app or the spike); `src/platform/module-boundaries.test.ts`
+  proves it with a deliberate violation. The element needs its **own** policy – being listed as an element is
+  not enough, because `default: "allow"` lets anything through that no policy names.
+- **Adding one:** `npx shadcn@latest add <name>`, then read the copied file before committing it – it lands in
+  the repository and is ours from then on.
+- **The 360 px rules live in `Page`** (single column, padding, maximum width, word wrapping). A page sets no
+  padding, width or column layout of its own.
+- **Select: use the native `NativeSelect`, not shadcn's `select`.** shadcn's select (Base UI) renders a
+  `<button>` trigger and a JavaScript-driven listbox with no native form control, so with JavaScript disabled no
+  value can be chosen or submitted – checked on the copied component in ST-076, which is why it was removed
+  again. Every field that must submit without JavaScript uses `NativeSelect`; a scripted component is only an
+  option where the interaction needs JavaScript anyway. `e2e/no-js-form.spec.ts` guards it.
 
 ## Domain language and IDs
 
