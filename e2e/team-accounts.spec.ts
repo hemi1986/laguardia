@@ -46,6 +46,29 @@ test("a technician creates, changes and deactivates an account on a 360 px phone
   await expect(page.getByRole("article").filter({ hasText: newUsername })).toContainText("deaktiviert");
 });
 
+test("a helper cannot reach the account pages", async ({ page }) => {
+  const helper = `e2e_helper_${Date.now().toString(36)}`;
+
+  // The technician creates the helper account this test then logs in with.
+  await page.goto("/team/members");
+  await page.getByLabel("Name").fill(`E2E ${helper}`);
+  await page.getByLabel("Benutzername").fill(helper);
+  await page.getByLabel("Anfangspasswort").fill("helper-secret-10");
+  await page.getByRole("button", { name: "Konto anlegen" }).click();
+  await expect(page.getByRole("status")).toHaveText("Konto angelegt.");
+
+  await page.goto("/team");
+  await page.getByRole("button", { name: "Abmelden" }).click();
+  await page.getByLabel("Benutzername").fill(helper);
+  await page.getByLabel("Passwort").fill("helper-secret-10");
+  await page.getByRole("button", { name: "Anmelden" }).click();
+  await expect(page).toHaveURL(/\/team$/);
+
+  await expect(page.getByRole("link", { name: "Teammitglieder" })).toHaveCount(0);
+  await page.goto("/team/members");
+  await expect(page).toHaveURL(/\/team$/);
+});
+
 test("a team member changes their own password and a wrong current password is rejected", async ({ page }) => {
   await page.getByRole("link", { name: "Passwort ändern" }).click();
   await expect(page).toHaveURL(/\/team\/password$/);
