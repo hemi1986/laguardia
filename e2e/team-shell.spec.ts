@@ -23,18 +23,21 @@ test.beforeEach(async () => {
 test("every team page carries the same navigation, once per destination, with logout", async ({ page }) => {
   await logIn(page);
 
-  for (const path of ["/team", "/team/members", "/team/password"]) {
+  for (const path of ["/team", "/team/machine-models", "/team/members", "/team/password"]) {
     await page.goto(path);
     await expect(page.getByRole("navigation")).toHaveCount(1);
     await expect(page.getByRole("main")).toHaveCount(1);
     // Playwright's strict mode fails these if a page offered a destination twice.
+    await expect(page.getByRole("link", { name: "Modelle" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Passwort ändern" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Abmelden" })).toBeVisible();
   }
 
-  // The navigation is walkable by keyboard, in the order it is written.
+  // The navigation is walkable by keyboard, in the order it is written (ST-006 added "Modelle" after "Start").
   await page.getByRole("link", { name: "Start" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Modelle" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeFocused();
 });
