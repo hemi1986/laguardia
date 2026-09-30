@@ -1,22 +1,31 @@
 import { Page } from "@/components/page";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { machineCategories, machineModelsToChooseFrom, technologiesOf, type MachineModel } from "@/modules/collection";
+import {
+  machineCategories,
+  machineModelsToChooseFrom,
+  technologies,
+  technologiesOf,
+  type MachineModel,
+} from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
-import { CreateMachineModelForm, type MachineCategoryChoice } from "./create-machine-model-form";
+import { CreateMachineModelForm, type Choices } from "./create-machine-model-form";
 
 const { machineModels: texts } = teamMessages;
 
 /** The choices of the form, with the German wording – the form itself knows no domain and no catalogue key. */
-const categoryChoices: MachineCategoryChoice[] = machineCategories.map((category) => ({
-  value: category,
-  label: texts.categories[category],
-  technologies: technologiesOf(category).map((technology) => ({
+const choices: Choices = {
+  categories: machineCategories.map((category) => ({ value: category, label: texts.categories[category] })),
+  technologies: technologies.map((technology) => ({
     value: technology,
-    label: texts.technologies[technology],
+    // "LCD (Flipper, Arcade)" – the categories a technology fits, so the technician sees it without JavaScript.
+    label: `${texts.technologies[technology]} (${machineCategories
+      .filter((category) => technologiesOf(category).includes(technology))
+      .map((category) => texts.categories[category])
+      .join(", ")})`,
   })),
-}));
+};
 
 /**
  * The machine models (ST-006): a technician creates one here, and sees the ones a machine can be registered for
@@ -42,7 +51,7 @@ export default async function MachineModelsPage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">{texts.newMachineModel}</h2>
-        <CreateMachineModelForm categories={categoryChoices} />
+        <CreateMachineModelForm {...choices} />
       </section>
     </Page>
   );

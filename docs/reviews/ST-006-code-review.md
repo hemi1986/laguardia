@@ -76,3 +76,20 @@ three are the user's or discovery's call, not an engineering choice:
   whichever browser-test story comes next (ST-068) can move it into `e2e/fixtures.ts`.
 
 None of the eleven findings clears the follow-up hurdle, so **no follow-up story was created**.
+
+---
+
+## `/code-review` of the diff `main...HEAD` (2026-09-30)
+
+Run in addition to the two reviewers because ST-006 changes shared platform code (`commandErrorText` and the team
+message catalogue). Three findings, all fixed in this story.
+
+| # | Severity | File | Finding | What was done |
+|---|---|---|---|---|
+| A | medium | `src/app/(team)/team/machine-models/create-machine-model-input.ts` | The year was bounded nowhere: `yearOf` accepted any run of digits, so "99999999999" reached `machine_model.year` (`integer`) and PostgreSQL raised `22003`. `executeCommand` maps only `Rejected`/`NotFound`/`VersionConflict`, so that error escapes the Server Action – the technician gets a 500 instead of a rejection. | `yearOf` now accepts a four-digit year only; anything else stays "no value given" as before. Four digits is not a domain rule but the bound that keeps a keypad slip out of an `int4` column – the comment says so, and a unit test pins it. Whether a year that is not a number should be *rejected* instead of dropped is the open question below, not an engineering choice. |
+| B | low | same file | The doc comment promised "a year that is no number … CMD-CreateMachineModel rejects [it] with its own reason", but there is no year error code at all – the machine model is created without a year and nothing tells the technician. | The comment now says what the code does and points at `docs/stories/OPEN_QUESTIONS.md` (ST-006, 2026-09-30). |
+| C | low | `src/app/(team)/team/machine-models/create-machine-model-form.tsx` | The technology select grouped the technologies per machine category, so LCD appeared as two `<option value="lcd">`. After a rejection the browser selects the *first* match, so a technician who chose *Arcade → LCD* saw *Flipper → LCD* echoed back, and a screen reader announced two identical entries. | The select now offers every technology exactly once, its label naming the categories it fits ("LCD (Flipper, Arcade)"). Same information without JavaScript, no duplicate value, no wrong echo. |
+
+Noted, not findings: `redirect()` from `onSuccess` clears `useActionState` (checked in Next's server-action
+reducer), so no stale rejection survives a success; `npx next build` failing locally on `DATABASE_URL` while
+prerendering `/team` is pre-existing on `main` and not made worse here (the new page is dynamic via `headers()`).
