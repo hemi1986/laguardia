@@ -46,7 +46,7 @@ test("a technician creates, changes and deactivates an account on a 360 px phone
   await expect(page.getByRole("article").filter({ hasText: newUsername })).toContainText("deaktiviert");
 });
 
-test("a helper cannot reach the account pages", async ({ page }) => {
+test("a helper cannot reach the technician pages", async ({ page }) => {
   const helper = `e2e_helper_${Date.now().toString(36)}`;
 
   // The technician creates the helper account this test then logs in with.
@@ -66,6 +66,11 @@ test("a helper cannot reach the account pages", async ({ page }) => {
 
   await expect(page.getByRole("link", { name: "Teammitglieder" })).toHaveCount(0);
   await page.goto("/team/members");
+  await expect(page).toHaveURL(/\/team$/);
+
+  // The machine model page is technician-only too (ST-006).
+  await expect(page.getByRole("link", { name: "Modelle" })).toHaveCount(0);
+  await page.goto("/team/machine-models");
   await expect(page).toHaveURL(/\/team$/);
 });
 

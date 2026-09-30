@@ -4,7 +4,12 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { createMachineModelCommand, machineModelsToChooseFrom, type CreateMachineModelInput } from ".";
+import {
+  createMachineModelCommand,
+  machineModelsToChooseFrom,
+  type CreateMachineModelInput,
+  type MachineModel,
+} from ".";
 
 /**
  * CMD-CreateMachineModel through the command layer, against real PostgreSQL. The new machine model is read back
@@ -27,6 +32,11 @@ async function create(input: CreateMachineModelInput, actor: Actor = eva) {
 /** The one machine model among the ones every test of this run creates – tests never assert on the whole list. */
 async function choice(machineModelId: string) {
   return (await machineModelsToChooseFrom(db)).find((model) => model.id === machineModelId);
+}
+
+/** The same for a machine model that must not exist: one detail of it is unique to this attempt. */
+async function choicesMatching(match: (model: MachineModel) => boolean) {
+  return (await machineModelsToChooseFrom(db)).filter(match);
 }
 
 describe("CMD-CreateMachineModel", () => {
@@ -69,23 +79,24 @@ describe("CMD-CreateMachineModel", () => {
   });
 
   it("ST-006: Helpers cannot create machine models", async () => {
-    const before = (await machineModelsToChooseFrom(db)).length;
+    const title = `Xenon ${randomUUID()}`;
 
-    const rejected = await create({ title: "Xenon", manufacturer: "Bally", machineCategory: "pinball" }, tom);
+    const rejected = await create({ title, manufacturer: "Bally", machineCategory: "pinball" }, tom);
 
     expect(rejected).toEqual({ ok: false, error: "not-authorized" });
-    expect(await machineModelsToChooseFrom(db)).toHaveLength(before);
+    expect(await choicesMatching((model) => model.title === title)).toEqual([]);
   });
 
-  it("stores nothing and journals nothing when the machine model is rejected", async () => {
-    const before = (await machineModelsToChooseFrom(db)).length;
+  it("stores nothing when the machine model is rejected", async () => {
+    // The title is blank, so the rejected attempt is recognised by its manufacturer.
+    const manufacturer = `Gottlieb ${randomUUID()}`;
 
-    expect(await create({ title: "  ", manufacturer: "Gottlieb", machineCategory: "pinball" })).toEqual({
+    expect(await create({ title: "   ", manufacturer, machineCategory: "pinball" })).toEqual({
       ok: false,
       error: "title-required",
     });
 
-    expect(await machineModelsToChooseFrom(db)).toHaveLength(before);
+    expect(await choicesMatching((model) => model.manufacturer === manufacturer)).toEqual([]);
   });
 
   it("journals the created machine model without its title and manufacturer", async () => {
