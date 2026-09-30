@@ -10,9 +10,21 @@ import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
 export const machineCategories = ["pinball", "arcade", "other"] as const;
 export type MachineCategory = (typeof machineCategories)[number];
 
-/** The technical generation within a machine category; which one fits which category is `technologiesOf`. */
+/** The technical generation within a machine category; which ones fit which category is `technologiesOf`. */
 export const technologies = ["em", "solid-state", "dmd", "lcd", "crt"] as const;
 export type Technology = (typeof technologies)[number];
+
+/** The invariant of AGG-MachineModel: the technology fits the machine category – Other has none (HS-10). */
+const technologiesPerCategory = {
+  pinball: ["em", "solid-state", "dmd", "lcd"],
+  arcade: ["crt", "lcd"],
+  other: [],
+} as const satisfies Record<MachineCategory, readonly Technology[]>;
+
+/** The technologies a machine category offers, in the order the form shows them. */
+export function technologiesOf(machineCategory: MachineCategory): readonly Technology[] {
+  return technologiesPerCategory[machineCategory];
+}
 
 /** Who may create a machine model – the allowed actors of CMD-CreateMachineModel. */
 export const machineModelActors = ["technician"] as const;
@@ -48,7 +60,11 @@ export type CreateMachineModelInput = {
   technology?: Technology;
 };
 
-export type CreateMachineModelError = "title-required" | "manufacturer-required" | "machine-category-required";
+export type CreateMachineModelError =
+  | "title-required"
+  | "manufacturer-required"
+  | "machine-category-required"
+  | "technology-does-not-fit-machine-category";
 
 export function createMachineModel(
   _nothingYet: undefined,
@@ -61,6 +77,10 @@ export function createMachineModel(
   if (!manufacturer) return { ok: false, error: "manufacturer-required" };
   const { machineCategory } = input;
   if (!machineCategory) return { ok: false, error: "machine-category-required" };
+  const { technology } = input;
+  if (technology && !technologiesOf(machineCategory).includes(technology)) {
+    return { ok: false, error: "technology-does-not-fit-machine-category" };
+  }
 
   const model: MachineModel = {
     id: newId(),
@@ -68,7 +88,7 @@ export function createMachineModel(
     manufacturer,
     year: input.year,
     machineCategory,
-    technology: input.technology,
+    technology,
   };
   const { id: machineModelId, ...created } = model;
   return { ok: true, state: model, events: [{ type: "EVT-MachineModelCreated", machineModelId, ...created }] };

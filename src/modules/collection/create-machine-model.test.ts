@@ -24,6 +24,37 @@ describe("CMD-CreateMachineModel – the decision", () => {
     expect(decision).toEqual({ ok: false, error: "manufacturer-required" });
   });
 
+  it.each([
+    { category: "arcade", technology: "dmd" },
+    { category: "pinball", technology: "crt" },
+    { category: "other", technology: "lcd" },
+  ] as const)("ST-006: Technology must fit the machine category", ({ category, technology }) => {
+    const decision = createMachineModel(
+      undefined,
+      { ...medievalMadness, machineCategory: category, technology },
+      context,
+    );
+
+    expect(decision).toEqual({ ok: false, error: "technology-does-not-fit-machine-category" });
+  });
+
+  it("accepts every technology that fits its machine category, and none for Other", () => {
+    const fitting = [
+      { machineCategory: "pinball", technology: "em" },
+      { machineCategory: "pinball", technology: "solid-state" },
+      { machineCategory: "pinball", technology: "dmd" },
+      { machineCategory: "pinball", technology: "lcd" },
+      { machineCategory: "arcade", technology: "crt" },
+      { machineCategory: "arcade", technology: "lcd" },
+      { machineCategory: "other", technology: undefined },
+    ] as const;
+
+    for (const combination of fitting) {
+      const decision = createMachineModel(undefined, { ...medievalMadness, ...combination }, context);
+      expect(decision.ok, `${combination.machineCategory} / ${combination.technology}`).toBe(true);
+    }
+  });
+
   it("rejects a machine model without a title or without a machine category", () => {
     const without = (input: Partial<CreateMachineModelInput>) =>
       createMachineModel(undefined, { ...medievalMadness, ...input }, context);
