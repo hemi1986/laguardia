@@ -7,7 +7,7 @@ priority: must
 size: S
 risk: low
 events: [EVT-MachineModelCreated]
-depends_on: [ST-004]
+depends_on: [ST-004, ST-073]
 labels: [mvp, collection]
 status: in-progress
 ---
@@ -20,6 +20,13 @@ Command `CMD-CreateMachineModel` (technicians only). Rules and invariants (`AGG-
 - Title, manufacturer and machine category (*Pinball*, *Arcade*, *Other*) are required; the year is optional.
 - The technology is optional and must fit the machine category: Pinball – *EM*, *Solid-state*, *DMD*, *LCD*; Arcade – *CRT*, *LCD*; Other – none.
 UI wording (de): Modell, Kategorie (Flipper / Arcade / Sonstiges), Technik.
+
+The technicians' machine model page (decided by the user at the test plan checkpoint of `/implement` on 2026-09-30):
+the story carries the page a technician creates a machine model on – without it nobody could create one before
+ST-007 needs to choose one. It lists the existing machine models and has the form, like the account page of ST-005,
+and runs through the Server Action runner (ST-073), which is why ST-073 is now a dependency. Foundation pulled in
+just in time: the team catalogue gets its `commandErrors` section here (ST-007 adds the codes of CMD-RegisterMachine
+to it).
 
 ## Acceptance Criteria
 
