@@ -20,9 +20,14 @@ export function TeamNavigation({ role }: { role: Role }) {
           {team.home}
         </Link>
         {role === "technician" && (
-          <Link href="/team/members" className="text-sm font-medium underline-offset-4 hover:underline">
-            {team.accounts}
-          </Link>
+          <>
+            <Link href="/team/machine-models" className="text-sm font-medium underline-offset-4 hover:underline">
+              {team.machineModels}
+            </Link>
+            <Link href="/team/members" className="text-sm font-medium underline-offset-4 hover:underline">
+              {team.accounts}
+            </Link>
+          </>
         )}
         <Link href="/team/password" className="text-sm font-medium underline-offset-4 hover:underline">
           {team.ownPassword}
