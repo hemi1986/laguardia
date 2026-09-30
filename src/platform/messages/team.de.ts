@@ -62,6 +62,19 @@ export const teamMessages = {
     submit: "Speichern",
     changed: "Passwort geändert.",
   },
+  /**
+   * Texts of rejected commands of the team UI, keyed by their kebab-case error code (ST-006, the first team form).
+   * Every error code of a command a team form runs needs one here – otherwise the form fails the type check.
+   */
+  commandErrors: {
+    "title-required": "Bitte einen Titel angeben.",
+    "manufacturer-required": "Bitte einen Hersteller angeben.",
+    "machine-category-required": "Bitte eine Kategorie wählen.",
+    "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
+    "not-authorized": "Das dürfen nur Techniker:innen.",
+    "not-found": "Das gibt es nicht mehr.",
+    "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
+  },
   /** Keyed by the kebab-case reason a Team module function rejects a change (ST-005). */
   accountErrors: {
     "not-authorized": "Das dürfen nur Techniker:innen.",
