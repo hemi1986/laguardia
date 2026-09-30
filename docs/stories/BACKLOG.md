@@ -4,15 +4,20 @@
 
 **Progress: 2 of 55 domain stories done** · scenarios 21 of 354
 
-**75 stories** · In Progress: 0 · Ready: 64 · In Review: 0 · Draft: 0 · Done: 11
+**75 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 0 · Done: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
 | [ST-069](ST-069-acting-person-from-the-session.md) | The acting person comes from the session in one place | tech-task | Team | must | S | medium | ST-004, ST-073, ST-005 |
 | [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | M | medium | ST-006, ST-071, ST-073, ST-069 |
 | [ST-008](ST-008-machine-overview.md) | Machine overview with search and machine status filter | story | Collection | must | S | low | ST-007 |
