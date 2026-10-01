@@ -29,15 +29,15 @@ A deactivated account (ST-005) must not act: a command sent with the session of 
 The runner, its signature and its lint rule stay as ST-073 built them. Tests keep calling `executeCommand` with an explicit actor.
 
 ## Acceptance Criteria
-- [ ] `currentPerson()` builds the acting person from the session of the current request; the runner (ST-073) and its signature are unchanged (evidence: the diff touches `currentPerson()` and its tests only, apart from the conventions).
-- [ ] A command run through the runner by a signed-in helper is journaled with the actor team member, that helper's team member ID and the role helper (integration test via `journalOf`).
-- [ ] A command run through the runner by a signed-in technician is journaled with the role technician.
-- [ ] Without a session the actor is a visitor: a visitor-allowed command is journaled with the actor visitor, and a command allowed only for team members is rejected with `not-authorized` and stores neither a change nor a journal entry.
-- [ ] An expired, unknown or tampered session cookie is treated like no session (actor visitor); the rejection reveals nothing about the session.
-- [ ] After a technician changes a helper's role to technician, the helper's next command through the runner acts with the role technician, without logging in again.
-- [ ] A command sent with the session of a deactivated account is rejected and stores neither a change nor a journal entry – also a visitor-allowed command such as `CMD-ReportProblem`, which is not run as a visitor (integration test with an account marked deactivated in the test data).
-- [ ] A forged Server Action post by a signed-in helper that adds form fields such as `role=technician` or another team member's ID is still run as that helper: a technician-only command is rejected with `not-authorized` (browser or integration test).
-- [ ] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that `currentPerson()` reads the session and that the system actor never comes from a session.
+- [x] `currentPerson()` builds the acting person from the session of the current request; the runner (ST-073) and its signature are unchanged (evidence: the diff touches `currentPerson()` and its tests only, apart from the conventions).
+- [x] A command run through the runner by a signed-in helper is journaled with the actor team member, that helper's team member ID and the role helper (integration test via `journalOf`).
+- [x] A command run through the runner by a signed-in technician is journaled with the role technician.
+- [x] Without a session the actor is a visitor: a visitor-allowed command is journaled with the actor visitor, and a command allowed only for team members is rejected with `not-authorized` and stores neither a change nor a journal entry.
+- [x] An expired, unknown or tampered session cookie is treated like no session (actor visitor); the rejection reveals nothing about the session.
+- [x] After a technician changes a helper's role to technician, the helper's next command through the runner acts with the role technician, without logging in again.
+- [x] A command sent with the session of a deactivated account is rejected and stores neither a change nor a journal entry – also a visitor-allowed command such as `CMD-ReportProblem`, which is not run as a visitor (integration test with an account marked deactivated in the test data).
+- [x] A forged Server Action post by a signed-in helper that adds form fields such as `role=technician` or another team member's ID is still run as that helper: a technician-only command is rejected with `not-authorized` (browser or integration test).
+- [x] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that `currentPerson()` reads the session and that the system actor never comes from a session.
 
 ## Out of Scope
 - The Server Action runner, its missing actor parameter and the lint rule against direct `executeCommand` calls under `src/app/` (ST-073)
