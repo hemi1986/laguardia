@@ -5,6 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
 import { changeDescriptionForTest } from "./problem-report-stand-ins.test-support";
+import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 
 const db = testDatabase();
 const visitor: Actor = { kind: "visitor" };
@@ -12,7 +13,7 @@ const deps = { actor: visitor, db, clock: fixedClock("2026-09-27T10:00:00Z"), ne
 
 describe("CMD-ReportProblem as a creating command", () => {
   it("stores the new problem report at version 0", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
 
     const reported = await executeCommand(
       reportProblemCommand,
@@ -38,22 +39,22 @@ describe("CMD-ReportProblem as a creating command", () => {
   });
 
   it("rejects a problem report without a description and stores nothing", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
 
     expect(await executeCommand(reportProblemCommand, { machineId, description: "  " }, deps)).toEqual({
       ok: false,
       error: "description-required",
     });
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
-    expect(await journalOf(db, { machineId })).toEqual([]);
+    expect(await journalSinceRegistration(db, machineId)).toEqual([]);
   });
 
   it("journals the reported problem without its description", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
 
     await executeCommand(reportProblemCommand, { machineId, description: "Coin door jammed" }, deps);
 
-    const entries = await journalOf(db, { machineId });
+    const entries = await journalSinceRegistration(db, machineId);
     expect(entries.map((e) => [e.type, e.data])).toEqual([["EVT-ProblemReported", {}]]);
     expect(JSON.stringify(entries)).not.toContain("Coin door jammed");
   });

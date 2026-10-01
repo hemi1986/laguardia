@@ -4,11 +4,12 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
+import { aRegisteredMachine } from "@/test-support/machines";
 
 describe("problem reports in PostgreSQL", () => {
   it("stores a reported problem at the time of the fixed clock and lists it for its machine", async () => {
     const db = testDatabase();
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
     const reported = await executeCommand(
       reportProblemCommand,
       { machineId, description: "Left flipper is weak" },

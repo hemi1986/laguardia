@@ -8,6 +8,7 @@ import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { formRunner } from "./form-runner";
 import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
+import { aRegisteredMachine } from "@/test-support/machines";
 
 /**
  * The Server Action runner (ST-073, architecture review Q9/Q10/Q19): the one way from a form to a command. Tested
@@ -37,7 +38,7 @@ function post(fields: Record<string, string>): FormData {
 
 describe("the Server Action runner", () => {
   it("returns the error code and the typed values on a rejection, and stores nothing", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
     const action = reportProblemFor(machineId, { kind: "visitor" });
 
     const state = await action(null, post({ description: "   " }));
@@ -54,12 +55,12 @@ describe("the Server Action runner", () => {
     const byTechnician: string[] = [];
 
     expect(
-      await reportProblemFor(randomUUID(), { kind: "visitor" }, (id) => byVisitor.push(id))(
+      await reportProblemFor(await aRegisteredMachine(db), { kind: "visitor" }, (id) => byVisitor.push(id))(
         null,
         post({ description: "Left flipper is weak" }),
       ),
     ).toBeNull();
-    await reportProblemFor(randomUUID(), technician, (id) => byTechnician.push(id))(
+    await reportProblemFor(await aRegisteredMachine(db), technician, (id) => byTechnician.push(id))(
       null,
       post({ description: "Coil burnt" }),
     );
@@ -69,7 +70,7 @@ describe("the Server Action runner", () => {
   });
 
   it("ignores forged actor, role and team member fields – the person still comes from currentPerson()", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
     const reported: string[] = [];
     const forged = post({
       description: "Forged report",

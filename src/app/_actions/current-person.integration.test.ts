@@ -9,6 +9,7 @@ import { journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { currentPersonOf } from "./current-person";
 import { formRunner } from "./form-runner";
+import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 
 /**
  * The acting person comes from the session in one place (ST-069): the runner (ST-073) bound to the real session
@@ -56,7 +57,7 @@ function createMachineModel(headers: Headers) {
 
 async function actorOfReport(headers: Headers, fields: Record<string, string> = {}) {
   const reported: string[] = [];
-  await reportProblem(headers, randomUUID(), reported)(null, post({ description: "Ball stuck", ...fields }));
+  await reportProblem(headers, await aRegisteredMachine(db), reported)(null, post({ description: "Ball stuck", ...fields }));
   return (await journalOf(db, { aggregateId: reported[0] })).map((e) => e.actor);
 }
 
@@ -158,14 +159,14 @@ describe("the acting person of a Server Action", () => {
   it("rejects a command sent with the session of a deactivated account – also a visitor-allowed one – and asks for the login", async () => {
     const helper = await signedIn("helper");
     await db.execute(sql`UPDATE team_member SET banned = true WHERE id = ${helper.id}`); // deactivated, session kept
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
 
     await expect(reportProblem(helper.headers, machineId)(null, post({ description: "Ball stuck" }))).rejects.toThrow(
       expect.objectContaining({ digest: expect.stringContaining(";/login;") }),
     );
 
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
-    expect(await journalOf(db, { machineId })).toEqual([]);
+    expect(await journalSinceRegistration(db, machineId)).toEqual([]);
     // the session has ended – from now on the person can report as a visitor
     const reported: string[] = [];
     await reportProblem(helper.headers, machineId, reported)(null, post({ description: "Ball stuck" }));

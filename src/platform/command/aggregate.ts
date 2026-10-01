@@ -99,7 +99,12 @@ type Common<Allowed extends AllowedActor, State extends { id: string }, Event, R
   policies?: (state: State, events: Event[]) => PolicyCall<PolicyError>[];
 };
 
-/** A creating command (Q14): no load, no version check – the new aggregate is saved at version 0. */
+/**
+ * A creating command (Q14): no load, no version check – the new aggregate is saved at version 0.
+ * `facts` reads what its decision must know about the module's other aggregates – a set-based rule such as the
+ * unique museum number (HS-17) – in the command's transaction, before the pure decision gets it. Whoever needs the
+ * facts to stay true until the command commits takes a lock there (e.g. `pg_advisory_xact_lock`).
+ */
 type Creating<
   Input,
   State extends { id: string },
@@ -108,9 +113,11 @@ type Creating<
   Error extends string,
   PolicyError extends string,
   Allowed extends AllowedActor,
+  Facts,
 > = Common<Allowed, State, Event, Result, PolicyError> & {
   creates: true;
-  decide: (state: undefined, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
+  facts?: (tx: Database, input: Input) => Promise<Facts>;
+  decide: (facts: Facts, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
 };
 
 /**
@@ -140,9 +147,10 @@ export function aggregateCommand<
   Error extends string,
   PolicyError extends string = never,
   const Allowed extends AllowedActor = AllowedActor,
+  Facts = undefined,
 >(
   definition:
-    | Creating<Input, State, Event, Result, Error, PolicyError, Allowed>
+    | Creating<Input, State, Event, Result, Error, PolicyError, Allowed, Facts>
     | Changing<Input, State, Event, Result, Error, PolicyError, Allowed>,
 ): Command<Input, Result, Error | PolicyError> {
   return {
@@ -157,7 +165,8 @@ export function aggregateCommand<
       let decision: Decision<State, Event, Error>;
       let expectedVersion: number | undefined;
       if (definition.creates) {
-        decision = definition.decide(undefined, input, decisionContext);
+        const facts = definition.facts ? await definition.facts(tx, input) : (undefined as Facts);
+        decision = definition.decide(facts, input, decisionContext);
       } else {
         const target = definition.target(input);
         if (target.version === undefined && actor.kind !== "system") {

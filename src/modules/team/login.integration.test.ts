@@ -5,6 +5,7 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { currentPerson, logIn, logOut, renewedSessionCookie } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
+import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 
 const db = testDatabase();
 const DAY = 24 * 3_600_000;
@@ -33,9 +34,9 @@ describe("logging in", () => {
     const person = await currentPerson({ db, headers });
 
     expect(person).toEqual({ kind: "team-member", teamMemberId: id, role: "helper" });
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
     await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { actor: person, db });
-    expect((await journalOf(db, { machineId })).map((e) => e.actor)).toEqual([
+    expect((await journalSinceRegistration(db, machineId)).map((e) => e.actor)).toEqual([
       { kind: "team-member", teamMemberId: id, role: "helper" },
     ]);
   });

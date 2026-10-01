@@ -13,6 +13,7 @@ import {
   reportWithRejectedPolicyForTest,
 } from "./problem-report-stand-ins.test-support";
 import { problemReports } from "./problem-reports";
+import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 
 const db = testDatabase();
 const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
@@ -23,7 +24,7 @@ describe("automatic policies triggered by a command", () => {
   it("runs an automatic policy as the system actor in the same transaction and journals it as the system", async () => {
     const outcome = await executeCommand(
       reportWithPolicyForTest,
-      { machineId: randomUUID(), description: "Tilt bob missing" },
+      { machineId: await aRegisteredMachine(db), description: "Tilt bob missing" },
       deps,
     );
 
@@ -37,7 +38,7 @@ describe("automatic policies triggered by a command", () => {
   });
 
   it("rejects the whole command, including the triggering change, when its automatic policy is rejected", async () => {
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
 
     const outcome = await executeCommand(
       reportWithRejectedPolicyForTest,
@@ -52,13 +53,13 @@ describe("automatic policies triggered by a command", () => {
         "description-required" | "policy-rejected" | "not-authorized" | "not-found" | "version-conflict"
       >();
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
-    expect(await journalOf(db, { machineId })).toEqual([]);
+    expect(await journalSinceRegistration(db, machineId)).toEqual([]);
   });
 
   it("saves nothing and keeps the version when a policy has nothing to do", async () => {
     const reported = await executeCommand(
       reportWithIdlePolicyForTest,
-      { machineId: randomUUID(), description: "Tilt bob missing" },
+      { machineId: await aRegisteredMachine(db), description: "Tilt bob missing" },
       deps,
     );
     if (!reported.ok) throw new Error(reported.error);
@@ -77,7 +78,7 @@ describe("automatic policies triggered by a command", () => {
   it("lets concurrent policies on the same aggregate both succeed – a policy saw no version to conflict with", async () => {
     const reported = await executeCommand(
       reportWithIdlePolicyForTest,
-      { machineId: randomUUID(), description: "Tilt bob missing" },
+      { machineId: await aRegisteredMachine(db), description: "Tilt bob missing" },
       deps,
     );
     if (!reported.ok) throw new Error(reported.error);
