@@ -49,7 +49,7 @@ function reportProblem(headers: Headers, machineId: string, reported: string[] =
 function createMachineModel(headers: Headers) {
   return runnerWith(headers)(createMachineModelCommand, {
     fields: ["title"],
-    input: ({ title }) => ({ title: title ?? "", manufacturer: "Bally", machineCategory: "pinball" }),
+    input: ({ title }) => ({ title: title ?? "", manufacturer: "Bally", machineCategory: "pinball" as const }),
     onSuccess: async () => {},
   });
 }
