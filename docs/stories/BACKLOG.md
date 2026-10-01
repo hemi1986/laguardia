@@ -4,15 +4,20 @@
 
 **Progress: 3 of 57 domain stories done** · scenarios 27 of 396
 
-**79 stories** · In Progress: 0 · Ready: 62 · In Review: 0 · Draft: 4 · Done: 13
+**79 stories** · In Progress: 1 · Ready: 61 · In Review: 0 · Draft: 4 · Done: 13
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | L | medium | ST-006, ST-071, ST-073, ST-069 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | L | medium | ST-006, ST-071, ST-073, ST-069 |
 | [ST-008](ST-008-machine-overview.md) | Machine overview with search and machine status filter | story | Collection | must | S | low | ST-007 |
 | [ST-009](ST-009-machine-record.md) | Machine record with machine status history | story | Collection | must | S | low | ST-008 |
 | [ST-010](ST-010-visitor-machine-page.md) | Visitor machine page in German and English | story | Repair | must | M | medium | ST-007 |
