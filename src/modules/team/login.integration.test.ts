@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
-import { executeCommand, journalOf } from "@/platform/command";
+import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { currentPerson, logIn, logOut, renewedSessionCookie } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";

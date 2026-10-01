@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { reportProblemCommand } from "@/modules/repair";
-import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { executeCommand, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import {
   changeRole,
