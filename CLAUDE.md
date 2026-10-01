@@ -11,6 +11,7 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | Artifact | File | Owner |
 |---|---|---|
 | Vision, user groups, scope | `docs/product/vision.md` | user + product-owner |
+| UI/UX decisions (yardstick) | `docs/product/ux-guidelines.md` | ux-designer (user approves) |
 | Glossary (ubiquitous language) | `CONTEXT.md` | domain-model skill (event storming, `/feature`, domain-architect, `/implement`) |
 | Event storming model | `docs/domain/events.yaml` | event storming / domain-architect |
 | Visualization (generated!) | `docs/domain/event-storming.md` | hook – never edit manually |
@@ -33,6 +34,8 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | `/grill-with-docs` | grilling + domain-model + architect: interview that writes glossary and ADRs as it goes |
 | `/event-storming`, `/feature` | discovery entry points (see workflow); both start by grilling |
 | `user-stories`, `/review-stories` | story format, validation, review |
+| `ux-design` | how we decide the interface: the UX frontier to grill, what a story says about a screen, review order |
+| `/groom-backlog` | periodic challenge of the open backlog: still worth building, dependencies, priorities |
 | `/implement` | engineering entry point: one story test-first, verify, review, refactor, acceptance |
 | `tdd` | red → green loop, good tests, seams |
 | `codebase-design` | vocabulary for deep modules: module, interface, depth, seam, adapter, leverage, locality |
@@ -63,7 +66,7 @@ Initial discovery:
 1. `/event-storming` – grills the vision, then big picture; afterwards `/event-storming <process>` for detailed flows
 2. `@domain-architect` – contexts, aggregates, data model, glossary, ADR proposals (incl. tech stack)
 3. `@requirements-engineer` – derive stories from events/commands
-4. `/review-stories` – PO + lead dev in parallel, user approves → `status: ready`
+4. `/review-stories` – PO + lead dev in parallel (plus ux-designer for `ui` stories), user approves → `status: ready`
 5. Hand-off: `docs/stories/BACKLOG.md` lists all `ready` stories in implementation order for the engineering workflow
 
 Later features and changes: `/feature <idea>` – grills the idea, runs a focused event storming, updates domain model/ADRs, derives stories (label `feature:<slug>`) and runs the story review on them – the user approves in that review.
@@ -77,7 +80,7 @@ Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story who
 6. Refactor – fix findings in the story; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
 7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**
 
-After the foundation stories, per finished bounded context or about every 8–10 **domain** stories: `/improve-codebase-architecture` – not in between. Progress is measured in done domain stories and scenarios (`docs/stories/BACKLOG.md`), not in the total number of stories. Technical groundwork is pulled in just in time: into the first story that needs it.
+After the foundation stories, per finished bounded context or about every 8–10 **domain** stories: `/improve-codebase-architecture` for the code and `/groom-backlog` for what is still planned – not in between. Progress is measured in done domain stories and scenarios (`docs/stories/BACKLOG.md`), not in the total number of stories. Technical groundwork is pulled in just in time: into the first story that needs it.
 
 Anytime: `/grill-me` to stress-test a plan, `/grill-with-docs` to do the same while recording glossary terms and ADRs.
 
