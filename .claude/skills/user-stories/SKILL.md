@@ -68,7 +68,12 @@ Discovery ends at `ready`. The engineering workflow (`/implement`) sets `in-prog
 As a <role from CONTEXT.md>, I want <goal>, so that <business benefit>.
 
 ## Context
-Briefly: trigger, preconditions, business rules (from the command's `rules`).
+Briefly: trigger, preconditions, business rules – from the command's `rules` **and from the `invariants` of its
+aggregate**. Since 2026-10-01 an invariant is stated once, on the aggregate, and a command's `rules` list only what
+it adds beyond them (user's decision; `docs/domain/events.yaml`). So a command with few rules is not a command with
+few rules to test: read its aggregate's `invariants` and give every one the command can violate its own rejection
+scenario. "A machine model always has a title, a manufacturer and exactly one machine category" is why
+`CMD-CorrectMachineModel` needs a scenario for an emptied title, although its `rules` do not mention it.
 
 ## Acceptance Criteria
 Scenario: <Happy path>

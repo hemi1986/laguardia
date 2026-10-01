@@ -49,7 +49,7 @@ aggregates:
     invariants:
       - A defect refers to exactly one machine and to the problem report it was recorded from; neither ever changes
       - A defect is either open (possibly on hold), resolved, or closed on retirement
-      - A resolved defect cannot be claimed, prioritized, put on hold or have work logged – only reopened
+      - A resolved defect can only be reopened – no claiming, prioritizing, hold, change of its details, work log entry, resolving again or closing on retirement
       - A defect closed on retirement is final – it cannot be reopened or changed
       - A defect has at most one claimant
       - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers
@@ -68,7 +68,7 @@ aggregates:
       - A machine always has exactly one museum number
       - A machine always has exactly one machine status
       - Every machine status change is kept in the machine's status history with previous status, new status, reason and who changed it
-      - A retired machine stays retired and cannot change status
+      - A retired machine is final – it stays retired and cannot change status, be moved, have its details corrected or be retired again
       - Helpers can only set Out of order
   - id: AGG-MachineModel
     name: Machine model
@@ -274,7 +274,7 @@ commands:
       marks itself triaged with the new defect, and creates the defect. The technician may change the machine status
       in the same step (see POL-DefectMayChangeMachineStatus).
     rules:
-      - The problem report has not been triaged yet – if another technician triaged it meanwhile, the command is rejected
+      - If another technician triaged the problem report meanwhile, the command is rejected
       - Title is required and understandable for visitors
       - Priority defaults to normal
   - id: CMD-LinkProblemReportToDefect
@@ -283,16 +283,12 @@ commands:
     actor: ACT-Technician
     produces: [EVT-ProblemReportLinkedToDefect]
     description: Triage outcome. Linking to a resolved defect reopens it (see POL-LinkReopensResolvedDefect).
-    rules:
-      - The problem report has not been triaged yet
-      - The defect belongs to the same machine as the problem report
   - id: CMD-ResolveProblemOnTheSpot
     aggregate: AGG-ProblemReport
     name: Resolve problem on the spot
     actor: ACT-TeamMember
     produces: [EVT-ProblemResolvedOnTheSpot]
     rules:
-      - The problem report has not been triaged yet
       - A note is required
   - id: CMD-DismissProblemReport
     aggregate: AGG-ProblemReport
@@ -300,7 +296,6 @@ commands:
     actor: ACT-Technician
     produces: [EVT-ProblemReportDismissed]
     rules:
-      - The problem report has not been triaged yet
       - A reason is required
       - Dismissing as spam removes the description and photo
 
@@ -310,15 +305,12 @@ commands:
     name: Prioritize defect
     actor: ACT-Technician
     produces: [EVT-DefectPrioritized]
-    rules:
-      - The defect is not resolved
   - id: CMD-ChangeDefectDetails
     name: Change defect details
     actor: ACT-Technician
     aggregate: AGG-Defect
     produces: [EVT-DefectDetailsChanged]
     rules:
-      - The defect is not resolved
       - The title stays understandable for visitors
       - Removing the suitable-for-helpers mark while a helper holds the claim releases that claim in the same step
   - id: CMD-ClaimDefect
@@ -328,9 +320,7 @@ commands:
     produces: [EVT-DefectClaimed]
     description: Technicians may also assign a defect to any team member. Claiming an already claimed defect takes it over.
     rules:
-      - The defect is not resolved
       - Claiming a defect claimed by someone else takes it over – allowed for everyone
-      - Helpers can only claim, or be assigned, defects suitable for helpers
   - id: CMD-ReleaseClaim
     aggregate: AGG-Defect
     name: Release claim
@@ -344,7 +334,6 @@ commands:
     actor: ACT-TeamMember
     produces: [EVT-WorkLogged]
     rules:
-      - The defect is not resolved
       - What was done is required; parts used and photos are optional
       - Any team member may log work, with or without a claim
   - id: CMD-PutDefectOnHold
@@ -353,7 +342,6 @@ commands:
     actor: ACT-TeamMember
     produces: [EVT-DefectPutOnHold]
     rules:
-      - The defect is not resolved and not on hold
       - Only technicians or the team member who claimed the defect
       - A reason is required
   - id: CMD-ResumeDefect
@@ -362,7 +350,6 @@ commands:
     actor: ACT-TeamMember
     produces: [EVT-DefectResumed]
     rules:
-      - The defect is on hold
       - Only technicians or the team member who claimed the defect
   - id: CMD-ResolveDefect
     aggregate: AGG-Defect
@@ -370,10 +357,7 @@ commands:
     actor: ACT-TeamMember
     produces: [EVT-DefectResolved]
     rules:
-      - The defect is not resolved
       - A closing note is required
-      - Helpers can only resolve defects suitable for helpers
-      - Resolving ends the claim; a reopened defect is unclaimed
   - id: CMD-ReopenDefect
     aggregate: AGG-Defect
     name: Reopen defect
@@ -389,10 +373,6 @@ commands:
     name: Create machine model
     actor: ACT-Technician
     produces: [EVT-MachineModelCreated]
-    rules:
-      - Title, manufacturer and machine category are required
-      - The technology must fit the machine category
-      - The year is optional, but a given year must be a four-digit calendar year
   - id: CMD-RegisterMachine
     aggregate: AGG-Machine
     name: Register machine
@@ -408,39 +388,30 @@ commands:
     actor: ACT-Technician
     produces: [EVT-MachineStatusChanged]
     rules:
-      - The machine is not retired
-      - Helpers may only set Out of order, and only when the machine is unsafe; a reason is required
+      - Helpers set Out of order only when the machine is unsafe; a reason is required
   - id: CMD-MoveMachine
     name: Move machine
     actor: ACT-TeamMember
     aggregate: AGG-Machine
     produces: [EVT-MachineMoved]
-    rules:
-      - The machine is not retired
   - id: CMD-CorrectMachineDetails
     name: Correct machine details
     actor: ACT-Technician
     aggregate: AGG-Machine
     produces: [EVT-MachineDetailsCorrected]
     rules:
-      - The machine is not retired
       - A new museum number is unique across all machines, retired ones included; the old one stays reserved
   - id: CMD-CorrectMachineModel
     name: Correct machine model
     actor: ACT-Technician
     aggregate: AGG-MachineModel
     produces: [EVT-MachineModelCorrected]
-    rules:
-      - The technology fits the machine category
-      - The year is optional, but a given year must be a four-digit calendar year
   - id: CMD-AttachFile
     aggregate: AGG-File
     name: Attach file
     actor: ACT-TeamMember
     produces: [EVT-FileAttached]
     rules:
-      - Attached to exactly one machine or one machine model
-      - File category is required
       - Files are visible to team members only, like photos
   - id: CMD-RemoveFile
     aggregate: AGG-File
@@ -453,15 +424,12 @@ commands:
     actor: ACT-Technician
     produces: [EVT-MachineRetired]
     rules:
-      - The machine is not retired yet
       - A reason is required
 
   - id: CMD-CloseDefectOnRetirement
     aggregate: AGG-Defect
     name: Close defect on retirement
     produces: [EVT-DefectClosedOnRetirement]
-    rules:
-      - Only defects that are not resolved
 
   # --- Maintenance ---
   - id: CMD-ChangeMaintenancePlan
@@ -470,8 +438,7 @@ commands:
     actor: ACT-Technician
     produces: [EVT-MaintenancePlanChanged]
     rules:
-      - A new maintenance task requires a start date that counts as last done
-      - The interval is a positive time span
+      - The start date of a new maintenance task counts as last done
   - id: CMD-RecordMaintenance
     aggregate: AGG-MaintenanceRecord
     name: Record maintenance

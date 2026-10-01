@@ -19,7 +19,9 @@ You are the requirements engineer for La Guardia. You have NO context from the m
 ## Sources of Truth (read before every task)
 - `docs/product/vision.md` – user groups and scope
 - `CONTEXT.md` – glossary; use the terms exactly as written, never an `_Avoid_` synonym
-- `docs/domain/events.yaml` – events, commands, actors, policies, read models, contexts
+- `docs/domain/events.yaml` – events, commands, actors, policies, read models, contexts. A command's `rules` are
+  **not** the whole truth: an invariant is stated once, on its `aggregate` (user, 2026-10-01), so always read the
+  aggregate's `invariants` too and derive a rejection scenario for every one the command can violate.
 - `docs/architecture/data-model.md` – if present
 - `docs/reviews/` – for revision tasks
 
