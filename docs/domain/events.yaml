@@ -12,7 +12,7 @@ actors:
     description: Any helper or technician – used where both may act.
 external_systems: []
 # Machine status lives in Collection (technician decision; Repair only prompts it via policies).
-# Team accounts, roles and last seen: the generic context BC-Team, not modelled here (no aggregates or events) – see docs/domain/context-map.md (supplier to all contexts).
+# Team accounts, roles and last visit: the generic context BC-Team, not modelled here (no aggregates or events) – see docs/domain/context-map.md (supplier to all contexts).
 # Context relationships: docs/domain/context-map.md. Logical data model: docs/architecture/data-model.md.
 bounded_contexts:
   - id: BC-Collection
@@ -23,7 +23,7 @@ bounded_contexts:
     purpose: From problem reports via triage to defects that are worked on and resolved
   - id: BC-Team
     name: Team
-    purpose: Generic, not modelled – team member accounts, roles (helper, technician), login and last seen; supplier to all other contexts
+    purpose: Generic, not modelled – team member accounts, roles (helper, technician), signing in and last visit; supplier to all other contexts
   - id: BC-Maintenance
     name: Maintenance
     purpose: The maintenance plan and keeping every machine's scheduled maintenance up to date
@@ -538,16 +538,16 @@ read_models:
     fields: [Maintenance task, Instruction, Interval, Suitable for helpers, Machine category, Technology]
   - id: RM-TechnicianDashboard
     name: Technician dashboard
-    description: Highlights everything new since the viewer's last login.
+    description: Highlights everything new since the viewer's last visit – the previous time they opened their dashboard, recorded by the Team area.
     fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed, EVT-MachineStatusChanged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClaimed, EVT-WorkLogged, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
     used_by: [ACT-Technician]
-    fields: [Untriaged problem reports (waiting longer than 3 days highlighted), Machine status changes, Defects resolved or reopened, Overdue maintenance tasks, Limited or Out of order machines without open defects, Claims older than 14 days without a work log entry, New since last login]
+    fields: [Untriaged problem reports (waiting longer than 3 days highlighted), Machine status changes, Defects resolved or reopened, Overdue maintenance tasks, Limited or Out of order machines without open defects, Claims older than 14 days without a work log entry, New since last visit]
   - id: RM-HelperDashboard
     name: Helper dashboard
-    description: Highlights everything new since the viewer's last login.
+    description: Highlights everything new since the viewer's last visit – the previous time they opened their dashboard, recorded by the Team area.
     fed_by: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-DefectDetailsChanged]
     used_by: [ACT-Helper]
-    fields: [Open defects suitable for helpers, Due maintenance tasks suitable for helpers, My claimed defects and what changed on them (incl. taken over), New since last login]
+    fields: [Open defects suitable for helpers, Due maintenance tasks suitable for helpers, My claimed defects and what changed on them (incl. taken over), New since last visit]
   - id: RM-RepairTimes
     name: Repair times
     description: Measures the success criteria – a simple view (median times, last 30/90 days), no export. Report time of a defect = its earliest problem report.
@@ -691,7 +691,7 @@ hotspots:
       Recommendation – yes, since the previous visit ("last seen"), recorded by the Team area.
     refs: [RM-TechnicianDashboard, RM-HelperDashboard]
     status: resolved
-    resolution: "Accepted as recommended: \"new\" is measured since the viewer's previous dashboard visit (last seen), recorded by the Team area."
+    resolution: "Accepted as recommended: \"new\" is measured since the viewer's previous dashboard visit – the Last visit, recorded by the Team area. RM-TechnicianDashboard and RM-HelperDashboard both carry the field \"New since last visit\"."
 
 flows:
   - id: FLOW-ProblemReportTriage

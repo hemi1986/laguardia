@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachineRegistered]
 depends_on: [ST-006, ST-071, ST-073, ST-069]
 labels: [mvp, collection, ui]
-status: review
+status: ready
 ---
 
 ## Story
@@ -18,7 +18,7 @@ As a technician, I want to register a machine with its machine model, museum num
 ## Context
 **The machine overview as a plain list is part of this story** (user's decision, backlog grooming 2026-10-01). ST-007 ships the first form on the house pattern, and G2a says creating a thing is reached by a named action under the heading of a list – that list did not exist, because ST-008 depends on this story. So this story delivers the machine overview as a plain list of the active machines, showing museum number, machine model title, location and machine status, sorted by museum number. The counts, the machine status filter and the search are added by ST-008 to a list that then already exists.
 - The machine overview is the entry point: registering is reached by a named action directly under its heading and happens on its own page; the overview stays a list (G2a).
-- After registering, the technician lands on the new machine's record with a confirmation naming the museum number and the machine model (G3).
+- After registering, the technician lands back on the machine overview with a confirmation naming the museum number and the machine model (G2a, G3). The machine's own record does not exist yet when this story ships – it is built by ST-009, which is where the assertion "the technician reaches the machine record of the new machine" lives (user's decision, backlog grooming 2026-10-01).
 - A rejection stays on the form, keeps every value that was typed, names the reason above the submit button and marks the field that caused it (G8).
 - A helper is not offered registering; the command rejects it anyway (G11).
 - The team navigation is decided in ST-008 with every destination the MVP will have (G19).
@@ -119,10 +119,11 @@ Scenario: A rejected registration keeps what was typed
   And the reason is shown at the form, with the museum number marked
   And the machine model, the location and the machine status they chose are still filled in
 
-Scenario: After registering, the technician sees the new machine
+Scenario: After registering, the technician is back on the machine overview
   When a technician registers a machine of the machine model "Medieval Madness" at "Hall 2, row 3"
-  Then the machine record of "LG-042" is shown
+  Then the machine overview is shown
   And a confirmation names the museum number "LG-042" and the machine model "Medieval Madness"
+  And "LG-042" is listed in the machine overview
 
 Scenario: Helpers are not offered registering
   Given a helper is logged in
@@ -140,6 +141,7 @@ Scenario: Helpers are not offered registering
 - Printing the QR sticker (ST-011)
 - The count per machine status, the machine status filter and the search in the machine overview (ST-008)
 - The machine category and the technology in the overview entry, and the machine record itself (ST-008, ST-009)
+- Reaching the machine record of the newly registered machine (ST-009)
 
 ## Open Questions
-- [OPEN] Where does a successful registration land? The grooming scenario says the machine record of the new machine, but the machine record is ST-009, which depends on ST-008, which depends on this story – so it does not exist yet when ST-007 ships. Guideline G2a says the opposite for a creation form: "on success the person lands back on the list, with the confirmation of G3". Options: (a) land back on the machine overview with the confirmation naming museum number and machine model, and move the "lands on the machine record" scenario to ST-009; (b) pull a minimal machine record into this story, which grows it again. Recommendation: (a) – it is what G2a says and it keeps the story at L.
+- none

@@ -38,6 +38,12 @@ The page a team member lands on after logging in, showing what needs their atten
 _Avoid_: Start page, home, landing page, cockpit
 _UI (de)_: Übersicht
 
+**Last visit**:
+The moment a team member last opened their dashboard, recorded by the Team area; the dashboard marks everything that
+happened since then as new. Deliberately not the moment they last signed in – team members stay signed in for weeks.
+_Avoid_: Last login, last seen, session start
+_UI (de)_: Letzter Besuch der Übersicht
+
 **Suitable for helpers**:
 A mark on a defect or a maintenance task saying a helper may take it on (claim and resolve the defect, or record the maintenance).
 _Avoid_: Easy task, simple ticket

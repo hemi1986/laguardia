@@ -16,7 +16,7 @@ status: ready
 As a team member, I want my dashboard to highlight everything that is new since my previous dashboard visit, so that I notice changes without e-mail or push notifications even though I stay logged in on my phone for weeks.
 
 ## Context
-`RM-TechnicianDashboard`, `RM-HelperDashboard`: "New since last login". HS-21: "new" is measured since the viewer's previous dashboard visit (last seen), recorded by the Team area – because sessions are long-lived (`docs/adr/0004-team-authentication.md`). The event journal is the source for what changed (`docs/adr/0002-modular-monolith-state-based-persistence.md`).
+`RM-TechnicianDashboard`, `RM-HelperDashboard`: "New since last visit". HS-21: "new" is measured since the viewer's **Last visit** (`CONTEXT.md`) – the previous time they opened their dashboard, recorded by the Team area – because sessions are long-lived (`docs/adr/0004-team-authentication.md`). The event journal is the source for what changed (`docs/adr/0002-modular-monolith-state-based-persistence.md`).
 No e-mail or push notifications (`docs/product/vision.md`, Non-Goals).
 - The "previous visit" is the dashboard visit before the current page load; it is one value per team member, shared across all their phones, tablets and the workshop PC.
 - A team member's own actions are never highlighted as new.
