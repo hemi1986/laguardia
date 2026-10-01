@@ -85,8 +85,12 @@ reason at the top of a 22 000 px page, where the person never sees it next to th
 
 **G9 – A rejection is recognisable without colour.**
 Red text alone is not a rejection; it carries a marker a person can see in daylight with a cracked screen
-protector, and it is announced to screen readers.
+protector, and it is announced to screen readers. **The marker is an icon** (user, 2026-10-01): a warning symbol
+on a rejection, a tick on a confirmation, from `lucide-react` – the icon library `components.json` already names.
 *Why:* the phone is used on the museum floor, not at a desk.
+*Not yet true:* today a rejection is red text and nothing else. The icons and the field marking of G8 arrive with
+ST-007, which builds the first form on shadcn's `Field` (`data-invalid` on the field, `aria-invalid` on the
+control); the four older forms follow in their own tech task.
 
 **G10 – A destructive or irreversible action asks once, and says in words what will happen to whom.**
 "Zugang für Anna Berger beenden? Anna wird sofort abgemeldet."
@@ -162,4 +166,5 @@ have one layout to maintain and one volunteer to maintain it.
 | Date | Change | Reason |
 |---|---|---|
 | 2026-10-01 | First version proposed, derived from `docs/product/vision.md` and the review of the five existing screens (`docs/reviews/2026-10-01-ux-review-existing-screens.md`) | The user asked for a yardstick before the next screens are built (ST-007 ff.) |
+| 2026-10-01 | G9 got its means: an icon from `lucide-react`, and the form layout moves to shadcn's `Field` so a rejection can mark the field it belongs to (`data-invalid`/`aria-invalid`). Neither is built yet – ST-007 is the first form on the new pattern. | The shadcn skill made the gap visible: G8/G9 were rules without anything to implement them with |
 | 2026-10-01 | Accepted by the user. O1 became **G2a** (creating happens on its own page), O3 became **G10a** (deactivating is reversible), and the *Teammitglied* / *Konto* split went into **G12** and into `CONTEXT.md` as the new term **Account**. O2 stays open until the first long list (ST-008). | The three decisions the first version deliberately left to the user |

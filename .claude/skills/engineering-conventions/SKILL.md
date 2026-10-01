@@ -90,16 +90,21 @@ input and pass. Record the outcome here when you test one, so nobody tests it tw
 The skill's "Form inputs: `Input`, `Select`, `Combobox`, …" table has not run this test. A scripted component is
 still fine where the interaction needs JavaScript anyway (the camera photo, ST-002/ST-016).
 
-**Our `Field` is not shadcn's `Field`.** `src/components/ui/field.tsx` wraps the control in its label and links a
-description with `aria-describedby`; shadcn's `FieldGroup`/`Field` are different components. The skill's "Forms use
-`FieldGroup` + `Field`" means *its* ones. Don't swap ours out as a side effect – that is its own decision, with the
-browser tests to prove it. What the skill gets right and we should adopt: `data-invalid` on the field and
-`aria-invalid` on the control for a rejected input (UX guideline G8/G9).
+**The form layout moves to shadcn's `Field`** (user, 2026-10-01). Our hand-rolled `src/components/ui/field.tsx`
+(38 lines: label wraps control, `aria-describedby` for the description) is replaced by shadcn's `field` with its
+`label` and `separator` dependencies – for `data-invalid` on the field, `aria-invalid` on the control and a
+`FieldError` with `role="alert"`, which is what UX guidelines G8/G9 need. shadcn's Field supports `NativeSelect`
+explicitly, so this costs us none of the no-JavaScript guarantee.
+Until the migration is finished **both patterns exist, and that is the one thing to avoid spreading**: the first
+form on the new pattern is ST-007, and the four forms that predate it (login, team members, own password, machine
+models) follow in their own tech task. Write no new form on the old `Field`.
 
-**A new component is a decision, not a convenience.** We own seven. "Callouts use `Alert`", "Empty states use
-`Empty`", "Use `Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in
-the bundle. Adding one happens in a story, with a reason – `Confirmation`/`Rejection` in `src/components/ui/message.tsx`
-already cover what `Alert` and `toast` would.
+**A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
+`Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in the bundle.
+Adding one happens in a story, with a reason – `Confirmation`/`Rejection` in `src/components/ui/message.tsx`
+already cover what `Alert` and `toast` would. Decided so far: `field`, `label` and `separator` come in (see above),
+and `lucide-react` is installed as the icon library `components.json` already names, so a confirmation and a
+rejection carry a symbol and not only a colour (UX guideline G9, user 2026-10-01). Both land in ST-007.
 
 **Never run `apply` or `init --preset`.** Both rewrite the theme, the CSS variables and installed components across
 the whole application. The style (`base-nova`, `components.json`) was decided in ST-076; changing it is an ADR-level
