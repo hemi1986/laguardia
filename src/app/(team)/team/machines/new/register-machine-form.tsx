@@ -19,10 +19,10 @@ export type Choices = {
   machineStatuses: { value: MachineStatus; label: string }[];
 };
 
-type Rejected = NonNullable<RegisterMachineState>["error"];
+type ErrorCode = NonNullable<RegisterMachineState>["error"];
 
 /** The field that caused a rejection – marked at the form (G8). The others have no field of their own. */
-const fieldOf: Partial<Record<Rejected, RegisterMachineField>> = {
+const fieldOf: Partial<Record<ErrorCode, RegisterMachineField>> = {
   "machine-model-required": "machineModelId",
   "location-required": "location",
   "machine-status-required": "machineStatus",

@@ -15,8 +15,11 @@ const leftovers: { name: string; pattern: RegExp }[] = [
 
 /** Everything in the repository but the discovery artifacts, the tooling and the generated migrations. */
 const notScanned = /^(docs|\.claude|drizzle)\/|\.(png|jpe?g|ico|webp|svg|woff2?)$/;
-/** The 404 checks must name the removed addresses to prove they are gone. */
-const allowed: Record<string, string[]> = { "e2e/home.spec.ts": ["a spike address or import"] };
+/** The 404 checks must name the removed addresses, the migration test the spike rows, to prove they are gone. */
+const allowed: Record<string, string[]> = {
+  "e2e/home.spec.ts": ["a spike address or import"],
+  "src/platform/migrations.integration.test.ts": ["the spike's test machine"],
+};
 const thisFile = "src/platform/spike-leftovers.test.ts";
 
 /** Tracked files and new ones not yet added – the ignored ones (.env files, node_modules, .next) excluded. */
