@@ -4,11 +4,11 @@ title: Correct a machine model
 type: story
 context: BC-Collection
 priority: must
-size: XS
+size: S
 risk: low
 events: [EVT-MachineModelCorrected]
-depends_on: [ST-009, ST-044]
-labels: [mvp, collection]
+depends_on: [ST-009, ST-010, ST-043, ST-044]
+labels: [mvp, collection, ui]
 status: ready
 ---
 

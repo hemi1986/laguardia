@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-MachineRegistered, EVT-MachineModelCreated, EVT-MachineStatusChanged]
 depends_on: [ST-008]
-labels: [mvp, collection]
+labels: [mvp, collection, ui]
 status: ready
 ---
 
@@ -19,6 +19,7 @@ As a team member, I want to open the machine record of a machine with its detail
 Read model `RM-MachineRecord`. This story delivers the base of the page: museum number, serial number, machine model (title, manufacturer, year, machine category, technology), location, machine status with history (previous status, new status, reason, who, when).
 All times are shown in Europe/Berlin (time convention, ST-003). The retired-machine scenario is tested with test data until retirement exists (ST-039).
 Further sections are added by later stories: report problem (ST-015), repair history (ST-033), files (ST-037), maintenance (ST-047). Team members scanning the QR code land here (ST-011).
+**This story is where a machine first has a record of its own** (user's decision, backlog grooming 2026-10-01). A technician who registers a machine lands back on the machine overview with a confirmation (ST-007, G2a) – the assertion that they then reach the newly registered machine's own record belongs here, and the scenario "Team member opens a machine record" covers it: the record is opened from the machine overview.
 
 ## Acceptance Criteria
 

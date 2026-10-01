@@ -8,7 +8,7 @@ size: XS
 risk: low
 events: [EVT-DefectPrioritized]
 depends_on: [ST-021, ST-028]
-labels: [mvp, defect-work]
+labels: [mvp, defect-work, ui]
 status: ready
 ---
 

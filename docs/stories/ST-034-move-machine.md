@@ -3,12 +3,12 @@ id: ST-034
 title: Move a machine to a new location
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: XS
 risk: low
 events: [EVT-MachineMoved]
 depends_on: [ST-009]
-labels: [mvp, collection]
+labels: [mvp, collection, ui]
 status: ready
 ---
 

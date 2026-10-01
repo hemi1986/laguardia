@@ -34,7 +34,7 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - Visitors report problems via a QR code on each machine: free text plus an optional photo, no account, no contact data.
 - Every problem report – also from team members – is triaged by a technician; technicians triage their own reports in the same step.
 - Team members (helpers, technicians) have personal accounts; technicians manage them.
-- No active notifications (e-mail, push); instead the dashboard highlights what is new since the last login.
+- No active notifications (e-mail, push); instead the dashboard highlights what is new since the team member's previous visit to it (HS-21; team members stay logged in on their phones for weeks, so the last login would highlight nothing).
 - Machines are registered and retired; loans, purchase prices and provenance are out of scope.
 - Visitors see a machine's open defects (by title) before writing a report, to avoid duplicates.
 - Helpers may resolve a problem report on the spot (e.g. stuck ball) and mark a machine *Out of order* when unsafe; all other triage, status changes, file deletion, the maintenance plan and machine registration are technician-only.

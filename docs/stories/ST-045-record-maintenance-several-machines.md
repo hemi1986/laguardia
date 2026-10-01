@@ -3,12 +3,12 @@ id: ST-045
 title: Record a maintenance task for several machines at once
 type: story
 context: BC-Maintenance
-priority: must
+priority: should
 size: M
 risk: low
 events: [EVT-MaintenanceRecorded]
 depends_on: [ST-044]
-labels: [mvp, maintenance]
+labels: [mvp, maintenance, ui]
 status: ready
 ---
 

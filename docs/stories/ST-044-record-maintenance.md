@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-MaintenanceRecorded]
 depends_on: [ST-043]
-labels: [mvp, maintenance]
+labels: [mvp, maintenance, ui]
 status: ready
 ---
 

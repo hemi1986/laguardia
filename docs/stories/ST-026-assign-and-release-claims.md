@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-DefectClaimed, EVT-DefectClaimReleased]
 depends_on: [ST-025]
-labels: [mvp, defect-work]
+labels: [mvp, defect-work, ui]
 status: ready
 ---
 

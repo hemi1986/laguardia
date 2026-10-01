@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-ProblemResolvedOnTheSpot]
 depends_on: [ST-017]
-labels: [mvp, triage]
+labels: [mvp, triage, ui]
 status: ready
 ---
 

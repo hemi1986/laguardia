@@ -33,6 +33,17 @@ everything they did.
 _Avoid_: Login, user, profile
 _UI (de)_: Konto
 
+**Dashboard**:
+The page a team member lands on after logging in, showing what needs their attention right now; technicians and helpers each have their own.
+_Avoid_: Start page, home, landing page, cockpit
+_UI (de)_: Übersicht
+
+**Last visit**:
+The moment a team member last opened their dashboard, recorded by the Team area; the dashboard marks everything that
+happened since then as new. Deliberately not the moment they last signed in – team members stay signed in for weeks.
+_Avoid_: Last login, last seen, session start
+_UI (de)_: Letzter Besuch der Übersicht
+
 **Suitable for helpers**:
 A mark on a defect or a maintenance task saying a helper may take it on (claim and resolve the defect, or record the maintenance).
 _Avoid_: Easy task, simple ticket
@@ -122,6 +133,11 @@ A triage outcome for a problem report that was fixed immediately (e.g. a stuck b
 _Avoid_: Quick fix, closed
 _UI (de)_: Direkt behoben
 
+**Dismissed**:
+A triage outcome for a problem report that describes no fault, is spam, or is set aside for another reason given as free text; retiring a machine dismisses its untriaged problem reports.
+_Avoid_: Rejected, deleted, ignored, closed
+_UI (de)_: Verworfen (Kein Defekt / Spam / Anderer Grund / Gerät ausgemustert)
+
 **Claim**:
 A team member taking on a defect so others see who works on it; technicians may also assign or release a claim. Maintenance tasks are not claimed.
 _Avoid_: Assignment (for self-claiming), ownership, lock
@@ -135,7 +151,7 @@ _UI (de)_: Liegengeblieben
 **On hold**:
 A defect that is open but temporarily cannot progress – waiting for a part, waiting for a technician, or another reason.
 _Avoid_: Paused, blocked, parked
-_UI (de)_: Pausiert
+_UI (de)_: Pausiert (Wartet auf Ersatzteil / Wartet auf Techniker:in / Anderer Grund)
 
 **Closed on retirement**:
 The final end of a defect that was not resolved when its machine was retired; it does not count as resolved.
@@ -170,6 +186,6 @@ _Avoid_: Pending, late
 _UI (de)_: Fällig / Überfällig
 
 **Maintenance record**:
-A record that a maintenance task was carried out on a machine – who, when, done or partially done, optional note.
+A record that a maintenance task was carried out on a machine – who, when, done or partially done (only *done* restarts the interval), optional note.
 _Avoid_: Maintenance log, service entry, work log entry (that belongs to a defect)
-_UI (de)_: Wartungseintrag
+_UI (de)_: Wartungseintrag (Erledigt / Teilweise erledigt)

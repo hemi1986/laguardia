@@ -3,12 +3,12 @@ id: ST-054
 title: Attach a camera photo as a file of a machine
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: S
 risk: low
 events: [EVT-FileAttached]
 depends_on: [ST-002, ST-037, ST-016]
-labels: [mvp, files]
+labels: [mvp, files, ui]
 status: ready
 ---
 

@@ -5,10 +5,10 @@ type: story
 context: BC-Repair
 priority: must
 size: L
-risk: high
+risk: medium
 events: [EVT-ProblemReported]
 depends_on: [ST-002, ST-015, ST-017, ST-021, ST-064, ST-073]
-labels: [mvp, visitor, triage]
+labels: [mvp, visitor, triage, ui]
 status: ready
 ---
 

@@ -3,12 +3,12 @@ id: ST-046
 title: Report a finding during maintenance
 type: story
 context: BC-Maintenance
-priority: could
+priority: wont
 size: XS
 risk: low
 events: [EVT-MaintenanceRecorded, EVT-ProblemReported]
 depends_on: [ST-015, ST-044]
-labels: [maintenance, triage]
+labels: [maintenance, triage, ui]
 status: ready
 ---
 

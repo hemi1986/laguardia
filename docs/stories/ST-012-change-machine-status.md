@@ -8,7 +8,7 @@ size: M
 risk: low
 events: [EVT-MachineStatusChanged]
 depends_on: [ST-009]
-labels: [mvp, collection]
+labels: [mvp, collection, ui]
 status: ready
 ---
 
@@ -58,6 +58,23 @@ Scenario: Retired machines cannot change status
   Given the machine "LG-013" is retired
   When a technician tries to change its machine status
   Then the change is rejected
+
+Scenario: A helper is offered only Außer Betrieb
+  Given a helper is logged in
+  When the helper changes the machine status of "LG-042"
+  Then Außer Betrieb is the only machine status offered
+  And a reason is asked for
+
+Scenario: A rejected status change keeps what was chosen
+  Given a technician changes the machine status of "LG-042" to Limited without a reason
+  When they submit it
+  Then the change is rejected, and the reason field is marked with what to do next
+  And the machine status they chose is still chosen
+
+Scenario: After the change the team member sees the machine
+  When a technician changes the machine status of "LG-042" to Limited with the reason "left flipper weak"
+  Then the machine record of "LG-042" is shown with the machine status Eingeschränkt
+  And a confirmation names "LG-042" and its new machine status
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q13)
 - [ ] The insert-only history helper, used by a test stand-in aggregate with a history list (its table exists only in the test database): two commands each add an entry; both entries are stored, the first unchanged, and an entry present at load is never updated (integration test).

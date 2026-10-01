@@ -3,12 +3,12 @@ id: ST-055
 title: Retired machines in the overview, search and visitor page
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: S
 risk: low
 events: [EVT-MachineRetired]
 depends_on: [ST-039]
-labels: [mvp, collection]
+labels: [mvp, collection, ui]
 status: ready
 ---
 
