@@ -4,11 +4,11 @@ title: Dashboards highlight what is new since the last visit
 type: story
 context: BC-Repair
 priority: should
-size: L
+size: M
 risk: medium
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-MachineStatusChanged, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
 depends_on: [ST-049, ST-058]
-labels: [dashboard]
+labels: [dashboard, ui]
 status: ready
 ---
 
@@ -16,16 +16,14 @@ status: ready
 As a team member, I want my dashboard to highlight everything that is new since my previous dashboard visit, so that I notice changes without e-mail or push notifications even though I stay logged in on my phone for weeks.
 
 ## Context
-`RM-TechnicianDashboard`, `RM-HelperDashboard`: "New since last login". HS-21: "new" is measured since the viewer's previous dashboard visit (last seen), recorded by the Team area – because sessions are long-lived (`docs/adr/0004-team-authentication.md`). The event journal is the source for what changed (`docs/adr/0002-modular-monolith-state-based-persistence.md`).
+`RM-TechnicianDashboard`, `RM-HelperDashboard`: "New since last visit". HS-21: "new" is measured since the viewer's **Last visit** (`CONTEXT.md`) – the previous time they opened their dashboard, recorded by the Team area – because sessions are long-lived (`docs/adr/0004-team-authentication.md`). The event journal is the source for what changed (`docs/adr/0002-modular-monolith-state-based-persistence.md`).
 No e-mail or push notifications (`docs/product/vision.md`, Non-Goals).
 - The "previous visit" is the dashboard visit before the current page load; it is one value per team member, shared across all their phones, tablets and the workshop PC.
 - A team member's own actions are never highlighted as new.
 - On the very first dashboard visit nothing is highlighted as new.
 - From this story on, the technician dashboard (ST-058) also shows status changes and resolved or reopened defects since the previous visit, if that is longer ago than 7 days.
 
-**Foundation (moved from ST-074 on 2026-09-27).** This is the first page that reads the event journal, so it builds the event catalogue (architecture review 2026-09-27, decisions **Q4** and **Q15**). Until this story, each command maps its own domain events to journal entries (ST-071).
-- **Q4 – event catalogue per module** (e.g. `src/modules/repair/events.ts`): for each event type its aggregate, how its machine is found, and an explicit journal projection – only the listed fields reach the journal, and none of them is free text a person typed (rule of 2026-09-27, `OPEN_QUESTIONS.md`, ST-003). Commands return domain events; the command layer maps them to journal entries through the catalogue, replacing the per-command mapping of ST-071 in every command built so far. `journalOf` returns entries typed per event type.
-- **Q15 – traceability.** `verify.ts` (domain ID check, `.claude/skills/implement/scripts/check-commands.ts`) also checks that every catalogue event exists in `docs/domain/events.yaml` and belongs to the aggregate the catalogue declares for it.
+This is the first page that reads the event journal. It reads it **through the event catalogue per module** (architecture review 2026-09-27, Q4 and Q15), which is no longer built here: the catalogue is its own tech task **ST-079**, placed right after ST-018, because it is a retrofit whose price grows with every command built before it (backlog grooming 2026-10-01, finding 2).
 
 ## Acceptance Criteria
 
@@ -76,17 +74,9 @@ Scenario: No notifications are sent
   When a problem report is recorded
   Then no e-mail or push notification is sent to any team member
 
-### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q4, Q15)
-- [ ] `src/modules/repair/events.ts` lists `EVT-ProblemReported` with its aggregate `AGG-ProblemReport`, its machine and its journal projection; CMD-ReportProblem's journal entry is produced through the catalogue and contains no description (integration test via `journalOf`).
-- [ ] Every command built so far maps its events to journal entries through its module's catalogue; no per-command mapping is left under `src/`.
-- [ ] A test over all catalogue entries of all modules fails when an event whose catalogue entry says it concerns a machine yields a journal entry without machine reference.
-- [ ] `journalOf` returns entries typed per event type: reading a field of `EVT-ProblemReported` that its projection does not list is a type error (type test).
-- [ ] `npm run verify` fails when a catalogue event is missing from `docs/domain/events.yaml`, or declares a different aggregate than `events.yaml`; both demonstrated with a deliberate change and then removed.
-- [ ] Every behaviour asserted by an existing journal test is still asserted after the conversion; no assertion is dropped (evidence: list old test → new test in the pull request). No test weakened.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "The event journal" – the event catalogue.
-
 ## Out of Scope
 - E-mail and push notifications (non-goal)
+- The event catalogue per module, the typed `journalOf` and its `verify.ts` check (ST-079)
 
 ## Open Questions
 - none

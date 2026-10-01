@@ -1,6 +1,6 @@
 # Context Map
 
-> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-09-26
+> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-10-01
 
 ## Contexts
 
@@ -9,7 +9,7 @@
 | **Repair** (`BC-Repair`) | Core domain | From problem reports via triage to defects that are worked on and resolved – the reason La Guardia exists ("no defect gets lost", traceable repair history) | Problem report, Triage, Defect, Priority, Resolved on the spot, Claim, On hold, Closed on retirement, Work log entry, Repair history | Technician (triage, priority); every team member works on defects | `AGG-ProblemReport`, `AGG-Defect` |
 | **Collection** (`BC-Collection`) | Supporting | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, Machine category, Technology, Museum number, Serial number, Location, Machine status, Registered / Retired machine, File, File category | Technician (registration, machine status, file removal); helpers may set *Out of order* and attach files | `AGG-Machine`, `AGG-MachineModel`, `AGG-File` |
 | **Maintenance** (`BC-Maintenance`) | Supporting | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance task, Maintenance plan, Due / Overdue, Maintenance record, Suitable for helpers | Technician (maintenance plan); every team member records maintenance | `AGG-MaintenancePlan`, `AGG-MaintenanceRecord` |
-| **Team** | Generic, **not modelled** | Team member accounts, roles (helper / technician), last login / last seen | Team member, Helper, Technician | Technician (manages accounts, `docs/product/vision.md`) | – (standard account management, see `docs/adr/0004-team-authentication.md`) |
+| **Team** | Generic, **not modelled** | Team member accounts, roles (helper / technician), signing in and last visit | Team member, Account, Helper, Technician, Last visit | Technician (manages accounts, `docs/product/vision.md`) | – (standard account management, see `docs/adr/0004-team-authentication.md`) |
 
 The **Visitor** is not a context and has no account: visitor pages are a public view onto Collection and Repair (`RM-VisitorMachinePage`) plus the *Report problem* command of Repair.
 
@@ -22,7 +22,7 @@ flowchart LR
     Repair["Repair<br/>(core domain)"]
     Maintenance["Maintenance<br/>(supporting)"]
 
-    Team -- "U → D · Conformist<br/>team member ID, role, last seen" --> Collection
+    Team -- "U → D · Conformist<br/>team member ID, role, last visit" --> Collection
     Team -- "U → D · Conformist" --> Repair
     Team -- "U → D · Conformist" --> Maintenance
 
@@ -51,7 +51,7 @@ Solid arrows: upstream (U) supplies, downstream (D) depends. Dotted arrows: the 
 
 ### Team → all contexts (Conformist)
 - All contexts use the Team area's **team member ID** as the only reference to people (`Reported by`, `Claimed by`, `Recorded by`, …) and its **role** (helper / technician) for permission rules, e.g. "Helpers can only claim defects suitable for helpers", "Helpers can only set Out of order".
-- The dashboards use the viewer's last login (or last visit, HS-21) from the Team area for "new since last login".
+- The dashboards use the viewer's **last visit** from the Team area – the previous time they opened their dashboard – for the field *New since last visit* in `RM-TechnicianDashboard` and `RM-HelperDashboard` (HS-21). Not the last sign-in: team members stay signed in for weeks, so it would mark almost nothing as new.
 - Team is deliberately not modelled as a domain: it is standard account management (`docs/adr/0004-team-authentication.md`).
 
 ## Cross-context read models
@@ -72,5 +72,4 @@ Read models compose data from several contexts; they only read, every write goes
 | `RM-RepairTimes` | | x | | |
 
 ## Open points
-- HS-18 – no events for corrections (location, machine model, museum number, defect title) – affects the Collection and Repair aggregates.
-- HS-21 – "new since last login" vs. last visit – affects what the Team area must record.
+- None affecting a context boundary. HS-18 (events for corrections of location, machine model, museum number and defect title – Collection and Repair) and HS-21 (the Team area records the viewer's last visit for *New since last visit*) are both resolved; see `docs/domain/events.yaml`.

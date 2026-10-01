@@ -1,7 +1,9 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G17, including G2a and G10a) is binding. One decision is still open (O2, how much of
-> a wide screen a list may use) – it is at the end and is settled when the first long list is built (ST-008).
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G20, including G2a, G4a, G6a, G8a and G10a)
+> is binding. One decision is still open (O2, how much of a wide screen a list may use) – it is at the end and is
+> settled when the first long list is built (ST-008). One violation is known and accepted with an end date – it is
+> named under G2a.
 
 The yardstick every screen is measured against. **How** we arrive at a decision is the skill `ux-design`; **what**
 the code does with it is `.claude/skills/engineering-conventions/SKILL.md` (the `Page` container, the 360 px rules,
@@ -45,6 +47,10 @@ the form. On success the person lands back on the list, with the confirmation of
 page, where they are. The list page stays a list, the form page stays a form.
 *Why:* the two pages that mix both are the two longest in the application, and on both of them a rejection appears
 at a place the person is not looking at.
+*Known exception, accepted 2026-10-01:* `/team/machine-models` keeps its form below the list and therefore breaks
+this rule. The machine model gets its own page only with **ST-036**, which cannot move forward because two of its
+scenario groups need ST-010 and ST-043; the user decided not to split it and not to pull it forward. The exception
+ends when ST-036 is done. No new page may copy this shape in the meantime.
 
 **G3 – After a successful action the person sees what changed.**
 They land where the result is visible and get a confirmation that names the thing by its own words
@@ -60,6 +66,14 @@ words people actually know (museum number, title, name), or a filter over a stat
 list that cannot pass 20 entries stays plain.
 *Why:* a technician opens the account list to find one person, not to read 34 cards.
 
+**G4a – A grouped list shows the groups first, each with how many entries it has** (user, 2026-10-01).
+When entries fall into groups, the person first sees the groups with a count each ("Kugeln reinigen · 12 Geräte")
+and opens the one they want; the entries themselves come after that choice. A list that puts every entry of every
+group on the screen at once is not grouped, it is long.
+*Why:* the due-maintenance list (ST-043) is 19 maintenance tasks across up to 60 machines, and recording
+maintenance for several machines (ST-045) is ~50 checkboxes in one go – at 360 px both become a wall nobody reads
+to the end.
+
 **G5 – A list entry shows only what tells it apart from its neighbours; the actions live on the entry's page.**
 At most one action may sit on the entry itself, and only when it is the one thing people come to the list for.
 *Why:* every account card carries a role button, a password field and a destructive button, which is what turns
@@ -68,6 +82,13 @@ At most one action may sit on the entry itself, and only when it is the one thin
 **G6 – Say what a number or a state means, in words.**
 A status, a count or a date is labelled where it stands; the person does not have to know a code or a colour.
 *Why:* colours mean nothing on a dim phone in a bright hall, and nothing to someone who sees the screen once.
+
+**G6a – An entry that is singled out says in words why** (user, 2026-10-01).
+"Highlighted", "marked" or "at the top" is not a design. The entry carries the reason as text next to it
+("seit 14 Tagen offen", "neu seit deinem letzten Besuch", "überfällig"), and the reason is decided in the story
+that singles the entry out.
+*Why:* ST-017, ST-043, ST-048, ST-050 and ST-058 all say only "highlighted" – five screens where five developers
+would each pick a different colour and nobody would learn what it means.
 
 ## 3. The states that must exist
 
@@ -83,6 +104,13 @@ only what was wrong ("Zu viele fehlgeschlagene Versuche. Bitte in 15 Minuten ern
 *Why:* the login empties both fields after a wrong password; the account form loses everything and shows the
 reason at the top of a 22 000 px page, where the person never sees it next to the form they just submitted.
 
+**G8a – What the form cannot give back is said, not silently lost** (user, 2026-10-01).
+A file or a photo a person chose cannot be put back into the chooser after a rejection. So the rejection says so,
+in the same message, and says what to do: "Bitte beschreibe das Problem. Das Foto muss erneut ausgewählt werden."
+The chooser shows itself as empty rather than pretending the file is still attached.
+*Why:* ST-016 is the first form with a photo, and ST-037, ST-054 and ST-032 follow. A visitor who taps "Senden"
+twice because the photo looked attached sends the problem report without it – and never learns why.
+
 **G9 – A rejection is recognisable without colour.**
 Red text alone is not a rejection; it carries a marker a person can see in daylight with a cracked screen
 protector, and it is announced to screen readers. **The marker is an icon** (user, 2026-10-01): a warning symbol
@@ -94,18 +122,33 @@ control); the four older forms follow in their own tech task.
 
 **G10 – A destructive or irreversible action asks once, and says in words what will happen to whom.**
 "Zugang für Anna Berger beenden? Anna wird sofort abgemeldet."
-*Why:* "Deaktivieren" is one tap, it ends the person's sessions, and nothing in La Guardia undoes it.
+The question names the thing by its own words **and the consequences nobody sees on this screen**: retiring a
+machine (ST-039) names the machine, how many defects will be closed and how many problem reports dismissed;
+removing a file (ST-038) names the file and says that it is gone for good.
+*Why:* "Deaktivieren" is one tap, it ends the person's sessions, and nothing in La Guardia undoes it. Retiring a
+machine looks like one tap on one machine and quietly ends every open piece of work on it.
 
-**G10a – What can be undone is undoable in La Guardia** (user, 2026-10-01).
-Deactivating an account is reversible: a technician can activate it again. A thing a person can switch off and the
-software cannot switch back on is a bug, not a safety feature.
+**G10a – What a person *sets* to manage access or visibility, they can unset** (user, 2026-10-01, narrowed the
+same day).
+Deactivating an account is reversible: a technician can activate it again. The same holds for a filter, a mark, a
+"nicht ausgestellt". A state a person can switch off and the software cannot switch back on is a bug, not a safety
+feature.
+**This rule does not cover recorded facts or deleted bytes.** Retiring a machine (ST-039) and removing a file
+(ST-038) stay irreversible, and keep **G10's confirmation** instead. The boundary is deliberate: an access or
+visibility state says "for now", a recorded fact says "this happened", and undoing a recorded fact would mean
+rewriting history rather than changing a setting – a correction is its own command with its own story, not an
+undo button. Deleted bytes we simply no longer have.
 *Why:* a mistap in a list of ten names locks a colleague out, and the only repair today is a second account for the
-same person – which splits their work history in two.
+same person – which splits their work history in two. Without the boundary written down, the same rule would be
+read as "everything has an undo", and the next story would promise one the domain cannot keep.
 
 **G11 – Someone who may not do a thing does not see the control.**
 The page shows the rest; the command refuses it anyway (`allowedActors` – the UI never carries the rule alone).
 Where a whole page is not theirs, they do not reach it from the navigation.
 *Why:* a helper looking at buttons that reject them learns to ignore rejections.
+*Already done right:* `src/app/(team)/navigation.tsx` hides technician-only destinations from helpers while the
+page and the Team module check the role again – built before G11 existed. That is the pattern later stories copy:
+hide in the navigation, and still refuse in the page and in the command.
 
 ## 4. The words
 
@@ -129,6 +172,16 @@ Team texts use the plain imperative ("Bitte einen Titel angeben."), visitor text
 "Modell anlegen", "Zugang beenden" – not "Speichern", "OK", "Absenden".
 *Why:* on a long page a lone "Speichern" does not say what it saves.
 
+**G20 – An enumeration a person picks from has its German option texts decided in the story that first offers it**
+(user, 2026-10-01).
+Every option of a choice is written out in that story – the exact German text, in the order they appear, and which
+one is preselected. If the options are domain values, they go into `CONTEXT.md` first, through the domain-model
+skill, and the story uses the `_UI (de)_` wording; a story never invents a label for a value the glossary does not
+have.
+*Why:* ST-020, ST-029 and ST-044 each build a choice – dismissal reason, hold reason, maintenance outcome – with
+nine option texts nobody has decided. Whoever implements them first writes nine German words into the catalog by
+accident, and the next screen uses different ones for the same value.
+
 ## 5. Consistency
 
 **G15 – Same thing, same pattern, on every screen.**
@@ -142,6 +195,24 @@ Nothing is tried first on a laptop. **How much of a wide screen a list may use i
 **G17 – Every page is reachable and leaveable.**
 Each page either stands in the navigation or is reached from a named link on a page that is, and every page has a
 way back without the browser's button.
+
+**G18 – A page several stories add to has one owner story** (user, 2026-10-01).
+The owner story fixes the page's sections and their order; every later story adds its content *into* one of those
+sections, or adds a new section at a named place – never a second shape for the same page. The owner is named in
+the later stories, so a reader knows which story to look at.
+*Why:* eleven stories add to the machine record (ST-009, 011, 012, 015, 021, 033, 034, 035, 037, 039, 047) and four
+to the dashboards (ST-048, 049, 050, 058). Fourteen things on one phone page, in an order no story decides, is
+decided by whoever implements last – and two of those stories render the same list twice.
+
+**G19 – The navigation is decided once, with every destination the product will have** (user, 2026-10-01).
+One story names the full set of destinations, their German labels, their order and who sees which; every later
+story takes a place in that set and does not invent one. A destination the decided navigation does not have is a
+question for the user, not a line a story adds on its way past.
+**ST-008 is that story for the team navigation** – the first team page with a second destination. Until it is done,
+no story adds a destination of its own.
+*Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
+navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
+happens at ten.
 
 ## 6. Then, and only then, polish
 
@@ -168,3 +239,6 @@ have one layout to maintain and one volunteer to maintain it.
 | 2026-10-01 | First version proposed, derived from `docs/product/vision.md` and the review of the five existing screens (`docs/reviews/2026-10-01-ux-review-existing-screens.md`) | The user asked for a yardstick before the next screens are built (ST-007 ff.) |
 | 2026-10-01 | G9 got its means: an icon from `lucide-react`, and the form layout moves to shadcn's `Field` so a rejection can mark the field it belongs to (`data-invalid`/`aria-invalid`). Neither is built yet – ST-007 is the first form on the new pattern. | The shadcn skill made the gap visible: G8/G9 were rules without anything to implement them with |
 | 2026-10-01 | Accepted by the user. O1 became **G2a** (creating happens on its own page), O3 became **G10a** (deactivating is reversible), and the *Teammitglied* / *Konto* split went into **G12** and into `CONTEXT.md` as the new term **Account**. O2 stays open until the first long list (ST-008). | The three decisions the first version deliberately left to the user |
+| 2026-10-01 | Backlog grooming (`docs/reviews/2026-10-01-backlog-grooming.md`) added six rules, each from a pile-up in the backlog: **G4a** (grouped lists), **G6a** (say why an entry is singled out), **G8a** (a file chooser cannot be refilled), **G18** (one owner story per shared page), **G19** (the navigation is decided once – ST-008), **G20** (option texts decided where the choice first appears). | 63 stories reviewed at once made visible what no single story review could: 5 stories say only "highlighted", 11 add to the machine record, 6 add a navigation destination, 3 build selects with 9 undecided option texts |
+| 2026-10-01 | **G10a narrowed** to states a person *sets* to manage access or visibility; recorded facts and deleted bytes are explicitly out. ST-039 (retiring a machine) and ST-038 (removing a file) stay irreversible and keep **G10**, which now requires the confirmation to name the consequences – for ST-039 the machine, the defects closed and the problem reports dismissed. | Read broadly, G10a would have promised an undo the domain cannot keep; the boundary and its reason are written down so the rule does not quietly stop applying |
+| 2026-10-01 | **Known exception recorded under G2a**: `/team/machine-models` keeps its form below the list until ST-036. | The user decided not to split ST-036 and not to pull it forward. A yardstick that hides a violation it knows about is worth nothing |

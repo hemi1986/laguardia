@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-015, ST-018]
-labels: [mvp, triage]
+labels: [mvp, triage, ui]
 status: ready
 ---
 

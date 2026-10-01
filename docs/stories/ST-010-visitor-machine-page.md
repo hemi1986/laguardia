@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-MachineRegistered, EVT-MachineModelCreated, EVT-MachineStatusChanged, EVT-MachineModelCorrected]
 depends_on: [ST-007]
-labels: [mvp, visitor]
+labels: [mvp, visitor, ui]
 status: ready
 ---
 

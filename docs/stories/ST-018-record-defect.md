@@ -8,7 +8,7 @@ size: L
 risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
-labels: [mvp, triage]
+labels: [mvp, triage, ui]
 status: ready
 ---
 
@@ -24,6 +24,7 @@ Rules and invariants:
 - One problem report leads to one defect (HS-4).
 - Manual policy `POL-DefectMayChangeMachineStatus` / HS-3: in the same step the technician may set the machine to *Limited* or *Out of order* – two events, one action, one transaction. Only *Limited* and *Out of order* are offered in this step. The status history entry's reason is a reference to the new defect (its title); no extra input is needed. If the status change is rejected (e.g. the machine was retired meanwhile), the defect is not recorded either and the problem report stays untriaged.
 - The race between two technicians is covered by a real concurrency test (two transactions on the same problem report version), not only by a sequential test.
+- After recording, the technician lands back on the triage list with a confirmation naming the defect and the machine (G2a, G3). The defect's own page does not exist yet when this story ships – it is built by ST-021, which is where the assertion "the defect is shown with its machine" lives (user's decision, backlog grooming 2026-10-01).
 
 **Foundation (moved from ST-074 on 2026-09-27).** HS-3 is the first case of one command running another: the status change belongs to `AGG-Machine` in the collection module, and a command belongs to one aggregate (architecture review 2026-09-27, Q12, ST-071). This story therefore builds `context.run(command, input)` (architecture review 2026-09-27, decision **Q6**): it runs another command – also another module's, imported through its `index.ts` – in the same transaction, as the same acting person, including that command's authorization check. A rejection of the inner command rejects everything; the inner command's error type becomes part of the outer command's result type. `context.runAsSystem` stays for automatic policies.
 
@@ -78,6 +79,19 @@ Scenario: Helpers cannot record defects
   When the helper tries to record a defect from a problem report
   Then the action is rejected
 
+Scenario: A rejected defect keeps what was typed
+  Given a technician records a defect from an untriaged problem report with the priority high, the suitable-for-helpers mark set, the machine status Out of order and no title
+  When they submit it
+  Then nothing is recorded and the problem report stays untriaged
+  And the reason is shown at the form, with the title marked
+  And the priority, the mark and the machine status they chose are still chosen
+
+Scenario: After recording, the technician is back on the triage list
+  When a technician records the defect "Left flipper weak" from a problem report of "LG-042"
+  Then the triage list is shown
+  And a confirmation names the defect "Left flipper weak" and the machine "LG-042"
+  And the triaged problem report is no longer listed
+
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q6)
 - [ ] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
 - [ ] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
@@ -88,6 +102,7 @@ Scenario: Helpers cannot record defects
 ## Out of Scope
 - Changing priority or details later (ST-027, ST-031)
 - Linking to an existing defect (ST-022)
+- The defect's own page and reaching it after recording (ST-021)
 
 ## Open Questions
 - none

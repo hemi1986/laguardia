@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved]
 depends_on: [ST-022, ST-024, ST-028]
-labels: [dashboard]
+labels: [dashboard, ui]
 status: ready
 ---
 

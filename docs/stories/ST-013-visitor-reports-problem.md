@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-ProblemReported]
 depends_on: [ST-010]
-labels: [mvp, visitor]
+labels: [mvp, visitor, ui]
 status: ready
 ---
 

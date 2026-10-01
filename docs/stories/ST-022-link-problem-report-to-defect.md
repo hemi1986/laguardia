@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-ProblemReportLinkedToDefect]
 depends_on: [ST-018, ST-021]
-labels: [mvp, triage]
+labels: [mvp, triage, ui]
 status: ready
 ---
 

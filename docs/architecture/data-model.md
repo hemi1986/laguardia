@@ -1,6 +1,6 @@
 # Logical Data Model
 
-> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-09-26
+> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-01
 >
 > No physical model yet – the stack is only *proposed* (`docs/adr/0001-tech-stack.md`, `0002`, `0003`). A "Physical Model" section follows once the user accepts them.
 
@@ -384,7 +384,7 @@ Not an aggregate of this model; listed only because all contexts reference it (`
 | ID | `TeamMemberId` | yes | every "… by" in events |
 | Name | `Text` | yes | *Claimed by*, *Reporter* in RM-OpenDefects, RM-TriageList |
 | Role | *Helper* \| *Technician* | yes | command rules (e.g. CMD-ClaimDefect, CMD-ChangeMachineStatus) |
-| Last seen | `Timestamp` | no | *New since last login* in RM-TechnicianDashboard, RM-HelperDashboard – measured since the previous dashboard visit (HS-21) |
+| Last visit | `Timestamp` | no | *New since last visit* in RM-TechnicianDashboard, RM-HelperDashboard – the previous time the team member opened their dashboard (HS-21) |
 
 ## Open points
 HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the previous dashboard visit.

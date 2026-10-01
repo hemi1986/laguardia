@@ -5,10 +5,10 @@ type: story
 context: BC-Maintenance
 priority: must
 size: M
-risk: high
+risk: medium
 events: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenancePlanChanged, EVT-MachineRegistered]
 depends_on: [ST-003, ST-007, ST-040]
-labels: [mvp, maintenance]
+labels: [mvp, maintenance, ui]
 status: ready
 ---
 
@@ -23,7 +23,7 @@ Rules (`CONTEXT.md` *Due* / *Overdue*, `docs/architecture/data-model.md`, HS-20 
 - *Due since* = last done + interval (month arithmetic per the time convention, ST-003).
 - *Overdue* once the due date plus 25 % of the interval's actual number of days, rounded up to whole days, has passed (ST-003) – e.g. 12 months = 365 days → overdue 92 days after the due date.
 - Removed maintenance tasks are never due.
-- Within each maintenance task, machines are sorted by location. A filter shows only maintenance tasks suitable for helpers (helpers have no dashboard in the MVP).
+- Within each maintenance task, machines are sorted by location. A filter shows only maintenance tasks suitable for helpers.
 - Machines *Not on display* and machines returning to display: ST-056.
 
 ## Acceptance Criteria

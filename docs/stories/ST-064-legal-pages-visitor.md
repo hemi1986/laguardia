@@ -8,7 +8,7 @@ size: S
 risk: low
 events: []
 depends_on: [ST-010]
-labels: [mvp, visitor]
+labels: [mvp, visitor, ui]
 status: ready
 ---
 

@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-MachineRetired, EVT-DefectClosedOnRetirement, EVT-ProblemReportDismissed]
 depends_on: [ST-012, ST-020, ST-024, ST-027, ST-030]
-labels: [mvp, collection]
+labels: [mvp, collection, ui]
 status: ready
 ---
 

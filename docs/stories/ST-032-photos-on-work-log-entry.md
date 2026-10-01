@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-WorkLogged]
 depends_on: [ST-002, ST-024, ST-016]
-labels: [defect-work]
+labels: [defect-work, ui]
 status: ready
 ---
 
