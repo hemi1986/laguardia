@@ -26,6 +26,13 @@ A helper or a technician – anyone on the museum team with a personal account.
 _Avoid_: User, staff, volunteer, crew
 _UI (de)_: Teammitglied
 
+**Account**:
+A team member's access to La Guardia – username, password and role. Resetting a password, changing a role and
+deactivating act on the account, never on the person: a deactivated account's team member keeps their name on
+everything they did.
+_Avoid_: Login, user, profile
+_UI (de)_: Konto
+
 **Suitable for helpers**:
 A mark on a defect or a maintenance task saying a helper may take it on (claim and resolve the defect, or record the maintenance).
 _Avoid_: Easy task, simple ticket

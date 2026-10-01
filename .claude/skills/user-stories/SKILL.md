@@ -28,7 +28,12 @@ Template: `templates/story-template.md`. Schema: `schema/story.schema.json`.
 | `id`, `title`, `type`, `context`, `events` | yes | requirements-engineer |
 | `priority` (`must/should/could/wont`) | yes | product-owner (initially `should`) |
 | `size` (`XS–XL`), `risk`, `depends_on` | before `ready` | lead-dev |
-| `labels` | no | anyone (lowercase, e.g. `mvp`) |
+| `labels` | no | anyone (lowercase, e.g. `mvp`, `feature:<slug>`) |
+
+**The `ui` label** marks every story with a frontend part – a screen, a form, a flow a person walks through.
+`/review-stories` and `/groom-backlog` route those to the `ux-designer`, so a missing label means a story nobody
+reviews from that side. What such a story has to say about the interface (and what it must not) is in the
+`ux-design` skill; the decisions it is measured against are `docs/product/ux-guidelines.md`.
 | `status` | yes | see workflow |
 
 ## Backlog Order

@@ -14,10 +14,11 @@ Pick a short kebab-case slug for it (e.g. `defect-photos`); stories get the labe
 Read `docs/product/vision.md`, `CONTEXT.md`, `docs/domain/events.yaml`, `docs/domain/context-map.md`, `docs/architecture/data-model.md`, `docs/adr/`, `docs/stories/BACKLOG.md`. Find out what already exists for this idea (events, stories, hotspots) before asking anything.
 
 ## 2. Grill the idea
-Call the Skill tool three times, for `grilling`, `domain-model` and `architect` (the same set as `/grill-with-docs`, which can't be called from a skill). Grill the user until the frontier is empty and they confirm a shared understanding. Typical branches:
+Call the Skill tool four times, for `grilling`, `domain-model`, `architect` and `ux-design` (the first three are the set of `/grill-with-docs`, which can't be called from a skill). Grill the user until the frontier is empty and they confirm a shared understanding. Typical branches:
 - Which problem, for which user group, and what value? Measurable outcome?
 - Does it fit the vision, or touch a non-goal? If it changes scope → update `docs/product/vision.md` with the user.
 - Which existing processes, events and stories does it change? What's explicitly out of scope?
+- **Does a person see anything?** Almost always yes – then the UX frontier of `ux-design` belongs in the rounds: entry point, the screen's one job, what is shown before acting, what happens afterwards, the rejected, empty, full and no-permission cases, and the German wording. A feature whose screens nobody named gets them by accident. Stories with a frontend part get the label `ui`.
 - New or changed terms → `CONTEXT.md` inline.
 - An architectural trade-off → ADR (`status: proposed`) only if the architect skill's three criteria hold.
 
@@ -31,7 +32,7 @@ Read `.claude/skills/event-storming/SKILL.md` and follow it with the feature as 
 - An architectural trade-off came up that wasn't recorded during grilling → offer an ADR per the architect skill's three criteria (`status: proposed`, the user accepts).
 
 ## 5. Stories
-Delegate to `requirements-engineer`: derive stories for the feature's new or changed commands, policies and read models; name the event/command IDs, the label `feature:<slug>`, and existing stories that need revising. Finished stories get `status: review`; have it report the IDs of all stories it created or revised.
+Delegate to `requirements-engineer`: derive stories for the feature's new or changed commands, policies and read models; name the event/command IDs, the label `feature:<slug>`, the label `ui` for every story with a frontend part, the UX decisions from step 2, and existing stories that need revising. Finished stories get `status: review`; have it report the IDs of all stories it created or revised.
 
 ## 6. Review
 Read `.claude/skills/review-stories/SKILL.md` and follow it with the story IDs from step 5 as `$ARGUMENTS` (only this feature's stories, not everything in `review`). The user still approves every change and every `ready`.

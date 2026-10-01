@@ -8,9 +8,9 @@ argument-hint: "[ST-IDs, empty = all with status review]"
 # Story Review
 
 1. **Selection**: Stories from `$ARGUMENTS`, or all with `status: review` in `docs/stories/`. None found → report and stop.
-2. **Delegate in parallel** to `product-owner` and `lead-dev`. The subagents do not know this conversation: give the full file paths of the stories in the task and state the job clearly.
+2. **Delegate in parallel** to `product-owner` and `lead-dev`, and to `ux-designer` for every story with the label `ui` or an obvious frontend part (none in the batch? say so – a set of stories where nobody sees anything is worth a second look). The subagents do not know this conversation: give the full file paths of the stories in the task and state the job clearly.
 3. **Consolidate** into `docs/reviews/YYYY-MM-DD-story-review.md`:
-   - per story: PO verdict + priority, lead-dev assessment (size, risk, split), conflicts between the two
+   - per story: PO verdict + priority, lead-dev assessment (size, risk, split), UX findings and the scenarios they ask for, conflicts between them
    - list of proposed new stories/spikes/tech tasks
 4. **Let the user decide**: present conflicts and recommendations (max. 3 questions at a time). Adopt nothing without consent.
 5. **Apply**:
