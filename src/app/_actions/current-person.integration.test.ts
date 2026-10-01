@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMachineModelCommand, machineModelsToChooseFrom } from "@/modules/collection";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
-import { changeRole, createAccount, logIn } from "@/modules/team";
+import { changeRole, createAccount, logIn, logOut } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -29,8 +29,8 @@ async function signedIn(role: "helper" | "technician") {
   if (!created.ok) throw new Error(created.error);
   const outcome = await logIn({ username, password: PASSWORD }, { db });
   if (!outcome.ok) throw new Error(outcome.error);
-  const cookie = outcome.cookies.map((setCookie) => setCookie.split(";")[0]).join("; ");
-  return { id: created.teamMemberId, headers: new Headers({ cookie }) };
+  expect(outcome.cookies).toHaveLength(1); // the session cookie only – the tests below change exactly that one
+  return { id: created.teamMemberId, headers: new Headers({ cookie: outcome.cookies[0].split(";")[0] }) };
 }
 
 function runnerWith(headers: Headers) {
@@ -108,10 +108,14 @@ describe("the acting person of a Server Action", () => {
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-06-01T08:00:00Z") });
     const expired = (await signedIn("technician")).headers;
     vi.useRealTimers();
-    const signed = (await signedIn("technician")).headers.get("cookie")!;
-    const [name, value] = [signed.slice(0, signed.indexOf("=")), signed.slice(signed.indexOf("=") + 1)];
-    const unknown = new Headers({ cookie: `${name}=${randomUUID()}` });
-    const tampered = new Headers({ cookie: `${name}=${value.slice(0, -2)}${value.endsWith("A") ? "BB" : "AA"}` });
+    // unknown: correctly signed, but its session no longer exists
+    const unknown = (await signedIn("technician")).headers;
+    await logOut({ db, headers: unknown });
+    // tampered: one character of the session token changed, the signature (after the last ".") kept
+    const cookie = (await signedIn("technician")).headers.get("cookie")!;
+    const tokenStart = cookie.indexOf("=") + 1;
+    const changed = cookie[tokenStart] === "a" ? "b" : "a";
+    const tampered = new Headers({ cookie: cookie.slice(0, tokenStart) + changed + cookie.slice(tokenStart + 1) });
     const title = `Forged session model ${randomUUID()}`;
     const withoutSession = await createMachineModel(noSession)(null, post({ title }));
 

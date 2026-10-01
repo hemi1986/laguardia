@@ -81,13 +81,17 @@ export class DeactivatedAccount extends Error {
 
 /**
  * The acting person of a request (ST-069): the logged-in team member with the role stored now (read again for every
- * request), or a visitor – no session, or an expired, unknown or forged one. Never the system. Throws
- * `DeactivatedAccount` for the session of a deactivated account – not even a visitor may act with it.
+ * request), or a visitor – no session, or an expired, unknown or forged one. Never the system. The session of a
+ * deactivated account is ended and `DeactivatedAccount` thrown – not even a visitor may act with it. Ending the
+ * session sets a cookie, so in Next.js call it from a Server Action only, never while a page renders.
  */
 export async function currentPerson(dependencies: Dependencies): Promise<Actor> {
   const found = await sessionOf(dependencies);
   if (!found) return { kind: "visitor" };
-  if (found.user.banned) throw new DeactivatedAccount();
+  if (found.user.banned) {
+    await logOut(dependencies);
+    throw new DeactivatedAccount();
+  }
   return { kind: "team-member", teamMemberId: found.user.id, role: roleOf(found.user) };
 }
 
