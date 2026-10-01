@@ -10,6 +10,8 @@ export const teamMessages = {
     Visitor: "Besucher:in",
     Machine: "Gerät",
     "Machine model": "Modell",
+    "Machine category": "Kategorie",
+    Technology: "Technik",
     "Museum number": "Museumsnummer",
     Location: "Standort",
     File: "Datei",
@@ -33,7 +35,22 @@ export const teamMessages = {
     loggedInAs: "Angemeldet als",
     logout: "Abmelden",
     accounts: "Teammitglieder",
+    machineModels: "Modelle",
     ownPassword: "Passwort ändern",
+  },
+  machineModels: {
+    title: "Modelle",
+    newMachineModel: "Neues Modell",
+    modelTitle: "Titel",
+    manufacturer: "Hersteller",
+    year: "Baujahr",
+    choose: "Bitte wählen",
+    noTechnology: "keine",
+    create: "Modell anlegen",
+    empty: "Noch keine Modelle angelegt.",
+    /** The machine categories, in the German wording of their definition in CONTEXT.md. */
+    categories: { pinball: "Flipper", arcade: "Arcade", other: "Sonstiges" },
+    technologies: { em: "EM", "solid-state": "Solid-State", dmd: "DMD", lcd: "LCD", crt: "CRT" },
   },
   accounts: {
     title: "Teammitglieder",
@@ -61,6 +78,20 @@ export const teamMessages = {
     new: "Neues Passwort",
     submit: "Speichern",
     changed: "Passwort geändert.",
+  },
+  /**
+   * Texts of rejected commands of the team UI, keyed by their kebab-case error code (ST-006, the first team form).
+   * Every error code of a command a team form runs needs one here – otherwise the form fails the type check.
+   */
+  commandErrors: {
+    "title-required": "Bitte einen Titel angeben.",
+    "manufacturer-required": "Bitte einen Hersteller angeben.",
+    "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
+    "machine-category-required": "Bitte eine Kategorie wählen.",
+    "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
+    "not-authorized": "Das dürfen nur Techniker:innen.",
+    "not-found": "Das gibt es nicht mehr.",
+    "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
   },
   /** Keyed by the kebab-case reason a Team module function rejects a change (ST-005). */
   accountErrors: {

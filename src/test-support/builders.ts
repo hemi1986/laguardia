@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { MachineCategory, MachineModel, Technology } from "@/modules/collection";
 import type { Role } from "@/platform/command";
 
 /**
@@ -17,8 +18,9 @@ const at = () => new Date(BUILDER_TIME);
 let museumNumbers = 0;
 
 export type MachineStatus = "playable" | "limited" | "out-of-order" | "not-on-display";
-export type MachineCategory = "pinball" | "arcade" | "other";
-export type Technology = "em" | "solid-state" | "dmd" | "lcd" | "crt";
+
+/** AGG-MachineModel has its real domain type since ST-006 – the builder uses it, not a local record. */
+export type { MachineCategory, MachineModel, Technology };
 
 export type TeamMember = { id: string; name: string; role: Role; lastSeen?: Date };
 
@@ -32,15 +34,6 @@ export const aTechnician = (overrides: Partial<TeamMember> = {}) =>
   aTeamMember({ name: "Eva", ...overrides, role: "technician" });
 
 /** AGG-MachineModel */
-export type MachineModel = {
-  id: string;
-  title: string;
-  manufacturer: string;
-  year?: number;
-  machineCategory: MachineCategory;
-  technology?: Technology;
-};
-
 export function aMachineModel(overrides: Partial<MachineModel> = {}): MachineModel {
   return {
     id: randomUUID(),

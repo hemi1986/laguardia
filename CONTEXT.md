@@ -39,9 +39,9 @@ _Avoid_: Game, title (alone), type
 _UI (de)_: Modell
 
 **Machine category**:
-The kind of machine: *Pinball*, *Arcade* (video arcade game) or *Other* (e.g. jukebox, gum machine, table football).
+The kind of machine: *Pinball* (_de_ Flipper), *Arcade* (video arcade game) or *Other* (_de_ Sonstiges; e.g. jukebox, gum machine, table football).
 _Avoid_: Type, class, kind
-_UI (de)_: Kategorie (Flipper / Arcade / Sonstiges)
+_UI (de)_: Kategorie
 
 **Technology**:
 The optional technical generation within a machine category – for Pinball *EM*, *Solid-state*, *DMD* or *LCD*; for Arcade *CRT* or *LCD*; none for Other.

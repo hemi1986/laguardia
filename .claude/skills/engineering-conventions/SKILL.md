@@ -190,6 +190,8 @@ Its events are journaled with the system as actor, after the triggering command'
 
 A read model (`RM-…`) is a query function in the owning module, exported via `index.ts`, e.g. `problemReportsOfMachine(db, machineId)`. It takes a `Database`, returns plain data for the page and selects only what the page shows. Read models are computed on read – no projections (ADR 0002).
 
+**Not every query is an `RM-…`** (user, 2026-10-01, during `/implement` ST-006): a query that only feeds a choice or a detail *inside* its own bounded context carries no domain ID, because `events.yaml` names only the read models that are a view of their own – `machineModelsToChooseFrom` (the machine models the registration of ST-007 chooses from) is one of those. Don't invent an `RM-…` for it; a query that does become a screen gets its ID from `events.yaml` first, through the domain-architect.
+
 **Open:** ADR 0002 lets read models read across modules, but the import rules keep a module's tables private. How the first cross-module read model (e.g. the machine overview with open defects, ST-008) reads another module's data – an exported read-only query of that module, or a view – is decided with that story. Don't import another module's `schema.ts`.
 
 ## Time and time-based rules

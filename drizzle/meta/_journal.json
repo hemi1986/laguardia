@@ -29,6 +29,13 @@
       "when": 1790537530089,
       "tag": "0003_problem_report_reporter_team_member",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790779911779,
+      "tag": "0004_machine_model",
+      "breakpoints": true
     }
   ]
 }

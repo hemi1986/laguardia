@@ -7,9 +7,9 @@ priority: must
 size: S
 risk: low
 events: [EVT-MachineModelCreated]
-depends_on: [ST-004]
+depends_on: [ST-004, ST-073]
 labels: [mvp, collection]
-status: ready
+status: in-progress
 ---
 
 ## Story
@@ -19,7 +19,19 @@ As a technician, I want to create a machine model with title, manufacturer, year
 Command `CMD-CreateMachineModel` (technicians only). Rules and invariants (`AGG-MachineModel`):
 - Title, manufacturer and machine category (*Pinball*, *Arcade*, *Other*) are required; the year is optional.
 - The technology is optional and must fit the machine category: Pinball – *EM*, *Solid-state*, *DMD*, *LCD*; Arcade – *CRT*, *LCD*; Other – none.
-UI wording (de): Modell, Kategorie (Flipper / Arcade / Sonstiges), Technik.
+- The year stays optional – an empty field is "no value given" (empty-field rule of ST-073) and the machine model is
+  created without a year – but a year that is given must be a four-digit calendar year and is otherwise rejected with
+  its own reason, instead of being silently dropped. There is deliberately no plausibility range: 1067 and 2999 are
+  allowed, only the four-digit form is checked (decided by the user on 2026-10-01 during `/implement`; this answers the
+  ST-006 open question of 2026-09-30 in `docs/stories/OPEN_QUESTIONS.md`).
+UI wording (de): Modell, Kategorie, Technik, Baujahr; the machine categories are Flipper / Arcade / Sonstiges.
+
+The technicians' machine model page (decided by the user at the test plan checkpoint of `/implement` on 2026-09-30):
+the story carries the page a technician creates a machine model on – without it nobody could create one before
+ST-007 needs to choose one. It lists the existing machine models and has the form, like the account page of ST-005,
+and runs through the Server Action runner (ST-073), which is why ST-073 is now a dependency. Foundation pulled in
+just in time: the team catalogue gets its `commandErrors` section here (ST-007 adds the codes of CMD-RegisterMachine
+to it).
 
 ## Acceptance Criteria
 
@@ -46,6 +58,10 @@ Scenario Outline: Technology must fit the machine category
 Scenario: Required details are missing
   When a technician creates a machine model without a manufacturer
   Then the machine model is rejected because the manufacturer is required
+
+Scenario: Year must be a four-digit year
+  When a technician creates a machine model with the year "ca. 1997"
+  Then the machine model is rejected because the year must be a four-digit year
 
 Scenario: Helpers cannot create machine models
   Given a helper is logged in
