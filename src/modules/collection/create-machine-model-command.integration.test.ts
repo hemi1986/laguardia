@@ -44,7 +44,7 @@ describe("CMD-CreateMachineModel", () => {
     const created = await create({
       title: "Medieval Madness",
       manufacturer: "Williams",
-      year: 1997,
+      year: "1997",
       machineCategory: "pinball",
       technology: "dmd",
     });
@@ -54,7 +54,7 @@ describe("CMD-CreateMachineModel", () => {
       id: created.result.machineModelId,
       title: "Medieval Madness",
       manufacturer: "Williams",
-      year: 1997,
+      year: 1997, // the technician typed "1997"; the decision made it the machine model's year
       machineCategory: "pinball",
       technology: "dmd",
     });
@@ -103,7 +103,7 @@ describe("CMD-CreateMachineModel", () => {
     const created = await create({
       title: "Eight Ball Deluxe",
       manufacturer: "Bally",
-      year: 1981,
+      year: "1981",
       machineCategory: "pinball",
       technology: "solid-state",
     });

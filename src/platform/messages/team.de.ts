@@ -10,6 +10,7 @@ export const teamMessages = {
     Visitor: "Besucher:in",
     Machine: "Gerät",
     "Machine model": "Modell",
+    "Machine category": "Kategorie",
     Technology: "Technik",
     "Museum number": "Museumsnummer",
     Location: "Standort",
@@ -43,12 +44,11 @@ export const teamMessages = {
     modelTitle: "Titel",
     manufacturer: "Hersteller",
     year: "Baujahr",
-    machineCategory: "Kategorie",
     choose: "Bitte wählen",
     noTechnology: "keine",
     create: "Modell anlegen",
     empty: "Noch keine Modelle angelegt.",
-    /** The machine categories in the wording of the glossary term "Machine category" (Flipper / Arcade / Sonstiges). */
+    /** The machine categories, in the German wording of their definition in CONTEXT.md. */
     categories: { pinball: "Flipper", arcade: "Arcade", other: "Sonstiges" },
     technologies: { em: "EM", "solid-state": "Solid-State", dmd: "DMD", lcd: "LCD", crt: "CRT" },
   },
@@ -86,6 +86,7 @@ export const teamMessages = {
   commandErrors: {
     "title-required": "Bitte einen Titel angeben.",
     "manufacturer-required": "Bitte einen Hersteller angeben.",
+    "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
     "machine-category-required": "Bitte eine Kategorie wählen.",
     "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
     "not-authorized": "Das dürfen nur Techniker:innen.",

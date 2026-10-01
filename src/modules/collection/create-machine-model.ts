@@ -51,11 +51,15 @@ export type MachineModelCreated = {
   technology?: Technology;
 };
 
-/** The machine category and the technology are "no value given" when the form had none (ST-073, Q19). */
+/**
+ * What the acting person gave. The machine category and the technology are "no value given" when the form had
+ * none (ST-073, Q19); the year arrives as it was typed, because a year that is not a four-digit year is rejected
+ * rather than dropped and only the decision may say so.
+ */
 export type CreateMachineModelInput = {
   title: string;
   manufacturer: string;
-  year?: number;
+  year?: string;
   machineCategory: MachineCategory | undefined;
   technology?: Technology;
 };
@@ -63,6 +67,7 @@ export type CreateMachineModelInput = {
 export type CreateMachineModelError =
   | "title-required"
   | "manufacturer-required"
+  | "year-must-be-four-digits"
   | "machine-category-required"
   | "technology-does-not-fit-machine-category";
 
@@ -75,6 +80,10 @@ export function createMachineModel(
   if (!title) return { ok: false, error: "title-required" };
   const manufacturer = input.manufacturer.trim();
   if (!manufacturer) return { ok: false, error: "manufacturer-required" };
+  // The year is optional, but one that is given must be a four-digit calendar year (user, 2026-10-01) – no
+  // plausibility range: 1067 is allowed, "ca. 1997" is not, and the museum is told instead of losing the input.
+  const typedYear = input.year?.trim() ?? "";
+  if (typedYear && !/^\d{4}$/.test(typedYear)) return { ok: false, error: "year-must-be-four-digits" };
   const { machineCategory } = input;
   if (!machineCategory) return { ok: false, error: "machine-category-required" };
   const { technology } = input;
@@ -86,7 +95,7 @@ export function createMachineModel(
     id: newId(),
     title,
     manufacturer,
-    year: input.year,
+    year: typedYear ? Number(typedYear) : undefined,
     machineCategory,
     technology,
   };

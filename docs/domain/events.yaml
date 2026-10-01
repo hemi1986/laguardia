@@ -76,6 +76,7 @@ aggregates:
     invariants:
       - A machine model always has a title, a manufacturer and exactly one machine category
       - The technology fits the machine category (Pinball – EM, Solid-state, DMD, LCD; Arcade – CRT, LCD; Other – none)
+      - A machine model has either no year or a four-digit calendar year (deliberately no plausibility range – 1067 and 2999 are allowed)
   - id: AGG-File
     name: File
     context: BC-Collection
@@ -391,6 +392,7 @@ commands:
     rules:
       - Title, manufacturer and machine category are required
       - The technology must fit the machine category
+      - The year is optional, but a given year must be a four-digit calendar year
   - id: CMD-RegisterMachine
     aggregate: AGG-Machine
     name: Register machine
@@ -430,6 +432,7 @@ commands:
     produces: [EVT-MachineModelCorrected]
     rules:
       - The technology fits the machine category
+      - The year is optional, but a given year must be a four-digit calendar year
   - id: CMD-AttachFile
     aggregate: AGG-File
     name: Attach file

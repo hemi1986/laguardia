@@ -31,6 +31,7 @@ describe("command errors in the team catalogue", () => {
     const codes = [
       "title-required",
       "manufacturer-required",
+      "year-must-be-four-digits",
       "machine-category-required",
       "technology-does-not-fit-machine-category",
       "not-authorized",

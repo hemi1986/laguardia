@@ -22,7 +22,7 @@
 | `MachineStatus` | *Playable* \| *Limited* \| *Out of order* \| *Not on display* |
 | `MachineCategory` | *Pinball* \| *Arcade* \| *Other* |
 | `Technology` | Pinball: *EM* \| *Solid-state* \| *DMD* \| *LCD*; Arcade: *CRT* \| *LCD*; Other: none |
-| `Year` | Calendar year of manufacture |
+| `Year` | Four-digit calendar year of manufacture; no plausibility range (1067 and 2999 are allowed) |
 | `Priority` | *high* \| *normal* (default) \| *low* |
 | `HoldReason` | *waiting for part* \| *waiting for technician* \| *other* |
 | `TriageOutcome` | *defect recorded* \| *linked* \| *resolved on the spot* \| *dismissed* |

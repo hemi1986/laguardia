@@ -2,7 +2,7 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 2 of 55 domain stories done** · scenarios 21 of 354
+**Progress: 2 of 55 domain stories done** · scenarios 21 of 355
 
 **75 stories** · In Progress: 1 · Ready: 63 · In Review: 0 · Draft: 0 · Done: 11
 
@@ -12,7 +12,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004 |
+| [ST-006](ST-006-create-machine-model.md) | Create a machine model | story | Collection | must | S | low | ST-004, ST-073 |
 
 ## Ready
 

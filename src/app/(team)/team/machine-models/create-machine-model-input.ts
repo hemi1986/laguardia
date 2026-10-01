@@ -15,27 +15,20 @@ type Fields = FormFields<(typeof createMachineModelFields)[number]>;
 /**
  * Reads and converts the fields of the machine model form (ST-073, Q19): no validation, no default. Free text
  * arrives as it was typed (the decision trims it); an unknown machine category or technology is "no value given",
- * so CMD-CreateMachineModel rejects it with its own reason (`machine-category-required`).
- *
- * The year has no rule in `events.yaml`, so anything that is not a four-digit year is "no value given" too and the
- * machine model is created without a year – the technician is not told. Whether that should be a rejection of its
- * own instead is an open question (`docs/stories/OPEN_QUESTIONS.md`, ST-006, 2026-09-30). Four digits is not a
- * domain rule but the bound that keeps a slip on the numeric keypad ("99999999999") out of the `integer` column:
- * PostgreSQL would raise 22003, which no command error maps, so it would reach the technician as a 500.
+ * so CMD-CreateMachineModel rejects it with its own reason (`machine-category-required`). The year is passed on as
+ * it was typed: that it must be a four-digit year is a domain rule and only the decision may say so
+ * (`year-must-be-four-digits`, user 2026-10-01) – converting it here would drop "ca. 1997" without a word.
  */
 export function createMachineModelInput(fields: Fields): CreateMachineModelInput {
   return {
     title: fields.title ?? "",
     manufacturer: fields.manufacturer ?? "",
-    year: yearOf(fields.year),
+    year: fields.year,
     machineCategory: oneOf(machineCategories, fields.machineCategory),
     technology: oneOf(technologies, fields.technology),
   };
 }
 
-function yearOf(value: string | undefined): number | undefined {
-  return value && /^\d{4}$/.test(value.trim()) ? Number(value) : undefined;
-}
 
 function oneOf<Value extends MachineCategory | Technology>(
   known: readonly Value[],

@@ -12,7 +12,7 @@ const context = { actor: technician, clock: fixedClock("2026-09-30T10:00:00Z"), 
 const medievalMadness: CreateMachineModelInput = {
   title: "Medieval Madness",
   manufacturer: "Williams",
-  year: 1997,
+  year: "1997",
   machineCategory: "pinball",
   technology: "dmd",
 };
@@ -52,6 +52,24 @@ describe("CMD-CreateMachineModel – the decision", () => {
     for (const combination of fitting) {
       const decision = createMachineModel(undefined, { ...medievalMadness, ...combination }, context);
       expect(decision.ok, `${combination.machineCategory} / ${combination.technology}`).toBe(true);
+    }
+  });
+
+  it("ST-006: Year must be a four-digit year", () => {
+    const decision = createMachineModel(undefined, { ...medievalMadness, year: "ca. 1997" }, context);
+
+    expect(decision).toEqual({ ok: false, error: "year-must-be-four-digits" });
+  });
+
+  it("takes a four-digit year as a number and no year at all when the field was empty", () => {
+    const withYear = (year: string | undefined) =>
+      createMachineModel(undefined, { ...medievalMadness, year }, context);
+
+    expect(withYear(" 1997 ").ok && withYear(" 1997 ")).toMatchObject({ state: { year: 1997 } });
+    expect(withYear("").ok && withYear("")).toMatchObject({ state: { year: undefined } });
+    expect(withYear(undefined).ok && withYear(undefined)).toMatchObject({ state: { year: undefined } });
+    for (const year of ["99999999999", "19977", "997", "-1997", "1997er"]) {
+      expect(withYear(year), year).toEqual({ ok: false, error: "year-must-be-four-digits" });
     }
   });
 

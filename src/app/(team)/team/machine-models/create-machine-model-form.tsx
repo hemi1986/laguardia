@@ -48,7 +48,7 @@ export function CreateMachineModelForm({ categories, technologies }: Choices) {
       <Field label={texts.year}>
         <Input name="year" inputMode="numeric" defaultValue={state?.values.year} key={`year-${kept}`} />
       </Field>
-      <Field label={texts.machineCategory}>
+      <Field label={terms["Machine category"]}>
         <NativeSelect
           name="machineCategory"
           defaultValue={state?.values.machineCategory ?? ""}

@@ -18,7 +18,7 @@ describe("the machine model form's input", () => {
     expect(createMachineModelInput(typed)).toEqual({
       title: "Medieval Madness",
       manufacturer: "Williams",
-      year: 1997,
+      year: "1997",
       machineCategory: "pinball",
       technology: "dmd",
     });
@@ -30,7 +30,7 @@ describe("the machine model form's input", () => {
     expect(createMachineModelInput(empty)).toEqual({
       title: "",
       manufacturer: "",
-      year: undefined,
+      year: "",
       machineCategory: undefined,
       technology: undefined,
     });
@@ -38,15 +38,12 @@ describe("the machine model form's input", () => {
       machineCategory: undefined,
       technology: undefined,
     });
-    expect(createMachineModelInput({ ...typed, year: "not a year" })).toMatchObject({ year: undefined });
   });
 
-  it("keeps a year that is not four digits out of the integer column instead of letting PostgreSQL raise", () => {
-    // A slip on the numeric keypad would otherwise reach machine_model.year (int4) and escape as a 500.
-    for (const year of ["99999999999", "19977", "997", "-1997"]) {
-      expect(createMachineModelInput({ ...typed, year }), year).toMatchObject({ year: undefined });
+  it("passes the year on as it was typed – whether it is a year at all is the decision's call", () => {
+    for (const year of ["ca. 1997", "99999999999", " 1997 "]) {
+      expect(createMachineModelInput({ ...typed, year }), year).toMatchObject({ year });
     }
-    expect(createMachineModelInput({ ...typed, year: " 1997 " })).toMatchObject({ year: 1997 });
   });
 
   it("does not trim or otherwise validate the free text – the decision does", () => {
