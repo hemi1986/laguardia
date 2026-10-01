@@ -11,6 +11,7 @@
  *   FINDING  a dead domain reference – an event or an ID in the body that events.yaml no longer has
  *   FINDING  a story that is not done but already has tests for its scenarios (left in progress, or built elsewhere)
  *   FINDING  an [OPEN] marker, or an open row in OPEN_QUESTIONS.md older than the threshold
+ *   FINDING  a story with a screen that has not decided its empty case, its rejection or its permission (G7/G8/G11)
  *   INFO     depth of the dependency chain per story, and what is reachable at all
  *
  * Findings are material for the grooming conversation, not errors: this script never fails a build.
@@ -163,6 +164,31 @@ for (const s of scope) {
   } else if (covered.length && !missing.length) {
     find(id, `every scenario already has a test, although the story is ${str(s, "status")} – is it done?`);
   }
+}
+
+// --------------------------------------------------------------------------
+// Stories with a screen that have not decided their states (UX guidelines G7, G8, G11)
+// --------------------------------------------------------------------------
+// `validate-stories.ts` warns about these while a story is draft or review. Here every open story is checked,
+// including the `ready` ones approved under the older rules – that debt belongs in a grooming conversation, not
+// in the output of every single write. Grouped per guideline, because forty separate lines drown everything else.
+const perGuideline = new Map<string, string[]>();
+for (const s of scope) {
+  for (const w of d.completenessWarnings(s)) {
+    const guideline = /UX guideline (G\d+[a-z]?)/.exec(w)?.[1] ?? "G?";
+    perGuideline.set(guideline, [...(perGuideline.get(guideline) ?? []), d.storyId(s)]);
+  }
+}
+const GUIDELINE_GAP: Record<string, string> = {
+  G7: "no scenario for the empty case",
+  G8: "a rejection that never says what happens to what was typed",
+  G11: "a permission rejection without the \"is not offered\" half",
+};
+for (const [guideline, ids] of [...perGuideline].sort()) {
+  findings.push(
+    `worth a look – ${ids.length} stories with a screen may have ${GUIDELINE_GAP[guideline] ?? guideline} ` +
+      `(${guideline}); the wording check cannot tell whether the guideline applies, the ux-designer can: ${ids.join(", ")}`,
+  );
 }
 
 // --------------------------------------------------------------------------

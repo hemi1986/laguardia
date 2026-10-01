@@ -30,6 +30,15 @@ Template: `templates/story-template.md`. Schema: `schema/story.schema.json`.
 | `size` (`XS–XL`), `risk`, `depends_on` | before `ready` | lead-dev |
 | `labels` | no | anyone (lowercase, e.g. `mvp`, `feature:<slug>`) |
 
+**No implementation foundation inside a domain story** (user, 2026-10-01). A story describes behaviour a person
+can observe; technical groundwork that several stories need is its own **tech task**, with its own `depends_on`.
+A checklist of files to create, layers to convert or configs to set is an implementation plan, not acceptance
+criteria – it is neither the user's language nor a testable outcome, and it hides the real size of the story.
+*Why this is a rule:* ST-050 carried a seven-item checklist that converted **every command built so far** to an
+event catalogue. That made an M story an L, put a retrofit nine dependencies deep, and the cost grew with every
+command built before it. The grooming of 2026-10-01 pulled it out as ST-079 and ST-050 went back to M.
+The exception is a tech task or a spike – there a checklist *is* the acceptance criteria.
+
 **The `ui` label** marks every story with a frontend part – a screen, a form, a flow a person walks through.
 `/review-stories` and `/groom-backlog` route those to the `ux-designer`, so a missing label means a story nobody
 reviews from that side. What such a story has to say about the interface (and what it must not) is in the
