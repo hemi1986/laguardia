@@ -28,7 +28,7 @@ export const reportWithPriorityForTest = aggregateCommand({
   creates: true,
   decide: (_nothingYet, input: ReportWithPriorityInput, { newId }) =>
     input.machineId === undefined
-      ? { ok: false as const, error: "machine-required" as const }
+      ? { ok: false as const, error: "machine-model-required" as const }
       : {
           ok: true as const,
           state: { id: newId() },

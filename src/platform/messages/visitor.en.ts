@@ -8,7 +8,6 @@ export const visitorEn: VisitorMessages = {
   },
   commandErrors: {
     "description-required": "Please describe the problem.",
-    "machine-required": "Please choose a machine.",
     "not-authorized": "You are not allowed to do that.",
     "not-found": "This no longer exists.",
     "version-conflict": "Someone has changed this in the meantime. Please reload the page and try again.",

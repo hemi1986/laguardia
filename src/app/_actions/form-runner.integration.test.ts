@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { journalOf, type Actor } from "@/platform/command";
-import { commandErrorText, visitorMessages } from "@/platform/messages";
+import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { formRunner } from "./form-runner";
@@ -96,8 +96,8 @@ describe("the Server Action runner", () => {
 
     const state = await action(null, post({}));
 
-    expect(state).toEqual({ error: "machine-required", values: { machineId: "", priority: "" } });
-    expect(commandErrorText(visitorMessages("de"), state!.error)).toMatch(/\S/);
+    expect(state).toEqual({ error: "machine-model-required", values: { machineId: "", priority: "" } });
+    expect(commandErrorText(teamMessages, state!.error)).toBe("Bitte ein Modell wählen.");
   });
 
   it("has no parameter for an acting person, a role or a team member ID", () => {
