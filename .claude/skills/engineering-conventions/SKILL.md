@@ -73,6 +73,38 @@ copied in, not a dependency that is upgraded – so a copied file may be edited 
   again. Every field that must submit without JavaScript uses `NativeSelect`; a scripted component is only an
   option where the interaction needs JavaScript anyway. `e2e/no-js-form.spec.ts` guards it.
 
+### The shadcn skill, and where it does not apply here (2026-10-01)
+
+`.claude/skills/shadcn/` is the official shadcn skill, installed so that component work stops being guesswork
+(APIs, composition, `--diff` updates, the Tailwind rules – `gap-*` over `space-y-*`, `size-*`, semantic tokens,
+`cn()`). It triggers by itself whenever `components.json` is in play, and its tools are limited to the shadcn CLI.
+It knows shadcn; it does **not** know the four decisions below, and it will cheerfully argue against each one.
+
+**The no-JavaScript test – the one that matters.** A copied component becomes a form field only if, with
+JavaScript switched off, (a) a value can be chosen and (b) that value arrives in the submitted form data. The
+reason is not purity: a Base UI control renders a `<button>` plus `role="listbox"` divs and keeps the value in
+React, so there is no form control in the DOM at all – nothing to pick, nothing to submit. Checked on the copied
+file in ST-076, which is why shadcn's `select` was removed again and `NativeSelect` exists; `e2e/no-js-form.spec.ts`
+guards it. It is a test, not a blacklist: `Checkbox`, `Switch` and `RadioGroup` often *do* render a hidden native
+input and pass. Record the outcome here when you test one, so nobody tests it twice.
+The skill's "Form inputs: `Input`, `Select`, `Combobox`, …" table has not run this test. A scripted component is
+still fine where the interaction needs JavaScript anyway (the camera photo, ST-002/ST-016).
+
+**Our `Field` is not shadcn's `Field`.** `src/components/ui/field.tsx` wraps the control in its label and links a
+description with `aria-describedby`; shadcn's `FieldGroup`/`Field` are different components. The skill's "Forms use
+`FieldGroup` + `Field`" means *its* ones. Don't swap ours out as a side effect – that is its own decision, with the
+browser tests to prove it. What the skill gets right and we should adopt: `data-invalid` on the field and
+`aria-invalid` on the control for a rejected input (UX guideline G8/G9).
+
+**A new component is a decision, not a convenience.** We own seven. "Callouts use `Alert`", "Empty states use
+`Empty`", "Use `Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in
+the bundle. Adding one happens in a story, with a reason – `Confirmation`/`Rejection` in `src/components/ui/message.tsx`
+already cover what `Alert` and `toast` would.
+
+**Never run `apply` or `init --preset`.** Both rewrite the theme, the CSS variables and installed components across
+the whole application. The style (`base-nova`, `components.json`) was decided in ST-076; changing it is an ADR-level
+decision for the user, never a step in a story.
+
 ## Domain language and IDs
 
 - Names come from `CONTEXT.md`, never an _Avoid_ synonym. A new term goes into `CONTEXT.md` first.
