@@ -10,6 +10,6 @@ export {
   type AccountOutcome,
   type TeamMemberAccount,
 } from "./accounts";
-export { currentPerson, loggedInTeamMember, logIn, logOut, type LoginOutcome } from "./login";
+export { currentPerson, DeactivatedAccount, loggedInTeamMember, logIn, logOut, type LoginOutcome } from "./login";
 export { setUpFirstTechnician, type FirstTechnicianOutcome } from "./first-technician";
 export { renewedSessionCookie } from "./session-cookie";

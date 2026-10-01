@@ -1,14 +1,28 @@
 import "server-only";
 import { headers } from "next/headers";
-import { currentPerson as sessionPerson } from "@/modules/team";
-import type { Actor } from "@/platform/command";
+import { redirect } from "next/navigation";
+import { currentPerson as sessionPerson, DeactivatedAccount, logOut } from "@/modules/team";
+import type { Actor, Database } from "@/platform/command";
 import { database } from "@/platform/database";
 
 /**
- * The acting person of this request – the one place every Server Action gets it (ST-073, Q10): the logged-in team
- * member with the role stored now (ST-004), otherwise a visitor. Never from form data. ST-069 changes only this
- * function (a deactivated account is rejected instead of acting as a visitor).
+ * The acting person of this request – the one place every Server Action gets it (ST-073, Q10; ST-069): the logged-in
+ * team member with the role stored now, otherwise a visitor. Never from form data, never the system.
  */
 export async function currentPerson(): Promise<Actor> {
-  return sessionPerson({ db: database(), headers: await headers(), inNext: true });
+  return currentPersonOf({ db: database(), headers: await headers(), inNext: true });
+}
+
+/**
+ * `currentPerson()` for a given database and request. The session of a deactivated account acts as nobody – not even
+ * as a visitor: it is ended and the login is requested, so the command never runs (ST-069).
+ */
+export async function currentPersonOf(request: { db: Database; headers: Headers; inNext?: boolean }): Promise<Actor> {
+  try {
+    return await sessionPerson(request);
+  } catch (error) {
+    if (!(error instanceof DeactivatedAccount)) throw error;
+    await logOut(request);
+    redirect("/login");
+  }
 }
