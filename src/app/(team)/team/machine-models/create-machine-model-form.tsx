@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+import { LabelledField } from "@/components/ui/labelled-field";
 import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -39,16 +39,16 @@ export function CreateMachineModelForm({ categories, technologies }: Choices) {
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <Field label={texts.modelTitle}>
+      <LabelledField label={texts.modelTitle}>
         <Input name="title" defaultValue={state?.values.title} key={`title-${kept}`} required />
-      </Field>
-      <Field label={texts.manufacturer}>
+      </LabelledField>
+      <LabelledField label={texts.manufacturer}>
         <Input name="manufacturer" defaultValue={state?.values.manufacturer} key={`manufacturer-${kept}`} required />
-      </Field>
-      <Field label={texts.year}>
+      </LabelledField>
+      <LabelledField label={texts.year}>
         <Input name="year" inputMode="numeric" defaultValue={state?.values.year} key={`year-${kept}`} />
-      </Field>
-      <Field label={terms["Machine category"]}>
+      </LabelledField>
+      <LabelledField label={terms["Machine category"]}>
         <NativeSelect
           name="machineCategory"
           defaultValue={state?.values.machineCategory ?? ""}
@@ -62,8 +62,8 @@ export function CreateMachineModelForm({ categories, technologies }: Choices) {
             </option>
           ))}
         </NativeSelect>
-      </Field>
-      <Field label={terms.Technology}>
+      </LabelledField>
+      <LabelledField label={terms.Technology}>
         <NativeSelect name="technology" defaultValue={state?.values.technology} key={`technology-${kept}`}>
           <option value="">{texts.noTechnology}</option>
           {technologies.map((technology) => (
@@ -72,7 +72,7 @@ export function CreateMachineModelForm({ categories, technologies }: Choices) {
             </option>
           ))}
         </NativeSelect>
-      </Field>
+      </LabelledField>
       {state && <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>}
       <Button type="submit" disabled={pending}>
         {texts.create}
