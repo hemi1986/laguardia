@@ -30,7 +30,7 @@ Focus of this session: **$ARGUMENTS** (empty = big picture across the whole doma
 1. **Chaotic exploration** – Propose 8–15 suspected events as a starting point. The user deletes, corrects, adds. Ask specifically about exceptions, failure cases and rare events.
 2. **Timeline** – Order events into `flows` (one flow per business process). Mark pivotal events (phase changes) with `pivotal: true`.
 3. **Hotspots** – Systematically collect gaps and contradictions along the timeline, then grill them: resolve the ones the user can decide now (`status: resolved` + `resolution`), keep the rest open.
-4. **Commands & actors** – What triggers each event, and who does it? Capture external systems (`EXT-`). Business rules of the command go into `rules`.
+4. **Commands & actors** – What triggers each event, and who does it? Capture external systems (`EXT-`). Business rules of the command go into `rules` – only what the command adds beyond the `invariants` of its aggregate, which are stated once, there (user, 2026-10-01).
 5. **Policies** – "Whenever <event>, then <command>". Include time-triggered ones (event with `origin: time`) and manual routines.
 6. **Read models** – What information does an actor need to trigger the command? (`fed_by`, `used_by`, `fields`)
 7. **Aggregates (proposal)** – Which rules must be protected consistently? Rough assignment of commands/events. Detailed work is done by `domain-architect`.

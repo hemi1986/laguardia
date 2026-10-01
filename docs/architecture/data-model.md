@@ -115,7 +115,7 @@ Derived for read models: *Waiting longer than 3 days* (`RM-TriageList`, `RM-Tech
 **Invariants**
 - A defect refers to exactly one machine and to the problem report it was recorded from; neither ever changes
 - A defect is either open (possibly on hold), resolved, or closed on retirement
-- A resolved defect cannot be claimed, prioritized, put on hold or have work logged – only reopened
+- A resolved defect can only be reopened – no claiming, prioritizing, hold, change of its details, work log entry, resolving again or closing on retirement
 - A defect closed on retirement is final – it cannot be reopened or changed
 - A defect has at most one claimant
 - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers
@@ -185,7 +185,7 @@ A defect keeps one *Resolution* per resolve (with its reopening, if any), so clo
 - A machine always has exactly one museum number
 - A machine always has exactly one machine status
 - Every machine status change is kept in the machine's status history with previous status, new status, reason and who changed it
-- A retired machine stays retired and cannot change status
+- A retired machine is final – it stays retired and cannot change status, be moved, have its details corrected or be retired again
 - Helpers can only set Out of order
 
 **Set-based rule (HS-17):** the museum number is unique among all machines, retired ones included – checked by *Register machine* and guaranteed atomically by the machine store, not by a single machine.
@@ -237,6 +237,7 @@ The status history is needed by `RM-MachineRecord` ("Machine status with history
 **Invariants**
 - A machine model always has a title, a manufacturer and exactly one machine category
 - The technology fits the machine category (Pinball – EM, Solid-state, DMD, LCD; Arcade – CRT, LCD; Other – none)
+- A machine model has either no year or a four-digit calendar year (deliberately no plausibility range – 1067 and 2999 are allowed)
 
 **Lifecycle**
 
