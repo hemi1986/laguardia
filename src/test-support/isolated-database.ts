@@ -2,6 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 import { testDatabaseUrl } from "./database";
 import { resetDatabase } from "./reset-test-database";
@@ -23,6 +24,11 @@ export function isolatedTestDatabase(name: string) {
       await resetDatabase(url, upTo ? migrationsUpTo(upTo) : "drizzle");
       pool = new Pool({ connectionString: url.toString(), max: 4 });
       return drizzle(pool);
+    },
+    /** Applies the migrations not applied yet – after `reset(upTo)`, the step a deployment takes. */
+    async migrate(): Promise<void> {
+      if (!pool) throw new Error("reset() first");
+      await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
     },
     async close(): Promise<void> {
       await pool?.end();
