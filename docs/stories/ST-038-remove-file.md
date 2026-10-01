@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-FileRemoved]
 depends_on: [ST-037]
-labels: [files]
+labels: [files, ui]
 status: ready
 ---
 

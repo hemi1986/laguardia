@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]
 depends_on: [ST-009, ST-044, ST-056]
-labels: [mvp, maintenance]
+labels: [mvp, maintenance, ui]
 status: ready
 ---
 

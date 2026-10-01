@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-MachineRegistered]
 depends_on: [ST-009, ST-010, ST-060]
-labels: [mvp, collection, visitor]
+labels: [mvp, collection, visitor, ui]
 status: ready
 ---
 
@@ -52,6 +52,17 @@ Scenario: Visitor and team member scan one after the other
   Given a team member scanned the sticker of "LG-042" and saw the machine record
   When a visitor scans the same sticker a moment later on another phone
   Then the visitor sees the visitor machine page, not the machine record
+
+Scenario: No machine chosen for printing
+  When a technician asks to print QR stickers without choosing a machine
+  Then no printable page is produced
+  And the technician is asked to choose at least one machine
+
+Scenario: Finding the machines to print for
+  Given 60 machines are registered
+  When a technician chooses the machines to print stickers for
+  Then the machines can be narrowed by museum number or machine model title, as in the machine overview
+  And how many machines are chosen is shown next to the way to print
 
 Scenario: Retired machines get no sticker
   Given the machine "LG-013" is retired

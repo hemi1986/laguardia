@@ -3,12 +3,12 @@ id: ST-037
 title: Attach files to a machine or machine model and find them by file category
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: M
 risk: medium
 events: [EVT-FileAttached]
 depends_on: [ST-001, ST-009, ST-016]
-labels: [mvp, files]
+labels: [mvp, files, ui]
 status: ready
 ---
 

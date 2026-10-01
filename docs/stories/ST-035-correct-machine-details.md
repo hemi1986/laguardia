@@ -8,7 +8,7 @@ size: M
 risk: medium
 events: [EVT-MachineDetailsCorrected]
 depends_on: [ST-011]
-labels: [collection]
+labels: [collection, ui]
 status: ready
 ---
 

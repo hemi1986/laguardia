@@ -8,8 +8,8 @@ size: L
 risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
-labels: [mvp, triage]
-status: ready
+labels: [mvp, triage, ui]
+status: review
 ---
 
 ## Story
@@ -78,6 +78,18 @@ Scenario: Helpers cannot record defects
   When the helper tries to record a defect from a problem report
   Then the action is rejected
 
+Scenario: A rejected defect keeps what was typed
+  Given a technician records a defect from an untriaged problem report with the priority high, the suitable-for-helpers mark set, the machine status Out of order and no title
+  When they submit it
+  Then nothing is recorded and the problem report stays untriaged
+  And the reason is shown at the form, with the title marked
+  And the priority, the mark and the machine status they chose are still chosen
+
+Scenario: After recording, the technician sees the new defect
+  When a technician records the defect "Left flipper weak" from a problem report of "LG-042"
+  Then the defect "Left flipper weak" is shown with its machine
+  And a confirmation names "Left flipper weak" and "LG-042"
+
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q6)
 - [ ] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
 - [ ] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
@@ -90,4 +102,4 @@ Scenario: Helpers cannot record defects
 - Linking to an existing defect (ST-022)
 
 ## Open Questions
-- none
+- [OPEN] Where does a successful recording land? The grooming scenario says the technician sees the new defect with its machine, but the defect's own page is ST-021, which depends on this story – so no defect page exists yet. Options: (a) land back on the triage list with the confirmation naming the defect and the machine, and move "the defect is shown" to ST-021; (b) build a minimal defect page here, which grows an already L story. Recommendation: (a). Same question as ST-007 (registration landing on the machine record) – one answer should cover both.

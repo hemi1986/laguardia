@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-MaintenancePlanChanged]
 depends_on: [ST-043]
-labels: [maintenance]
+labels: [maintenance, ui]
 status: ready
 ---
 

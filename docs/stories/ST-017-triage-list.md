@@ -8,7 +8,7 @@ size: S
 risk: low
 events: [EVT-ProblemReported]
 depends_on: [ST-013, ST-015]
-labels: [mvp, triage]
+labels: [mvp, triage, ui]
 status: ready
 ---
 
@@ -20,6 +20,9 @@ Read model `RM-TriageList`; manual routine `POL-TriageProblemReports`. Fields: m
 - "Waiting longer than 3 days" means more than 72 hours since the problem report was reported (time convention, ST-003).
 - Helpers see the triage list too, but may only resolve problems on the spot there (ST-019); the other triage outcomes are technician-only.
 - Showing photos is part of ST-016. Triage actions: ST-018 (record defect), ST-019 (resolve on the spot), ST-020 (dismiss), ST-022 (link).
+- The list entry shows the machine, the description, the reporter and how long the problem report has been waiting, plus one way to open it; the four triage outcomes live on that problem report's own page (G5).
+- "Empty" is the good state here, and it still says so: the empty case and how many problem reports wait are both said in words (G7, G6).
+- The long wait is said in words next to the entry, not only by a colour (G6a).
 
 ## Acceptance Criteria
 
@@ -48,6 +51,28 @@ Scenario: Triaged problem reports leave the list
   Given a problem report for "LG-042" has been triaged
   When a technician opens the triage list
   Then that problem report is not listed
+
+Scenario: Nothing waits for triage
+  Given no problem report is untriaged
+  When a technician opens the triage list
+  Then it says that nothing waits for triage
+  And no problem report is listed
+
+Scenario: How many problem reports wait
+  Given 12 problem reports are untriaged
+  When a technician opens the triage list
+  Then it says that 12 problem reports wait for triage
+
+Scenario: The long wait is said in words
+  Given a problem report for "LG-042" was reported 73 hours ago and is untriaged
+  When a technician opens the triage list
+  Then that problem report says in words how long it has been waiting
+
+Scenario: Triaging happens on the problem report's own page
+  Given a problem report for "LG-042" is untriaged
+  When a technician opens that problem report from the triage list
+  Then its machine, description, reporter and waiting time are shown
+  And the triage outcomes the technician may choose are offered there
 
 Scenario: Visitors cannot open the triage list
   Given nobody is logged in
