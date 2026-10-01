@@ -46,15 +46,7 @@ export function findStory(id: string): d.Story {
 }
 
 /** Scenario titles from the story's acceptance criteria, in order. */
-export function scenarioTitles(story: d.Story): string[] {
-  const ac = d.section(d.sections(story.body), "acceptance criteria") ?? "";
-  const out: string[] = [];
-  for (const line of ac.split("\n")) {
-    const m = /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:\s*(.+?)\s*$/.exec(line);
-    if (m) out.push(m[1]);
-  }
-  return out;
-}
+export const scenarioTitles = (story: d.Story): string[] => d.scenarioTitlesIn(story.body);
 
 /** Checklist items (`- [ ] …`) of a spike or tech task. */
 export function checklist(story: d.Story): { done: boolean; text: string }[] {

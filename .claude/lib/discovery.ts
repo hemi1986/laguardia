@@ -521,6 +521,71 @@ function checkBody(r: Report, where: string, meta: Obj, body: string): void {
 }
 
 /** Validates all stories. With `only`, findings are reported for that file only. */
+/** The scenario titles of a story body, in order. */
+export function scenarioTitlesIn(body: string): string[] {
+  const ac = section(sections(body), "acceptance criteria") ?? "";
+  const out: string[] = [];
+  for (const line of ac.split("\n")) {
+    const m = /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:\s*(.+?)\s*$/.exec(line);
+    if (m) out.push(m[1]);
+  }
+  return out;
+}
+
+/**
+ * What a story with a screen has not decided yet – UX guidelines G7, G8 and G11 (user, 2026-10-01).
+ *
+ * The backlog grooming of 2026-10-01 found the same three gaps 45 times across 63 stories, because nobody had
+ * the list: 12 stories introduced a screen with no empty case, 20 never said what a rejection does with what was
+ * typed, 13 let a person meet a wall instead of removing the door. A machine should remember that, not a person.
+ *
+ * **Warnings, never errors, and a prompt to look rather than a verdict.** Each rule matches the wording the
+ * stories actually use, which means it both misses cases and names stories where the guideline does not apply
+ * (a story whose screen has no list has no empty case to describe). Checked against the 2026-10-01 grooming:
+ * it finds twelve stories for G7, the same number the ux-designer found by reading – but not the same twelve.
+ * Do not tune it further against a particular backlog; that fits the regex to 63 stories instead of to the rule.
+ * The `ux-designer` in `/review-stories` is what reads for meaning, and it stays the authority.
+ */
+export function completenessWarnings(story: Story): string[] {
+  if (story.meta.type !== "story") return []; // spikes and tech tasks carry checklists, not screens
+  if (!list(story.meta.labels).includes("ui")) return [];
+  const ac = section(sections(story.body), "acceptance criteria") ?? "";
+  if (!ac.trim()) return [];
+  const titles = scenarioTitlesIn(story.body);
+  const out: string[] = [];
+
+  // G7 – the empty case, but only where there is something that can *be* empty. A `ui` story is often a single
+  // action on a page another story owns (change a status, claim a defect) and has no empty case of its own.
+  const showsAList = /\b(listed|overview|dashboard)\b/i.test(ac);
+  if (showsAList && !titles.some((t) => /\b(no|nothing|none|empty)\b/i.test(t))) {
+    out.push("no scenario for the empty case – what does the screen show before anything exists? (UX guideline G7)");
+  }
+
+  // Judged per scenario, not per line: a permission rejection names the role in its Given and the refusal in
+  // its Then, so a line-by-line check misses exactly the case G11 is about.
+  const blocks = ac.split(/^(?=\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:)/m).filter((b) => b.trim());
+  const rejections = blocks.filter((b) => /\breject(ed|s)?\b/i.test(b));
+  // A rejection is about permission when the *role* is the point – not merely because a role is named, which
+  // every scenario does ("When a technician registers …"). Otherwise G8 would never fire.
+  const aboutPermission = (b: string) =>
+    /\b(cannot|can not|may not|is not allowed|tries to|do(es)? not reach)\b/i.test(b) ||
+    /^\s*Given\b.*\b(helpers?|technicians?|visitors?)\b.*\bis logged in\b/im.test(b);
+
+  // G8 – a rejected form keeps what was typed. Skipped when every rejection is a permission rejection:
+  // "a helper tries and is refused" has nothing typed to keep.
+  if (rejections.length && !rejections.every(aboutPermission)) {
+    if (!/\b(still (filled in|chosen|selected)|keeps what was typed|are still|is still)\b/i.test(ac)) {
+      out.push("a rejection, but nothing says what happens to what was typed (UX guideline G8)");
+    }
+  }
+
+  // G11 – someone who may not do a thing does not see the control, instead of meeting a wall.
+  if (rejections.some(aboutPermission) && !/\b(not offered|not shown|does not see|is the only|only \S.{0,40}? offered)\b/i.test(ac)) {
+    out.push("a permission rejection, but nothing says the control is not offered in the first place (UX guideline G11)");
+  }
+  return out;
+}
+
 export function validateStories(report: Report, only: string | null = null, lenientDeps = false): Map<string, Story> {
   const model = loadEventsModel();
   const idx = model ? indexModel(model) : null;
@@ -576,6 +641,9 @@ export function validateStories(report: Report, only: string | null = null, leni
       r.warn(where, "no domain events linked – traceability is missing");
     }
     checkBody(r, where, m, s.body);
+    // Completeness is checked while a story is being written; `ready` ones were approved under the older rules
+    // and are challenged in `/groom-backlog` instead (user, 2026-10-01).
+    if (status === "draft" || status === "review") for (const w of completenessWarnings(s)) r.warn(where, w);
   }
 
   // Cycles in depends_on
