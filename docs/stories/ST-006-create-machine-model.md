@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MachineModelCreated]
 depends_on: [ST-004, ST-073]
 labels: [mvp, collection]
-status: in-progress
+status: done
 ---
 
 ## Story
