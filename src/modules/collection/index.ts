@@ -6,4 +6,4 @@ export { machineModelsToChooseFrom } from "./machine-models";
 export { registerMachineCommand } from "./register-machine-command";
 export { machineStatuses } from "./register-machine";
 export type { MachineStatus, RegisterMachineError, RegisterMachineInput, StatusChange } from "./register-machine";
-export { machineOverview, machineStatusHistory, type MachineOverviewEntry } from "./machines";
+export { machineOverview, machineStatusCounts, machineStatusHistory, type MachineOverviewEntry } from "./machines";

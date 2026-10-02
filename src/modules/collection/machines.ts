@@ -1,7 +1,7 @@
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
-import type { Machine, MachineStatus, RegistrationFacts, StatusChange } from "./register-machine";
+import { machineStatuses, type Machine, type MachineStatus, type RegistrationFacts, type StatusChange } from "./register-machine";
 import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
 
 /**
@@ -158,6 +158,22 @@ export async function machineOverview(db: Database): Promise<MachineOverviewEntr
     .where(isNull(machine.retiredAt))
     .orderBy(asc(machine.museumNumber));
   return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+}
+
+/**
+ * RM-MachineOverview: how many active machines have which machine status – always over all active machines, so it
+ * says at any time how many are playable (vision goal 3), whatever the overview is searched or filtered for.
+ * Every machine status is there, a zero included: it can still be filtered for (user, 2026-10-02).
+ */
+export async function machineStatusCounts(db: Database): Promise<Record<MachineStatus, number>> {
+  const rows = await db
+    .select({ machineStatus: machine.machineStatus, count: sql<number>`count(*)::int` })
+    .from(machine)
+    .where(isNull(machine.retiredAt))
+    .groupBy(machine.machineStatus);
+  const counts = Object.fromEntries(machineStatuses.map((status) => [status, 0])) as Record<MachineStatus, number>;
+  for (const row of rows) counts[row.machineStatus] = row.count;
+  return counts;
 }
 
 /** A machine's status history, oldest first – the machine record (RM-MachineRecord, ST-009) shows it. */

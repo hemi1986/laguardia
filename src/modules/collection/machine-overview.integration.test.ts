@@ -5,7 +5,14 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { createMachineModelCommand, machineOverview, registerMachineCommand, type RegisterMachineInput } from ".";
+import {
+  createMachineModelCommand,
+  machineOverview,
+  machineStatusCounts,
+  registerMachineCommand,
+  type MachineStatus,
+  type RegisterMachineInput,
+} from ".";
 import { retireMachineForTest, withoutMachines } from "./machines.test-support";
 
 /**
@@ -100,5 +107,24 @@ describe("RM-MachineOverview", () => {
     await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, asEva());
 
     expect(await machineOverview(db)).toEqual([]);
+  });
+
+  it("ST-008: Number of machines per machine status", async () => {
+    const statuses: [MachineStatus, number][] = [
+      ["playable", 45],
+      ["limited", 6],
+      ["out-of-order", 3],
+      ["not-on-display", 5],
+    ];
+    for (const [machineStatus, count] of statuses) {
+      for (let i = 0; i < count; i++) await registered({ museumNumber: undefined, location: "Hall 1", machineStatus });
+    }
+
+    expect(await machineStatusCounts(db)).toEqual({
+      playable: 45,
+      limited: 6,
+      "out-of-order": 3,
+      "not-on-display": 5,
+    });
   });
 });
