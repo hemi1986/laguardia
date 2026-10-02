@@ -1,0 +1,87 @@
+import { randomUUID } from "node:crypto";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { changeMachineStatusForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { reportProblemCommand } from "@/modules/repair";
+import { executeCommand } from "@/platform/command";
+import { visitorMessages } from "@/platform/messages";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadVisitorMachinePage } from "./visitor-machine-page-data";
+import { VisitorMachinePage } from "./visitor-machine-page";
+
+/**
+ * The visitor machine page (RM-VisitorMachinePage, ST-010): its data, loaded fresh for every request, rendered by its
+ * view. In a database of its own, so "LG-042" can be arranged.
+ */
+const isolated = isolatedTestDatabase("visitor_machine_page");
+let db: NodePgDatabase;
+const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+let medievalMadness: string;
+
+beforeAll(async () => {
+  db = await isolated.reset();
+  await anExistingTeamMember(db, tom, "Tom Technician");
+  const created = await executeCommand(
+    createMachineModelCommand,
+    { title: "Medieval Madness", manufacturer: "Williams", year: "1997", machineCategory: "pinball" },
+    { actor: tom, db, newId: randomUUID },
+  );
+  if (!created.ok) throw new Error(created.error);
+  medievalMadness = created.result.machineModelId;
+});
+
+afterAll(() => isolated.close());
+
+beforeEach(() => withoutMachines(db));
+
+async function registered(museumNumber: string) {
+  const outcome = await executeCommand(
+    registerMachineCommand,
+    { machineModelId: medievalMadness, museumNumber, serialNumber: undefined, location: "Hall 2", machineStatus: "playable" },
+    { actor: tom, db, newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+  return outcome.result.machineId;
+}
+
+async function page(museumNumber: string, locale: "de" | "en" = "de"): Promise<string> {
+  const data = await loadVisitorMachinePage(db, museumNumber);
+  if (!data) throw new Error(`no visitor machine page for ${museumNumber}`);
+  return renderToStaticMarkup(createElement(VisitorMachinePage, { data, museumNumber, messages: visitorMessages(locale) }));
+}
+
+describe("the visitor machine page", () => {
+  it("ST-010: Changes are visible immediately", async () => {
+    const machineId = await registered("LG-042");
+    expect(await page("LG-042")).toContain("Status: Spielbereit");
+
+    const changed = await executeCommand(
+      changeMachineStatusForTest,
+      { machineId, version: 0, machineStatus: "out-of-order" },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!changed.ok) throw new Error("not changed");
+
+    expect(await page("LG-042")).toContain("Status: Außer Betrieb");
+  });
+
+  it("shows no problem report text, no team member name and no internal ID – its data loads none", async () => {
+    const machineId = await registered("LG-042");
+    await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Secret ball stuck text" },
+      { actor: { kind: "visitor" }, db, newId: randomUUID },
+    );
+
+    const html = await page("LG-042", "en");
+
+    expect(html).toContain("Williams · 1997"); // the title is the page heading (Page), outside the view
+    expect(html).not.toContain("Secret ball stuck text");
+    expect(html).not.toContain("Tom Technician");
+    expect(html).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  });
+});
