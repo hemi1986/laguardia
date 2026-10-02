@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachineRegistered]
 depends_on: [ST-009, ST-010, ST-060]
 labels: [mvp, collection, visitor, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
