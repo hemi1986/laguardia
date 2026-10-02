@@ -61,8 +61,12 @@ async function usernameTaken(db: Database, username: string): Promise<boolean> {
   return found !== undefined;
 }
 
+/** PostgreSQL's unique violation – Drizzle wraps the driver's error ("Failed query …"), so the code is in a cause. */
 function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+  for (let cause = error; typeof cause === "object" && cause !== null; cause = (cause as { cause?: unknown }).cause) {
+    if ("code" in cause && cause.code === "23505") return true;
+  }
+  return false;
 }
 
 /** Better Auth's own duplicate check – the e-mail it rejects is `<username>@users.invalid` (ADR 0006). */
