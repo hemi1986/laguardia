@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 7 of 57 domain stories done** · scenarios 65 of 396
+**Progress: 8 of 57 domain stories done** · scenarios 74 of 396
 
-**80 stories** · In Progress: 1 · Ready: 56 · In Review: 0 · Draft: 4 · Done: 19
+**80 stories** · In Progress: 0 · Ready: 56 · In Review: 0 · Draft: 4 · Done: 20
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-011](ST-011-qr-sticker.md) | QR sticker leads visitors and team members to the machine | story | Collection | must | M | medium | ST-009, ST-010, ST-060 |
 
 ## Ready
 
@@ -103,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-009](ST-009-machine-record.md) | Machine record with machine status history | story | Collection | must | S | low | ST-008 |
 | [ST-010](ST-010-visitor-machine-page.md) | Visitor machine page in German and English | story | Repair | must | M | medium | ST-007 |
 | [ST-060](ST-060-custom-domain-and-qr-address.md) | Custom domain and stable QR address scheme | tech-task | Collection | must | XS | low | ST-001 |
+| [ST-011](ST-011-qr-sticker.md) | QR sticker leads visitors and team members to the machine | story | Collection | must | M | medium | ST-009, ST-010, ST-060 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | must | S | medium | ST-004, ST-073 |
