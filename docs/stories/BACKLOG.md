@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 6 of 57 domain stories done** · scenarios 57 of 396
+**Progress: 7 of 57 domain stories done** · scenarios 65 of 396
 
-**80 stories** · In Progress: 1 · Ready: 58 · In Review: 0 · Draft: 4 · Done: 17
+**80 stories** · In Progress: 0 · Ready: 58 · In Review: 0 · Draft: 4 · Done: 18
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-010](ST-010-visitor-machine-page.md) | Visitor machine page in German and English | story | Repair | must | M | medium | ST-007 |
 
 ## Ready
 
@@ -103,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-007](ST-007-register-machine.md) | Register a machine with its museum number | story | Collection | must | L | medium | ST-006, ST-071, ST-073, ST-069 |
 | [ST-008](ST-008-machine-overview.md) | Machine overview with search and machine status filter | story | Collection | must | S | low | ST-007 |
 | [ST-009](ST-009-machine-record.md) | Machine record with machine status history | story | Collection | must | S | low | ST-008 |
+| [ST-010](ST-010-visitor-machine-page.md) | Visitor machine page in German and English | story | Repair | must | M | medium | ST-007 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | must | S | medium | ST-004, ST-073 |

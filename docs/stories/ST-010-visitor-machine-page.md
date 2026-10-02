@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachineRegistered, EVT-MachineModelCreated, EVT-MachineStatusChanged, EVT-MachineModelCorrected]
 depends_on: [ST-007]
 labels: [mvp, visitor, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
