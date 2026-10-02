@@ -123,3 +123,13 @@
     @apply bg-background text-foreground;
   }
 }
+/* QR sticker pages (ST-011): A4 without browser margins, so the label positions are exact. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  .sticker-page {
+    break-after: page;
+  }
+}
