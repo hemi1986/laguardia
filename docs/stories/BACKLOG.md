@@ -80,7 +80,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-080](ST-080-pre-runner-forms-onto-house-pattern.md) | Move the four pre-runner forms onto the house pattern | tech-task | Team | must | S | low | ST-007 |
 | [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Find a team member and act on one account at a time | story | Team | must | – | – | – |
 | [ST-082](ST-082-deactivation-asks-once-and-can-be-undone.md) | Deactivating a team member asks once, and can be undone | story | Team | must | – | – | ST-081 (draft) |
-| [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | must | S | low | – |
+| [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 
 ## Done
 
