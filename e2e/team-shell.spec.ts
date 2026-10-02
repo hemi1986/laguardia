@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 /**
  * The team shell (ST-076): one navigation for every team page, the landmarks the other tests rely on, and the
@@ -23,23 +23,31 @@ test.beforeEach(async () => {
 test("every team page carries the same navigation, once per destination, with logout", async ({ page }) => {
   await logIn(page);
 
-  for (const path of ["/team", "/team/machine-models", "/team/members", "/team/password"]) {
+  for (const path of ["/team", "/team/machines", "/team/machine-models", "/team/members", "/team/password"]) {
     await page.goto(path);
-    await expect(page.getByRole("navigation")).toHaveCount(1);
+    await expect(page.getByRole("navigation", { name: "Navigation" })).toHaveCount(1);
     await expect(page.getByRole("main")).toHaveCount(1);
     // Playwright's strict mode fails these if a page offered a destination twice.
+    await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeVisible();
+    await openMore(page);
     await expect(page.getByRole("link", { name: "Modelle" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Passwort ändern" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Abmelden" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   }
 
-  // The navigation is walkable by keyboard, in the order it is written (ST-006 added "Modelle" after "Start").
-  await page.getByRole("link", { name: "Start" }).focus();
+  // The navigation is walkable by keyboard, in the order decided in ST-008: the daily destinations, then "Mehr".
+  await page.goto("/team");
+  await page.getByRole("link", { name: "Übersicht" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("navigation").locator("summary")).toBeFocused();
+  await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Modelle" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeFocused();
 });
 
 test("login and the team start page stay within 360 px, with the rejection inside main", async ({ page }) => {

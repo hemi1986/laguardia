@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 test("ST-004: Team pages require login", async ({ page }) => {
   await page.goto("/team");
@@ -26,6 +26,7 @@ test("a team member logs in and out on a 360 px phone", async ({ page }) => {
   await expect(page.getByText(/Angemeldet als/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 
+  await openMore(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/team");

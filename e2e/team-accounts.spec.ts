@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 /**
  * Managing accounts on a phone (ST-005). Needs a technician account: locally the one from
@@ -20,6 +20,7 @@ test.beforeEach(async ({ page }) => {
 test("a technician creates, changes and deactivates an account on a 360 px phone", async ({ page }) => {
   const newUsername = `e2e_${Date.now().toString(36)}`;
 
+  await openMore(page);
   await page.getByRole("link", { name: "Teammitglieder" }).click();
   await expect(page).toHaveURL(/\/team\/members$/);
 
@@ -58,12 +59,16 @@ test("a helper cannot reach the technician pages", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
 
   await page.goto("/team");
+  await openMore(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
   await page.getByLabel("Benutzername").fill(helper);
   await page.getByLabel("Passwort").fill("helper-secret-10");
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/team$/);
 
+  // Opened, so the missing links are really missing – not just hidden in the closed "Mehr" (ST-008).
+  await openMore(page);
+  await expect(page.getByRole("link", { name: "Passwort ändern" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Teammitglieder" })).toHaveCount(0);
   await page.goto("/team/members");
   await expect(page).toHaveURL(/\/team$/);
@@ -75,6 +80,7 @@ test("a helper cannot reach the technician pages", async ({ page }) => {
 });
 
 test("a team member changes their own password and a wrong current password is rejected", async ({ page }) => {
+  await openMore(page);
   await page.getByRole("link", { name: "Passwort ändern" }).click();
   await expect(page).toHaveURL(/\/team\/password$/);
 
