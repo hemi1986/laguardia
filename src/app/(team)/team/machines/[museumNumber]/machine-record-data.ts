@@ -1,4 +1,4 @@
-import { machineRecord, type MachineRecord, type StatusChange } from "@/modules/collection";
+import { machineRecord, type MachineRecord, type Retirement, type StatusChange } from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 
@@ -8,7 +8,7 @@ export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: s
 /** The machine record with names – what the page shows (ST-009). */
 export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retirement"> & {
   statusHistory: NamedStatusChange[];
-  retirement?: { reason: string; retiredBy: string | undefined; retiredAt: Date };
+  retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string | undefined };
 };
 
 /**

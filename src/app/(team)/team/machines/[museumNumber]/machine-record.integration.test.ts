@@ -102,9 +102,28 @@ describe("the machine record", () => {
 
     const html = await page("LG-013");
 
-    expect(html).toContain("Ausgemustert am 01.03.2026, 12:00 – Sold");
+    expect(html).toContain("Ausgemustert am 01.03.2026, 12:00 von Tom – Sold");
     expect(html).toContain("MM-12345");
     expect(html).toContain("Hall 2, row 3");
     expect(html).toContain("Erfasst als Spielbereit");
+  });
+
+  it("shows the machine model's details next to the machine's own", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+
+    const html = await page("LG-042");
+
+    for (const [term, value] of [
+      ["Seriennummer", "MM-12345"],
+      ["Modell", "Medieval Madness"],
+      ["Hersteller", "Williams"],
+      ["Baujahr", "1997"],
+      ["Kategorie", "Flipper"],
+      ["Technik", "DMD"],
+      ["Standort", "Hall 2, row 3"],
+      ["Status", "Spielbereit"],
+    ]) {
+      expect(html).toContain(`<dt class="text-muted-foreground">${term}</dt><dd>${value}</dd>`);
+    }
   });
 });

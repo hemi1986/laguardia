@@ -21,8 +21,8 @@ test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
 
-test("ST-009: Team member opens a machine record", async ({ page }) => {
-  await logIn(page);
+/** A machine model and a machine registered through the pages – returns the title and the assigned museum number. */
+async function aRegisteredMachine(page: Page, location = "Hall 2, row 3") {
   const title = `Medieval Madness ${Date.now().toString(36)}`;
   await page.goto("/team/machine-models");
   await page.getByLabel("Titel").fill(title);
@@ -35,10 +35,16 @@ test("ST-009: Team member opens a machine record", async ({ page }) => {
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams, 1997)` });
   await page.getByLabel("Seriennummer").fill("MM-12345");
-  await page.getByLabel("Standort").fill("Hall 2, row 3");
+  await page.getByLabel("Standort").fill(location);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const confirmation = page.getByRole("main").getByRole("status");
   const museumNumber = (await confirmation.textContent())!.match(/LG-\d{3}/)![0];
+  return { title, museumNumber };
+}
+
+test("ST-009: Team member opens a machine record", async ({ page }) => {
+  await logIn(page);
+  const { title, museumNumber } = await aRegisteredMachine(page);
 
   await page.getByLabel("Suche").fill(title);
   await page.getByRole("button", { name: "Suchen" }).click();
@@ -60,5 +66,15 @@ test("ST-009: Team member opens a machine record", async ({ page }) => {
     await expect(details.locator("div").filter({ has: page.locator("dt", { hasText: term }) })).toContainText(value);
   }
   await expect(page.getByRole("heading", { name: "Status-Historie" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});
+
+test("a long word without spaces in the location keeps the machine record within 360 px", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber } = await aRegisteredMachine(page, `Werkstatt${"x".repeat(60)}`);
+
+  await page.goto(`/team/machines/${museumNumber}`);
+
+  await expect(page.getByRole("main")).toContainText("Werkstatt");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });

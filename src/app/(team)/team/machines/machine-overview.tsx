@@ -159,7 +159,7 @@ function MachineEntry({ machine }: { machine: MachineOverviewEntry }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          <Link href={`/team/machines/${machine.museumNumber}`} className="underline-offset-4 hover:underline">
+          <Link href={`/team/machines/${machine.museumNumber}`} className="underline underline-offset-4">
             {machine.museumNumber} · {machine.machineModelTitle}
           </Link>
         </CardTitle>

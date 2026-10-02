@@ -14,6 +14,7 @@ export const teamMessages = {
     Technology: "Technik",
     "Museum number": "Museumsnummer",
     "Serial number": "Seriennummer",
+    "Status history": "Status-Historie",
     Location: "Standort",
     File: "Datei",
     "Problem report": "Meldung",
@@ -88,10 +89,9 @@ export const teamMessages = {
     noSerialNumber: "keine",
     year: "Baujahr",
     manufacturer: "Hersteller",
-    statusHistory: "Status-Historie",
     /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
     registeredAs: (status: string) => `Erfasst als ${status}`,
-    retired: (date: string, reason: string) => `Ausgemustert am ${date} – ${reason}`,
+    retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
     unknownTeamMember: "unbekannt",
   },
   accounts: {

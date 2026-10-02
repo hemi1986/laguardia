@@ -91,6 +91,11 @@ The technician-set state of a machine: *Playable*, *Limited* (playable with a no
 _Avoid_: State, availability
 _UI (de)_: Status (Spielbereit / Eingeschränkt / Außer Betrieb / Nicht ausgestellt)
 
+**Status history**:
+Every machine status a machine has had, with previous status, new status, reason, who changed it and when; its first entry is the machine status given at registration.
+_Avoid_: Status log, audit trail
+_UI (de)_: Status-Historie
+
 **Registered machine** / **Retired machine**:
 A machine becomes part of La Guardia when a technician registers it; it is retired when it leaves the museum, keeping its history but leaving the active lists.
 _Avoid_: Deleted, archived, sold

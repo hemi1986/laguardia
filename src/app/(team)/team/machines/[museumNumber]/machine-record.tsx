@@ -7,9 +7,10 @@ import type { MachineRecordData, NamedStatusChange } from "./machine-record-data
 const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
 /**
- * The machine record (RM-MachineRecord, ST-009) – the base of the page later stories add their sections to, in the
- * order the owner story fixes (G18): details, then the machine status history newest first. Times in Europe/Berlin.
- * A retired machine keeps its record and says so in words (G6a).
+ * The machine record (RM-MachineRecord, ST-009). ST-009 owns the page (G18) and fixed its sections, top to bottom:
+ * retirement note, "Problem melden" (ST-015), details with their actions (ST-012, ST-034, ST-035, ST-011), open
+ * defects (ST-021), due maintenance (ST-047), status history, repair history (ST-033), files (ST-037), retiring
+ * (ST-039) – see the story. Times in Europe/Berlin. A retired machine keeps its record and says so in words (G6a).
  */
 export function MachineRecordView({ record, museumNumber }: { record: MachineRecordData | undefined; museumNumber: string }) {
   if (!record) {
@@ -38,10 +39,14 @@ export function MachineRecordView({ record, museumNumber }: { record: MachineRec
     <>
       {record.retirement && (
         <p className="font-medium">
-          {texts.retired(formatDateTime(record.retirement.retiredAt), record.retirement.reason)}
+          {texts.retired(
+            formatDateTime(record.retirement.retiredAt),
+            record.retirement.retiredBy ?? texts.unknownTeamMember,
+            record.retirement.reason,
+          )}
         </p>
       )}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (
           <div key={term} className="contents">
             <dt className="text-muted-foreground">{term}</dt>
@@ -51,10 +56,10 @@ export function MachineRecordView({ record, museumNumber }: { record: MachineRec
       </dl>
       <Card>
         <CardHeader>
-          <CardTitle>{texts.statusHistory}</CardTitle>
+          <CardTitle>{terms["Status history"]}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ol className="flex flex-col gap-3">
+          <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
             {record.statusHistory.map((change, index) => (
               <li key={index} className="flex flex-col gap-0.5 text-sm">
                 <StatusChangeEntry change={change} />
