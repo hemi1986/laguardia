@@ -13,15 +13,16 @@ status: ready
 ---
 
 ## Story
-As a visitor, I want to describe a problem with the machine I am standing at on its visitor machine page, without an account or contact data, so that the team learns about it and can fix it.
+As a visitor, I want to describe a problem with the machine I am standing at in a report form I reach from its visitor machine page, without an account or contact data, so that the team learns about it and can fix it.
 
 ## Context
 Command `CMD-ReportProblem` (actor: visitor). Rules:
-- Visitors can report only for machines that are not *Not on display* and not retired.
+- Visitors can report only for machines that are not *Not on display* and not retired. The visitor machine page of a machine *Not on display* offers no "Report a problem" button (ST-010); if its report form page is opened directly anyway, the command rejects the problem report.
+- The report form is a page of its own with nothing but the form, at `/m/<museum number>/melden` (e.g. `/m/LG-042/melden`), reached from the button "Problem melden" / "Report a problem" on the visitor machine page (ST-010 builds the button and its link, this story builds the form page; user, 2026-10-02, during /implement ST-010 – UX guideline G2a: creating a thing happens on its own page, and the visitor machine page stays minimal). After a successful problem report the visitor lands back on the visitor machine page of the machine and sees the confirmation there (G3).
 - A description is required and has at most 2000 characters; a photo is optional (ST-016).
 - No account, no contact data (`docs/product/vision.md`). The reporter is recorded as *visitor* without further data.
 - The visitor machine page shows only the number of untriaged problem reports, never their text (HS-1). The number counts all untriaged problem reports of the machine, not only today's, and the wording contains no "today". With no untriaged problem report, no hint is shown; with one, the wording is singular.
-- The report form is in German and English like the visitor machine page (ST-010) and is protected against cross-site request forgery (ST-003). Report texts are always shown to team members as plain text (output encoding), never interpreted.
+- The report form page is in the visitor's language like the visitor machine page, with the same language choice (browser language or the remembered manual switch, ST-010), and is protected against cross-site request forgery (ST-003). Report texts are always shown to team members as plain text (output encoding), never interpreted.
 - No rate limits in the MVP (decision D3): spam is considered unlikely and is handled by dismissing it as spam (ST-020). Rate limits follow only if spam actually occurs (ST-014).
 
 ## Acceptance Criteria
@@ -30,7 +31,7 @@ Scenario: Visitor reports a problem
   Given the machine "LG-042" is Playable
   When a visitor reports a problem for "LG-042" with the description "Ball stuck behind the left ramp"
   Then a problem report for "LG-042" exists with that description, the reporter visitor and the time it was reported
-  And the visitor sees a confirmation in the visitor's language
+  And the visitor is back on the visitor machine page of "LG-042" and sees a confirmation there in the visitor's language
 
 Scenario: Visitor machine page shows the number of untriaged problem reports
   Given two untriaged problem reports exist for "LG-042", one reported today and one yesterday
