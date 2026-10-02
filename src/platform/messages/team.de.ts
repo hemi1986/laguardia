@@ -14,6 +14,7 @@ export const teamMessages = {
     Technology: "Technik",
     "Museum number": "Museumsnummer",
     "Serial number": "Seriennummer",
+    "Status history": "Status-Historie",
     Location: "Standort",
     File: "Datei",
     "Problem report": "Meldung",
@@ -82,6 +83,16 @@ export const teamMessages = {
     noMatch: (search: string) => `Kein Gerät passt zu „${search}“.`,
     clearSearch: "Suche zurücksetzen",
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
+  },
+  machineRecord: {
+    unknown: (museumNumber: string) => `Kein Gerät mit der Museumsnummer ${museumNumber}.`,
+    noSerialNumber: "keine",
+    year: "Baujahr",
+    manufacturer: "Hersteller",
+    /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
+    registeredAs: (status: string) => `Erfasst als ${status}`,
+    retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
+    unknownTeamMember: "unbekannt",
   },
   accounts: {
     title: "Teammitglieder",

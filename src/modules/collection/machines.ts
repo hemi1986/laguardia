@@ -1,7 +1,14 @@
 import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
-import { machineStatuses, type Machine, type MachineStatus, type RegistrationFacts, type StatusChange } from "./register-machine";
+import {
+  machineStatuses,
+  type Machine,
+  type MachineStatus,
+  type RegistrationFacts,
+  type Retirement,
+  type StatusChange,
+} from "./register-machine";
 import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
 
 /**
@@ -21,10 +28,7 @@ const machineRows = aggregateStore({
     machineStatus: row.machineStatus,
     registeredAt: row.registeredAt,
     statusHistory: [], // loaded separately – see `machines.load`
-    retirement:
-      row.retiredAt && row.retiredBy && row.retirementReason
-        ? { reason: row.retirementReason, retiredBy: row.retiredBy, retiredAt: row.retiredAt }
-        : undefined,
+    retirement: retirementOf(row),
   }),
   toRow: (state: Machine) => ({
     id: state.id,
@@ -194,7 +198,64 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
   return counts;
 }
 
-/** A machine's status history, oldest first – the machine record (RM-MachineRecord, ST-009) shows it. */
+/** The machine record (RM-MachineRecord) as ST-009 builds it – later stories add its further sections (G18). */
+export type MachineRecord = {
+  id: string;
+  museumNumber: string;
+  serialNumber?: string;
+  machineModel: {
+    title: string;
+    manufacturer: string;
+    year?: number;
+    machineCategory: MachineCategory;
+    technology?: Technology;
+  };
+  location: string;
+  machineStatus: MachineStatus;
+  /** Newest first. "… by" are TeamMemberIds – the page names them through the Team module (ST-009). */
+  statusHistory: StatusChange[];
+  retirement?: Retirement;
+};
+
+/** RM-MachineRecord: everything about one machine, retired ones included – by its museum number (ST-009). */
+export async function machineRecord(db: Database, museumNumber: string): Promise<MachineRecord | undefined> {
+  const [row] = await db
+    .select({ machine, model: machineModel })
+    .from(machine)
+    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
+    .where(eq(machine.museumNumber, museumNumber));
+  if (!row) return undefined;
+  const { machine: m, model } = row;
+  return {
+    id: m.id,
+    museumNumber: m.museumNumber,
+    serialNumber: m.serialNumber ?? undefined,
+    machineModel: {
+      title: model.title,
+      manufacturer: model.manufacturer,
+      year: model.year ?? undefined,
+      machineCategory: model.machineCategory,
+      technology: model.technology ?? undefined,
+    },
+    location: m.location,
+    machineStatus: m.machineStatus,
+    statusHistory: (await statusHistoryOf(db, m.id)).reverse(),
+    retirement: retirementOf(m),
+  };
+}
+
+/** A machine row's retirement – all three columns are set together, or none. */
+function retirementOf(row: {
+  retirementReason: string | null;
+  retiredBy: string | null;
+  retiredAt: Date | null;
+}): Retirement | undefined {
+  return row.retiredAt && row.retiredBy && row.retirementReason
+    ? { reason: row.retirementReason, retiredBy: row.retiredBy, retiredAt: row.retiredAt }
+    : undefined;
+}
+
+/** A machine's status history, oldest first – for tests that follow a machine's changes (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
 }

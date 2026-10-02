@@ -23,7 +23,7 @@ test.beforeEach(() => {
 
 test("a technician creates a machine model on a 360 px phone", async ({ page }) => {
   await logIn(page);
-  const title = `Medieval Madness ${Date.now().toString(36)}`;
+  const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
   await openMore(page);
   await page.getByRole("link", { name: "Modelle" }).click();
@@ -37,7 +37,7 @@ test("a technician creates a machine model on a 360 px phone", async ({ page }) 
   await page.getByRole("button", { name: "Modell anlegen" }).click();
 
   const model = page.getByRole("article").filter({ hasText: title });
-  await expect(model.getByRole("heading", { name: title })).toBeVisible();
+  await expect(model.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await expect(model).toContainText("Williams · 1997 · Flipper · DMD");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });

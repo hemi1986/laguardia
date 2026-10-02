@@ -58,7 +58,7 @@ export const correctMuseumNumberForTest = aggregateCommand({
   result: () => ({}),
 });
 
-/** A machine as stored – for details no read model shows yet (the serial number: machine record, ST-009). */
+/** A machine as stored – for checks at the command seam that no read model of that test's database shows. */
 export async function storedMachine(db: Database, machineId: string) {
   return (await machines.load(db, machineId))?.state;
 }
@@ -68,7 +68,7 @@ export const changeMachineStatusForTest = aggregateCommand({
   id: "CMD-TestChangeMachineStatus",
   allowedActors: ["technician"],
   store: machines,
-  target: (input: { machineId: string; version: number; machineStatus: MachineStatus }) => ({
+  target: (input: { machineId: string; version: number; machineStatus: MachineStatus; reason?: string }) => ({
     id: input.machineId,
     version: input.version,
   }),
@@ -82,7 +82,7 @@ export const changeMachineStatusForTest = aggregateCommand({
         {
           previousStatus: machine.machineStatus,
           newStatus: input.machineStatus,
-          reason: "Coil burnt",
+          reason: input.reason ?? "Coil burnt",
           changedBy: actor.teamMemberId,
           changedAt: clock.now(),
         },
