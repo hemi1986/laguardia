@@ -15,8 +15,10 @@ export type {
 export {
   machineOverview,
   machineRecord,
+  visitorMachine,
   machineStatusCounts,
   type MachineOverviewEntry,
   type MachineRecord,
+  type VisitorMachine,
   type MachineOverviewQuery,
 } from "./machines";
