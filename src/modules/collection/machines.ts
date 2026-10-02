@@ -255,7 +255,7 @@ function retirementOf(row: {
     : undefined;
 }
 
-/** A machine's status history, oldest first – for tests that follow a machine's changes (the record shows it newest first). */
+/** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
 }
