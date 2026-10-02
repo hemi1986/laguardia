@@ -8,6 +8,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   createMachineModelCommand,
   machineOverview,
+  machineRecord,
   machineStatusCounts,
   registerMachineCommand,
   type MachineStatus,
@@ -181,6 +182,38 @@ describe("RM-MachineOverview", () => {
     expect(museumNumbers(await machineOverview(db))).toEqual(["LG-012"]);
     expect(museumNumbers(await machineOverview(db, { search: "013" }))).toEqual([]);
     expect((await machineStatusCounts(db)).playable).toBe(1);
+  });
+});
+
+describe("RM-MachineRecord", () => {
+  it("has every detail of the machine and its machine model, by museum number", async () => {
+    const machineId = await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
+
+    expect(await machineRecord(db, "LG-042")).toEqual({
+      id: machineId,
+      museumNumber: "LG-042",
+      serialNumber: undefined,
+      machineModel: {
+        title: "Medieval Madness",
+        manufacturer: "Williams",
+        year: undefined,
+        machineCategory: "pinball",
+        technology: "dmd",
+      },
+      location: "Hall 2, row 3",
+      machineStatus: "playable",
+      statusHistory: [
+        {
+          previousStatus: undefined,
+          newStatus: "playable",
+          reason: "registration",
+          changedBy: eva.teamMemberId,
+          changedAt: new Date("2026-10-01T10:00:00Z"),
+        },
+      ],
+      retirement: undefined,
+    });
+    expect(await machineRecord(db, "LG-043")).toBeUndefined();
   });
 });
 

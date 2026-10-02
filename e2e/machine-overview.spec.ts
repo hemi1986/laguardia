@@ -19,13 +19,13 @@ async function logIn(page: Page) {
 
 /** A registered machine, so the overview is a list to search in and not its empty state. */
 async function aRegisteredMachine(page: Page) {
-  const title = `Medieval Madness ${Date.now().toString(36)}`;
+  const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   await page.goto("/team/machine-models");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");
   await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
   await page.getByLabel("Standort").fill("Hall 1, row 1");

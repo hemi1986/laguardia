@@ -25,6 +25,9 @@ export type StatusChange = {
   changedAt: Date;
 };
 
+/** The Retirement value object of AGG-Machine (data model): why, by whom and when the machine was retired. */
+export type Retirement = { reason: string; retiredBy: TeamMemberId; retiredAt: Date };
+
 /** AGG-Machine – current state (docs/architecture/data-model.md). */
 export type Machine = {
   id: string;
@@ -35,7 +38,7 @@ export type Machine = {
   machineStatus: MachineStatus;
   registeredAt: Date;
   statusHistory: StatusChange[];
-  retirement?: { reason: string; retiredBy: TeamMemberId; retiredAt: Date };
+  retirement?: Retirement;
 };
 
 export type MachineRegistered = {

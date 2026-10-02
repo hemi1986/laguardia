@@ -146,7 +146,7 @@ function NothingFound({ search, machineStatus }: MachineOverviewQuery) {
   return <p>{texts.noneWithStatus(texts.statuses[machineStatus])}</p>;
 }
 
-/** What tells a machine apart from its neighbours (G5) – everything else is on its machine record (ST-009). */
+/** What tells a machine apart from its neighbours (G5); its title leads to its machine record (ST-009). */
 function MachineEntry({ machine }: { machine: MachineOverviewEntry }) {
   const details = [
     machineModels.categories[machine.machineCategory],
@@ -159,7 +159,9 @@ function MachineEntry({ machine }: { machine: MachineOverviewEntry }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          {machine.museumNumber} · {machine.machineModelTitle}
+          <Link href={`/team/machines/${machine.museumNumber}`} className="underline underline-offset-4">
+            {machine.museumNumber} · {machine.machineModelTitle}
+          </Link>
         </CardTitle>
         <CardDescription>{details.join(" · ")}</CardDescription>
       </CardHeader>

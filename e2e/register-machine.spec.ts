@@ -32,7 +32,7 @@ async function aMachineModel(page: Page): Promise<string> {
   await page.getByLabel("Baujahr").fill("1997");
   await page.getByLabel("Kategorie").selectOption("pinball");
   await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   return title;
 }
 

@@ -28,7 +28,15 @@ const eslintConfig = defineConfig([
           policies: [
             {
               // Another module's internals: any file of a module but its index.ts (imports inside a module are not checked).
+              from: { element: { fileInternalPath: "!**/*.test.ts" } },
               disallow: { to: { element: { type: "module", fileInternalPath: "!index.ts" } } },
+              message: "Import another module only through its public interface (index.ts) – ADR 0002",
+            },
+            {
+              // A test may also use another module's test support – its stand-ins for commands that don't exist yet
+              // (user, 2026-10-02, ST-009). Nothing else of its internals; production code never (ST-067).
+              from: { element: { fileInternalPath: "**/*.test.ts" } },
+              disallow: { to: { element: { type: "module", fileInternalPath: "!{index,*.test-support}.ts" } } },
               message: "Import another module only through its public interface (index.ts) – ADR 0002",
             },
             {

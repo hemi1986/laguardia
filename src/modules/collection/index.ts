@@ -5,11 +5,19 @@ export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology
 export { machineModelsToChooseFrom } from "./machine-models";
 export { registerMachineCommand } from "./register-machine-command";
 export { machineStatuses } from "./register-machine";
-export type { MachineStatus, RegisterMachineError, RegisterMachineInput, StatusChange } from "./register-machine";
+export type {
+  MachineStatus,
+  RegisterMachineError,
+  RegisterMachineInput,
+  Retirement,
+  StatusChange,
+} from "./register-machine";
 export {
   machineOverview,
+  machineRecord,
   machineStatusCounts,
   machineStatusHistory,
   type MachineOverviewEntry,
+  type MachineRecord,
   type MachineOverviewQuery,
 } from "./machines";

@@ -13,3 +13,4 @@ export {
 export { currentPerson, DeactivatedAccount, loggedInTeamMember, logIn, logOut, type LoginOutcome } from "./login";
 export { setUpFirstTechnician, type FirstTechnicianOutcome } from "./first-technician";
 export { renewedSessionCookie } from "./session-cookie";
+export { teamMemberNames } from "./names";
