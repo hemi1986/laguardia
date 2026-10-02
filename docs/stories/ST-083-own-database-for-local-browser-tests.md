@@ -35,25 +35,25 @@ Runs against a deployed preview (`BASE_URL` set, CI workflow `.github/workflows/
 Related: ST-081 (finding a team member – a search on the members page) is a product need of its own and stays valid regardless of this task; ST-083 only removes the test-side cause of the timeouts.
 
 ## Acceptance Criteria
-- [ ] A full local browser-test run creates no team member account, machine model or machine in the development database: the row counts of these tables in `laguardia` are the same before and after `npm run verify -- --e2e` (checked once by hand and noted in the pull request).
-- [ ] An aborted or failed local run also leaves the development database untouched: the row counts in `laguardia` are the same before and after a run stopped part-way (checked once by hand and noted in the pull request).
-- [ ] The local browser tests run against a dev server Playwright starts itself on port 3100 with `distDir` `.next-e2e`, connected to `laguardia_e2e_test`.
-- [ ] With the developer's dev server running on port 3000 during a local run, there is no "Another next dev server is already running" lock error, and that server is neither used by the tests nor stopped.
-- [ ] With port 3100 already taken, the run fails with a clear message naming the port instead of reusing the server on it (`reuseExistingServer` off for the e2e server).
-- [ ] With PostgreSQL not running, the run stops with a message telling the developer to run `npm run db:up` instead of hanging.
-- [ ] When `laguardia_e2e_test` does not exist, the run creates it and proceeds.
-- [ ] Reset, migrate and seeding happen before the e2e server serves its first request; after the reset, before any test, the database holds exactly one team member account, the e2e technician.
-- [ ] Two back-to-back full local runs start from the same state: the second passes with the same results as the first and its tables contain only the data of that run.
-- [ ] The e2e server's `DATABASE_URL` and `BETTER_AUTH_URL` are set explicitly for it – the e2e database URL derived like `TEST_DATABASE_URL`, never from `DATABASE_URL`; login works on port 3100, including the CSRF test of `e2e/security.spec.ts`.
-- [ ] The e2e technician is created through the Team module's own setup (the non-interactive path of the first-technician setup, no copied Team logic, no hand-written SQL); with `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` set, the browser tests that need a technician account run and pass locally.
-- [ ] With `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` unset, no account is seeded and the account-dependent specs skip as they do today.
-- [ ] A password the Team module rejects (under 10 characters) fails the run with the Team module's message.
-- [ ] The reset guard is covered by a unit test: `laguardia`, `laguardia_e2e` and a production-looking database name are refused, each with the database name in the error message.
-- [ ] On a fresh clone, with `.env.development.local` filled in from `.env.example`, `npm run db:up` is the only preparation the local browser tests need – no `db:migrate:dev`, no `setup:first-technician` and no manual account.
-- [ ] `npm run verify -- --e2e` stays the one command for a local run including browser tests; `npx playwright test` alone behaves the same.
-- [ ] With `BASE_URL` set (runs against a deployed preview, `.github/workflows/e2e-preview.yml`) no reset and no local server start happen; the same tests are skipped as before.
-- [ ] `npm run build` and `npm run typecheck` stay green with the `distDir` change, and a plain build still writes to `.next`.
-- [ ] `.env.example` lists the variables a fresh clone needs for the local browser tests (`BETTER_AUTH_SECRET`, `E2E_TEAM_USERNAME`, `E2E_TEAM_PASSWORD`); the engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`, Tests section and the seam catalog's browser-test row), `README.md` and `.env.example` say which database (`laguardia_e2e_test`), port (3100) and `distDir` (`.next-e2e`) the local browser tests use, that the database is reset on every run and that the development database is never touched by tests. The conventions edit is confirmed by the user in the pull request.
+- [x] A full local browser-test run creates no team member account, machine model or machine in the development database: the row counts of these tables in `laguardia` are the same before and after `npm run verify -- --e2e` (checked once by hand and noted in the pull request).
+- [x] An aborted or failed local run also leaves the development database untouched: the row counts in `laguardia` are the same before and after a run stopped part-way (checked once by hand and noted in the pull request).
+- [x] The local browser tests run against a dev server Playwright starts itself on port 3100 with `distDir` `.next-e2e`, connected to `laguardia_e2e_test`.
+- [x] With the developer's dev server running on port 3000 during a local run, there is no "Another next dev server is already running" lock error, and that server is neither used by the tests nor stopped.
+- [x] With port 3100 already taken, the run fails with a clear message naming the port instead of reusing the server on it (`reuseExistingServer` off for the e2e server).
+- [x] With PostgreSQL not running, the run stops with a message telling the developer to run `npm run db:up` instead of hanging.
+- [x] When `laguardia_e2e_test` does not exist, the run creates it and proceeds.
+- [x] Reset, migrate and seeding happen before the e2e server serves its first request; after the reset, before any test, the database holds exactly one team member account, the e2e technician.
+- [x] Two back-to-back full local runs start from the same state: the second passes with the same results as the first and its tables contain only the data of that run.
+- [x] The e2e server's `DATABASE_URL` and `BETTER_AUTH_URL` are set explicitly for it – the e2e database URL derived like `TEST_DATABASE_URL`, never from `DATABASE_URL`; login works on port 3100, including the CSRF test of `e2e/security.spec.ts`.
+- [x] The e2e technician is created through the Team module's own setup (the non-interactive path of the first-technician setup, no copied Team logic, no hand-written SQL); with `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` set, the browser tests that need a technician account run and pass locally.
+- [x] With `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` unset, no account is seeded and the account-dependent specs skip as they do today.
+- [x] A password the Team module rejects (under 10 characters) fails the run with the Team module's message.
+- [x] The reset guard is covered by a unit test: `laguardia`, `laguardia_e2e` and a production-looking database name are refused, each with the database name in the error message.
+- [x] On a fresh clone, with `.env.development.local` filled in from `.env.example`, `npm run db:up` is the only preparation the local browser tests need – no `db:migrate:dev`, no `setup:first-technician` and no manual account.
+- [x] `npm run verify -- --e2e` stays the one command for a local run including browser tests; `npx playwright test` alone behaves the same.
+- [x] With `BASE_URL` set (runs against a deployed preview, `.github/workflows/e2e-preview.yml`) no reset and no local server start happen; the same tests are skipped as before.
+- [x] `npm run build` and `npm run typecheck` stay green with the `distDir` change, and a plain build still writes to `.next`.
+- [x] `.env.example` lists the variables a fresh clone needs for the local browser tests (`BETTER_AUTH_SECRET`, `E2E_TEAM_USERNAME`, `E2E_TEAM_PASSWORD`); the engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`, Tests section and the seam catalog's browser-test row), `README.md` and `.env.example` say which database (`laguardia_e2e_test`), port (3100) and `distDir` (`.next-e2e`) the local browser tests use, that the database is reset on every run and that the development database is never touched by tests. The conventions edit is confirmed by the user in the pull request.
 
 ## Out of Scope
 - Seeding the preview database for browser tests against a deployed preview (ST-068)

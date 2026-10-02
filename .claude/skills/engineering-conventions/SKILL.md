@@ -285,7 +285,7 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 |---|---|---|
 | Vitest project `unit` | `npm test` (both projects) | `src/**/*.test.ts` |
 | Vitest project `integration` | – | `src/**/*.integration.test.ts`, real PostgreSQL `laguardia_test`, dropped and migrated once per run |
-| Playwright | `npm run test:e2e` | `e2e/*.spec.ts`, 360 × 800, local dev server or the preview (`BASE_URL`) |
+| Playwright | `npm run test:e2e` | `e2e/*.spec.ts`, 360 × 800 – locally an own dev server (port 3100, distDir `.next-e2e`) against `laguardia_e2e_test`, or the preview (`BASE_URL`) |
 | Everything | `npm run verify` (`--e2e` for browser tests) | lint, types, tests, traceability |
 
 - **Titles:** every Gherkin scenario of a story has exactly one test titled `ST-NNN: <scenario title>` (checked by `verify.ts`). Tech-task tests describe behaviour without the prefix.
@@ -295,6 +295,7 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **Isolation:** integration tests share one database per run – give each test its own machine and assert on that, never on table counts.
 - **A machine to refer to:** a problem report needs a registered machine (foreign key, ST-007) – `aRegisteredMachine(db)` from `src/test-support/machines.ts` registers one through the commands. Its journal starts with `EVT-MachineRegistered`; `journalSinceRegistration(db, machineId)` is what happened to it since.
 - **A rule over a whole set** (the museum number, unique among all machines) cannot be arranged in the shared database: such tests use `isolatedTestDatabase(name)` (`src/test-support/isolated-database.ts`) – a database of their own, reset and migrated in `beforeAll`, emptied before each test by the module's test support (`withoutMachines`). The same helper migrates up to a given migration for migration tests.
+- **Local browser tests never touch the development database** (ST-083): Playwright starts `scripts/e2e-server.ts`, which creates `laguardia_e2e_test` if missing, resets and migrates it (`resetDatabase` – only names ending in `_test`), creates the e2e technician from `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` through the Team module's first-technician setup, and only then starts `next dev` on port 3100 with `NEXT_DIST_DIR=.next-e2e` and `DATABASE_URL` / `BETTER_AUTH_URL` set for it – a dev server on 3000 keeps running (Next.js allows one per distDir). Every run starts from the same state: exactly the e2e technician. A server already on 3100 fails the run; PostgreSQL not running says `npm run db:up`.
 - **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
 - Never weaken or delete a test to get green.
 
@@ -315,10 +316,11 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | A migration that changes or deletes existing data | `isolatedTestDatabase(…).reset("<tag before>")`, data inserted with SQL as production had it, then `.migrate()` | integration | `src/platform/migrations.integration.test.ts` |
 | A page composed from several modules' queries (the machine record with names, ST-009) | the page data function against an isolated database, its result rendered by the page's view with `renderToStaticMarkup` | integration | `src/app/(team)/team/machines/[museumNumber]/machine-record.integration.test.ts` |
 | A page state the shared databases can never show (the empty machine overview) | the page's view component rendered with `renderToStaticMarkup` (`createElement`, no JSX in `.test.ts`) | unit | `src/app/(team)/team/machines/machine-overview.test.ts` |
+| Test infrastructure itself (the reset guard, preparing the browser-test database, ST-083) | the function in `src/test-support/` – a pure check as a unit test, anything touching PostgreSQL against a database of its own (never `laguardia_e2e_test`, which a browser test may be using) | unit / integration | `src/test-support/reset-test-database.test.ts`, `e2e-database.integration.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
-| Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the dev server and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |
+| Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the browser tests' own dev server (port 3100, `laguardia_e2e_test`) and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |
 | Shared UI component without domain logic (ST-076) | the pages that use it, in the browser at 360 px – no unit or snapshot test of its own, unless the component carries logic itself | e2e | `e2e/team-accounts.spec.ts` |
 
 Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks of the database or of the command layer.
