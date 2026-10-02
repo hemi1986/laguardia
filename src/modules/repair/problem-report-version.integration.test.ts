@@ -11,13 +11,15 @@ import {
   splitForTest,
 } from "./problem-report-stand-ins.test-support";
 import { problemReports } from "./problem-reports";
+import { aRegisteredMachine } from "@/test-support/machines";
 
 const db = testDatabase();
 const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 beforeAll(() => anExistingTeamMember(db, technician));
 const deps = { actor: technician, db, clock: fixedClock("2026-09-27T10:00:00Z"), newId: randomUUID };
 
-async function reportedProblem(machineId = randomUUID()) {
+async function reportedProblem(machineId?: string) {
+  machineId ??= await aRegisteredMachine(db);
   const created = await executeCommand(reportProblemCommand, { machineId, description: "Display flickers" }, deps);
   if (!created.ok) throw new Error(created.error);
   return { machineId, problemReportId: created.result.problemReportId };
@@ -99,7 +101,7 @@ describe("commands on an existing problem report: load, decide, save (HS-16)", (
     await anExistingTeamMember(db, reportedBy);
     const created = await executeCommand(
       reportProblemCommand,
-      { machineId: randomUUID(), description: "Display flickers" },
+      { machineId: await aRegisteredMachine(db), description: "Display flickers" },
       { ...deps, actor: reportedBy },
     );
     if (!created.ok) throw new Error(created.error);

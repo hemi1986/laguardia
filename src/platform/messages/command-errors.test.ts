@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { createMachineModelCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
 import type { CommandError } from "@/platform/command";
 import { commandErrorText, teamMessages, visitorMessages, type CommandErrorCode, type TeamCommandErrorCode } from ".";
@@ -45,7 +45,24 @@ describe("command errors in the team catalogue", () => {
     );
   });
 
+  it("every error of CMD-RegisterMachine has its own German text (ST-007)", () => {
+    const codes = [
+      "machine-model-required",
+      "location-required",
+      "machine-status-required",
+      "museum-number-format",
+      "museum-number-taken",
+      "no-museum-number-free",
+    ] as const;
+
+    const texts = codes.map((code) => commandErrorText(teamMessages, code));
+    for (const text of texts) expect(text).toMatch(/\S/);
+    expect(new Set(texts).size).toBe(codes.length);
+    expect(commandErrorText(teamMessages, "museum-number-format")).toContain("LG-042");
+  });
+
   it("the type check refuses a team command whose error code has no text", () => {
     expectTypeOf<CommandError<typeof createMachineModelCommand>>().toExtend<TeamCommandErrorCode>();
+    expectTypeOf<CommandError<typeof registerMachineCommand>>().toExtend<TeamCommandErrorCode>();
   });
 });

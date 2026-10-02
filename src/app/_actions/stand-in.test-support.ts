@@ -8,7 +8,7 @@ import type { FormFields } from "./form-runner";
  */
 export type Priority = "high" | "normal" | "low";
 
-export type ReportWithPriorityInput = { machineId: string | undefined; priority: Priority | undefined };
+export type ReportWithPriorityInput = { machineModelId: string | undefined; priority: Priority | undefined };
 
 const neverSaved: AggregateStore<{ id: string }> = {
   type: "AGG-TestNeverSaved",
@@ -18,7 +18,7 @@ const neverSaved: AggregateStore<{ id: string }> = {
 };
 
 /**
- * The machine is required – like CMD-RegisterMachine rejecting a registration without a machine model. The priority
+ * The machine model is required – like CMD-RegisterMachine rejecting a registration without one. The priority
  * is optional: without one the decision (not the input function) takes the default priority normal.
  */
 export const reportWithPriorityForTest = aggregateCommand({
@@ -27,8 +27,8 @@ export const reportWithPriorityForTest = aggregateCommand({
   store: neverSaved,
   creates: true,
   decide: (_nothingYet, input: ReportWithPriorityInput, { newId }) =>
-    input.machineId === undefined
-      ? { ok: false as const, error: "machine-required" as const }
+    input.machineModelId === undefined
+      ? { ok: false as const, error: "machine-model-required" as const }
       : {
           ok: true as const,
           state: { id: newId() },
@@ -43,7 +43,7 @@ export const reportWithPriorityForTest = aggregateCommand({
   result: () => undefined,
 });
 
-export const reportWithPriorityFields = ["machineId", "priority"] as const;
+export const reportWithPriorityFields = ["machineModelId", "priority"] as const;
 
 /** The input function of the stand-in form (Q19): a missing field is "no value given" – never a default. */
 export function reportWithPriorityInput(
@@ -51,7 +51,7 @@ export function reportWithPriorityInput(
 ): ReportWithPriorityInput {
   const priority = fields.priority;
   return {
-    machineId: fields.machineId || undefined,
+    machineModelId: fields.machineModelId || undefined,
     priority: priority === "high" || priority === "normal" || priority === "low" ? priority : undefined,
   };
 }

@@ -13,6 +13,7 @@ export const teamMessages = {
     "Machine category": "Kategorie",
     Technology: "Technik",
     "Museum number": "Museumsnummer",
+    "Serial number": "Seriennummer",
     Location: "Standort",
     File: "Datei",
     "Problem report": "Meldung",
@@ -36,6 +37,7 @@ export const teamMessages = {
     logout: "Abmelden",
     accounts: "Teammitglieder",
     machineModels: "Modelle",
+    machines: "Geräte",
     ownPassword: "Passwort ändern",
   },
   machineModels: {
@@ -51,6 +53,26 @@ export const teamMessages = {
     /** The machine categories, in the German wording of their definition in CONTEXT.md. */
     categories: { pinball: "Flipper", arcade: "Arcade", other: "Sonstiges" },
     technologies: { em: "EM", "solid-state": "Solid-State", dmd: "DMD", lcd: "LCD", crt: "CRT" },
+  },
+  machines: {
+    title: "Geräte",
+    register: "Gerät erfassen",
+    empty: "Noch kein Gerät erfasst.",
+    registered: (museumNumber: string, machineModel: string) => `Gerät ${museumNumber} (${machineModel}) erfasst.`,
+    status: "Status",
+    /** The machine statuses (CONTEXT.md _UI (de)_), in the order the registration offers them (user, 2026-10-01). */
+    statuses: {
+      playable: "Spielbereit",
+      limited: "Eingeschränkt",
+      "out-of-order": "Außer Betrieb",
+      "not-on-display": "Nicht ausgestellt",
+    },
+    choose: "Bitte wählen",
+    museumNumberHint: "Leer lassen, dann vergibt La Guardia die nächste freie Nummer.",
+    serialNumberHint: "Falls lesbar – sonst leer lassen.",
+    noMachineModels: "Noch kein Modell angelegt. Ein Gerät braucht sein Modell – bitte zuerst eines anlegen.",
+    toMachineModels: "Zu den Modellen",
+    back: "Zurück zu den Geräten",
   },
   accounts: {
     title: "Teammitglieder",
@@ -89,6 +111,15 @@ export const teamMessages = {
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
     "machine-category-required": "Bitte eine Kategorie wählen.",
     "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
+    "machine-model-required": "Bitte ein Modell wählen.",
+    "location-required": "Bitte einen Standort angeben.",
+    "machine-status-required": "Bitte einen Status wählen.",
+    "museum-number-format":
+      "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042 – oder das Feld leer lassen.",
+    "museum-number-taken":
+      "Diese Museumsnummer ist schon vergeben. Bitte eine andere angeben oder das Feld leer lassen.",
+    "no-museum-number-free":
+      "Alle Museumsnummern von LG-001 bis LG-999 sind vergeben – es kann kein weiteres Gerät erfasst werden.",
     "not-authorized": "Das dürfen nur Techniker:innen.",
     "not-found": "Das gibt es nicht mehr.",
     "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",

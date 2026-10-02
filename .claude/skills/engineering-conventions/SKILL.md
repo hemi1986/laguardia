@@ -96,15 +96,18 @@ still fine where the interaction needs JavaScript anyway (the camera photo, ST-0
 `FieldError` with `role="alert"`, which is what UX guidelines G8/G9 need. shadcn's Field supports `NativeSelect`
 explicitly, so this costs us none of the no-JavaScript guarantee.
 Until the migration is finished **both patterns exist, and that is the one thing to avoid spreading**: the first
-form on the new pattern is ST-007, and the four forms that predate it (login, team members, own password, machine
-models) follow in their own tech task. Write no new form on the old `Field`.
+form on the new pattern is ST-007 (`src/app/(team)/team/machines/new/register-machine-form.tsx` – `Field` with
+`data-invalid`, `FieldLabel htmlFor`, the control with `aria-invalid` and `aria-describedby` pointing at the
+rejection, `FieldDescription` for a hint), and the four forms that predate it (login, team members, own password,
+machine models) follow in their own tech task. The hand-rolled field is renamed `LabelledField`
+(`src/components/ui/labelled-field.tsx`) until then. Write no new form on `LabelledField`.
 
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
 `Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in the bundle.
 Adding one happens in a story, with a reason – `Confirmation`/`Rejection` in `src/components/ui/message.tsx`
-already cover what `Alert` and `toast` would. Decided so far: `field`, `label` and `separator` come in (see above),
-and `lucide-react` is installed as the icon library `components.json` already names, so a confirmation and a
-rejection carry a symbol and not only a colour (UX guideline G9, user 2026-10-01). Both land in ST-007.
+already cover what `Alert` and `toast` would. Decided so far: `field`, `label` and `separator` came in with ST-007
+(see above), and `lucide-react` is the icon library `components.json` already names: `Confirmation` carries a tick,
+`Rejection` a warning symbol, both `aria-hidden` (UX guideline G9, user 2026-10-01).
 
 **Never run `apply` or `init --preset`.** Both rewrite the theme, the CSS variables and installed components across
 the whole application. The style (`base-nova`, `components.json`) was decided in ST-076; changing it is an ADR-level
@@ -157,6 +160,7 @@ Rules:
 - **Journal mapping** (`journal`) per command until the event catalogue exists (ST-050) – references and non-personal facts only (see *The event journal*).
 - **The acting person's type follows from `allowedActors`** (Q5/Q20): `aggregateCommand` infers the literal list, and the decision gets `DecisionContext<ActorOf<…>>` – a command for `["helper", "technician"]` gets `{ kind: "team-member"; teamMemberId: TeamMemberId; role: Role }` without narrowing; one that also allows visitors gets the union. Write the list once as `as const` next to the decision when the decision names it. `Actor` stays the technical type; `Role` (command layer) and `Reporter` (problem report, derived from the acting person in `reporterOf` only) are defined once – lint refuses a second definition. Every "… by" is a `TeamMemberId`.
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
+- **Set-based rules** (ST-007, HS-17): a creating command whose decision must know about the module's other aggregates declares `facts: (tx, input) => Promise<Facts>`; the layer reads them in the command's transaction and passes them to `decide(facts, input, context)` in place of the missing state. Facts that must stay true until the commit take a lock there – CMD-RegisterMachine takes `pg_advisory_xact_lock(hashtext('museum-number'))`, so concurrent registrations run one after the other – and a unique constraint stays the final guarantee (`museum_number`'s primary key).
 
 What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
 1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules in the decision.
@@ -277,7 +281,9 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **Test data:** builders in `src/test-support/builders.ts` (`aMachine`, `aDefect`, `aHelper`, `aTechnician`, …) – override only what the test is about. Switch a builder to the real domain type when the aggregate gets one.
 - **Time:** `fixedClock(…)` for every command and rule; `BUILDER_TIME` is the builders' default.
 - **Acting team members exist:** a test actor `{ kind: "team-member", teamMemberId }` must exist as an account (foreign keys, ST-004): `anExistingTeamMember(db, actor)` from `src/test-support/team-members.ts`; accounts with a password come from the Team module's own test support.
-- **Isolation:** integration tests share one database per run – give each test its own machine (`randomUUID()`) and assert on that, never on table counts.
+- **Isolation:** integration tests share one database per run – give each test its own machine and assert on that, never on table counts.
+- **A machine to refer to:** a problem report needs a registered machine (foreign key, ST-007) – `aRegisteredMachine(db)` from `src/test-support/machines.ts` registers one through the commands. Its journal starts with `EVT-MachineRegistered`; `journalSinceRegistration(db, machineId)` is what happened to it since.
+- **A rule over a whole set** (the museum number, unique among all machines) cannot be arranged in the shared database: such tests use `isolatedTestDatabase(name)` (`src/test-support/isolated-database.ts`) – a database of their own, reset and migrated in `beforeAll`, emptied before each test by the module's test support (`withoutMachines`). The same helper migrates up to a given migration for migration tests.
 - **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
 - Never weaken or delete a test to get green.
 
@@ -294,6 +300,9 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | The acting person from the session (`currentPerson()`) – roles, no/expired/forged session, deactivated account | `formRunner({ currentPerson: () => currentPersonOf({ db, headers }), … })` with the headers of a real login (`createAccount` + `logIn`), observed through `journalOf` and read models | integration | `src/app/_actions/current-person.integration.test.ts` |
 | Type rules (acting person per `allowedActors`, error codes with a text) | `expectTypeOf` / `@ts-expect-error`, checked by `tsc` | unit (types) | `src/platform/command/actor-types.test.ts` |
 | A rule over the whole repository that neither lint nor the type check reads (config, workflows, browser tests) – e.g. no spike leftovers (ST-078) | a scan of `git ls-files` (tracked and new files; `docs/`, `.claude/`, `drizzle/` excluded) with a self-test on sample lines | unit | `src/platform/spike-leftovers.test.ts` |
+| A rule over a whole set of aggregates (museum number unique and assigned, ST-007) | the command (`executeCommand`) or the read model against an **isolated** database (`isolatedTestDatabase`), emptied before each test | integration | `src/modules/collection/register-machine-command.integration.test.ts`, `machine-overview.integration.test.ts` |
+| A migration that changes or deletes existing data | `isolatedTestDatabase(…).reset("<tag before>")`, data inserted with SQL as production had it, then `.migrate()` | integration | `src/platform/migrations.integration.test.ts` |
+| A page state the shared databases can never show (the empty machine overview) | the page's view component rendered with `renderToStaticMarkup` (`createElement`, no JSX in `.test.ts`) | unit | `src/app/(team)/team/machines/machine-overview.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |

@@ -1,0 +1,1 @@
+ALTER TABLE "machine_status_change" ADD COLUMN "position" bigserial NOT NULL;

@@ -1,6 +1,6 @@
 import { Page } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+import { LabelledField } from "@/components/ui/labelled-field";
 import { Input } from "@/components/ui/input";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
@@ -22,12 +22,12 @@ export default async function OwnPasswordPage({ searchParams }: PageProps<"/team
       )}
       {done === "changed" && <Confirmation>{ownPassword.changed}</Confirmation>}
       <form action={changeOwnPasswordAction} className="flex flex-col gap-4">
-        <Field label={ownPassword.current}>
+        <LabelledField label={ownPassword.current}>
           <Input name="currentPassword" type="password" autoComplete="current-password" required />
-        </Field>
-        <Field label={ownPassword.new} description={accounts.passwordHint}>
+        </LabelledField>
+        <LabelledField label={ownPassword.new} description={accounts.passwordHint}>
           <Input name="newPassword" type="password" autoComplete="new-password" required />
-        </Field>
+        </LabelledField>
         <Button type="submit">{ownPassword.submit}</Button>
       </form>
     </Page>

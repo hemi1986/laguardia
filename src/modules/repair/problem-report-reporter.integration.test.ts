@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
+import { aRegisteredMachine } from "@/test-support/machines";
 
 const db = testDatabase();
 
@@ -21,7 +22,7 @@ describe("the reporting team member of a problem report", () => {
     expect(await columnType("team_member", "id")).toBe("uuid");
     expect(await columnType("problem_report", "reporter_team_member_id")).toBe(await columnType("team_member", "id"));
 
-    const machineId = randomUUID();
+    const machineId = await aRegisteredMachine(db);
     const withoutAccount = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     await expect(
       executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { actor: withoutAccount, db }),

@@ -8,7 +8,11 @@ import { testDatabaseUrl } from "./database";
  * in it and applies all migrations from `drizzle/` – every test run starts from the same empty schema.
  */
 export default async function resetTestDatabase(): Promise<void> {
-  const url = new URL(testDatabaseUrl());
+  await resetDatabase(new URL(testDatabaseUrl()));
+}
+
+/** Creates the database if it is missing, drops everything in it and applies the migrations of the folder. */
+export async function resetDatabase(url: URL, migrationsFolder = "drizzle"): Promise<void> {
   const name = url.pathname.slice(1);
   if (!/_test$/.test(name)) throw new Error(`Refusing to reset "${name}" – the test database name must end in _test`);
 
@@ -20,7 +24,7 @@ export default async function resetTestDatabase(): Promise<void> {
     await client.query(
       "DROP SCHEMA IF EXISTS public CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; CREATE SCHEMA public",
     );
-    await migrate(drizzle(client), { migrationsFolder: "drizzle" });
+    await migrate(drizzle(client), { migrationsFolder });
   } finally {
     await client.end();
   }

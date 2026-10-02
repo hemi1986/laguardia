@@ -1,7 +1,7 @@
 import { Page } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field } from "@/components/ui/field";
+import { LabelledField } from "@/components/ui/labelled-field";
 import { Input } from "@/components/ui/input";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -51,21 +51,21 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">{texts.newAccount}</h2>
         <form action={createAccountAction} className="flex flex-col gap-4">
-          <Field label={texts.name}>
+          <LabelledField label={texts.name}>
             <Input name="name" required />
-          </Field>
-          <Field label={texts.username}>
+          </LabelledField>
+          <LabelledField label={texts.username}>
             <Input name="username" autoCapitalize="none" required />
-          </Field>
-          <Field label={texts.initialPassword} description={texts.passwordHint}>
+          </LabelledField>
+          <LabelledField label={texts.initialPassword} description={texts.passwordHint}>
             <Input name="password" type="password" autoComplete="new-password" required />
-          </Field>
-          <Field label={texts.role}>
+          </LabelledField>
+          <LabelledField label={texts.role}>
             <NativeSelect name="role" defaultValue="helper">
               <option value="helper">{terms.Helper}</option>
               <option value="technician">{terms.Technician}</option>
             </NativeSelect>
-          </Field>
+          </LabelledField>
           <Button type="submit">{texts.create}</Button>
         </form>
       </section>
@@ -98,7 +98,7 @@ function Account({ account }: { account: TeamMemberAccount }) {
           </form>
           <form action={resetPasswordAction} className="flex flex-col gap-2">
             <input type="hidden" name="teamMemberId" value={account.id} />
-            <Field label={texts.newPassword}>
+            <LabelledField label={texts.newPassword}>
               <Input
                 name="password"
                 type="password"
@@ -106,7 +106,7 @@ function Account({ account }: { account: TeamMemberAccount }) {
                 required
                 aria-label={`${texts.newPassword} – ${account.name}`}
               />
-            </Field>
+            </LabelledField>
             <Button type="submit" variant="outline">
               {texts.resetPassword}
             </Button>
