@@ -1,5 +1,6 @@
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
+import type { MachineCategory, Technology } from "./create-machine-model";
 import type { Machine, MachineStatus, RegistrationFacts, StatusChange } from "./register-machine";
 import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
 
@@ -129,22 +130,26 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
-/** One entry of the machine overview (RM-MachineOverview) as ST-007 shows it; ST-008 adds counts, filter, search. */
+/** One entry of the machine overview (RM-MachineOverview): what tells a machine apart from its neighbours (G5). */
 export type MachineOverviewEntry = {
   id: string;
   museumNumber: string;
   machineModelTitle: string;
+  machineCategory: MachineCategory;
+  technology?: Technology;
   location: string;
   machineStatus: MachineStatus;
 };
 
 /** RM-MachineOverview: the active machines (not retired), sorted by museum number. */
 export async function machineOverview(db: Database): Promise<MachineOverviewEntry[]> {
-  return db
+  const rows = await db
     .select({
       id: machine.id,
       museumNumber: machine.museumNumber,
       machineModelTitle: machineModel.title,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
       location: machine.location,
       machineStatus: machine.machineStatus,
     })
@@ -152,6 +157,7 @@ export async function machineOverview(db: Database): Promise<MachineOverviewEntr
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(isNull(machine.retiredAt))
     .orderBy(asc(machine.museumNumber));
+  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
 }
 
 /** A machine's status history, oldest first – the machine record (RM-MachineRecord, ST-009) shows it. */

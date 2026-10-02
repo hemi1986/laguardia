@@ -106,6 +106,8 @@ describe("CMD-RegisterMachine", () => {
       id: machineId,
       museumNumber: "LG-042",
       machineModelTitle: "Medieval Madness",
+      machineCategory: "pinball",
+      technology: undefined,
       location: "Hall 2, row 3",
       machineStatus: "playable",
     });
