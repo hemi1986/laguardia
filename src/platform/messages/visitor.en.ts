@@ -17,7 +17,7 @@ export const visitorEn: VisitorMessages = {
     },
     reportProblem: "Report a problem",
     notOnDisplay: "This machine is not on display at the moment. Problems can only be reported for machines on display.",
-    unknown: (museumNumber: string) => `There is no machine with the museum number ${museumNumber}.`,
+    unknown: "There is no machine with this museum number.",
     switchLanguage: "Deutsch",
     language: "Language",
   },

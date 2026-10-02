@@ -17,7 +17,7 @@ export const visitorDe = {
     },
     reportProblem: "Problem melden",
     notOnDisplay: "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
-    unknown: (museumNumber: string) => `Kein Gerät mit der Museumsnummer ${museumNumber}.`,
+    unknown: "Kein Gerät mit dieser Museumsnummer.",
     /** The switch offers the other language, named in that language. */
     switchLanguage: "English",
     language: "Sprache",

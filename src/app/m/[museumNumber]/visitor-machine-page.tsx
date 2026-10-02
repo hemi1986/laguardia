@@ -12,12 +12,11 @@ export function VisitorMachinePage({
   museumNumber,
   messages,
 }: {
-  data: VisitorMachinePageData | undefined;
+  data: VisitorMachinePageData;
   museumNumber: string;
   messages: VisitorMessages;
 }) {
   const texts = messages.machinePage;
-  if (!data) return <p>{texts.unknown(museumNumber)}</p>;
   const maker = [data.manufacturer, data.year].filter(Boolean).join(" · ");
 
   return (

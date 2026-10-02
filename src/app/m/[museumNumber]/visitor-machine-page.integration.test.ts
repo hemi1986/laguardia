@@ -50,6 +50,7 @@ async function registered(museumNumber: string) {
 
 async function page(museumNumber: string, locale: "de" | "en" = "de"): Promise<string> {
   const data = await loadVisitorMachinePage(db, museumNumber);
+  if (!data) throw new Error(`no visitor machine page for ${museumNumber}`);
   return renderToStaticMarkup(createElement(VisitorMachinePage, { data, museumNumber, messages: visitorMessages(locale) }));
 }
 
