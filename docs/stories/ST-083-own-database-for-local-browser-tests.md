@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: []
 labels: [follow-up, foundation]
-status: draft
+status: ready
 ---
 
 ## Task
@@ -28,7 +28,7 @@ Deleting test data after each run is not the answer: accounts are never deleted,
 
 Everything else about how is left to the implementation (where the reset and the seed are triggered, how `distDir` is switched, the side effects on `.gitignore`, `tsconfig`, eslint ignores and `next typegen`).
 
-**First step (about 30 minutes): prove that a second `next dev` with its own `distDir` runs beside one on port 3000.** If it does not, stop: mark the problem `[OPEN]` in this story, add a row for ST-083 to `docs/stories/OPEN_QUESTIONS.md` and send the story back to `review` – no workaround in the code.
+**First step (about 30 minutes): prove that a second `next dev` with its own `distDir` runs beside one on port 3000.** If it does not, stop: mark the problem as open in this story (as `/implement` describes under *When the story is wrong*), add a row for ST-083 to `docs/stories/OPEN_QUESTIONS.md` and send the story back to `review` – no workaround in the code.
 
 Runs against a deployed preview (`BASE_URL` set, CI workflow `.github/workflows/e2e-preview.yml`) are unchanged – this task is about local runs only. Seeding the preview database is ST-068's job (decision in `docs/stories/OPEN_QUESTIONS.md`, 2026-09-27). The CI `verify` job runs no browser tests and does not change.
 
