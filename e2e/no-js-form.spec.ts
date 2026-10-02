@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 /**
  * The house select must submit without JavaScript (ST-076). shadcn's own select (Base UI) renders a `<button>`
@@ -21,6 +21,7 @@ test("a technician creates a technician account with JavaScript disabled", async
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/team$/);
 
+  await openMore(page);
   await page.getByRole("link", { name: "Teammitglieder" }).click();
   await page.getByLabel("Name", { exact: true }).fill(`No JS ${newUsername}`);
   await page.getByLabel("Benutzername").fill(newUsername);

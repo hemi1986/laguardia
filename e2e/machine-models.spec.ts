@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 /**
  * The machine model page on a phone (ST-006) and the Server Action runner in the browser (ST-073): a rejected
@@ -25,6 +25,7 @@ test("a technician creates a machine model on a 360 px phone", async ({ page }) 
   await logIn(page);
   const title = `Medieval Madness ${Date.now().toString(36)}`;
 
+  await openMore(page);
   await page.getByRole("link", { name: "Modelle" }).click();
   await expect(page).toHaveURL(/\/team\/machine-models$/);
 

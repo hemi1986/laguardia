@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, openMore, test } from "./fixtures";
 
 /**
  * Registering a machine on a phone (ST-007) and the Server Action runner in the browser (ST-073, proof moved here by
@@ -36,10 +36,10 @@ async function aMachineModel(page: Page): Promise<string> {
   return title;
 }
 
-/** From the team start page to the registration form, the way a technician gets there. */
+/** From the team navigation to the registration form, the way a technician gets there. */
 async function openRegistration(page: Page) {
   await page.goto("/team");
-  await page.getByRole("link", { name: "Geräte" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Geräte" }).click();
   await expect(page).toHaveURL(/\/team\/machines$/);
   await page.getByRole("link", { name: "Gerät erfassen" }).click();
   await expect(page).toHaveURL(/\/team\/machines\/new$/);
@@ -114,10 +114,11 @@ test("ST-007: Helpers are not offered registering", async ({ page }) => {
   await page.getByLabel("Anfangspasswort").fill(helper.password);
   await page.getByRole("button", { name: "Konto anlegen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
+  await openMore(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
 
   await logIn(page, helper);
-  await page.getByRole("link", { name: "Geräte" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Geräte" }).click();
 
   await expect(page.getByRole("heading", { name: "Geräte" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Gerät erfassen" })).toHaveCount(0);

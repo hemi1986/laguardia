@@ -7,15 +7,67 @@ import { MachineOverview } from "./machine-overview";
  * The machine overview's view, rendered on its own: browser tests run against databases other tests share (and the
  * preview), where the list is never empty – the empty state can only be shown here (user, 2026-10-01).
  */
-function rendered(props: Parameters<typeof MachineOverview>[0]): string {
-  return renderToStaticMarkup(createElement(MachineOverview, props));
+type Props = Parameters<typeof MachineOverview>[0];
+
+const noCounts = { playable: 0, limited: 0, "out-of-order": 0, "not-on-display": 0 };
+
+function rendered(props: Partial<Props>): string {
+  return renderToStaticMarkup(
+    createElement(MachineOverview, { machines: [], counts: noCounts, query: {}, canRegister: false, ...props }),
+  );
 }
 
 describe("the machine overview", () => {
   it("ST-007: No machine registered yet", () => {
-    const html = rendered({ machines: [], canRegister: true });
+    const html = rendered({ canRegister: true });
 
     expect(html).toContain("Noch kein Gerät erfasst.");
     expect(html).toMatch(/<a [^>]*href="\/team\/machines\/new"[^>]*>Gerät erfassen<\/a>/);
+  });
+
+  it("ST-008: No machine has the filtered machine status", () => {
+    const html = rendered({ counts: { ...noCounts, playable: 12 }, query: { machineStatus: "out-of-order" } });
+
+    expect(html).toContain("Kein Gerät ist Außer Betrieb.");
+    expect(html).not.toContain("Noch kein Gerät erfasst.");
+    expect(html).not.toContain("<article");
+  });
+
+  it("labels every machine status count in words – a zero included, so it can still be filtered for", () => {
+    const html = rendered({ counts: { playable: 45, limited: 6, "out-of-order": 0, "not-on-display": 5 } });
+
+    for (const count of ["Alle · 56", "Spielbereit · 45", "Eingeschränkt · 6", "Außer Betrieb · 0", "Nicht ausgestellt · 5"]) {
+      expect(html).toContain(count);
+    }
+    expect(html).toMatch(/href="\/team\/machines\?machineStatus=out-of-order"/);
+  });
+
+  it("shows each machine with what tells it apart: category, technology, location and machine status", () => {
+    const html = rendered({
+      counts: { ...noCounts, playable: 1, "out-of-order": 1 },
+      machines: [
+        {
+          id: "m1",
+          museumNumber: "LG-001",
+          machineModelTitle: "Medieval Madness",
+          machineCategory: "pinball",
+          technology: "dmd",
+          location: "Hall 1, row 3",
+          machineStatus: "playable",
+        },
+        {
+          id: "m2",
+          museumNumber: "LG-002",
+          machineModelTitle: "Jukebox",
+          machineCategory: "other",
+          location: "Foyer",
+          machineStatus: "out-of-order",
+        },
+      ],
+    });
+
+    expect(html).toContain("LG-001 · Medieval Madness");
+    expect(html).toContain("Flipper · DMD · Hall 1, row 3 · Status: Spielbereit");
+    expect(html).toContain("Sonstiges · Foyer · Status: Außer Betrieb"); // no technology – nothing in its place
   });
 });

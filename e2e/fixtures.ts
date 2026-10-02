@@ -1,4 +1,4 @@
-import { test as base } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 
 /**
  * The Vercel deployment protection bypass header goes only to requests for the preview itself,
@@ -23,3 +23,13 @@ export const test = base.extend({
 });
 
 export { expect } from "@playwright/test";
+
+/**
+ * Opens "Mehr" in the team navigation (ST-008): the managing destinations live behind it. Tests that assert a
+ * destination is *missing* must open it first – a closed `<details>` hides its links anyway.
+ */
+export async function openMore(page: import("@playwright/test").Page) {
+  const more = page.getByRole("navigation").locator("details");
+  if ((await more.getAttribute("open")) === null) await more.locator("summary").click();
+  await expect(more).toHaveAttribute("open", "");
+}

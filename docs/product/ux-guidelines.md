@@ -1,9 +1,8 @@
 # UX Guidelines – La Guardia
 
 > **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G20, including G2a, G4a, G6a, G8a and G10a)
-> is binding. One decision is still open (O2, how much of a wide screen a list may use) – it is at the end and is
-> settled when the first long list is built (ST-008). One violation is known and accepted with an end date – it is
-> named under G2a.
+> is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
+> now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
 The yardstick every screen is measured against. **How** we arrive at a decision is the skill `ux-design`; **what**
 the code does with it is `.claude/skills/engineering-conventions/SKILL.md` (the `Page` container, the 360 px rules,
@@ -190,7 +189,9 @@ pattern, the pattern comes here first.
 *Why:* two forms with two rejection behaviours (login vs. machine model) is how we got here after five screens.
 
 **G16 – Every screen works at 360 px, and the workshop PC shows the same screen.**
-Nothing is tried first on a laptop. **How much of a wide screen a list may use is Open decision O2.**
+Nothing is tried first on a laptop. One layout, one column, no tables and no side-by-side columns; a **list page may
+grow to about 672 px** (`Page wide`, `max-w-2xl`) so long texts stop wrapping, a form page stays at about 384 px
+(user, 2026-10-02 – was open decision O2; the first long list is the machine overview, ST-008).
 
 **G17 – Every page is reachable and leaveable.**
 Each page either stands in the navigation or is reached from a named link on a page that is, and every page has a
@@ -208,8 +209,24 @@ decided by whoever implements last – and two of those stories render the same 
 One story names the full set of destinations, their German labels, their order and who sees which; every later
 story takes a place in that set and does not invent one. A destination the decided navigation does not have is a
 question for the user, not a line a story adds on its way past.
-**ST-008 is that story for the team navigation** – the first team page with a second destination. Until it is done,
-no story adds a destination of its own.
+**ST-008 is that story for the team navigation** – decided by the user on 2026-10-02:
+
+| # | Destination | Label | Story | Shown to | Where |
+|---|---|---|---|---|---|
+| 1 | Start page / dashboard | Übersicht | ST-048/049 (today the team start page) | everyone | line |
+| 2 | Machine overview | Geräte | ST-007/008 | everyone | line |
+| 3 | Triage list | Sichtung | ST-017 | technicians | line |
+| 4 | Open defects | Defekte | ST-021 | everyone | line |
+| 5 | Due maintenance | Wartung | ST-043 | everyone | line |
+| 6 | Maintenance plan | Wartungsplan | ST-040 | technicians | "Mehr" |
+| 7 | Machine models | Modelle | ST-006 | technicians | "Mehr" |
+| 8 | Team members | Teammitglieder | ST-005 | technicians | "Mehr" |
+| 9 | Own password | Passwort ändern | ST-004 | everyone | "Mehr" |
+| 10 | Log out | Abmelden (button) | ST-004 | everyone | "Mehr" |
+
+The daily destinations stand in one line that may wrap; everything that manages sits behind **"Mehr"**, a native
+`<details>` that opens without JavaScript. A destination appears with the story that builds it, at its place in this
+order – no story adds, renames or reorders one. Implemented in `src/app/(team)/navigation.tsx`.
 *Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
 navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
 happens at ten.
@@ -225,10 +242,7 @@ and hides the open task does not.
 
 Not decided, not invented. Each needs the user's answer, and then it becomes a rule above, with the date.
 
-**O2 – How much of the workshop PC's width may a list use?**
-*Recommendation:* one layout, one column, and the maximum width may grow for list pages so long texts (defect
-titles, locations) stop wrapping into four lines – but no second layout, no tables, no side-by-side columns. We
-have one layout to maintain and one volunteer to maintain it.
+None at the moment. O2 became part of **G16** on 2026-10-02.
 
 ---
 
@@ -241,4 +255,5 @@ have one layout to maintain and one volunteer to maintain it.
 | 2026-10-01 | Accepted by the user. O1 became **G2a** (creating happens on its own page), O3 became **G10a** (deactivating is reversible), and the *Teammitglied* / *Konto* split went into **G12** and into `CONTEXT.md` as the new term **Account**. O2 stays open until the first long list (ST-008). | The three decisions the first version deliberately left to the user |
 | 2026-10-01 | Backlog grooming (`docs/reviews/2026-10-01-backlog-grooming.md`) added six rules, each from a pile-up in the backlog: **G4a** (grouped lists), **G6a** (say why an entry is singled out), **G8a** (a file chooser cannot be refilled), **G18** (one owner story per shared page), **G19** (the navigation is decided once – ST-008), **G20** (option texts decided where the choice first appears). | 63 stories reviewed at once made visible what no single story review could: 5 stories say only "highlighted", 11 add to the machine record, 6 add a navigation destination, 3 build selects with 9 undecided option texts |
 | 2026-10-01 | **G10a narrowed** to states a person *sets* to manage access or visibility; recorded facts and deleted bytes are explicitly out. ST-039 (retiring a machine) and ST-038 (removing a file) stay irreversible and keep **G10**, which now requires the confirmation to name the consequences – for ST-039 the machine, the defects closed and the problem reports dismissed. | Read broadly, G10a would have promised an undo the domain cannot keep; the boundary and its reason are written down so the rule does not quietly stop applying |
+| 2026-10-02 | **G19 filled in** with the team navigation for the whole MVP (labels, order, who sees which, "Mehr"), and **O2 became part of G16**: list pages may grow to ~672 px, one column, no tables. | ST-008 is the story both decisions were deferred to; the user decided during `/implement ST-008` |
 | 2026-10-01 | **Known exception recorded under G2a**: `/team/machine-models` keeps its form below the list until ST-036. | The user decided not to split ST-036 and not to pull it forward. A yardstick that hides a violation it knows about is worth nothing |

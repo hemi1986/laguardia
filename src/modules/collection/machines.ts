@@ -1,6 +1,7 @@
-import { asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
-import type { Machine, MachineStatus, RegistrationFacts, StatusChange } from "./register-machine";
+import type { MachineCategory, Technology } from "./create-machine-model";
+import { machineStatuses, type Machine, type MachineStatus, type RegistrationFacts, type StatusChange } from "./register-machine";
 import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
 
 /**
@@ -129,29 +130,68 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
-/** One entry of the machine overview (RM-MachineOverview) as ST-007 shows it; ST-008 adds counts, filter, search. */
+/** One entry of the machine overview (RM-MachineOverview): what tells a machine apart from its neighbours (G5). */
 export type MachineOverviewEntry = {
   id: string;
   museumNumber: string;
   machineModelTitle: string;
+  machineCategory: MachineCategory;
+  technology?: Technology;
   location: string;
   machineStatus: MachineStatus;
 };
 
-/** RM-MachineOverview: the active machines (not retired), sorted by museum number. */
-export async function machineOverview(db: Database): Promise<MachineOverviewEntry[]> {
-  return db
+/** What the machine overview is narrowed to (ST-008): both are optional and combine. */
+export type MachineOverviewQuery = {
+  /** Part of a museum number or a machine model title, in any case ("042", "medieval"). */
+  search?: string;
+  machineStatus?: MachineStatus;
+};
+
+/** RM-MachineOverview: the active machines (not retired), sorted by museum number – searched and filtered. */
+export async function machineOverview(
+  db: Database,
+  { search, machineStatus }: MachineOverviewQuery = {},
+): Promise<MachineOverviewEntry[]> {
+  const term = search?.trim();
+  const pattern = term ? `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%` : undefined;
+  const rows = await db
     .select({
       id: machine.id,
       museumNumber: machine.museumNumber,
       machineModelTitle: machineModel.title,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
       location: machine.location,
       machineStatus: machine.machineStatus,
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
-    .where(isNull(machine.retiredAt))
+    .where(
+      and(
+        isNull(machine.retiredAt),
+        machineStatus ? eq(machine.machineStatus, machineStatus) : undefined,
+        pattern ? or(ilike(machine.museumNumber, pattern), ilike(machineModel.title, pattern)) : undefined,
+      ),
+    )
     .orderBy(asc(machine.museumNumber));
+  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+}
+
+/**
+ * RM-MachineOverview: how many active machines have which machine status – always over all active machines, so it
+ * says at any time how many are playable (vision goal 3), whatever the overview is searched or filtered for.
+ * Every machine status is there, a zero included: it can still be filtered for (user, 2026-10-02).
+ */
+export async function machineStatusCounts(db: Database): Promise<Record<MachineStatus, number>> {
+  const rows = await db
+    .select({ machineStatus: machine.machineStatus, count: sql<number>`count(*)::int` })
+    .from(machine)
+    .where(isNull(machine.retiredAt))
+    .groupBy(machine.machineStatus);
+  const counts = Object.fromEntries(machineStatuses.map((status) => [status, 0])) as Record<MachineStatus, number>;
+  for (const row of rows) counts[row.machineStatus] = row.count;
+  return counts;
 }
 
 /** A machine's status history, oldest first – the machine record (RM-MachineRecord, ST-009) shows it. */
