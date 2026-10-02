@@ -1,0 +1,44 @@
+# Acceptance – ST-060: Custom domain and stable QR address scheme
+Date: 2026-10-02 · Tests run: `npx vitest run src/platform/provider-address.test.ts` → 2 passed, 0 failed; `check-scenarios.ts ST-060` → OK (tech task, 0 scenarios) · Preview: none (production checked read-only with curl)
+
+## Checklist (tech task: each item needs evidence)
+| Item | Evidence | OK? |
+|---|---|---|
+| Custom domain serves production over HTTPS | curl `https://eschbach.michaelschempp.de/` → 200, certificate verifies (ssl_verify_result 0); `http://` answers 308 to https; `/login` → 200. Certificate (Let's Encrypt, valid to 2026-12-31) and user's login test are the implementer's evidence. | yes |
+| Address scheme documented in the repository | `docs/architecture/qr-address.md` (scheme, only museum number, one address for everyone, 404, reserved number, stability, set-up); linked from the engineering conventions | yes |
+| Existing museum number reaches the machine; unknown number shows "no such machine" | Unknown: curl `/m/LG-999` → 404, "Kein Gerät mit dieser Museumsnummer." in the body. Existing: not shown on production (no machine yet). Substituted by ST-010's local browser tests (`e2e/visitor-machine-page.spec.ts`). | yes, with remark R1 |
+| Provider address redirects or is not used in any link | Repo scan `src/platform/provider-address.test.ts` (passes; includes a self-check that the scan finds an address). Login takes its address from `VERCEL_PROJECT_PRODUCTION_URL` (custom domain). No redirect (user decision). | yes, with remark R2 |
+
+## Substitutions
+- **Existing museum number via ST-010's local tests:** acceptable. Registering a test machine on production would burn a museum number permanently (never reused). The routing is the same code on production as locally, and the 404 branch is proven live. Remark R1: the "existing number" path is first proven in production when the first real machine is registered; ST-011 (QR sticker/team view) is the natural place to check `https://eschbach.michaelschempp.de/m/<number>` live before printing.
+- **No redirect of `laguardia.vercel.app`:** acceptable, because the story says "redirects ... **or** is not used in any link". The "not used in any link" half is covered by the scan, but note the scan's scope: it excludes `docs/`, `.claude/`, `drizzle/`, images, and cannot see Vercel dashboard settings or env vars. The docs state the rule.
+
+## Observed on `laguardia.vercel.app` now (read-only curl)
+- `/` → 200 and `/login` → 200 with the same app: the provider address still serves the full site (no redirect, as decided).
+- Login there: `src/modules/team/auth.ts` sets the Better Auth base URL to the production custom domain (`VERCEL_PROJECT_PRODUCTION_URL`), so a login attempt from the vercel.app origin should fail the origin/CSRF check or set a cookie for the wrong host. I did not try it (no POST to production). Not a security risk (it fails closed); it matters only if a team member uses a bookmarked old address. The QR stickers never carry it, so it does not touch the story's purpose.
+
+## Definition of done
+| Item | Applies | Evidence | OK? |
+|---|---|---|---|
+| 360 px, list speed | no (no UI) | – | n/a |
+| Journal entry per command | no | no command | n/a |
+| Message catalogs | no new text | existing ST-010 text shown | n/a |
+| No personal data in logs | no | – | n/a |
+| Documentation and traceability | yes | qr-address.md, conventions link, scan test | yes |
+
+## Edge cases not covered by the story
+| Case | Expected by a rule? | Recommendation |
+|---|---|---|
+| Team member uses `laguardia.vercel.app/login` (bookmark, old link in chat) and login fails or confuses | No rule; the story only requires "redirect or not used in a link" | question: Is a one-line note to the team ("use eschbach.michaelschempp.de only") enough? If not, a redirect in Vercel's Domains settings is a few minutes of dashboard work, can be done here, fails hurdle (2)/(1) so no new story |
+| Search engines index `laguardia.vercel.app` as a duplicate of the site | No | question; low impact, a `noindex`/redirect can wait |
+| Domain is declared provisional (`eschbach.michaelschempp.de`) until first sticker is printed | Documented in qr-address.md "Stability" | ST-011/ST-042 should re-confirm the final domain before printing (existing stories can take it; no new story) |
+| Domain or certificate lapses after stickers are printed (certificate auto-renewed by Vercel; domain registration belongs to the museum/user) | The task says the museum registers the domain | question: who renews `michaelschempp.de`? Is a private domain acceptable for the museum's permanent stickers? Not fixable by code; record in OPEN_QUESTIONS if the user wants it tracked |
+| Reserved/old museum number redirect on production | qr-address.md cites ST-035 | covered by that story, not here |
+| `/m/lg-042` lower case or trailing slash | none in this story | belongs to ST-010 |
+| Branch diff also touches `docs/stories/BACKLOG.md` | generated by hook | fine |
+
+## Gaps graded by the follow-up hurdle
+No gap reaches the hurdle (no security/data-loss risk; nothing blocks a named story; all remarks fixable within an hour or by ST-011/ST-042). No new story.
+
+## Verdict
+**accepted with remarks** – all four checklist items have real evidence and both substitutions are acceptable. Remarks: R1 verify an existing number live on the domain when the first machine exists (ST-011); R2 `laguardia.vercel.app` still serves the whole site and its login likely does not work there – decide whether a team note or a Vercel redirect is wanted.

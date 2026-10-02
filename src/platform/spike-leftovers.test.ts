@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { repositoryFiles } from "@/test-support/repository-files";
 
 /**
  * ST-078 removed the scaffolding of the ST-001/ST-002 spikes. This scan fails when a reference to it comes back –
@@ -13,8 +13,6 @@ const leftovers: { name: string; pattern: RegExp }[] = [
   { name: "the spike message block", pattern: /\bspike\s*:\s*\{|\.spike\b|\{\s*spike\s*\}/ },
 ];
 
-/** Everything in the repository but the discovery artifacts, the tooling and the generated migrations. */
-const notScanned = /^(docs|\.claude|drizzle)\/|\.(png|jpe?g|ico|webp|svg|woff2?)$/;
 /** The 404 checks must name the removed addresses, the migration test the spike rows, to prove they are gone. */
 const allowed: Record<string, string[]> = {
   "e2e/home.spec.ts": ["a spike address or import"],
@@ -22,12 +20,6 @@ const allowed: Record<string, string[]> = {
 };
 const thisFile = "src/platform/spike-leftovers.test.ts";
 
-/** Tracked files and new ones not yet added – the ignored ones (.env files, node_modules, .next) excluded. */
-function repositoryFiles(): string[] {
-  return execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], { encoding: "utf8" })
-    .split("\n")
-    .filter((file) => file && file !== thisFile && !notScanned.test(file));
-}
 
 function leftoversIn(file: string, text: string): string[] {
   return text
@@ -41,7 +33,7 @@ function leftoversIn(file: string, text: string): string[] {
 
 describe("spike leftovers", () => {
   it("no code, browser test, script or configuration refers to the removed spike scaffolding", () => {
-    const files = repositoryFiles();
+    const files = repositoryFiles(thisFile);
 
     expect(files).toContain("e2e/security.spec.ts");
     expect(files).toContain(".github/workflows/e2e-preview.yml");

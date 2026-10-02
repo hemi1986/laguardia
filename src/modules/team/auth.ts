@@ -53,8 +53,10 @@ export function createAuth(db: Database, options: { inNext: boolean }) {
 export type Auth = ReturnType<typeof createAuth>;
 
 /**
- * The origin of La Guardia – https on Vercel (so the session cookie is `Secure`), localhost in development.
- * BETTER_AUTH_URL overrides it (e.g. the custom domain, ST-060).
+ * The origin of La Guardia – https on Vercel (so the session cookie is `Secure`), localhost in development. In
+ * production it is VERCEL_PROJECT_PRODUCTION_URL, which Vercel sets to the custom domain once one is attached (ST-060,
+ * `docs/architecture/qr-address.md`). BETTER_AUTH_URL overrides it – set nowhere today; the local browser tests set it
+ * for their own server (ST-083).
  */
 function baseURL(): string {
   if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;

@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-001]
 labels: [mvp, foundation]
-status: ready
+status: done
 ---
 
 ## Task
@@ -20,10 +20,10 @@ Before any QR sticker is printed (ST-011), La Guardia gets its own custom domain
 - The address scheme is fixed and documented; it never changes after the first sticker is printed.
 
 ## Acceptance Criteria
-- [ ] The custom domain serves the production deployment over HTTPS.
-- [ ] The address scheme (e.g. `/m/LG-042`) is documented in the repository.
-- [ ] Opening the address of an existing museum number reaches the machine; an unknown museum number shows the "no such machine" page (ST-010).
-- [ ] The provider's default address redirects to the custom domain or is not used in any link.
+- [x] The custom domain serves the production deployment over HTTPS.
+- [x] The address scheme (e.g. `/m/LG-042`) is documented in the repository.
+- [x] Opening the address of an existing museum number reaches the machine; an unknown museum number shows the "no such machine" page (ST-010).
+- [x] The provider's default address redirects to the custom domain or is not used in any link.
 
 ## Out of Scope
 - Printing the stickers (ST-011)
