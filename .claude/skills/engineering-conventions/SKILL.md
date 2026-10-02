@@ -237,7 +237,12 @@ A read model (`RM-…`) is a query function in the owning module, exported via `
 
 **Not every query is an `RM-…`** (user, 2026-10-01, during `/implement` ST-006): a query that only feeds a choice or a detail *inside* its own bounded context carries no domain ID, because `events.yaml` names only the read models that are a view of their own – `machineModelsToChooseFrom` (the machine models the registration of ST-007 chooses from) is one of those. Don't invent an `RM-…` for it; a query that does become a screen gets its ID from `events.yaml` first, through the domain-architect.
 
-**Open:** ADR 0002 lets read models read across modules, but the import rules keep a module's tables private. How the first cross-module read model (e.g. the machine overview with open defects, ST-008) reads another module's data – an exported read-only query of that module, or a view – is decided with that story. Don't import another module's `schema.ts`.
+**Reading across modules – the page composes** (decided 2026-10-02, ST-009): a page that needs another module's
+data calls each module's own public query and puts the results together in its page data function – e.g. the
+machine record (`src/app/(team)/team/machines/[museumNumber]/machine-record-data.ts`) takes the Collection module's
+`machineRecord` (with TeamMemberIds) and the Team module's `teamMemberNames(db, ids)`. Neither module imports the
+other, and there is no database view across modules. A module offers such a query as narrow as the page needs (names
+by ID, not its table). Don't import another module's `schema.ts`.
 
 ## Time and time-based rules
 
@@ -306,6 +311,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | A rule over the whole repository that neither lint nor the type check reads (config, workflows, browser tests) – e.g. no spike leftovers (ST-078) | a scan of `git ls-files` (tracked and new files; `docs/`, `.claude/`, `drizzle/` excluded) with a self-test on sample lines | unit | `src/platform/spike-leftovers.test.ts` |
 | A rule over a whole set of aggregates (museum number unique and assigned, ST-007) | the command (`executeCommand`) or the read model against an **isolated** database (`isolatedTestDatabase`), emptied before each test | integration | `src/modules/collection/register-machine-command.integration.test.ts`, `machine-overview.integration.test.ts` |
 | A migration that changes or deletes existing data | `isolatedTestDatabase(…).reset("<tag before>")`, data inserted with SQL as production had it, then `.migrate()` | integration | `src/platform/migrations.integration.test.ts` |
+| A page composed from several modules' queries (the machine record with names, ST-009) | the page data function against an isolated database, its result rendered by the page's view with `renderToStaticMarkup` | integration | `src/app/(team)/team/machines/[museumNumber]/machine-record.integration.test.ts` |
 | A page state the shared databases can never show (the empty machine overview) | the page's view component rendered with `renderToStaticMarkup` (`createElement`, no JSX in `.test.ts`) | unit | `src/app/(team)/team/machines/machine-overview.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |

@@ -4,7 +4,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { changeMachineStatusForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import {
+  changeMachineStatusForTest,
+  retireMachineForTest,
+  withoutMachines,
+} from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -78,5 +82,29 @@ describe("the machine record", () => {
     expect(registration).toBeGreaterThan(change);
     expect(html).toContain("flipper coil burnt · Tom · 20.01.2026, 14:30");
     expect(html).toContain("Eva · 15.01.2026, 10:00");
+  });
+
+  it("ST-009: Unknown museum number", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+
+    expect(await loadMachineRecord(db, "LG-999")).toBeUndefined();
+    expect(await page("LG-999")).toContain("Kein Gerät mit der Museumsnummer LG-999.");
+  });
+
+  it("ST-009: Retired machine keeps its record", async () => {
+    const machineId = await registered("LG-013", "2026-01-15T09:00:00Z");
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error("not retired");
+
+    const html = await page("LG-013");
+
+    expect(html).toContain("Ausgemustert am 01.03.2026, 12:00 – Sold");
+    expect(html).toContain("MM-12345");
+    expect(html).toContain("Hall 2, row 3");
+    expect(html).toContain("Erfasst als Spielbereit");
   });
 });

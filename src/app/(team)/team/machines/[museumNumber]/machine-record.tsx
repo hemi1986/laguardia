@@ -51,9 +51,7 @@ export function MachineRecordView({ record, museumNumber }: { record: MachineRec
       </dl>
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2>{texts.statusHistory}</h2>
-          </CardTitle>
+          <CardTitle>{texts.statusHistory}</CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-3">
