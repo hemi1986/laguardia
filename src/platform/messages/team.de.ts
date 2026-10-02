@@ -88,6 +88,7 @@ export const teamMessages = {
     title: "QR-Sticker drucken",
     print: "QR-Sticker drucken",
     printNow: "Drucken",
+    back: "Zurück zur Auswahl",
     choose: "Geräte auswählen",
     chosen: (count: number) => (count === 1 ? "1 Gerät gewählt" : `${count} Geräte gewählt`),
     chosenWithoutScript: "Die angehakten Geräte werden gedruckt.",

@@ -1,7 +1,6 @@
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Rejection } from "@/components/ui/message";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -22,7 +21,6 @@ export default async function StickersPage({ searchParams }: { searchParams: Sea
   return (
     <Page title={texts.title} wide>
       <p className="text-muted-foreground text-sm">{texts.sheet}</p>
-      {params.error === "none" && <Rejection>{texts.noneChosen}</Rejection>}
       <form action="/team/machines/stickers" className="flex gap-2" role="search">
         <label htmlFor="search" className="sr-only">
           {machineTexts.search}
@@ -32,7 +30,11 @@ export default async function StickersPage({ searchParams }: { searchParams: Sea
           {machineTexts.searchSubmit}
         </button>
       </form>
-      {machines.length === 0 && search ? <p>{machineTexts.noMatch(search)}</p> : <StickerChoice machines={machines} />}
+      {machines.length === 0 ? (
+        <p>{search ? machineTexts.noMatch(search) : machineTexts.empty}</p>
+      ) : (
+        <StickerChoice machines={machines} search={search} noneChosen={params.error === "none"} />
+      )}
     </Page>
   );
 }

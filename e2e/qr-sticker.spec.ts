@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, test } from "./fixtures";
 
 /**
  * QR stickers (ST-011): printing them, and what the address on them opens for a visitor and for a logged-in team
@@ -57,12 +57,14 @@ test("ST-011: Technician prints a QR sticker", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("status")).toHaveText("1 Gerät gewählt");
   await page.getByRole("button", { name: "QR-Sticker drucken" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/team/machines/stickers/print\\?m=${museumNumber}$`));
+  await expect(page).toHaveURL(new RegExp(`/team/machines/stickers/print\\?m=${museumNumber}&search=`));
   await expect(page.getByRole("img", { name: `QR-Code ${museumNumber}` })).toBeVisible();
   await expect(page.getByText(museumNumber, { exact: true })).toBeVisible();
   await expect(page.getByText("Problem? Scan mich!")).toBeVisible();
   await expect(page.getByText("Problem? Scan me!")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Navigation" })).toHaveCount(0); // the page is what is printed
+  await page.getByRole("link", { name: "Zurück zur Auswahl" }).click(); // G17: a way back without the browser
+  await expect(page).toHaveURL(/\/team\/machines\/stickers\?search=/);
 });
 
 test("ST-011: Visitor scans the sticker", async ({ page, browser }) => {
@@ -110,7 +112,9 @@ test("ST-011: No machine chosen for printing", async ({ page }) => {
   await page.getByRole("button", { name: "QR-Sticker drucken" }).click();
 
   await expect(page).toHaveURL(/\/team\/machines\/stickers\?error=none$/);
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte mindestens ein Gerät auswählen.");
+  // Right above the button (G8): the alert and the button are neighbours in the form.
+  const form = page.locator("form", { has: page.getByRole("button", { name: "QR-Sticker drucken" }) });
+  await expect(form.getByRole("alert")).toHaveText("Bitte mindestens ein Gerät auswählen.");
   await expect(page.getByRole("img", { name: /QR-Code/ })).toHaveCount(0);
 });
 
@@ -132,5 +136,4 @@ test("ST-011: Finding the machines to print for", async ({ page }) => {
   await page.getByRole("button", { name: "Suchen" }).click();
   await expect(page.getByLabel(`${first.museumNumber} · ${first.title}`)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
-  await openMore(page);
 });

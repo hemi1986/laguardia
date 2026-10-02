@@ -19,7 +19,7 @@ describe("the QR sticker", () => {
     expect(decoded(image)).toBe("https://eschbach.michaelschempp.de/m/LG-042");
   });
 
-  it("ST-011: Technician prints a QR sticker", async () => {
+  it("shows the QR code, the museum number and the prompt in German and English on a sticker", async () => {
     const html = renderToStaticMarkup(
       createElement(StickerSheet, { sheet: L7160, stickers: [{ museumNumber: "LG-042", qrCode: await qrCodeImage("LG-042") }] }),
     );
