@@ -127,4 +127,54 @@ describe("RM-MachineOverview", () => {
       "not-on-display": 5,
     });
   });
+
+  it("ST-008: Filter by machine status", async () => {
+    for (const museumNumber of ["LG-001", "LG-003", "LG-004"]) {
+      await registered({ museumNumber, location: "Hall 1", machineStatus: "playable" });
+    }
+    for (const museumNumber of ["LG-002", "LG-007"]) {
+      await registered({ museumNumber, location: "Hall 1", machineStatus: "out-of-order" });
+    }
+
+    expect(museumNumbers(await machineOverview(db, { machineStatus: "out-of-order" }))).toEqual(["LG-002", "LG-007"]);
+  });
+
+  it("ST-008: Search by museum number", async () => {
+    await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
+    await registered({ museumNumber: "LG-142", machineModelId: galaxian, location: "Hall 1", machineStatus: "playable" });
+    await registered({ museumNumber: "LG-001", location: "Hall 1", machineStatus: "playable" });
+
+    expect(museumNumbers(await machineOverview(db, { search: "042" }))).toEqual(["LG-042"]);
+  });
+
+  it("ST-008: Search by title", async () => {
+    await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
+    await registered({ museumNumber: "LG-043", machineModelId: galaxian, location: "Hall 1", machineStatus: "playable" });
+
+    expect(museumNumbers(await machineOverview(db, { search: "medieval" }))).toEqual(["LG-042"]);
+  });
+
+  it("combines the search with the machine status filter", async () => {
+    await registered({ museumNumber: "LG-042", location: "Hall 2", machineStatus: "playable" });
+    await registered({ museumNumber: "LG-043", location: "Hall 2", machineStatus: "out-of-order" });
+    await registered({ museumNumber: "LG-044", machineModelId: galaxian, location: "Hall 1", machineStatus: "out-of-order" });
+
+    const found = await machineOverview(db, { search: "Medieval", machineStatus: "out-of-order" });
+
+    expect(museumNumbers(found)).toEqual(["LG-043"]);
+  });
+
+  it("ST-008: Retired machines are not listed", async () => {
+    await registered({ museumNumber: "LG-012", location: "Hall 1", machineStatus: "playable" });
+    const retired = await registered({ museumNumber: "LG-013", location: "Depot", machineStatus: "playable" });
+    await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, asEva());
+
+    expect(museumNumbers(await machineOverview(db))).toEqual(["LG-012"]);
+    expect(museumNumbers(await machineOverview(db, { search: "013" }))).toEqual([]);
+    expect((await machineStatusCounts(db)).playable).toBe(1);
+  });
 });
+
+function museumNumbers(machines: { museumNumber: string }[]): string[] {
+  return machines.map((machine) => machine.museumNumber);
+}

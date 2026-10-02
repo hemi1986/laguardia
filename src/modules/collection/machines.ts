@@ -1,4 +1,4 @@
-import { asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import { machineStatuses, type Machine, type MachineStatus, type RegistrationFacts, type StatusChange } from "./register-machine";
@@ -141,8 +141,20 @@ export type MachineOverviewEntry = {
   machineStatus: MachineStatus;
 };
 
-/** RM-MachineOverview: the active machines (not retired), sorted by museum number. */
-export async function machineOverview(db: Database): Promise<MachineOverviewEntry[]> {
+/** What the machine overview is narrowed to (ST-008): both are optional and combine. */
+export type MachineOverviewQuery = {
+  /** Part of a museum number or a machine model title, in any case ("042", "medieval"). */
+  search?: string;
+  machineStatus?: MachineStatus;
+};
+
+/** RM-MachineOverview: the active machines (not retired), sorted by museum number – searched and filtered. */
+export async function machineOverview(
+  db: Database,
+  { search, machineStatus }: MachineOverviewQuery = {},
+): Promise<MachineOverviewEntry[]> {
+  const term = search?.trim();
+  const pattern = term ? `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%` : undefined;
   const rows = await db
     .select({
       id: machine.id,
@@ -155,7 +167,13 @@ export async function machineOverview(db: Database): Promise<MachineOverviewEntr
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
-    .where(isNull(machine.retiredAt))
+    .where(
+      and(
+        isNull(machine.retiredAt),
+        machineStatus ? eq(machine.machineStatus, machineStatus) : undefined,
+        pattern ? or(ilike(machine.museumNumber, pattern), ilike(machineModel.title, pattern)) : undefined,
+      ),
+    )
     .orderBy(asc(machine.museumNumber));
   return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
 }
