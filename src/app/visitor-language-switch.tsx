@@ -17,7 +17,7 @@ export function VisitorLanguageSwitch({
       <input type="hidden" name="locale" value={locale === "de" ? "en" : "de"} />
       <input type="hidden" name="back" value={back} />
       <Button type="submit" variant="outline" size="sm" lang={locale === "de" ? "en" : "de"}>
-        {messages.machinePage.switchLanguage}
+        {messages.languageSwitch}
       </Button>
     </form>
   );

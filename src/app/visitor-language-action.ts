@@ -3,8 +3,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { VISITOR_LOCALE_COOKIE } from "@/platform/messages/visitor-locale";
+import { sameSitePath } from "./same-site-path";
 
 const YEAR = 365 * 24 * 60 * 60;
+
 
 /**
  * The language switch of the visitor pages (ST-010): remembers the chosen language for a year and shows the same page
@@ -17,5 +19,5 @@ export async function switchVisitorLanguage(formData: FormData): Promise<void> {
   if (locale === "de" || locale === "en") {
     (await cookies()).set(VISITOR_LOCALE_COOKIE, locale, { maxAge: YEAR, sameSite: "lax", path: "/" });
   }
-  redirect(back.startsWith("/") && !back.startsWith("//") ? back : "/");
+  redirect(sameSitePath(back));
 }

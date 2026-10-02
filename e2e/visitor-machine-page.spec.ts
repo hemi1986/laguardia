@@ -155,3 +155,21 @@ test("ST-010: Unknown museum number", async ({ browser }) => {
   await english.goto("/m/LG-999");
   await expect(english.getByRole("main")).toContainText("There is no machine with this museum number.");
 });
+
+test("a malformed address is refused by Next.js itself, not a server error", async ({ browser }) => {
+  const phone = await visitor(browser, "de-DE");
+
+  const response = await phone.goto("/m/%E0%A4%A");
+
+  expect(response!.status()).toBe(400);
+});
+
+test("the unknown-number page offers the language switch and a way on", async ({ browser }) => {
+  const phone = await visitor(browser, "de-DE");
+
+  await phone.goto("/m/LG-999");
+
+  await expect(phone.getByRole("button", { name: "English" })).toBeVisible();
+  await phone.getByRole("link", { name: "Zur Startseite" }).click();
+  await expect(phone).toHaveURL(/\/$/);
+});

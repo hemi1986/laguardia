@@ -21,12 +21,7 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "3mb" },
   },
   async headers() {
-    return [
-      { source: "/:path*", headers: securityHeaders },
-      // The QR address (ST-010, ST-011): always current, and never a team member's page for a visitor or vice versa –
-      // so never stored by a shared cache.
-      { source: "/m/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
-    ];
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 
