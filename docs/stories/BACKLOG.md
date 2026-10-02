@@ -4,15 +4,20 @@
 
 **Progress: 7 of 57 domain stories done** · scenarios 65 of 396
 
-**80 stories** · In Progress: 0 · Ready: 58 · In Review: 0 · Draft: 4 · Done: 18
+**80 stories** · In Progress: 1 · Ready: 57 · In Review: 0 · Draft: 4 · Done: 18
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-060](ST-060-custom-domain-and-qr-address.md) | Custom domain and stable QR address scheme | tech-task | Collection | must | XS | low | ST-001 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-060](ST-060-custom-domain-and-qr-address.md) | Custom domain and stable QR address scheme | tech-task | Collection | must | XS | low | ST-001 |
 | [ST-011](ST-011-qr-sticker.md) | QR sticker leads visitors and team members to the machine | story | Collection | must | M | medium | ST-009, ST-010, ST-060 |
 | [ST-012](ST-012-change-machine-status.md) | Change the machine status | story | Collection | must | M | low | ST-009 |
 | [ST-013](ST-013-visitor-reports-problem.md) | Visitor reports a problem at the machine | story | Repair | must | M | medium | ST-010 |
