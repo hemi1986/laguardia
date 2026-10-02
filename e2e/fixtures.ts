@@ -1,23 +1,27 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 
 /**
  * The Vercel deployment protection bypass header goes only to requests for the preview itself,
- * never to other origins the page may contact.
+ * never to other origins the page may contact. Every page needs it – the test's own `page` gets it from the fixture,
+ * a page of another browser context (e.g. a second visitor's phone, ST-010) through this function.
  */
+export async function allowPreview(page: Page, baseURL: string | undefined): Promise<void> {
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (!bypass || !baseURL) return;
+  await page.route(`${new URL(baseURL).origin}/**`, (route) =>
+    route.continue({
+      headers: {
+        ...route.request().headers(),
+        "x-vercel-protection-bypass": bypass,
+        "x-vercel-set-bypass-cookie": "true",
+      },
+    }),
+  );
+}
+
 export const test = base.extend({
   page: async ({ page, baseURL }, provide) => {
-    const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
-    if (bypass && baseURL) {
-      await page.route(`${new URL(baseURL).origin}/**`, (route) =>
-        route.continue({
-          headers: {
-            ...route.request().headers(),
-            "x-vercel-protection-bypass": bypass,
-            "x-vercel-set-bypass-cookie": "true",
-          },
-        }),
-      );
-    }
+    await allowPreview(page, baseURL);
     await provide(page);
   },
 });

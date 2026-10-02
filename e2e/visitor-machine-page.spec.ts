@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, openMore, test } from "./fixtures";
 
 /**
  * The visitor machine page on a phone (ST-010), at the QR address /m/<museum number>, without login. The machines are
@@ -38,10 +38,17 @@ async function aRegisteredMachine(page: Page, machineStatus: "playable" | "not-o
   return { title, museumNumber };
 }
 
-/** A visitor's phone with the given browser language – a fresh context, so no team session and no remembered switch. */
+/**
+ * A visitor's phone with the given browser language – a fresh context, so no team session and no remembered switch.
+ * It gets the preview's protection bypass like the test's own page, and opens the start page once: on the preview the
+ * first navigation of a context sets Vercel's bypass cookie (engineering conventions, Tests).
+ */
 async function visitor(browser: Browser, locale: string) {
   const context = await browser.newContext({ locale, viewport: { width: 360, height: 800 }, isMobile: true });
-  return context.newPage();
+  const phone = await context.newPage();
+  await allowPreview(phone, test.info().project.use.baseURL);
+  await phone.goto("/");
+  return phone;
 }
 
 test("ST-010: Visitor with a German browser opens the page", async ({ page, browser }) => {
