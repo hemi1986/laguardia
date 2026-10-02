@@ -16,7 +16,6 @@ export {
   machineOverview,
   machineRecord,
   machineStatusCounts,
-  machineStatusHistory,
   type MachineOverviewEntry,
   type MachineRecord,
   type MachineOverviewQuery,

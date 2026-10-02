@@ -5,7 +5,8 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { createMachineModelCommand, machineOverview, machineStatusHistory, registerMachineCommand } from ".";
+import { createMachineModelCommand, machineOverview, registerMachineCommand } from ".";
+import { machineStatusHistory } from "./machines";
 import type { RegisterMachineInput } from ".";
 import {
   changeMachineStatusForTest,

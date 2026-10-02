@@ -76,6 +76,11 @@ The museum's short identifier of a machine (e.g. LG-042), printed on its QR stic
 _Avoid_: ID, inventory ID, serial number (that is the manufacturer's)
 _UI (de)_: Museumsnummer
 
+**Reserved museum number**:
+The museum number a machine had before its museum number was corrected; it is never given out again and still leads to its machine, so an old QR sticker keeps working.
+_Avoid_: Old number, freed number, retired number
+_UI (de)_: Reservierte Museumsnummer
+
 **Serial number**:
 The manufacturer's number of a machine; optional, since many machines (especially EM pinball) have none that is readable.
 _Avoid_: Museum number, inventory number

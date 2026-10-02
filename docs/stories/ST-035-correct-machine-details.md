@@ -74,6 +74,16 @@ Scenario: Helpers cannot correct machine details
   When the helper tries to correct a museum number or serial number
   Then the correction is rejected
 
+### Foundation (from the architecture review 2026-10-02 (user decisions) – one museum number register for the Collection module)
+Today what a museum number is lives in four places (`registrationFacts` and `giveOut` in `src/modules/collection/machines.ts`, `MUSEUM_NUMBER`/`nextMuseumNumber` in `register-machine.ts`, the lock key), and a changing command gets no facts (`src/platform/command/aggregate.ts`). So CMD-CorrectMachineDetails could not reject "New museum number already used", and the race with a registration would end in a primary-key crash; the test stand-in `correctMuseumNumberForTest` hides it. Built just in time in this story, its first real caller – no ADR. It resolves the notes of `docs/reviews/ST-007-code-review.md` (Resolution: "facts on changing commands – revisit with ST-035", "count(*) on every machine update – revisit with ST-010", "#4 MuseumNumber type – revisit with ST-035").
+- [ ] One museum number register in the Collection module (`src/modules/collection/museum-numbers.ts`) is the only place that knows what a museum number is: the format "LG-" plus three digits, the next free museum number (after LG-999 counting down), the set of all museum numbers given out (in use, of retired machines, and every reserved museum number) read under the advisory lock, giving a museum number to a machine (its earlier museum number stays a reserved museum number), and resolving a museum number – current or reserved – to its machine. CMD-RegisterMachine and CMD-CorrectMachineDetails both go through it; only the register writes the `museum_number` table (tests).
+- [ ] The register takes the lock when it reads its facts and again when it gives out a museum number (re-entrant within the transaction), so every write of a museum number is serialized even if a command forgets its facts (integration test).
+- [ ] A unique violation on `museum_number` that slips past the lock is turned into the rejection `museum-number-taken` by the register – in one place, not per command (integration test).
+- [ ] The command layer lets changing commands declare `facts` too, not only creating ones; the type rule of ST-007 – `facts` is required when `decide` takes facts – holds for both shapes (type test in `src/platform/command/facts-types.test.ts`); the engineering conventions are updated when this is built.
+- [ ] The machine store keeps the status history append-only without `count(*)`: it remembers how many entries it loaded and appends only new ones; a decision that shortens or changes a loaded entry fails loudly (integration test).
+- [ ] A reserved museum number in an address leads to the machine's current museum number: the team machine record (`/team/machines/<number>`, ST-009) redirects to the current museum number – in addition to the scenario "Old QR sticker keeps working", which covers the visitor machine page (test).
+- [ ] The test stand-in `correctMuseumNumberForTest` (`src/modules/collection/machines.test-support.ts`) is replaced by the real command or goes through the register, so no test can skip the museum number rule.
+
 ## Out of Scope
 - Correcting machine model data (ST-036)
 
