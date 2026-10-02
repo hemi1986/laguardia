@@ -164,6 +164,15 @@ describe("RM-MachineOverview", () => {
     expect(museumNumbers(found)).toEqual(["LG-043"]);
   });
 
+  it("searches for what was typed – spaces around it ignored, % and _ taken literally", async () => {
+    await registered({ museumNumber: "LG-042", location: "Hall 2", machineStatus: "playable" });
+
+    expect(museumNumbers(await machineOverview(db, { search: "  042 " }))).toEqual(["LG-042"]);
+    expect(museumNumbers(await machineOverview(db, { search: "%" }))).toEqual([]);
+    expect(museumNumbers(await machineOverview(db, { search: "LG_042" }))).toEqual([]);
+    expect(museumNumbers(await machineOverview(db, { search: "   " }))).toEqual(["LG-042"]);
+  });
+
   it("ST-008: Retired machines are not listed", async () => {
     await registered({ museumNumber: "LG-012", location: "Hall 1", machineStatus: "playable" });
     const retired = await registered({ museumNumber: "LG-013", location: "Depot", machineStatus: "playable" });

@@ -58,4 +58,5 @@ test("ST-008: No machine matches the search", async ({ page }) => {
   await expect(page).toHaveURL(/\/team\/machines$/);
   await expect(page.getByLabel("Suche")).toHaveValue("");
   await expect(page.getByRole("article").first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360); // the full list
 });

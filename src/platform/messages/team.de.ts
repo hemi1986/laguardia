@@ -31,7 +31,7 @@ export const teamMessages = {
   },
   team: {
     menu: "Navigation",
-    home: "Übersicht",
+    dashboard: "Übersicht",
     more: "Mehr",
     start: "La Guardia – Team",
     loggedInAs: "Angemeldet als",

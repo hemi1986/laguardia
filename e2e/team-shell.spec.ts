@@ -50,6 +50,20 @@ test("every team page carries the same navigation, once per destination, with lo
   await expect(page.getByRole("link", { name: "Modelle" })).toBeFocused();
 });
 
+test("'Mehr' closes when a destination in it is chosen, and on Escape", async ({ page }) => {
+  await logIn(page);
+  const more = page.getByRole("navigation").locator("details");
+
+  await openMore(page);
+  await page.getByRole("link", { name: "Modelle" }).click();
+  await expect(page).toHaveURL(/\/team\/machine-models$/);
+  await expect(more).not.toHaveAttribute("open");
+
+  await openMore(page);
+  await page.keyboard.press("Escape");
+  await expect(more).not.toHaveAttribute("open");
+});
+
 test("login and the team start page stay within 360 px, with the rejection inside main", async ({ page }) => {
   await page.goto("/login?error=login-failed");
 

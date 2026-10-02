@@ -4,13 +4,15 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
-import type { MachineOverviewEntry, MachineOverviewQuery, MachineStatus } from "@/modules/collection";
+import {
+  machineStatuses,
+  type MachineOverviewEntry,
+  type MachineOverviewQuery,
+  type MachineStatus,
+} from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 
 const { machines: texts, machineModels } = teamMessages;
-
-/** The machine statuses in the order the overview counts them – the glossary's order (user, 2026-10-01). */
-const statusOrder: MachineStatus[] = ["playable", "limited", "out-of-order", "not-on-display"];
 
 /** The address of the overview for a search and a filter – a plain link, so it works without JavaScript. */
 function overviewHref({ search, machineStatus }: MachineOverviewQuery): string {
@@ -41,7 +43,7 @@ export function MachineOverview({
   /** The machine just registered – named in the confirmation (G3). */
   registered?: MachineOverviewEntry;
 }) {
-  const total = statusOrder.reduce((sum, status) => sum + counts[status], 0);
+  const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
 
   return (
@@ -84,7 +86,7 @@ export function MachineOverview({
               <FilterLink href={overviewHref({ search })} current={!query.machineStatus}>
                 {texts.all} · {total}
               </FilterLink>
-              {statusOrder.map((status) => (
+              {machineStatuses.map((status) => (
                 <FilterLink
                   key={status}
                   href={overviewHref({ search, machineStatus: status })}
@@ -126,19 +128,22 @@ function FilterLink({ href, current, children }: { href: string; current: boolea
   );
 }
 
-/** The two "nothing found" cases say what to do about them (G7). */
+/**
+ * The two "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
+ * clear it (the filter stays); without a search only a filter can have emptied the list.
+ */
 function NothingFound({ search, machineStatus }: MachineOverviewQuery) {
-  if (search) {
+  if (search || !machineStatus) {
     return (
       <div className="flex flex-col gap-2">
-        <p>{texts.noMatch(search)}</p>
+        <p>{texts.noMatch(search ?? "")}</p>
         <Link href={overviewHref({ machineStatus })} className="self-start underline underline-offset-4">
           {texts.clearSearch}
         </Link>
       </div>
     );
   }
-  return <p>{texts.noneWithStatus(machineStatus ? texts.statuses[machineStatus] : "")}</p>;
+  return <p>{texts.noneWithStatus(texts.statuses[machineStatus])}</p>;
 }
 
 /** What tells a machine apart from its neighbours (G5) – everything else is on its machine record (ST-009). */

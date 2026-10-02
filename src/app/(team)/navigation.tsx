@@ -3,6 +3,7 @@ import { widePageWidth } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { MoreMenu } from "./more-menu";
 import { logOutAction } from "./team/actions";
 
 const { team } = teamMessages;
@@ -23,15 +24,12 @@ export function TeamNavigation({ role }: { role: Role }) {
     <nav aria-label={team.menu} className="border-b">
       <div className={`${widePageWidth} flex flex-wrap items-center gap-x-4 gap-y-2`}>
         <Link href="/team" className={link}>
-          {team.home}
+          {team.dashboard}
         </Link>
         <Link href="/team/machines" className={link}>
           {team.machines}
         </Link>
-        <details className="group relative ms-auto">
-          <summary className={`${link} cursor-pointer list-none`}>
-            {team.more} <span aria-hidden="true">▾</span>
-          </summary>
+        <MoreMenu label={team.more}>
           <ul className="bg-background absolute end-0 z-10 mt-2 flex min-w-48 flex-col gap-3 rounded-lg border p-3 shadow-sm">
             {technician && (
               <>
@@ -60,7 +58,7 @@ export function TeamNavigation({ role }: { role: Role }) {
               </form>
             </li>
           </ul>
-        </details>
+        </MoreMenu>
       </div>
     </nav>
   );

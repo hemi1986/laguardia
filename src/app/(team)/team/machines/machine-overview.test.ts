@@ -41,4 +41,33 @@ describe("the machine overview", () => {
     }
     expect(html).toMatch(/href="\/team\/machines\?machineStatus=out-of-order"/);
   });
+
+  it("shows each machine with what tells it apart: category, technology, location and machine status", () => {
+    const html = rendered({
+      counts: { ...noCounts, playable: 1, "out-of-order": 1 },
+      machines: [
+        {
+          id: "m1",
+          museumNumber: "LG-001",
+          machineModelTitle: "Medieval Madness",
+          machineCategory: "pinball",
+          technology: "dmd",
+          location: "Hall 1, row 3",
+          machineStatus: "playable",
+        },
+        {
+          id: "m2",
+          museumNumber: "LG-002",
+          machineModelTitle: "Jukebox",
+          machineCategory: "other",
+          location: "Foyer",
+          machineStatus: "out-of-order",
+        },
+      ],
+    });
+
+    expect(html).toContain("LG-001 · Medieval Madness");
+    expect(html).toContain("Flipper · DMD · Hall 1, row 3 · Status: Spielbereit");
+    expect(html).toContain("Sonstiges · Foyer · Status: Außer Betrieb"); // no technology – nothing in its place
+  });
 });
