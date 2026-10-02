@@ -49,9 +49,14 @@ export function MachineOverview({
   return (
     <>
       {canRegister && (
-        <Link href="/team/machines/new" className={buttonVariants({ className: "self-start" })}>
-          {texts.register}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/team/machines/new" className={buttonVariants()}>
+            {texts.register}
+          </Link>
+          <Link href="/team/machines/stickers" className={buttonVariants({ variant: "outline" })}>
+            {teamMessages.stickers.print}
+          </Link>
+        </div>
       )}
       {registered && (
         <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>

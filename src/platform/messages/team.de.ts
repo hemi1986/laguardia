@@ -84,6 +84,20 @@ export const teamMessages = {
     clearSearch: "Suche zurücksetzen",
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
   },
+  stickers: {
+    title: "QR-Sticker drucken",
+    print: "QR-Sticker drucken",
+    printNow: "Drucken",
+    back: "Zurück zur Auswahl",
+    choose: "Geräte auswählen",
+    chosen: (count: number) => (count === 1 ? "1 Gerät gewählt" : `${count} Geräte gewählt`),
+    chosenWithoutScript: "Die angehakten Geräte werden gedruckt.",
+    noneChosen: "Bitte mindestens ein Gerät auswählen.",
+    sheet: "Etikettenbogen: Avery Zweckform L7160 (A4, 21 Etiketten 63,5 × 38,1 mm)",
+    /** Printed on every sticker, in both languages (decision D14) – for visitors, not only the team. */
+    prompt: { de: "Problem? Scan mich!", en: "Problem? Scan me!" },
+    qrCodeOf: (museumNumber: string) => `QR-Code ${museumNumber}`,
+  },
   machineRecord: {
     unknown: (museumNumber: string) => `Kein Gerät mit der Museumsnummer ${museumNumber}.`,
     noSerialNumber: "keine",

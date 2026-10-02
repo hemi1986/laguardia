@@ -11,6 +11,11 @@ export async function requireTeamMember() {
   return member;
 }
 
+/** The logged-in team member, if any – for pages everyone may open that show team members more (ST-011). */
+export async function teamMemberIfLoggedIn() {
+  return loggedInTeamMember({ db: database(), headers: await headers(), inNext: true });
+}
+
 /** For pages only technicians may open (ST-005): helpers are sent back to the team start page. */
 export async function requireTechnician() {
   const member = await requireTeamMember();
