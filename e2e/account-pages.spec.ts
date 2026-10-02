@@ -3,8 +3,8 @@ import { expect, test } from "./fixtures";
 
 /**
  * The account pages rebuilt from the shared UI components (ST-077): the accessibility contract of ST-005 and the
- * 360 px rules hold for the new markup. Needs a technician account: locally the one from
- * `npm run setup:first-technician` (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD) – the preview database has none
+ * 360 px rules hold for the new markup. Needs a technician account: locally the e2e technician each local run creates
+ * (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD) – the preview database has none
  * before ST-068.
  */
 const username = process.env.E2E_TEAM_USERNAME;

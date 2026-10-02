@@ -10,7 +10,7 @@ test("ST-004: Team pages require login", async ({ page }) => {
   await expect(page).not.toHaveURL(/\/login/);
 });
 
-// Logging in needs an account: locally the one from `npm run setup:first-technician` (E2E_TEAM_USERNAME /
+// Logging in needs an account: locally the e2e technician each local run creates (ST-083) (E2E_TEAM_USERNAME /
 // E2E_TEAM_PASSWORD); the preview database has none before ST-068 seeds it, so this runs locally only.
 test("a team member logs in and out on a 360 px phone", async ({ page }) => {
   const username = process.env.E2E_TEAM_USERNAME;

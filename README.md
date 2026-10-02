@@ -28,6 +28,8 @@ Two accesses make the engineering workflow a lot smoother – both are optional,
 
 Local development and the integration tests need a database: copy the values from `.env.example` into `.env.development.local`, then `npm run db:up` (PostgreSQL in Docker) and `npm run db:migrate:dev`. Environment values from Vercel come with `npx vercel env pull`.
 
+The local browser tests (`npm run test:e2e`, `npm run verify -- --e2e`) need only `npm run db:up` and `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` in `.env.development.local`: they start their own dev server on port 3100 (distDir `.next-e2e`) against `laguardia_e2e_test`, which is reset on every run and gets the e2e technician automatically. Your development database and a dev server on port 3000 are never touched (ST-083).
+
 You don't have to remember any of this: the `session-start` hook checks all of it at the start of every session and reports only what is missing.
 
 ## Flow at a glance

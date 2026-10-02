@@ -3,7 +3,7 @@ import { expect, openMore, test } from "./fixtures";
 /**
  * The machine model page on a phone (ST-006) and the Server Action runner in the browser (ST-073): a rejected
  * creation shows the catalogue text of its error code and keeps what was typed. Needs a technician account:
- * locally the one from `npm run setup:first-technician` (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview
+ * locally the e2e technician each local run creates (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview
  * database has none before ST-068 seeds it, so this runs locally only – like the account tests of ST-005.
  */
 const username = process.env.E2E_TEAM_USERNAME;

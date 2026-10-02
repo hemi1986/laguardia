@@ -1,8 +1,8 @@
 import { expect, openMore, test } from "./fixtures";
 
 /**
- * Managing accounts on a phone (ST-005). Needs a technician account: locally the one from
- * `npm run setup:first-technician` (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none
+ * Managing accounts on a phone (ST-005). Needs a technician account: locally the e2e technician each local run creates
+ * (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none
  * before ST-068 seeds it, so this runs locally only – like the login test of ST-004.
  */
 const username = process.env.E2E_TEAM_USERNAME;

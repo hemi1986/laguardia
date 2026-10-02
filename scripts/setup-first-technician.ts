@@ -10,6 +10,7 @@ import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 import { setUpFirstTechnician } from "@/modules/team";
 import { database } from "@/platform/database";
+import { firstTechnicianRefusal } from "./first-technician-messages";
 
 async function main() {
   const muted = { on: false };
@@ -39,14 +40,7 @@ async function main() {
     console.log(`Technician account "${username}" created.`);
     process.exit(0);
   }
-  console.error(
-    {
-      "name-required": "The name must not be empty – nothing was created.",
-      "username-invalid": "The username needs 3–30 characters: letters a–z, digits, _ and . – nothing was created.",
-      "password-too-short": "The password must have at least 10 characters – nothing was created.",
-      "accounts-exist": "Team member accounts exist already – nothing was created or changed.",
-    }[outcome.error],
-  );
+  console.error(firstTechnicianRefusal(outcome.error));
   process.exit(1);
 }
 

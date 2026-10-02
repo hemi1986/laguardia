@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 
 /**
  * The machine overview on a phone (ST-008). Visitors are sent to the login – that needs no account and runs on the
- * preview too. The search needs a technician account: locally the one from `npm run setup:first-technician`
+ * preview too. The search needs a technician account: locally the e2e technician each local run creates (ST-083)
  * (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none before ST-068.
  */
 const username = process.env.E2E_TEAM_USERNAME;

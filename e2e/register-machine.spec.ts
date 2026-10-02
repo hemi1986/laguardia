@@ -4,8 +4,8 @@ import { expect, openMore, test } from "./fixtures";
 /**
  * Registering a machine on a phone (ST-007) and the Server Action runner in the browser (ST-073, proof moved here by
  * ST-078): a rejected registration shows the catalogue text of its error code, marks the field and keeps what was
- * typed – with and without JavaScript. Needs a technician account: locally the one from
- * `npm run setup:first-technician` (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none before
+ * typed – with and without JavaScript. Needs a technician account: locally the e2e technician each local run creates
+ * (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none before
  * ST-068 seeds it, so this runs locally only.
  */
 const username = process.env.E2E_TEAM_USERNAME;

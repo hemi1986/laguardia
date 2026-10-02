@@ -2,6 +2,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
+/** The port of the local browser tests' own dev server (ST-083) – scripts/e2e-server.ts starts it there. */
+const E2E_PORT = 3100;
+
 /**
  * Browser tests at phone size (360 px, Definition of Done). BASE_URL points at a deployed preview (CI);
  * without it they run against a local dev server. Previews sit behind Vercel's deployment protection –
@@ -26,10 +29,19 @@ export default defineConfig({
     viewport: { width: 360, height: 800 },
     isMobile: true,
     hasTouch: true,
-    baseURL: baseURL ?? "http://localhost:3000",
+    baseURL: baseURL ?? `http://localhost:${E2E_PORT}`,
     trace: process.env.CI ? "off" : "retain-on-failure",
     screenshot: "off",
     video: "off",
   },
-  webServer: baseURL ? undefined : { command: "npm run dev", url: "http://localhost:3000", reuseExistingServer: true },
+  // Locally (ST-083): a dev server of their own on port 3100 against laguardia_e2e_test, prepared before it serves –
+  // never the developer's server on 3000 nor its database. Not reused: a server already on 3100 fails the run.
+  webServer: baseURL
+    ? undefined
+    : {
+        command: "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/e2e-server.ts",
+        url: `http://localhost:${E2E_PORT}`,
+        reuseExistingServer: false,
+        timeout: 180_000, // the first run compiles cold in .next-e2e
+      },
 });

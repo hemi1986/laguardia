@@ -2,7 +2,7 @@ import { expect, openMore, test } from "./fixtures";
 
 /**
  * The team shell (ST-076): one navigation for every team page, the landmarks the other tests rely on, and the
- * 360 px rules. Needs a technician account: locally the one from `npm run setup:first-technician`
+ * 360 px rules. Needs a technician account: locally the e2e technician each local run creates (ST-083)
  * (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD) – the preview database has none before ST-068.
  */
 const username = process.env.E2E_TEAM_USERNAME;
