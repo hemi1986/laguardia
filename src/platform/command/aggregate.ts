@@ -116,9 +116,11 @@ type Creating<
   Facts,
 > = Common<Allowed, State, Event, Result, PolicyError> & {
   creates: true;
-  facts?: (tx: Database, input: Input) => Promise<Facts>;
   decide: (facts: Facts, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
-};
+} & ([Facts] extends [undefined]
+    ? { facts?: never }
+    : // A decision that needs facts cannot be declared without reading them (ST-007 review).
+      { facts: (tx: Database, input: Input) => Promise<Facts> });
 
 /**
  * A command on an existing aggregate: `target` names it and the version the acting person saw. Only a command run

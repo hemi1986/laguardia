@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -21,8 +21,14 @@ export function isolatedTestDatabase(name: string) {
     /** Drops everything and applies the migrations – all of them, or up to and including `upTo` (a migration tag). */
     async reset(upTo?: string): Promise<NodePgDatabase> {
       await pool?.end();
-      await resetDatabase(url, upTo ? migrationsUpTo(upTo) : "drizzle");
-      pool = new Pool({ connectionString: url.toString(), max: 4 });
+      const folder = upTo ? migrationsUpTo(upTo) : "drizzle";
+      try {
+        await resetDatabase(url, folder);
+      } finally {
+        if (upTo) rmSync(folder, { recursive: true, force: true });
+      }
+      // Enough connections for eight commands at once – the concurrency scenarios need them to really overlap.
+      pool = new Pool({ connectionString: url.toString(), max: 10 });
       return drizzle(pool);
     },
     /** Applies the migrations not applied yet – after `reset(upTo)`, the step a deployment takes. */

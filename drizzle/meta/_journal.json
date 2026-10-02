@@ -43,6 +43,13 @@
       "when": 1790880086856,
       "tag": "0005_machine",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790922796748,
+      "tag": "0006_machine_status_change_position",
+      "breakpoints": true
     }
   ]
 }

@@ -145,7 +145,8 @@ const HIGHEST = 999;
  * the next free one below it, counting down (user 2026-10-01). Undefined when LG-001 to LG-999 are all given out.
  */
 function nextMuseumNumber(givenOut: ReadonlySet<string>): string | undefined {
-  const numbers = [...givenOut].map((museumNumber) => Number(museumNumber.slice(3)));
+  // Only numbers in the format count – one stored otherwise (by hand, an import) must not break the assignment.
+  const numbers = [...givenOut].filter((museumNumber) => MUSEUM_NUMBER.test(museumNumber)).map((museumNumber) => Number(museumNumber.slice(3)));
   const highest = Math.max(0, ...numbers);
   if (highest < HIGHEST) return museumNumberOf(highest + 1);
   for (let number = HIGHEST - 1; number >= 1; number--) {

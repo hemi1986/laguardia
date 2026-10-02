@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigserial, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { machineCategories, technologies } from "./create-machine-model";
 import { machineStatuses } from "./register-machine";
 
@@ -51,6 +51,8 @@ export const machineStatusChange = pgTable(
   "machine_status_change",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    /** The order the changes were stored in – changes of one command share their point in time (ST-007 review). */
+    position: bigserial("position", { mode: "number" }).notNull(),
     machineId: uuid("machine_id")
       .notNull()
       .references(() => machine.id),

@@ -97,7 +97,7 @@ async function statusHistoryOf(db: Database, machineId: string): Promise<StatusC
     .select()
     .from(machineStatusChange)
     .where(eq(machineStatusChange.machineId, machineId))
-    .orderBy(asc(machineStatusChange.changedAt), asc(machineStatusChange.id));
+    .orderBy(asc(machineStatusChange.position));
   return rows.map((row) => ({
     previousStatus: row.previousStatus ?? undefined,
     newStatus: row.newStatus,

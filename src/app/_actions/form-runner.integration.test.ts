@@ -96,7 +96,7 @@ describe("the Server Action runner", () => {
 
     const state = await action(null, post({}));
 
-    expect(state).toEqual({ error: "machine-model-required", values: { machineId: "", priority: "" } });
+    expect(state).toEqual({ error: "machine-model-required", values: { machineModelId: "", priority: "" } });
     expect(commandErrorText(teamMessages, state!.error)).toBe("Bitte ein Modell wählen.");
   });
 

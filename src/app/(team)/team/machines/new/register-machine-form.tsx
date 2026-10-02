@@ -28,7 +28,7 @@ const fieldOf: Partial<Record<ErrorCode, RegisterMachineField>> = {
   "machine-status-required": "machineStatus",
   "museum-number-format": "museumNumber",
   "museum-number-taken": "museumNumber",
-  "no-museum-number-free": "museumNumber",
+  // "no-museum-number-free" marks no field: nothing typed here can make a number free (ST-007 review).
 };
 
 /**
