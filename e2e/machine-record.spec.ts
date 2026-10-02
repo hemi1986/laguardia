@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures";
 
 /**
  * The machine record on a phone (ST-009), opened from the machine overview. Needs a technician account: locally the
- * one from `npm run setup:first-technician` (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none
+ * e2e technician each local run creates (ST-083, E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD); the preview database has none
  * before ST-068.
  */
 const username = process.env.E2E_TEAM_USERNAME;

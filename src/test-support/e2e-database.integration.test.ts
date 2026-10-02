@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client, Pool } from "pg";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { logIn } from "@/modules/team";
 import { testDatabaseUrl } from "./database";
 import { e2eDatabaseUrl, prepareE2eDatabase } from "./e2e-database";
@@ -36,10 +36,16 @@ afterAll(dropDatabase);
 
 describe("the browser-test database", () => {
   it("is laguardia_e2e_test on the server of the test database – never taken from DATABASE_URL", () => {
-    const e2e = e2eDatabaseUrl();
+    vi.stubEnv("DATABASE_URL", "postgres://someone:secret@development.example:5432/laguardia");
+    try {
+      const e2e = e2eDatabaseUrl();
 
-    expect(e2e.pathname).toBe("/laguardia_e2e_test");
-    expect(e2e.host).toBe(new URL(testDatabaseUrl()).host);
+      expect(e2e.pathname).toBe("/laguardia_e2e_test");
+      expect(e2e.host).not.toBe("development.example:5432");
+      expect(e2e.username).not.toBe("someone");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("is created when missing and then holds exactly the e2e technician – again after a second preparation", async () => {

@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { setUpFirstTechnician } from "@/modules/team";
-import { firstTechnicianProblem } from "../../scripts/first-technician-messages";
+import { firstTechnicianRefusal } from "../../scripts/first-technician-messages";
 import { testDatabaseUrl } from "./database";
 import { resetDatabase } from "./reset-test-database";
 
@@ -29,7 +29,7 @@ export async function prepareE2eDatabase(
   const pool = new Pool({ connectionString: url.toString(), max: 1 });
   try {
     const outcome = await setUpFirstTechnician(drizzle(pool), { name: "E2E Technician", ...technician });
-    if (!outcome.ok) throw new Error(firstTechnicianProblem(outcome.error));
+    if (!outcome.ok) throw new Error(firstTechnicianRefusal(outcome.error));
   } finally {
     await pool.end();
   }

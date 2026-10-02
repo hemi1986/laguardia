@@ -10,7 +10,7 @@ import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 import { setUpFirstTechnician } from "@/modules/team";
 import { database } from "@/platform/database";
-import { firstTechnicianProblem } from "./first-technician-messages";
+import { firstTechnicianRefusal } from "./first-technician-messages";
 
 async function main() {
   const muted = { on: false };
@@ -40,7 +40,7 @@ async function main() {
     console.log(`Technician account "${username}" created.`);
     process.exit(0);
   }
-  console.error(firstTechnicianProblem(outcome.error));
+  console.error(firstTechnicianRefusal(outcome.error));
   process.exit(1);
 }
 

@@ -6,17 +6,23 @@
  * explicitly – they override `.env.development.local`, so the development database is never touched.
  */
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import { e2eDatabaseUrl, prepareE2eDatabase } from "@/test-support/e2e-database";
 
-export const E2E_PORT = 3100;
+const E2E_PORT = 3100; // playwright.config.ts waits for this port
 
 async function main() {
   const database = e2eDatabaseUrl();
   const username = process.env.E2E_TEAM_USERNAME;
   const password = process.env.E2E_TEAM_PASSWORD;
+  if (Boolean(username) !== Boolean(password)) {
+    console.warn("Only one of E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD is set – no e2e technician, the team-page tests skip.");
+  }
   await prepareE2eDatabase(database, username && password ? { username, password } : undefined);
 
-  const server = spawn("npx", ["next", "dev", "--port", String(E2E_PORT)], {
+  // `next` through Node itself – no `npx` layer, and it works without a shell on Windows too.
+  const next = join(process.cwd(), "node_modules", "next", "dist", "bin", "next"); // Playwright starts us in the root
+  const server = spawn(process.execPath, [next, "dev", "--port", String(E2E_PORT)], {
     stdio: "inherit",
     env: {
       ...process.env,
@@ -26,7 +32,8 @@ async function main() {
     },
   });
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => server.kill(signal));
-  server.on("exit", (code) => process.exit(code ?? 0));
+  // Killed by a signal: not a clean end – the wrapper fails too.
+  server.on("exit", (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 }
 
 main().catch((error) => {
