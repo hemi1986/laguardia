@@ -23,7 +23,7 @@ test.beforeEach(() => {
 
 /** A machine model and a machine registered through the pages – returns the title and the assigned museum number. */
 async function aRegisteredMachine(page: Page, location = "Hall 2, row 3") {
-  const title = `Medieval Madness ${Date.now().toString(36)}`;
+  const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   await page.goto("/team/machine-models");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
@@ -31,7 +31,7 @@ async function aRegisteredMachine(page: Page, location = "Hall 2, row 3") {
   await page.getByLabel("Kategorie").selectOption("pinball");
   await page.getByLabel("Technik").selectOption("dmd");
   await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams, 1997)` });
   await page.getByLabel("Seriennummer").fill("MM-12345");
