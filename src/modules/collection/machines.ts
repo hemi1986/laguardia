@@ -194,6 +194,55 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
   return counts;
 }
 
+/** The machine record (RM-MachineRecord) as ST-009 builds it – later stories add its further sections (G18). */
+export type MachineRecord = {
+  id: string;
+  museumNumber: string;
+  serialNumber?: string;
+  machineModel: {
+    title: string;
+    manufacturer: string;
+    year?: number;
+    machineCategory: MachineCategory;
+    technology?: Technology;
+  };
+  location: string;
+  machineStatus: MachineStatus;
+  /** Newest first. "… by" are TeamMemberIds – the page names them through the Team module (ST-009). */
+  statusHistory: StatusChange[];
+  retirement?: { reason: string; retiredBy: string; retiredAt: Date };
+};
+
+/** RM-MachineRecord: everything about one machine, retired ones included – by its museum number (ST-009). */
+export async function machineRecord(db: Database, museumNumber: string): Promise<MachineRecord | undefined> {
+  const [row] = await db
+    .select({ machine, model: machineModel })
+    .from(machine)
+    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
+    .where(eq(machine.museumNumber, museumNumber));
+  if (!row) return undefined;
+  const { machine: m, model } = row;
+  return {
+    id: m.id,
+    museumNumber: m.museumNumber,
+    serialNumber: m.serialNumber ?? undefined,
+    machineModel: {
+      title: model.title,
+      manufacturer: model.manufacturer,
+      year: model.year ?? undefined,
+      machineCategory: model.machineCategory,
+      technology: model.technology ?? undefined,
+    },
+    location: m.location,
+    machineStatus: m.machineStatus,
+    statusHistory: (await statusHistoryOf(db, m.id)).reverse(),
+    retirement:
+      m.retiredAt && m.retiredBy && m.retirementReason
+        ? { reason: m.retirementReason, retiredBy: m.retiredBy, retiredAt: m.retiredAt }
+        : undefined,
+  };
+}
+
 /** A machine's status history, oldest first – the machine record (RM-MachineRecord, ST-009) shows it. */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);

@@ -9,10 +9,12 @@ import type { Actor, Database } from "@/platform/command";
 export async function anExistingTeamMember(
   db: Database,
   actor: Extract<Actor, { kind: "team-member" }>,
+  /** The name pages show for the team member ("Tom"); the username when none is given. */
+  name?: string,
 ): Promise<void> {
   const username = `tm_${actor.teamMemberId.slice(0, 8)}`;
   await db.execute(sql`
     INSERT INTO team_member (id, name, email, username, role)
-    VALUES (${actor.teamMemberId}, ${username}, ${`${username}@users.invalid`}, ${username}, ${actor.role})
+    VALUES (${actor.teamMemberId}, ${name ?? username}, ${`${username}@users.invalid`}, ${username}, ${actor.role})
     ON CONFLICT (id) DO NOTHING`);
 }

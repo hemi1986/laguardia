@@ -68,7 +68,7 @@ export const changeMachineStatusForTest = aggregateCommand({
   id: "CMD-TestChangeMachineStatus",
   allowedActors: ["technician"],
   store: machines,
-  target: (input: { machineId: string; version: number; machineStatus: MachineStatus }) => ({
+  target: (input: { machineId: string; version: number; machineStatus: MachineStatus; reason?: string }) => ({
     id: input.machineId,
     version: input.version,
   }),
@@ -82,7 +82,7 @@ export const changeMachineStatusForTest = aggregateCommand({
         {
           previousStatus: machine.machineStatus,
           newStatus: input.machineStatus,
-          reason: "Coil burnt",
+          reason: input.reason ?? "Coil burnt",
           changedBy: actor.teamMemberId,
           changedAt: clock.now(),
         },

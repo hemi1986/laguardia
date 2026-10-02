@@ -83,6 +83,17 @@ export const teamMessages = {
     clearSearch: "Suche zurücksetzen",
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
   },
+  machineRecord: {
+    unknown: (museumNumber: string) => `Kein Gerät mit der Museumsnummer ${museumNumber}.`,
+    noSerialNumber: "keine",
+    year: "Baujahr",
+    manufacturer: "Hersteller",
+    statusHistory: "Status-Historie",
+    /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
+    registeredAs: (status: string) => `Erfasst als ${status}`,
+    retired: (date: string, reason: string) => `Ausgemustert am ${date} – ${reason}`,
+    unknownTeamMember: "unbekannt",
+  },
   accounts: {
     title: "Teammitglieder",
     newAccount: "Neues Konto",

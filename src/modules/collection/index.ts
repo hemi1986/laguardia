@@ -8,8 +8,10 @@ export { machineStatuses } from "./register-machine";
 export type { MachineStatus, RegisterMachineError, RegisterMachineInput, StatusChange } from "./register-machine";
 export {
   machineOverview,
+  machineRecord,
   machineStatusCounts,
   machineStatusHistory,
   type MachineOverviewEntry,
+  type MachineRecord,
   type MachineOverviewQuery,
 } from "./machines";
