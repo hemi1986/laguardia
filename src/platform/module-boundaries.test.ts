@@ -45,6 +45,17 @@ describe("module boundaries", () => {
     expect(errors).toHaveLength(1);
   });
 
+  it("allow a test – and only a test – another module's test support, and nothing else of its internals", async () => {
+    const importTestSupport =
+      'import { retireMachineForTest } from "@/modules/collection/machines.test-support";\nexport const x = retireMachineForTest;\n';
+    const importInternals = 'import { machines } from "@/modules/collection/machines";\nexport const x = machines;\n';
+
+    expect(await boundaryErrors("src/app/deliberate.integration.test.ts", importTestSupport)).toEqual([]);
+    expect(await boundaryErrors("src/modules/repair/deliberate.test.ts", importTestSupport)).toEqual([]);
+    expect(await boundaryErrors("src/app/deliberate-violation.ts", importTestSupport)).toHaveLength(1);
+    expect(await boundaryErrors("src/app/deliberate.integration.test.ts", importInternals)).toHaveLength(1);
+  });
+
   it("allow another module's public interface and a module's own internals", async () => {
     const publicInterface = await boundaryErrors(
       "src/modules/collection/allowed.ts",

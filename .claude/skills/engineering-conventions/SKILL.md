@@ -42,7 +42,9 @@ Inside a module (flat until it grows):
 | `*.test.ts` / `*.integration.test.ts` | next to the code they test |
 
 **Import rules** (lint, `eslint.config.mjs`, ADR 0002):
-- A module is used only through its `index.ts`. Inside a module, import freely.
+- A module is used only through its `index.ts`. Inside a module, import freely. **One exception, for tests only**
+  (user, 2026-10-02, ST-009): a `*.test.ts` may import another module's `*.test-support.ts` – its stand-ins for
+  commands that don't exist yet –, e.g. a page test that needs a machine with a changed status before ST-012.
 - Direction: `app` → `modules` → `platform`. The platform imports no module or page code (its tests may drive a module command); a module imports no page code.
 - A module's `index.ts` exports commands and read-model queries – **never** its persistence functions or tables. Other modules change its data only through its commands.
 
