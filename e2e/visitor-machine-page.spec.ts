@@ -157,6 +157,9 @@ test("ST-010: Unknown museum number", async ({ browser }) => {
 });
 
 test("a malformed address is refused by Next.js itself, not a server error", async ({ browser }) => {
+  // On Vercel the edge already refuses it at the HTTP/2 level – the request never reaches La Guardia, and there is no
+  // HTTP response to check. Locally Next.js answers 400 before the page runs.
+  test.skip(!!process.env.BASE_URL, "Vercel's edge refuses the malformed address before La Guardia");
   const phone = await visitor(browser, "de-DE");
 
   const response = await phone.goto("/m/%E0%A4%A");
