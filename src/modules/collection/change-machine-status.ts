@@ -7,7 +7,7 @@ import type { Machine, MachineStatus } from "./register-machine";
  */
 
 /** Who may change a machine status – the allowed actors of CMD-ChangeMachineStatus. */
-export const changingActors = ["technician"] as const;
+export const changingActors = ["helper", "technician"] as const;
 
 type ChangingPerson = ActorOf<(typeof changingActors)[number]>;
 
@@ -27,7 +27,7 @@ export type MachineStatusChanged = {
   newStatus: MachineStatus;
 };
 
-export type ChangeMachineStatusError = never;
+export type ChangeMachineStatusError = "helpers-only-out-of-order";
 
 export function changeMachineStatus(
   machine: Machine,
@@ -35,6 +35,8 @@ export function changeMachineStatus(
   { actor, clock, newId }: DecisionContext<ChangingPerson>,
 ): Decision<Machine, MachineStatusChanged, ChangeMachineStatusError> {
   const newStatus = input.machineStatus!;
+  // Whether the machine is really unsafe is a matter of trust; the required reason documents it (ST-012).
+  if (actor.role === "helper" && newStatus !== "out-of-order") return { ok: false, error: "helpers-only-out-of-order" };
   const reason = input.reason.trim();
   const previousStatus = machine.machineStatus;
   return {

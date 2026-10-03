@@ -82,4 +82,20 @@ describe("CMD-ChangeMachineStatus", () => {
     });
     expect(changed.data).toEqual({ previousStatus: "playable", newStatus: "limited" });
   });
+
+  it("ST-012: Helpers can only set Out of order", async () => {
+    const machineId = await registered("LG-042", "out-of-order");
+
+    for (const machineStatus of ["playable", "limited", "not-on-display"] as const) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus, reason: "looks fine again" },
+        { actor: hanna, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error: "helpers-only-out-of-order" });
+      expect((await machineRecord(db, "LG-042"))?.machineStatus).toBe("out-of-order");
+    }
+    expect(await journalOf(db, { machineId })).toHaveLength(1);
+  });
 });
