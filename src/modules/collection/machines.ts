@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import {
@@ -338,4 +338,22 @@ export async function machineIdOf(db: Database, museumNumber: string): Promise<s
     .from(machine)
     .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
   return row?.id;
+}
+
+/**
+ * What another module's page shows to name machines – the museum number and the machine model's title, by machine ID
+ * (e.g. the triage list, ST-017; the page composes, ST-009). Retired machines included: their history stays readable.
+ */
+export async function machineLabels(
+  db: Database,
+  machineIds: readonly string[],
+): Promise<Map<string, { museumNumber: string; machineModelTitle: string }>> {
+  const unique = [...new Set(machineIds)];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({ id: machine.id, museumNumber: machine.museumNumber, machineModelTitle: machineModel.title })
+    .from(machine)
+    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
+    .where(inArray(machine.id, unique));
+  return new Map(rows.map(({ id, ...label }) => [id, label]));
 }

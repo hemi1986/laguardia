@@ -162,3 +162,32 @@ export const changeWithoutVersionForTest = aggregateCommand({
 export async function storedProblemReport(db: Database, problemReportId: string) {
   return (await problemReports.load(db, problemReportId))?.state;
 }
+
+/**
+ * Test stand-in for the triage commands (ST-018 ff.): the problem report is triaged with the given outcome at the
+ * version the technician saw – it leaves the untriaged lists.
+ */
+export const triageForTest = aggregateCommand({
+  id: "CMD-TestTriage",
+  allowedActors: ["technician"],
+  store: problemReports,
+  target: (input: { problemReportId: string; version: number }) => ({
+    id: input.problemReportId,
+    version: input.version,
+  }),
+  decide: (report, _input, { actor, clock }) => ({
+    ok: true as const,
+    state: {
+      ...report,
+      triage: { outcome: "defect-recorded" as const, triagedBy: actor.teamMemberId, triagedAt: clock.now() },
+    },
+    events: [{ type: "EVT-TestTriaged" as const }],
+  }),
+  journal: (event, report) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: report.id },
+    machineId: report.machineId,
+    data: {},
+  }),
+  result: () => ({}),
+});

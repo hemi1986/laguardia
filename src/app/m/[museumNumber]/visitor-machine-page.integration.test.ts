@@ -5,7 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { reportProblemCommand } from "@/modules/repair";
+import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
+import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
@@ -127,6 +128,21 @@ describe("the visitor machine page", () => {
 
     expect(await page("LG-042")).not.toContain("Sichtung");
     expect(await page("LG-042", "en")).not.toContain("waiting");
+  });
+
+  it("counts only untriaged problem reports – a triaged one no longer waits (ST-017)", async () => {
+    const machineId = await registered("LG-042");
+    await reported(machineId, "Ball stuck behind the left ramp", "2026-10-02T15:00:00Z");
+    const [triaged] = await problemReportsOfMachine(db, machineId);
+    await reported(machineId, "Left flipper weak", "2026-10-03T09:00:00Z");
+    const outcome = await executeCommand(
+      triageForTest,
+      { problemReportId: triaged.id, version: 0 },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!outcome.ok) throw new Error("not triaged");
+
+    expect(await page("LG-042")).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
   });
 });
 

@@ -12,7 +12,7 @@ const link = "text-sm font-medium underline-offset-4 hover:underline";
 
 /**
  * The one navigation of the team area (ST-076), decided for the whole MVP in ST-008 (UX guideline G19, user
- * 2026-10-02): the daily destinations in one line – Übersicht, Geräte, Sichtung (technicians), Defekte, Wartung –,
+ * 2026-10-02): the daily destinations in one line – Übersicht, Geräte, Sichtung (everyone since 2026-10-03), Defekte, Wartung –,
  * everything that manages behind "Mehr" – Wartungsplan, Modelle, Teammitglieder (technicians), Passwort ändern,
  * Abmelden. A destination appears with the story that builds it (Sichtung ST-017, Defekte ST-021, Wartung ST-043,
  * Wartungsplan ST-040), at its place in this order. "Mehr" is a native `<details>`, so it opens without JavaScript.
@@ -28,6 +28,9 @@ export function TeamNavigation({ role }: { role: Role }) {
         </Link>
         <Link href="/team/machines" className={link}>
           {team.machines}
+        </Link>
+        <Link href="/team/triage" className={link}>
+          {team.triage}
         </Link>
         <MoreMenu label={team.more}>
           <ul className="bg-background absolute end-0 z-10 mt-2 flex min-w-48 flex-col gap-3 rounded-lg border p-3 shadow-sm">

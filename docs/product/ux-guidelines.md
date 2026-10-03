@@ -215,7 +215,7 @@ question for the user, not a line a story adds on its way past.
 |---|---|---|---|---|---|
 | 1 | Start page / dashboard | Übersicht | ST-048/049 (today the team start page) | everyone | line |
 | 2 | Machine overview | Geräte | ST-007/008 | everyone | line |
-| 3 | Triage list | Sichtung | ST-017 | technicians | line |
+| 3 | Triage list | Sichtung | ST-017 | everyone | line |
 | 4 | Open defects | Defekte | ST-021 | everyone | line |
 | 5 | Due maintenance | Wartung | ST-043 | everyone | line |
 | 6 | Maintenance plan | Wartungsplan | ST-040 | technicians | "Mehr" |
@@ -227,6 +227,9 @@ question for the user, not a line a story adds on its way past.
 The daily destinations stand in one line that may wrap; everything that manages sits behind **"Mehr"**, a native
 `<details>` that opens without JavaScript. A destination appears with the story that builds it, at its place in this
 order – no story adds, renames or reorders one. Implemented in `src/app/(team)/navigation.tsx`.
+*Changed 2026-10-03 (user):* row 3 (Sichtung) is shown to everyone, not only technicians. Helpers use the triage
+list to resolve problems on the spot (ST-019; ST-017's scenario "Helpers see the triage list without technician
+actions"); the technician-only triage outcomes are hidden on the problem report's page instead (G11).
 *Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
 navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
 happens at ten.
@@ -257,3 +260,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-01 | **G10a narrowed** to states a person *sets* to manage access or visibility; recorded facts and deleted bytes are explicitly out. ST-039 (retiring a machine) and ST-038 (removing a file) stay irreversible and keep **G10**, which now requires the confirmation to name the consequences – for ST-039 the machine, the defects closed and the problem reports dismissed. | Read broadly, G10a would have promised an undo the domain cannot keep; the boundary and its reason are written down so the rule does not quietly stop applying |
 | 2026-10-02 | **G19 filled in** with the team navigation for the whole MVP (labels, order, who sees which, "Mehr"), and **O2 became part of G16**: list pages may grow to ~672 px, one column, no tables. | ST-008 is the story both decisions were deferred to; the user decided during `/implement ST-008` |
 | 2026-10-01 | **Known exception recorded under G2a**: `/team/machine-models` keeps its form below the list until ST-036. | The user decided not to split ST-036 and not to pull it forward. A yardstick that hides a violation it knows about is worth nothing |
+| 2026-10-03 | **G19 row 3 (Triage list, "Sichtung")** is shown to everyone instead of technicians. | Helpers resolve problems on the spot from the triage list (ST-019, ST-017's helper scenario); the technician-only triage outcomes are hidden on the problem report's page (G11). The user decided during `/implement ST-017` |

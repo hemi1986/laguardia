@@ -3,6 +3,7 @@ import { fixedClock } from "./clock";
 import {
   addMonths,
   calendarDate,
+  elapsedHours,
   elapsedMoreThanHours,
   formatDateTime,
   graceDays,
@@ -103,5 +104,16 @@ describe("time convention", () => {
     ])("%s is shown as %s", (instant, shown) => {
       expect(formatDateTime(new Date(instant))).toBe(shown);
     });
+  });
+});
+
+describe("elapsedHours", () => {
+  it.each([
+    ["2026-10-03T15:00:00Z", 1],
+    ["2026-10-03T15:00:01Z", 0], // a started hour does not count yet
+    ["2026-09-30T15:00:00Z", 73],
+    ["2026-10-03T16:00:00Z", 0],
+  ])("since %s → %i whole hours at 2026-10-03T16:00:00Z", (since, hours) => {
+    expect(elapsedHours(new Date(since), new Date("2026-10-03T16:00:00Z"))).toBe(hours);
   });
 });

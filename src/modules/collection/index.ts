@@ -21,6 +21,7 @@ export {
   machineForTeamForm,
   machineForReporting,
   machineIdOf,
+  machineLabels,
   type MachineForTeamForm,
   visitorMachine,
   machineStatusCounts,

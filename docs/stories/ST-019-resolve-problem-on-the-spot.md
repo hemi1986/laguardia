@@ -21,6 +21,7 @@ Command `CMD-ResolveProblemOnTheSpot` (actor: team member – helpers and techni
 - A note is required.
 Outcome *resolved on the spot* (`CONTEXT.md`): no defect is created; the problem report stays in the repair history (ST-033).
 Helpers use the triage list only for this triage outcome (`RM-TriageList`).
+Its triage outcome is offered on the problem report's own page, which ST-017 builds and owns (G18); the assertion that the outcome is offered there – and, for technician-only outcomes, not to helpers – belongs to this story (moved from ST-017, user 2026-10-03).
 
 ## Acceptance Criteria
 
