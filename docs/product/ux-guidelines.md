@@ -1,6 +1,6 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G20, including G2a, G4a, G6a, G8a and G10a)
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G21, including G2a, G4a, G6a, G8a and G10a)
 > is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
 > now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
@@ -56,6 +56,16 @@ They land where the result is visible and get a confirmation that names the thin
 ("Modell *Medieval Madness* angelegt."), or they land on the new thing's own page. Never the same empty form again.
 *Why:* creating a machine model today looks exactly like doing nothing – the list is sorted by title, so the new
 model is somewhere in the middle, and no confirmation is shown. The next step is a second attempt and a duplicate.
+
+**G21 – A thing with several possible outcomes offers each one as a button on its own page** (user, 2026-10-03).
+Each outcome leads to a form page of its own, which repeats what is being decided about; a rejection stays there
+and keeps the input (G8). Every outcome lands in the same place afterwards, with the confirmation of G3. Only the
+outcomes the person may choose are shown (G11), in an order fixed by the stories that add them, and none is offered
+once the thing is decided.
+*First use:* the problem report's page (ST-017) – in this order: „Mit Defekt verknüpfen“ (only when the machine
+has open defects), „Defekt erfassen“, „Direkt behoben“, „Meldung verwerfen“ (ST-022, ST-018, ST-019, ST-020).
+*Why:* the problem report has four triage outcomes, and the defect page, ST-039 and ST-044 will have more. Four
+inline forms on one page at 360 px put the rejection where nobody looks (G8).
 
 ## 2. Understanding what you are looking at
 
@@ -126,6 +136,9 @@ machine (ST-039) names the machine, how many defects will be closed and how many
 removing a file (ST-038) names the file and says that it is gone for good.
 *Why:* "Deaktivieren" is one tap, it ends the person's sessions, and nothing in La Guardia undoes it. Retiring a
 machine looks like one tap on one machine and quietly ends every open piece of work on it.
+*Triage outcomes* (user, 2026-10-03): a triage outcome is a recorded fact and asks nothing. Dismissing a problem
+report as spam deletes bytes – its description and photo – and so asks once, naming what is deleted: „Meldung zu
+LG-042 als Spam verwerfen? Beschreibung und Foto werden endgültig gelöscht.“ („Endgültig verwerfen“ / „Zurück“).
 
 **G10a – What a person *sets* to manage access or visibility, they can unset** (user, 2026-10-01, narrowed the
 same day).
@@ -261,3 +274,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-02 | **G19 filled in** with the team navigation for the whole MVP (labels, order, who sees which, "Mehr"), and **O2 became part of G16**: list pages may grow to ~672 px, one column, no tables. | ST-008 is the story both decisions were deferred to; the user decided during `/implement ST-008` |
 | 2026-10-01 | **Known exception recorded under G2a**: `/team/machine-models` keeps its form below the list until ST-036. | The user decided not to split ST-036 and not to pull it forward. A yardstick that hides a violation it knows about is worth nothing |
 | 2026-10-03 | **G19 row 3 (Triage list, "Sichtung")** is shown to everyone instead of technicians. | Helpers resolve problems on the spot from the triage list (ST-019, ST-017's helper scenario); the technician-only triage outcomes are hidden on the problem report's page (G11). The user decided during `/implement ST-017` |
+| 2026-10-03 | **G21 added** (several outcomes: one button each on the thing's page, one form page each, one common landing with a confirmation, only the permitted outcomes, in a fixed order, none once decided; first use the problem report's page). **G10 extended**: a triage outcome asks nothing; dismissing as spam asks once and names the description and photo it deletes. | Story review of ST-018/019/020/022 (`docs/reviews/2026-10-03-story-review.md`, Decisions 1 and 2): four triage outcomes on one 360 px page, more to come on the defect page, ST-039 and ST-044 |
