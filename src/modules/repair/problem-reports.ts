@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { machineForReporting } from "@/modules/collection";
+import type { Clock } from "@/platform/clock";
 import { aggregateStore, type Database } from "@/platform/command";
+import { elapsedHours, elapsedMoreThanHours } from "@/platform/time";
 import type { ProblemReport, Reporter, ReportingFacts } from "./report-problem";
 import { problemReport } from "./schema";
 
@@ -33,15 +35,22 @@ function problemReportOf(row: typeof problemReport.$inferSelect): ProblemReport 
         ? { kind: "team-member", teamMemberId: row.reporterTeamMemberId ?? missing("reporter_team_member_id", row.id) }
         : { kind: "visitor" },
     reportedAt: row.reportedAt,
-    triage:
-      row.triageOutcome && row.triagedBy && row.triagedAt
-        ? { outcome: row.triageOutcome, triagedBy: row.triagedBy, triagedAt: row.triagedAt }
-        : undefined,
+    triage: triageOf(row),
+  };
+}
+
+/** The Triage value object – all three columns or none (the database checks it too, ST-017 review). */
+function triageOf(row: typeof problemReport.$inferSelect): ProblemReport["triage"] {
+  if (row.triageOutcome === null) return undefined;
+  return {
+    outcome: row.triageOutcome,
+    triagedBy: row.triagedBy ?? missing("triaged_by", row.id),
+    triagedAt: row.triagedAt ?? missing("triaged_at", row.id),
   };
 }
 
 function missing(column: string, id: string): never {
-  throw new Error(`problem_report ${id}: ${column} is missing for a team member's report`);
+  throw new Error(`problem_report ${id}: ${column} is missing`);
 }
 
 /** Read model: the problem reports of one machine, newest first. */
@@ -73,29 +82,48 @@ export async function untriagedProblemReportCount(db: Database, machineId: strin
   return row.count;
 }
 
-/** One untriaged problem report as the triage list shows it (RM-TriageList) – machine and reporter by ID. */
+/** Waiting longer than 3 days: more than 72 hours since it was reported (HS-2, time convention ST-003). */
+const LONG_WAIT_HOURS = 72;
+
+/**
+ * One untriaged problem report as the triage list shows it (RM-TriageList) – machine and reporter by ID, and how long
+ * it has been waiting, computed when the page loads (ADR 0002). ST-048's dashboard reads the same long wait.
+ */
 export type TriageListEntry = {
   id: string;
   machineId: string;
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  waitingHours: number;
+  waitingLong: boolean;
 };
+
+function triageListEntry(report: ProblemReport, now: Date): TriageListEntry {
+  const { id, machineId, description, reporter, reportedAt } = report;
+  return {
+    id,
+    machineId,
+    description,
+    reporter,
+    reportedAt,
+    waitingHours: elapsedHours(reportedAt, now),
+    waitingLong: elapsedMoreThanHours(reportedAt, now, LONG_WAIT_HOURS),
+  };
+}
 
 /**
  * RM-TriageList (ST-017): every untriaged problem report, the oldest first – it has waited longest. The page adds the
  * machine's museum number and title (Collection) and the reporting team member's name (Team).
  */
-export async function triageList(db: Database): Promise<TriageListEntry[]> {
+export async function triageList(db: Database, clock: Clock): Promise<TriageListEntry[]> {
   const rows = await db
     .select()
     .from(problemReport)
     .where(isNull(problemReport.triageOutcome))
     .orderBy(asc(problemReport.reportedAt), asc(problemReport.id));
-  return rows.map((row) => {
-    const { id, machineId, description, reporter, reportedAt } = problemReportOf(row);
-    return { id, machineId, description, reporter, reportedAt };
-  });
+  const now = clock.now();
+  return rows.map((row) => triageListEntry(problemReportOf(row), now));
 }
 
 /**
@@ -104,11 +132,12 @@ export async function triageList(db: Database): Promise<TriageListEntry[]> {
  */
 export async function problemReportForTriage(
   db: Database,
+  clock: Clock,
   problemReportId: string,
 ): Promise<(TriageListEntry & { triaged: boolean }) | undefined> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
   const [row] = await db.select().from(problemReport).where(eq(problemReport.id, problemReportId));
   if (!row) return undefined;
-  const { id, machineId, description, reporter, reportedAt, triage } = problemReportOf(row);
-  return { id, machineId, description, reporter, reportedAt, triaged: triage !== undefined };
+  const report = problemReportOf(row);
+  return { ...triageListEntry(report, clock.now()), triaged: report.triage !== undefined };
 }

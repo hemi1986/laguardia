@@ -83,6 +83,7 @@ test("a technician opens a problem report from the triage list on a phone", asyn
   await page.getByRole("navigation").getByRole("link", { name: "Sichtung" }).click();
   const entry = page.getByRole("article").filter({ hasText: description });
   await expect(entry).toContainText("wartet seit weniger als 1 Stunde");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await entry.getByRole("link", { name: new RegExp(`^${museumNumber} · `) }).click();
 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Meldung");
