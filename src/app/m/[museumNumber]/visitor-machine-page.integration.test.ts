@@ -3,8 +3,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { changeMachineStatusForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
@@ -20,11 +20,13 @@ import { VisitorMachinePage } from "./visitor-machine-page";
 const isolated = isolatedTestDatabase("visitor_machine_page");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const hanna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 let medievalMadness: string;
 
 beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom Technician");
+  await anExistingTeamMember(db, hanna, "Hanna Helper");
   const created = await executeCommand(
     createMachineModelCommand,
     { title: "Medieval Madness", manufacturer: "Williams", year: "1997", machineCategory: "pinball" },
@@ -60,12 +62,25 @@ describe("the visitor machine page", () => {
     expect(await page("LG-042")).toContain("Status: Spielbereit");
 
     const changed = await executeCommand(
-      changeMachineStatusForTest,
-      { machineId, version: 0, machineStatus: "out-of-order" },
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "coil burnt" },
       { actor: tom, db, newId: randomUUID },
     );
     if (!changed.ok) throw new Error("not changed");
 
+    expect(await page("LG-042")).toContain("Status: Außer Betrieb");
+  });
+
+  it("ST-012: Helper takes an unsafe machine out of play", async () => {
+    const machineId = await registered("LG-042");
+
+    const changed = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "glass cracked – unsafe" },
+      { actor: hanna, db, newId: randomUUID },
+    );
+
+    expect(changed).toEqual({ ok: true, result: { museumNumber: "LG-042", machineStatus: "out-of-order" } });
     expect(await page("LG-042")).toContain("Status: Außer Betrieb");
   });
 

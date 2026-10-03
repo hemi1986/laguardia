@@ -1,0 +1,1 @@
+ALTER TABLE "machine_status_change" ALTER COLUMN "id" DROP DEFAULT;

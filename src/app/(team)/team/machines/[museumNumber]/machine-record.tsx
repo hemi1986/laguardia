@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { MachineRecordData, NamedStatusChange } from "./machine-record-data";
@@ -12,7 +14,19 @@ const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
  * defects (ST-021), due maintenance (ST-047), status history, repair history (ST-033), files (ST-037), retiring
  * (ST-039) – see the story. Times in Europe/Berlin. A retired machine keeps its record and says so in words (G6a).
  */
-export function MachineRecordView({ record, museumNumber }: { record: MachineRecordData | undefined; museumNumber: string }) {
+export function MachineRecordView({
+  record,
+  museumNumber,
+  canChangeStatus = false,
+  statusChanged = false,
+}: {
+  record: MachineRecordData | undefined;
+  museumNumber: string;
+  /** Whether the team member may change this machine's status at all (G11) – the page decides it (ST-012). */
+  canChangeStatus?: boolean;
+  /** Just back from a status change: the confirmation names the machine and its new machine status (G3). */
+  statusChanged?: boolean;
+}) {
   if (!record) {
     return (
       <>
@@ -37,6 +51,9 @@ export function MachineRecordView({ record, museumNumber }: { record: MachineRec
 
   return (
     <>
+      {statusChanged && (
+        <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
+      )}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(
@@ -54,14 +71,22 @@ export function MachineRecordView({ record, museumNumber }: { record: MachineRec
           </div>
         ))}
       </dl>
+      {canChangeStatus && (
+        <Link
+          href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status`}
+          className={buttonVariants({ variant: "outline", className: "self-start" })}
+        >
+          {texts.changeStatus}
+        </Link>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>{terms["Status history"]}</CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
-            {record.statusHistory.map((change, index) => (
-              <li key={index} className="flex flex-col gap-0.5 text-sm">
+            {record.statusHistory.map((change) => (
+              <li key={change.id} className="flex flex-col gap-0.5 text-sm">
                 <StatusChangeEntry change={change} />
               </li>
             ))}

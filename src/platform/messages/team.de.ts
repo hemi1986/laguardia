@@ -107,6 +107,19 @@ export const teamMessages = {
     registeredAs: (status: string) => `Erfasst als ${status}`,
     retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
     unknownTeamMember: "unbekannt",
+    changeStatus: "Status ändern",
+    statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
+  },
+  machineStatusChange: {
+    title: (museumNumber: string) => `Status von ${museumNumber} ändern`,
+    current: (status: string) => `Aktueller Status: ${status}`,
+    reason: "Grund",
+    reasonHint: "Steht in der Status-Historie, z. B. „linker Flipper schwach“.",
+    submit: "Status ändern",
+    retired: "Dieses Gerät ist ausgemustert – sein Status lässt sich nicht mehr ändern.",
+    nothingToChange: (status: string) =>
+      `Das Gerät ist bereits ${status}. Einen anderen Status können nur Techniker:innen setzen.`,
+    back: "Zurück zum Gerät",
   },
   accounts: {
     title: "Teammitglieder",
@@ -152,6 +165,10 @@ export const teamMessages = {
       "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042 – oder das Feld leer lassen.",
     "museum-number-taken":
       "Diese Museumsnummer ist schon vergeben. Bitte eine andere angeben oder das Feld leer lassen.",
+    "machine-retired": "Dieses Gerät ist ausgemustert – sein Status lässt sich nicht mehr ändern.",
+    "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",
+    "machine-status-unchanged": "Das Gerät hat diesen Status schon. Bitte einen anderen Status wählen.",
+    "reason-required": "Bitte einen Grund angeben – er steht in der Status-Historie.",
     "no-museum-number-free":
       "Alle Museumsnummern von LG-001 bis LG-999 sind vergeben – es kann kein weiteres Gerät erfasst werden.",
     "not-authorized": "Das dürfen nur Techniker:innen.",

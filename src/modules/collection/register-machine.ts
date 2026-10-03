@@ -17,6 +17,8 @@ type RegisteringPerson = ActorOf<(typeof registeringActors)[number]>;
 
 /** One entry of a machine's status history; the first one is the machine status given at registration. */
 export type StatusChange = {
+  /** From the command's ID generator – the history is saved by inserting the entries not stored yet (Q13). */
+  id: string;
   previousStatus: MachineStatus | undefined;
   newStatus: MachineStatus;
   /** Free text – except for the first entry, whose reason is "registration" (data model). */
@@ -114,6 +116,7 @@ export function registerMachine(
     registeredAt: now,
     statusHistory: [
       {
+        id: newId(),
         previousStatus: undefined,
         newStatus: machineStatus,
         reason: "registration",

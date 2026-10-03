@@ -204,6 +204,7 @@ describe("RM-MachineRecord", () => {
       machineStatus: "playable",
       statusHistory: [
         {
+          id: expect.any(String),
           previousStatus: undefined,
           newStatus: "playable",
           reason: "registration",

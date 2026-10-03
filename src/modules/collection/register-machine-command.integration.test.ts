@@ -5,11 +5,15 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { createMachineModelCommand, machineOverview, registerMachineCommand } from ".";
-import { machineStatusHistory } from "./machines";
-import type { RegisterMachineInput } from ".";
 import {
-  changeMachineStatusForTest,
+  changeMachineStatusCommand,
+  createMachineModelCommand,
+  machineOverview,
+  registerMachineCommand,
+  type RegisterMachineInput,
+} from ".";
+import { machineStatusHistory } from "./machines";
+import {
   correctMuseumNumberForTest,
   retireMachineForTest,
   storedMachine,
@@ -114,6 +118,7 @@ describe("CMD-RegisterMachine", () => {
     });
     expect(await machineStatusHistory(db, machineId)).toEqual([
       {
+        id: expect.any(String),
         previousStatus: undefined,
         newStatus: "playable",
         reason: "registration",
@@ -234,8 +239,8 @@ describe("CMD-RegisterMachine", () => {
   it("keeps the status history in the order it was recorded, also within one point in time", async () => {
     const { machineId } = await registered({ machineStatus: "playable" });
     const changed = await executeCommand(
-      changeMachineStatusForTest,
-      { machineId, version: 0, machineStatus: "out-of-order" },
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "coil burnt" },
       { ...asTechnician, db },
     );
     if (!changed.ok) throw new Error("not changed");

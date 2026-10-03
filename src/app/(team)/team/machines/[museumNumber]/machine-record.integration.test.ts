@@ -3,9 +3,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import {
-  changeMachineStatusForTest,
   retireMachineForTest,
   withoutMachines,
 } from "@/modules/collection/machines.test-support";
@@ -68,7 +67,7 @@ describe("the machine record", () => {
   it("ST-009: Machine status history is shown newest first", async () => {
     const machineId = await registered("LG-042", "2026-01-15T09:00:00Z");
     const changed = await executeCommand(
-      changeMachineStatusForTest,
+      changeMachineStatusCommand,
       { machineId, version: 0, machineStatus: "out-of-order", reason: "flipper coil burnt" },
       { actor: tom, db, clock: fixedClock("2026-01-20T13:30:00Z"), newId: randomUUID },
     );

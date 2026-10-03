@@ -26,6 +26,7 @@ export {
   type Decision,
   type DecisionContext,
 } from "./aggregate";
+export { saveHistory, type History } from "./history";
 
 export type Role = "helper" | "technician";
 

@@ -168,6 +168,18 @@ Rules:
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 - **Set-based rules** (ST-007, HS-17): a creating command whose decision must know about the module's other aggregates declares `facts: (tx, input) => Promise<Facts>`; the layer reads them in the command's transaction and passes them to `decide(facts, input, context)` in place of the missing state. Facts that must stay true until the commit take a lock there – CMD-RegisterMachine takes `pg_advisory_xact_lock(hashtext('museum-number'))`, so concurrent registrations run one after the other – and a unique constraint stays the final guarantee (`museum_number`'s primary key).
 
+**Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
+status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
+with an ID from `context.newId()` and never changes or removes one. The store saves it with
+`saveHistory(tx, { table, owner: "machineId" }, aggregateId, rows)` (`src/platform/command/history.ts`) – `owner` names
+the column holding the aggregate's ID, which the helper fills in itself: it inserts the entries whose ID is not stored yet and never updates or deletes a stored entry, whatever the state says about it. A history
+table has its own `id` (the entry's ID, no database default), the owner column and a `position bigserial` for the order entries were
+stored in (entries of one command share their point in time); the store loads the list ordered by `position`.
+Example: `machines.ts` (`saveStatusHistory`). Proven by `src/platform/command/history.integration.test.ts` (a stand-in
+aggregate) and the machine status history test in `change-machine-status-command.integration.test.ts` – both install
+a trigger in their own database that refuses UPDATE. The real tables get no such trigger: an entry's free text (a
+reason) may one day have to be removed.
+
 What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
 1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules in the decision.
 2. **One transaction** for all changes and journal entries; a rejection, `version-conflict` or `not-found` rolls everything back.
@@ -202,6 +214,12 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **A Server Action that runs a command only calls the runner.** (Login, logout and the ST-005 account actions call Team module functions backed by Better Auth, not commands – they take the acting person from the same `currentPerson()`.) `formAction` (`src/app/_actions/form-action.ts`) takes the acting person from `currentPerson()`; it has no parameter for an actor, a role or a team member ID, and form fields named `actor`/`role`/`teamMemberId` are never read. Lint refuses `executeCommand` and the factory `formRunner` anywhere under `src/app/` outside `_actions/` (tests excepted).
 - **`{ error, values }` with `useActionState`**: on a rejection the action returns the error code and the typed values of the declared fields; the form shows the catalogue text and keeps the input. Success goes through `onSuccess` (usually `revalidatePath` + `redirect`), which also empties the form. It works without JavaScript – key the field on the state so React's form reset does not drop the kept value.
 - **One small typed input function per action** (Q19), no schema library: it reads and converts the fields, domain validation stays in the decision. **The empty-field rule:** a missing or empty field becomes "no value given" and the decision decides – a text field an empty string; a field that is not free text `undefined`. Example ST-007: a missing machine model becomes "no machine model given", which CMD-RegisterMachine rejects ("Machine model and location are required"); a missing museum number – optional there – becomes "no museum number given" and the command assigns one. The input function **never fills in a default** and never throws; an unknown enumeration value is "no value given" too. This holds for every form on the runner; the ST-005 account actions predate it (their `role()` helper falls back to helper) and follow it when they move onto a command.
+- **A form on an existing aggregate** (first: ST-012, `…/[museumNumber]/status/`) posts the aggregate's ID and the
+  version its page loaded as hidden fields; the page reads them with a query that returns the version (e.g.
+  `machineForStatusChange`). The input function converts a version that is not a whole number to `-1` – a version
+  nobody saw, which the command layer answers with `version-conflict`. After a rejection the form keeps posting the
+  version the page loaded – it never picks up a newer one by itself: after `version-conflict` the person reloads the
+  page (the catalogue text says so), which loads the current state and version.
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
 - Forms with a photo ("store, run, delete on failure") come with ST-016.

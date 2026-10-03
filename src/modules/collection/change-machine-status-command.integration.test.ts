@@ -1,0 +1,172 @@
+import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { fixedClock } from "@/platform/clock";
+import { executeCommand, journalOf } from "@/platform/command";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { anExistingTeamMember } from "@/test-support/team-members";
+import {
+  changeMachineStatusCommand,
+  createMachineModelCommand,
+  machineRecord,
+  registerMachineCommand,
+  type MachineStatus,
+} from ".";
+import { retireMachineForTest, withoutMachines } from "./machines.test-support";
+
+/**
+ * CMD-ChangeMachineStatus (ST-012) through the command layer, observed through the machine record and the journal.
+ * In a database of its own, so "LG-042" can be arranged.
+ */
+const isolated = isolatedTestDatabase("change_machine_status");
+let db: NodePgDatabase;
+const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const hanna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+let machineModelId: string;
+
+beforeAll(async () => {
+  db = await isolated.reset();
+  for (const member of [eva, tom, hanna]) await anExistingTeamMember(db, member);
+  const created = await executeCommand(
+    createMachineModelCommand,
+    { title: "Medieval Madness", manufacturer: "Williams", machineCategory: "pinball" },
+    { actor: eva, db, newId: randomUUID },
+  );
+  if (!created.ok) throw new Error(created.error);
+  machineModelId = created.result.machineModelId;
+});
+
+afterAll(() => isolated.close());
+
+beforeEach(() => withoutMachines(db));
+
+async function registered(museumNumber: string, machineStatus: MachineStatus = "playable") {
+  const outcome = await executeCommand(
+    registerMachineCommand,
+    { machineModelId, museumNumber, serialNumber: undefined, location: "Hall 2", machineStatus },
+    { actor: eva, db, clock: fixedClock("2026-01-15T09:00:00Z"), newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+  return outcome.result.machineId;
+}
+
+const at = (instant: string) => ({ db, clock: fixedClock(instant), newId: randomUUID });
+
+describe("CMD-ChangeMachineStatus", () => {
+  it("ST-012: Technician changes the machine status", async () => {
+    const machineId = await registered("LG-042");
+
+    const outcome = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "limited", reason: "left flipper weak" },
+      { actor: tom, ...at("2026-03-02T14:00:00Z") },
+    );
+
+    expect(outcome).toEqual({ ok: true, result: { museumNumber: "LG-042", machineStatus: "limited" } });
+    const record = await machineRecord(db, "LG-042");
+    expect(record?.machineStatus).toBe("limited");
+    expect(record?.statusHistory[0]).toMatchObject({
+      previousStatus: "playable",
+      newStatus: "limited",
+      reason: "left flipper weak",
+      changedBy: tom.teamMemberId,
+      changedAt: new Date("2026-03-02T14:00:00Z"),
+    });
+    const [, changed] = await journalOf(db, { machineId });
+    // No free text in the journal: the reason lives only in the status history.
+    expect(changed).toMatchObject({
+      type: "EVT-MachineStatusChanged",
+      actor: tom,
+      aggregate: { type: "AGG-Machine", id: machineId },
+    });
+    expect(changed.data).toEqual({ previousStatus: "playable", newStatus: "limited" });
+  });
+
+  it("ST-012: Helpers can only set Out of order", async () => {
+    const machineId = await registered("LG-042", "out-of-order");
+
+    for (const machineStatus of ["playable", "limited", "not-on-display"] as const) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus, reason: "looks fine again" },
+        { actor: hanna, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error: "helpers-only-out-of-order" });
+      expect((await machineRecord(db, "LG-042"))?.machineStatus).toBe("out-of-order");
+    }
+    expect(await journalOf(db, { machineId })).toHaveLength(1);
+  });
+
+  it("ST-012: A reason is required", async () => {
+    const machineId = await registered("LG-042");
+
+    for (const reason of ["", "   "]) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus: "limited", reason },
+        { actor: tom, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error: "reason-required" });
+    }
+    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
+
+  it("ST-012: Retired machines cannot change status", async () => {
+    const machineId = await registered("LG-013");
+    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, ...at("2026-03-01T11:00:00Z") });
+    if (!retired.ok) throw new Error("not retired");
+
+    const outcome = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 1, machineStatus: "limited", reason: "left flipper weak" },
+      { actor: tom, ...at("2026-03-02T14:00:00Z") },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "machine-retired" });
+    expect((await machineRecord(db, "LG-013"))?.statusHistory).toHaveLength(1);
+  });
+
+  it("rejects a change without a chosen machine status, and one to the machine status the machine already has", async () => {
+    const machineId = await registered("LG-042", "limited");
+
+    for (const [machineStatus, error] of [
+      [undefined, "machine-status-required"],
+      ["limited", "machine-status-unchanged"],
+    ] as const) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus, reason: "left flipper weak" },
+        { actor: tom, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error });
+    }
+    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
+
+  it("saves the status history insert-only: two changes leave two entries, the first unchanged, nothing updated", async () => {
+    const machineId = await registered("LG-042");
+    // A trigger of this test's own database refuses every UPDATE of a status history entry (Q13).
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION test_refuse_update() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN RAISE EXCEPTION 'a status history entry is never updated'; END $$;
+      DROP TRIGGER IF EXISTS test_status_history_insert_only ON machine_status_change;
+      CREATE TRIGGER test_status_history_insert_only BEFORE UPDATE ON machine_status_change
+        FOR EACH ROW EXECUTE FUNCTION test_refuse_update();
+    `);
+    const change = (version: number, machineStatus: MachineStatus, reason: string, instant: string) =>
+      executeCommand(changeMachineStatusCommand, { machineId, version, machineStatus, reason }, { actor: tom, ...at(instant) });
+
+    expect((await change(0, "limited", "left flipper weak", "2026-03-02T14:00:00Z")).ok).toBe(true);
+    const [first] = (await machineRecord(db, "LG-042"))!.statusHistory;
+    expect((await change(1, "out-of-order", "coil burnt", "2026-03-03T09:00:00Z")).ok).toBe(true);
+
+    const history = (await machineRecord(db, "LG-042"))!.statusHistory;
+    expect(history.map((entry) => entry.reason)).toEqual(["coil burnt", "left flipper weak", "registration"]);
+    expect(history[1]).toEqual(first);
+  });
+});
