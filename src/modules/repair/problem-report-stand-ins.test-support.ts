@@ -1,5 +1,5 @@
 import { aggregateCommand, created, trigger, type Database } from "@/platform/command";
-import { problemReports } from "./problem-reports";
+import { problemReports, reportingFacts } from "./problem-reports";
 import { reportProblem } from "./report-problem";
 
 /**
@@ -90,6 +90,7 @@ export const reportWithPolicyForTest = aggregateCommand({
   allowedActors: ["technician"],
   store: problemReports,
   creates: true,
+  facts: reportingFacts,
   decide: reportProblem,
   journal: (event) => ({
     type: event.type,
@@ -107,6 +108,7 @@ export const reportWithRejectedPolicyForTest = aggregateCommand({
   allowedActors: ["technician"],
   store: problemReports,
   creates: true,
+  facts: reportingFacts,
   decide: reportProblem,
   journal: (event) => ({
     type: event.type,
@@ -124,6 +126,7 @@ export const reportWithIdlePolicyForTest = aggregateCommand({
   allowedActors: ["technician"],
   store: problemReports,
   creates: true,
+  facts: reportingFacts,
   decide: reportProblem,
   journal: (event) => ({
     type: event.type,

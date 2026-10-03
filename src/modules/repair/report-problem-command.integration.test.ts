@@ -83,4 +83,15 @@ describe("CMD-ReportProblem by a visitor", () => {
       ["EVT-ProblemReported", { kind: "visitor" }],
     ]);
   });
+
+  it("ST-013: No reporting for machines not on display", async () => {
+    const machineId = await aRegisteredMachine(db, "not-on-display");
+
+    expect(await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, deps)).toEqual({
+      ok: false,
+      error: "machine-not-on-display",
+    });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(await journalSinceRegistration(db, machineId)).toEqual([]);
+  });
 });

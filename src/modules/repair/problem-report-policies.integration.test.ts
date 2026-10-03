@@ -50,7 +50,13 @@ describe("automatic policies triggered by a command", () => {
     // The policy's error is part of the triggering command's result type.
     if (!outcome.ok)
       expectTypeOf(outcome.error).toEqualTypeOf<
-        "description-required" | "policy-rejected" | "not-authorized" | "not-found" | "version-conflict"
+        | "machine-not-found"
+        | "machine-not-on-display"
+        | "description-required"
+        | "policy-rejected"
+        | "not-authorized"
+        | "not-found"
+        | "version-conflict"
       >();
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await journalSinceRegistration(db, machineId)).toEqual([]);

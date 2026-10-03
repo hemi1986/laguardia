@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
+import { machineForReporting } from "@/modules/collection";
 import { aggregateStore, type Database } from "@/platform/command";
-import type { ProblemReport } from "./report-problem";
+import type { ProblemReport, ReportingFacts } from "./report-problem";
 import { problemReport } from "./schema";
 
 /** How AGG-ProblemReport is stored: one row per problem report, versioned (HS-16). */
@@ -38,4 +39,12 @@ export async function problemReportsOfMachine(db: Database, machineId: string) {
     .from(problemReport)
     .where(eq(problemReport.machineId, machineId))
     .orderBy(desc(problemReport.reportedAt));
+}
+
+/**
+ * The facts of CMD-ReportProblem: the machine as the Collection module knows it now, read in the command's transaction
+ * through its public interface (context map, Collection → Repair). Repair never stores the machine status itself.
+ */
+export async function reportingFacts(tx: Database, input: { machineId: string }): Promise<ReportingFacts> {
+  return { machine: await machineForReporting(tx, input.machineId) };
 }

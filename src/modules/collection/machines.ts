@@ -310,3 +310,19 @@ export async function machineForStatusChange(
     .where(eq(machine.museumNumber, museumNumber));
   return row && { id: row.id, museumNumber: row.museumNumber, machineStatus: row.machineStatus, version: row.version, retired: row.retiredAt !== null };
 }
+
+/**
+ * What the Repair module needs to know about a machine when a problem is reported (context map, Collection → Repair:
+ * Repair checks its command rules against the current machine state). Undefined for an unknown machine.
+ */
+export async function machineForReporting(
+  db: Database,
+  machineId: string,
+): Promise<{ machineStatus: MachineStatus; retired: boolean } | undefined> {
+  if (!isUuid(machineId)) return undefined;
+  const [row] = await db
+    .select({ machineStatus: machine.machineStatus, retiredAt: machine.retiredAt })
+    .from(machine)
+    .where(eq(machine.id, machineId));
+  return row && { machineStatus: row.machineStatus, retired: row.retiredAt !== null };
+}
