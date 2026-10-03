@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
 labels: [mvp, triage, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
