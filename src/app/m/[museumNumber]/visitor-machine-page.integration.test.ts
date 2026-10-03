@@ -108,8 +108,8 @@ describe("the visitor machine page", () => {
 
     const html = await page("LG-042");
 
-    expect(html).toContain("Schon 2× gemeldet – noch nicht vom Team gesichtet.");
-    expect(await page("LG-042", "en")).toContain("Already reported 2 times – not yet checked by the team.");
+    expect(html).toContain("2 Meldungen warten noch auf die Sichtung durch das Team.");
+    expect(await page("LG-042", "en")).toContain("2 reports are waiting to be checked by the team.");
     expect(html).not.toContain("Ball stuck behind the left ramp");
     expect(html).not.toContain("Left flipper weak");
   });
@@ -118,15 +118,15 @@ describe("the visitor machine page", () => {
     const machineId = await registered("LG-042");
     await reported(machineId, "Ball stuck behind the left ramp", "2026-10-03T09:00:00Z");
 
-    expect(await page("LG-042")).toContain("Schon einmal gemeldet – noch nicht vom Team gesichtet.");
-    expect(await page("LG-042", "en")).toContain("Already reported once – not yet checked by the team.");
+    expect(await page("LG-042")).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
+    expect(await page("LG-042", "en")).toContain("1 report is waiting to be checked by the team.");
   });
 
   it("ST-013: No hint without untriaged problem reports", async () => {
     await registered("LG-042");
 
-    expect(await page("LG-042")).not.toContain("gemeldet");
-    expect(await page("LG-042", "en")).not.toContain("reported");
+    expect(await page("LG-042")).not.toContain("Sichtung");
+    expect(await page("LG-042", "en")).not.toContain("waiting");
   });
 });
 

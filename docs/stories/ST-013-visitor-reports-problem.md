@@ -30,6 +30,8 @@ Decided in the test plan (user, 2026-10-03, during `/implement ST-013`):
 - `CMD-ReportProblem` reads the machine status for its visitor rule in its own transaction through the Collection module's public interface (context map, Collection → Repair: "Repair reads from Collection when checking command rules").
 - The description is a multi-line field (shadcn `textarea`).
 
+Decided at acceptance (user, 2026-10-03): HS-1 stays – visitors see the number of untriaged problem reports, never their texts; what is known becomes visible as the titles of open defects (ST-018). The hint says what waits for the team: „2 Meldungen warten noch auf die Sichtung durch das Team.“ / „1 Meldung wartet noch …“ (en: "2 reports are waiting to be checked by the team.").
+
 ## Acceptance Criteria
 
 Scenario: Visitor reports a problem

@@ -18,9 +18,14 @@ export const visitorDe = {
       "not-on-display": "Nicht ausgestellt",
     },
     reportProblem: "Problem melden",
-    /** The number of untriaged problem reports (HS-1) – all of them, so no "heute" (user, 2026-09-26). */
+    /**
+     * The number of untriaged problem reports (HS-1) – all of them, so no "heute" (user, 2026-09-26); worded as what
+     * waits for the team (user, 2026-10-03). What is known shows as the open defects' titles (ST-018).
+     */
     alreadyReported: (count: number) =>
-      `Schon ${count === 1 ? "einmal" : `${count}×`} gemeldet – noch nicht vom Team gesichtet.`,
+      count === 1
+        ? "1 Meldung wartet noch auf die Sichtung durch das Team."
+        : `${count} Meldungen warten noch auf die Sichtung durch das Team.`,
     notOnDisplay: "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     unknown: "Kein Gerät mit dieser Museumsnummer.",
     toStart: "Zur Startseite",

@@ -75,7 +75,7 @@ test("ST-013: Visitor reports a problem", async ({ page, browser }) => {
       "Was ist das Problem?",
       "Meldung senden",
       "Danke! Deine Meldung ist beim Team angekommen.",
-      "Schon einmal gemeldet – noch nicht vom Team gesichtet.",
+      "1 Meldung wartet noch auf die Sichtung durch das Team.",
     ],
     [
       "en-GB",
@@ -83,7 +83,7 @@ test("ST-013: Visitor reports a problem", async ({ page, browser }) => {
       "What is the problem?",
       "Send report",
       "Thank you! Your report has reached the team.",
-      "Already reported 2 times – not yet checked by the team.",
+      "2 reports are waiting to be checked by the team.",
     ],
   ]) {
     const phone = await visitor(browser, locale);

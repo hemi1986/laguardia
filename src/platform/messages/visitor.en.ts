@@ -19,7 +19,9 @@ export const visitorEn: VisitorMessages = {
     },
     reportProblem: "Report a problem",
     alreadyReported: (count: number) =>
-      `Already reported ${count === 1 ? "once" : `${count} times`} – not yet checked by the team.`,
+      count === 1
+        ? "1 report is waiting to be checked by the team."
+        : `${count} reports are waiting to be checked by the team.`,
     notOnDisplay: "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     unknown: "There is no machine with this museum number.",
     toStart: "To the start page",
