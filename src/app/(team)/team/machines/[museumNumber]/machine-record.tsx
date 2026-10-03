@@ -19,6 +19,7 @@ export function MachineRecordView({
   museumNumber,
   canChangeStatus = false,
   statusChanged = false,
+  problemReported = false,
 }: {
   record: MachineRecordData | undefined;
   museumNumber: string;
@@ -26,6 +27,8 @@ export function MachineRecordView({
   canChangeStatus?: boolean;
   /** Just back from a status change: the confirmation names the machine and its new machine status (G3). */
   statusChanged?: boolean;
+  /** Just back from a problem report: the confirmation names the machine and says it waits for triage (ST-015). */
+  problemReported?: boolean;
 }) {
   if (!record) {
     return (
@@ -54,6 +57,7 @@ export function MachineRecordView({
       {statusChanged && (
         <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
       )}
+      {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(
@@ -62,6 +66,15 @@ export function MachineRecordView({
             record.retirement.reason,
           )}
         </p>
+      )}
+      {!record.retirement && (
+        // Section 2 of the machine record (ST-009): reporting a problem – any team member, not for a retired machine (G11).
+        <Link
+          href={`/team/machines/${encodeURIComponent(record.museumNumber)}/melden`}
+          className={buttonVariants({ className: "self-start" })}
+        >
+          {texts.reportProblem}
+        </Link>
       )}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (

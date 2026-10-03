@@ -16,7 +16,7 @@ export default async function MachineRecordPage({
 }: PageProps<"/team/machines/[museumNumber]">) {
   const member = await requireTeamMember();
   const museumNumber = decodeURIComponent((await params).museumNumber);
-  const record = await loadMachineRecord(database(), museumNumber);
+  const [record, query] = await Promise.all([loadMachineRecord(database(), museumNumber), searchParams]);
 
   return (
     <Page title={record ? `${record.museumNumber} · ${record.machineModel.title}` : teamMessages.terms.Machine}>
@@ -30,7 +30,8 @@ export default async function MachineRecordPage({
             retired: record.retirement !== undefined,
           }).length > 0
         }
-        statusChanged={(await searchParams).statusChanged !== undefined}
+        statusChanged={query.statusChanged !== undefined}
+        problemReported={query.gemeldet !== undefined}
       />
     </Page>
   );

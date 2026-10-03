@@ -18,10 +18,10 @@ export type {
 export {
   machineOverview,
   machineRecord,
-  machineForStatusChange,
+  machineForTeamForm,
   machineForReporting,
   machineIdOf,
-  type MachineForStatusChange,
+  type MachineForTeamForm,
   visitorMachine,
   machineStatusCounts,
   type MachineOverviewEntry,
