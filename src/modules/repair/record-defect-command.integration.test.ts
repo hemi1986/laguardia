@@ -5,6 +5,9 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { machineRecord } from "@/modules/collection";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { commandErrorText, teamMessages } from "@/platform/messages";
 import { recordDefectCommand, reportProblemCommand, triageList } from ".";
 import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.test-support";
 
@@ -25,7 +28,13 @@ async function anUntriagedProblemReport(machineId: string, description = "Left f
 
 function recordDefect(
   problemReportId: string,
-  fields: { title: string; priority?: "high" | "normal" | "low"; suitableForHelpers?: boolean },
+  fields: {
+    title: string;
+    priority?: "high" | "normal" | "low";
+    suitableForHelpers?: boolean;
+    machineStatus?: "limited" | "out-of-order";
+    machineVersion?: number;
+  },
   actor: Actor = tom,
 ) {
   return executeCommand(
@@ -36,8 +45,8 @@ function recordDefect(
       title: fields.title,
       priority: fields.priority,
       suitableForHelpers: fields.suitableForHelpers ?? false,
-      machineStatus: undefined,
-      machineVersion: undefined,
+      machineStatus: fields.machineStatus,
+      machineVersion: fields.machineVersion,
     },
     { actor, db, clock, newId: randomUUID },
   );
@@ -76,4 +85,80 @@ describe("CMD-RecordDefect", () => {
     expect(recordedEvent).toMatchObject({ type: "EVT-DefectRecorded", actor: tom, machineId });
     expect(recordedEvent.data).toEqual({ defectId, priority: "normal", suitableForHelpers: false });
   });
+
+  it("ST-018: Machine status is changed in the same step", async () => {
+    await anExistingTeamMember(db, tom);
+    const machineId = await aRegisteredMachine(db);
+    const museumNumber = await museumNumberOf(machineId);
+    const problemReportId = await anUntriagedProblemReport(machineId);
+
+    const recorded = await recordDefect(problemReportId, {
+      title: "Coil burnt, ball not ejected",
+      priority: "high",
+      machineStatus: "out-of-order",
+      machineVersion: 0,
+    });
+
+    if (!recorded.ok) throw new Error(recorded.error);
+    expect((await storedDefect(db, recorded.result.defectId))?.priority).toBe("high");
+    const record = await machineRecord(db, museumNumber);
+    expect(record?.machineStatus).toBe("out-of-order");
+    expect(record?.statusHistory[0]).toMatchObject({
+      previousStatus: "playable",
+      newStatus: "out-of-order",
+      reason: "Coil burnt, ball not ejected",
+      changedBy: tom.teamMemberId,
+    });
+    // Two events, one action – journaled with the same technician, in this order.
+    expect((await journalOf(db, { machineId })).slice(-2).map((entry) => [entry.type, entry.actor])).toEqual([
+      ["EVT-DefectRecorded", tom],
+      ["EVT-MachineStatusChanged", tom],
+    ]);
+  });
+
+  it("ST-018: Rejected status change rolls back the defect", async () => {
+    await anExistingTeamMember(db, tom);
+    const machineId = await aRegisteredMachine(db);
+    const problemReportId = await anUntriagedProblemReport(machineId);
+    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, db, clock, newId: randomUUID });
+    if (!retired.ok) throw new Error("not retired");
+    const journalBefore = (await journalOf(db, { machineId })).length;
+
+    const recorded = await recordDefect(problemReportId, {
+      title: "Left flipper weak",
+      machineStatus: "out-of-order",
+      machineVersion: 1,
+    });
+
+    expect(recorded).toEqual({ ok: false, error: "machine-retired" });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
+    expect((await machineRecord(db, await museumNumberOf(machineId)))?.statusHistory).toHaveLength(1);
+    expect(commandErrorText(teamMessages, "machine-retired")).toContain("ausgemustert");
+  });
+
+  it("ST-018: Title is required", async () => {
+    await anExistingTeamMember(db, tom);
+    const machineId = await aRegisteredMachine(db);
+    const problemReportId = await anUntriagedProblemReport(machineId);
+
+    expect(await recordDefect(problemReportId, { title: "  " })).toEqual({ ok: false, error: "title-required" });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    expect((await triageList(db, clock)).map((entry) => entry.id)).toContain(problemReportId);
+  });
+
+  it("refuses a status that is not stricter than the machine's – the form never offers one", async () => {
+    await anExistingTeamMember(db, tom);
+    const machineId = await aRegisteredMachine(db, "out-of-order");
+    const problemReportId = await anUntriagedProblemReport(machineId);
+
+    expect(
+      await recordDefect(problemReportId, { title: "Left flipper weak", machineStatus: "limited", machineVersion: 0 }),
+    ).toEqual({ ok: false, error: "machine-status-not-stricter" });
+  });
 });
+
+async function museumNumberOf(machineId: string) {
+  const [registered] = await journalOf(db, { machineId });
+  return registered.data.museumNumber as string;
+}
