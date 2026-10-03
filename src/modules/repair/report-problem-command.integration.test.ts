@@ -7,6 +7,7 @@ import { problemReportsOfMachine, reportProblemCommand } from ".";
 import { changeDescriptionForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 
 const db = testDatabase();
 const visitor: Actor = { kind: "visitor" };
@@ -130,5 +131,48 @@ describe("CMD-ReportProblem by a visitor", () => {
 
     expect(reported.ok).toBe(true);
     expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual(["Coil burnt"]);
+  });
+});
+
+describe("CMD-ReportProblem by a team member", () => {
+  const helper = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+  const asHelper = { ...deps, actor: helper };
+
+  it("ST-015: Team members can report for machines not on display", async () => {
+    await anExistingTeamMember(db, helper);
+    const machineId = await aRegisteredMachine(db, "not-on-display");
+
+    const reported = await executeCommand(reportProblemCommand, { machineId, description: "Coil burnt" }, asHelper);
+
+    expect(reported.ok).toBe(true);
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual(["Coil burnt"]);
+  });
+
+  it("ST-015: Description is required", async () => {
+    await anExistingTeamMember(db, helper);
+    const machineId = await aRegisteredMachine(db);
+
+    expect(await executeCommand(reportProblemCommand, { machineId, description: "" }, asHelper)).toEqual({
+      ok: false,
+      error: "description-required",
+    });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+  });
+
+  it("ST-015: No problem reports for retired machines", async () => {
+    await anExistingTeamMember(db, helper);
+    const machineId = await aRegisteredMachine(db);
+    const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+    await anExistingTeamMember(db, technician);
+    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { ...deps, actor: technician });
+    if (!retired.ok) throw new Error("not retired");
+
+    for (const actor of [helper, technician]) {
+      expect(await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { ...deps, actor })).toEqual({
+        ok: false,
+        error: "machine-retired",
+      });
+    }
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
   });
 });

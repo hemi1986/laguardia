@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
-import { machineForStatusChange, machineStatusesToChangeTo } from "@/modules/collection";
+import { machineForTeamForm, machineStatusesToChangeTo } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -15,7 +15,7 @@ const { machines, machineRecord, machineStatusChange: texts } = teamMessages;
 export default async function ChangeMachineStatusPage({ params }: PageProps<"/team/machines/[museumNumber]/status">) {
   const member = await requireTeamMember();
   const museumNumber = decodeURIComponent((await params).museumNumber);
-  const machine = await machineForStatusChange(database(), museumNumber);
+  const machine = await machineForTeamForm(database(), museumNumber);
   const offered = machine ? machineStatusesToChangeTo(member.role, machine) : [];
 
   return (

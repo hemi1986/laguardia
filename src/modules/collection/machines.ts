@@ -284,8 +284,8 @@ export function machineStatusHistory(db: Database, machineId: string): Promise<S
   return statusHistoryOf(db, machineId);
 }
 
-/** What the status change page (ST-012) shows of a machine, with the version the team member saw (HS-16). */
-export type MachineForStatusChange = {
+/** What a team form on a machine shows of it – the status change (ST-012), the problem report (ST-015) – with the version the team member saw (HS-16). */
+export type MachineForTeamForm = {
   id: string;
   museumNumber: string;
   machineStatus: MachineStatus;
@@ -293,11 +293,11 @@ export type MachineForStatusChange = {
   retired: boolean;
 };
 
-/** The machine whose status is about to change, by its museum number – retired ones included, so the page can say so. */
-export async function machineForStatusChange(
+/** The machine a team form acts on, by its museum number – retired ones included, so the page can say so. */
+export async function machineForTeamForm(
   db: Database,
   museumNumber: string,
-): Promise<MachineForStatusChange | undefined> {
+): Promise<MachineForTeamForm | undefined> {
   const [row] = await db
     .select({
       id: machine.id,

@@ -5,7 +5,7 @@ import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platfor
  * CMD-ReportProblem (AGG-ProblemReport): a visitor or team member reports a problem with a machine.
  * The pure decision of a creating command – the command layer saves the new problem report at version 0. What it must
  * know about the machine comes in as its facts, read from the Collection module in the command's transaction (ST-013).
- * The team members' rule (any machine that is not retired) follows with ST-015.
+ * Team members may report for any machine that is not retired (ST-015).
  */
 
 export type Reporter = { kind: "visitor" } | { kind: "team-member"; teamMemberId: TeamMemberId };
@@ -40,6 +40,7 @@ export type ReportingFacts = { machine: { machineStatus: MachineStatus; retired:
 
 export type ReportProblemError =
   | "machine-not-found"
+  | "machine-retired"
   | "machine-not-on-display"
   | "description-required"
   | "description-too-long";
@@ -53,6 +54,8 @@ export function reportProblem(
   { actor, clock, newId }: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported, ReportProblemError> {
   if (!machine) return { ok: false, error: "machine-not-found" };
+  // Nobody reports for a retired machine (CMD-ReportProblem rules); team members may for any other one (ST-015).
+  if (machine.retired) return { ok: false, error: "machine-retired" };
   // Visitors report only for machines on display (CMD-ReportProblem rules); the page offers no button either (ST-010).
   if (actor.kind === "visitor" && machine.machineStatus === "not-on-display") {
     return { ok: false, error: "machine-not-on-display" };
