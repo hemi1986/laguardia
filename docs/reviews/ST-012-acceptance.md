@@ -53,3 +53,4 @@ Remarks on the process:
 ## Resolution (main session, 2026-10-03)
 - Hidden "Status ändern": the rule now lives in `machineStatusesToChangeTo` with a table test (retired, helper on Out of order). The pages only render its result – no separate page rendering test (skipped minor: the branches are a direct read of the tested list).
 - Form-level version conflict: skipped minor – the layer's conflict path is tested (`problem-report-version.integration.test.ts`), the convention now says the person reloads. Questions on a maximum reason length and the URL-driven confirmation go to the user with the pull request.
+- User, 2026-10-03: accepted; the conventions passages are approved; a reason needs no maximum length; the confirmation via `?statusChanged` stays as it is.
