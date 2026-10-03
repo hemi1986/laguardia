@@ -22,6 +22,8 @@ Command `CMD-ReportProblem`, used by team members. Rules:
 - The reporter is the team member.
 - Every problem report is triaged by a technician (`docs/product/vision.md`). A technician's own problem report is triaged in the same step – see ST-023.
 
+**Decided in the test plan (user, 2026-10-03, during `/implement ST-015`):** the action „Problem melden“ sits at the top of the machine record (section 2, ST-009) and leads to a page of its own, `/team/machines/<museum number>/melden`, with nothing but the form; on success the team member is back on the machine record with a confirmation that names the machine and says the problem report waits for triage. The action is not shown for a retired machine (G11); the command refuses it anyway.
+
 ## Acceptance Criteria
 
 Scenario: Helper reports a problem
