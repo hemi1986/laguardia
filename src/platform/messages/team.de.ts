@@ -40,6 +40,7 @@ export const teamMessages = {
     accounts: "Teammitglieder",
     machineModels: "Modelle",
     machines: "Geräte",
+    triage: "Sichtung",
     ownPassword: "Passwort ändern",
   },
   machineModels: {
