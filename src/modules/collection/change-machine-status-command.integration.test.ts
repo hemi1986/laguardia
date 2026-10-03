@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
@@ -145,5 +146,27 @@ describe("CMD-ChangeMachineStatus", () => {
       expect(outcome).toEqual({ ok: false, error });
     }
     expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
+
+  it("saves the status history insert-only: two changes leave two entries, the first unchanged, nothing updated", async () => {
+    const machineId = await registered("LG-042");
+    // A trigger of this test's own database refuses every UPDATE of a status history entry (Q13).
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION test_refuse_update() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN RAISE EXCEPTION 'a status history entry is never updated'; END $$;
+      DROP TRIGGER IF EXISTS test_status_history_insert_only ON machine_status_change;
+      CREATE TRIGGER test_status_history_insert_only BEFORE UPDATE ON machine_status_change
+        FOR EACH ROW EXECUTE FUNCTION test_refuse_update();
+    `);
+    const change = (version: number, machineStatus: MachineStatus, reason: string, instant: string) =>
+      executeCommand(changeMachineStatusCommand, { machineId, version, machineStatus, reason }, { actor: tom, ...at(instant) });
+
+    expect((await change(0, "limited", "left flipper weak", "2026-03-02T14:00:00Z")).ok).toBe(true);
+    const [first] = (await machineRecord(db, "LG-042"))!.statusHistory;
+    expect((await change(1, "out-of-order", "coil burnt", "2026-03-03T09:00:00Z")).ok).toBe(true);
+
+    const history = (await machineRecord(db, "LG-042"))!.statusHistory;
+    expect(history.map((entry) => entry.reason)).toEqual(["coil burnt", "left flipper weak", "registration"]);
+    expect(history[1]).toEqual(first);
   });
 });
