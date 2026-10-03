@@ -33,3 +33,16 @@ export async function openDefectTitles(db: Database, machineId: string): Promise
     .orderBy(asc(defect.recordedAt), asc(defect.id));
   return rows.map((row) => row.title);
 }
+
+/** A defect's title and machine – for the confirmation after recording it (ST-018, G3). */
+export async function defectTitle(
+  db: Database,
+  defectId: string,
+): Promise<{ title: string; machineId: string } | undefined> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(defectId)) return undefined;
+  const [row] = await db
+    .select({ title: defect.title, machineId: defect.machineId })
+    .from(defect)
+    .where(eq(defect.id, defectId));
+  return row;
+}

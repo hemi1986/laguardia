@@ -9,6 +9,8 @@ import { recordDefect, recordingActors } from "./record-defect";
  * change in the same step runs Collection's CMD-ChangeMachineStatus as the same technician, in the same transaction
  * (`context.run`, HS-3) – its rejection rejects the defect too. The status history's reason is the defect's title.
  */
+const NO_VERSION_SEEN = -1;
+
 export const recordDefectCommand = aggregateCommand({
   id: "CMD-RecordDefect",
   allowedActors: recordingActors,
@@ -24,11 +26,12 @@ export const recordDefectCommand = aggregateCommand({
     data: { defectId: event.defectId, priority: event.priority, suitableForHelpers: event.suitableForHelpers },
   }),
   runs: (report, events, input) =>
-    input.machineStatus && input.machineVersion !== undefined
+    input.machineStatus
       ? events.map((event) =>
           run(changeMachineStatusCommand, {
             machineId: report.machineId,
-            version: input.machineVersion!,
+            // Without the version the technician saw, a chosen status ends as a conflict – it is never skipped.
+            version: input.machineVersion ?? NO_VERSION_SEEN,
             machineStatus: input.machineStatus,
             reason: event.title,
           }),

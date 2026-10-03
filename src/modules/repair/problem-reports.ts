@@ -129,17 +129,17 @@ export async function triageList(db: Database, clock: Clock): Promise<TriageList
 }
 
 /**
- * One problem report for its own page (ST-017), triaged or not – the page says when it is already triaged. Undefined
- * for an unknown ID, or an address that is no ID at all.
+ * One problem report for its own page and its triage forms (ST-017, ST-018), triaged or not – with the version the
+ * person sees (HS-16) and who triaged it, if anyone. Undefined for an unknown ID, or an address that is no ID at all.
  */
 export async function problemReportForTriage(
   db: Database,
   clock: Clock,
   problemReportId: string,
-): Promise<(TriageListEntry & { triaged: boolean }) | undefined> {
+): Promise<(TriageListEntry & { version: number; triagedBy: string | undefined }) | undefined> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
   const [row] = await db.select().from(problemReport).where(eq(problemReport.id, problemReportId));
   if (!row) return undefined;
   const report = problemReportOf(row);
-  return { ...triageListEntry(report, clock.now()), triaged: report.triage !== undefined };
+  return { ...triageListEntry(report, clock.now()), version: row.version, triagedBy: report.triage?.triagedBy };
 }
