@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
 labels: [mvp, triage, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -75,10 +75,17 @@ Scenario: Two technicians triage the same problem report
   Then Eva's action is rejected with the message that the problem report was already triaged by Tom
   And only Tom's defect exists
 
+Scenario: Recording a defect is offered on the problem report's page
+  Given a problem report for "LG-042" is untriaged
+  When a technician opens that problem report from the triage list
+  Then recording a defect from it is offered there
+
 Scenario: Helpers cannot record defects
   Given a helper is logged in
-  When the helper tries to record a defect from a problem report
-  Then the action is rejected
+  And a problem report for "LG-042" is untriaged
+  When the helper opens that problem report from the triage list
+  Then recording a defect is not offered there
+  But if the helper tries to record a defect from it anyway, the action is rejected
 
 Scenario: A rejected defect keeps what was typed
   Given a technician records a defect from an untriaged problem report with the priority high, the suitable-for-helpers mark set, the machine status Out of order and no title

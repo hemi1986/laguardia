@@ -9,7 +9,7 @@ risk: low
 events: [EVT-ProblemResolvedOnTheSpot]
 depends_on: [ST-017]
 labels: [mvp, triage, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -24,6 +24,11 @@ Helpers use the triage list only for this triage outcome (`RM-TriageList`).
 Its triage outcome is offered on the problem report's own page, which ST-017 builds and owns (G18); the assertion that the outcome is offered there – and, for technician-only outcomes, not to helpers – belongs to this story (moved from ST-017, user 2026-10-03).
 
 ## Acceptance Criteria
+
+Scenario: Resolving on the spot is offered on the problem report's page
+  Given a problem report for "LG-042" is untriaged
+  When the helper Anna or a technician opens that problem report from the triage list
+  Then resolving it on the spot is offered there
 
 Scenario: Helper resolves a problem on the spot
   Given the visitor problem report "Ball stuck behind the left ramp" for "LG-042" is untriaged

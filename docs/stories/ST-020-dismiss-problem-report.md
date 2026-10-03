@@ -9,7 +9,7 @@ risk: low
 events: [EVT-ProblemReportDismissed]
 depends_on: [ST-017, ST-016]
 labels: [mvp, triage, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -62,10 +62,17 @@ Scenario: Already triaged problem report
   When a technician tries to dismiss the same problem report
   Then the action is rejected with the message that it was already triaged
 
+Scenario: Dismissing is offered on the problem report's page
+  Given a problem report for "LG-042" is untriaged
+  When a technician opens that problem report from the triage list
+  Then dismissing it is offered there
+
 Scenario: Helpers cannot dismiss
   Given a helper is logged in
-  When the helper tries to dismiss a problem report
-  Then the action is rejected
+  And a problem report for "LG-042" is untriaged
+  When the helper opens that problem report from the triage list
+  Then dismissing is not offered there
+  But if the helper tries to dismiss it anyway, the action is rejected
 
 ## Out of Scope
 - Automatic dismissal when a machine is retired (ST-039)

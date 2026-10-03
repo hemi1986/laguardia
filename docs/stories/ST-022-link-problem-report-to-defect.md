@@ -9,7 +9,7 @@ risk: low
 events: [EVT-ProblemReportLinkedToDefect]
 depends_on: [ST-018, ST-021]
 labels: [mvp, triage, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -20,7 +20,7 @@ Command `CMD-LinkProblemReportToDefect` (technicians only). Rules and invariants
 - The problem report has not been triaged yet.
 - The defect belongs to the same machine as the problem report.
 - A linked problem report refers to exactly one defect; the outcome never changes.
-The triage list (ST-017) shows the open defects of the machine next to each problem report for linking. The open defects list shows the number of linked problem reports.
+The problem report's own page (built by ST-017) shows the open defects of the machine for linking – not the triage list. The open defects list shows the number of linked problem reports.
 Linking uses the same version check on the problem report as ST-018.
 Linking to a *resolved* defect reopens it automatically (`POL-LinkReopensResolvedDefect`) – see ST-053.
 Its triage outcome is offered on the problem report's own page, which ST-017 builds and owns (G18); the assertion that the outcome is offered there – and, for technician-only outcomes, not to helpers – belongs to this story (moved from ST-017, user 2026-10-03).
@@ -30,8 +30,8 @@ Its triage outcome is offered on the problem report's own page, which ST-017 bui
 Scenario: Open defects of the machine are offered for linking
   Given "LG-042" has the open defect "Left flipper weak"
   And a problem report for "LG-042" is untriaged
-  When a technician looks at that problem report in the triage list
-  Then the open defect "Left flipper weak" is offered for linking
+  When a technician opens that problem report from the triage list
+  Then linking it to the open defect "Left flipper weak" is offered on that problem report's page
 
 Scenario: Technician links a problem report to an open defect
   Given the open defect "Left flipper weak" of "LG-042"
@@ -60,8 +60,11 @@ Scenario: Already triaged problem report
 
 Scenario: Helpers cannot link
   Given a helper is logged in
-  When the helper tries to link a problem report to a defect
-  Then the action is rejected
+  And "LG-042" has the open defect "Left flipper weak"
+  And a problem report for "LG-042" is untriaged
+  When the helper opens that problem report from the triage list
+  Then linking is not offered there
+  But if the helper tries to link it to "Left flipper weak" anyway, the action is rejected
 
 ## Out of Scope
 - Linking to a resolved defect, which reopens it (ST-053)
