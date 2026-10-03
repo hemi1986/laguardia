@@ -53,3 +53,4 @@ Follow-up hurdle: no finding is a security/data-loss risk that blocks a named st
 3. Fixed: new browser test – the report form of a machine not on display refuses with the reason in words.
 4. Unchanged: CSRF is the platform's (ST-003, `e2e/security.spec.ts`, `src/proxy.ts` covers `/m/…/melden`).
 Questions (direct form of a machine not on display, team members on `/melden`, UTF-16 counting) go to the user with the pull request.
+- User, 2026-10-03: accepted („setz auf done“) after rewording the hint. The three open questions stay as recommended (form of a machine not on display refuses on submit; team members on `/melden` → ST-015; UTF-16 counting).
