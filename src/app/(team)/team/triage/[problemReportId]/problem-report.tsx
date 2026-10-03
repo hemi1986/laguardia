@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../triage-list";
@@ -11,7 +13,7 @@ const { triage: texts, terms } = teamMessages;
  * who reported it and how long it has been waiting. The triage stories add their outcomes below, each for whom it is
  * allowed (ST-018 record defect, ST-019 resolve on the spot, ST-020 dismiss, ST-022 link) – no outcome before them.
  */
-export function ProblemReportView({ data }: { data: ProblemReportData }) {
+export function ProblemReportView({ data, role }: { data: ProblemReportData; role: Role }) {
   if (!data) {
     return (
       <>
@@ -45,8 +47,35 @@ export function ProblemReportView({ data }: { data: ProblemReportData }) {
           {report.waitingLong && <span className="font-medium"> · {texts.longWait}</span>}
         </p>
       )}
+      {!triaged && <TriageOutcomes problemReportId={report.id} role={role} />}
       <BackToTriage />
     </>
+  );
+}
+
+/**
+ * The triage outcomes the person may choose (G21, story review 2026-10-03): each a button to its own form page, in the
+ * order Mit Defekt verknüpfen (ST-022), Defekt erfassen (ST-018), Direkt behoben (ST-019), Meldung verwerfen (ST-020).
+ * Technician-only outcomes are not shown to helpers (G11); the commands refuse them anyway.
+ */
+function TriageOutcomes({ problemReportId, role }: { problemReportId: string; role: Role }) {
+  const outcomes = role === "technician" ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : [];
+  if (outcomes.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-medium">{texts.outcomes}</h2>
+      <div className="flex flex-wrap gap-2">
+        {outcomes.map((outcome) => (
+          <Link
+            key={outcome.href}
+            href={`/team/triage/${problemReportId}/${outcome.href}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {outcome.label}
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

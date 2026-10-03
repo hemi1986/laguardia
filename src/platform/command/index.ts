@@ -12,7 +12,8 @@ import { NotFound, Rejected, VersionConflict } from "./errors";
  *   3. a rejection or a version conflict rolls everything back – no change, no journal entry.
  * Commands get the clock and the ID generator injected, so they are deterministic in tests.
  * Commands are written with `aggregateCommand` (load → decide → save, `./aggregate.ts`) – the only public way.
- * Automatic policies run inside the triggering command's transaction as the system actor.
+ * Automatic policies run inside the triggering command's transaction as the system actor; `context.run` runs another
+ * command in it as the same acting person (ST-018).
  * All commands are invoked through Server Actions (POST, Origin checked – the CSRF protection, src/proxy.ts).
  */
 
@@ -21,10 +22,12 @@ export {
   aggregateCommand,
   aggregateStore,
   created,
+  run,
   trigger,
   type AggregateStore,
   type Decision,
   type DecisionContext,
+  type RunCall,
 } from "./aggregate";
 export { saveHistory, type History } from "./history";
 
@@ -75,6 +78,12 @@ export type CommandContext = {
     policy: Command<Input, Result, Error>,
     input: Input,
   ) => Promise<Result>;
+  /**
+   * Runs another command – also another module's – in this command's transaction, as the same acting person and after
+   * its own authorization check (architecture review Q6, ST-018). Its rejection rejects the whole command; a person
+   * it does not allow makes the whole command `not-authorized`.
+   */
+  run: <Input, Result, Error extends string>(command: Command<Input, Result, Error>, input: Input) => Promise<Result>;
 };
 
 export type CommandOutcome<Result, Error extends string> =
@@ -138,14 +147,22 @@ async function runInTransaction<Input, Result, Error extends string>(
   actor: Actor,
   scope: TransactionScope,
 ): Promise<{ result: Result; rows: JournalRow[] }> {
-  const policyRows: JournalRow[] = [];
+  // The rows of the commands this one runs and the policies it triggers, in the order they ran.
+  const laterRows: JournalRow[] = [];
   const outcome = await command.run(input, {
     ...scope,
     actor,
     runAsSystem: async (policy, policyInput) => {
       if (!policy.allowedActors.includes("system")) throw new Error(`${policy.id} is not an automatic policy`);
       const { result, rows } = await runInTransaction(policy, policyInput, { kind: "system" }, scope);
-      policyRows.push(...rows);
+      laterRows.push(...rows);
+      return result;
+    },
+    run: async (inner, innerInput) => {
+      // The same authorization check executeCommand makes – the inner command decides whom it allows.
+      if (!inner.allowedActors.includes(actorKind(actor))) throw new Rejected("not-authorized");
+      const { result, rows } = await runInTransaction(inner, innerInput, actor, scope);
+      laterRows.push(...rows);
       return result;
     },
   });
@@ -153,7 +170,7 @@ async function runInTransaction<Input, Result, Error extends string>(
   const occurredAt = scope.clock.now();
   return {
     result: outcome.result,
-    rows: [...outcome.events.map((e) => journalRow(e, actor, occurredAt)), ...policyRows],
+    rows: [...outcome.events.map((e) => journalRow(e, actor, occurredAt)), ...laterRows],
   };
 }
 

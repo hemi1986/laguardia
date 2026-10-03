@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 12 of 57 domain stories done** · scenarios 104 of 415
+**Progress: 13 of 57 domain stories done** · scenarios 118 of 415
 
-**80 stories** · In Progress: 0 · Ready: 52 · In Review: 0 · Draft: 4 · Done: 24
+**80 stories** · In Progress: 0 · Ready: 51 · In Review: 0 · Draft: 4 · Done: 25
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-018](ST-018-record-defect.md) | Triage – record a defect, optionally changing the machine status | story | Repair | must | L | medium | ST-012, ST-017 |
 | [ST-021](ST-021-open-defects-list.md) | Open defects list and defect details | story | Repair | must | M | low | ST-008, ST-018 |
 | [ST-064](ST-064-legal-pages-visitor.md) | Legal pages for the visitor pages in German and English | story | Repair | must | S | low | ST-010 |
 | [ST-016](ST-016-photo-on-problem-report.md) | Add a photo to a problem report and show it to the team | story | Repair | must | L | medium | ST-002, ST-015, ST-017, ST-021, ST-064, ST-073 |
@@ -98,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-013](ST-013-visitor-reports-problem.md) | Visitor reports a problem at the machine | story | Repair | must | M | medium | ST-010 |
 | [ST-015](ST-015-team-member-reports-problem.md) | Team member reports a problem from the machine record | story | Repair | must | S | low | ST-009, ST-013 |
 | [ST-017](ST-017-triage-list.md) | Triage list of untriaged problem reports | story | Repair | must | S | low | ST-013, ST-015 |
+| [ST-018](ST-018-record-defect.md) | Triage – record a defect, optionally changing the machine status | story | Repair | must | L | medium | ST-012, ST-017 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | must | S | medium | ST-004, ST-073 |

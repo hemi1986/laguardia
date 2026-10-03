@@ -8,13 +8,13 @@ import { ProblemReportView } from "./problem-report";
 
 /** A problem report's own page (ST-017), opened from the triage list – where it is triaged (ST-018 ff.). */
 export default async function ProblemReportPage({ params }: PageProps<"/team/triage/[problemReportId]">) {
-  await requireTeamMember();
+  const member = await requireTeamMember();
   const { problemReportId } = await params;
   const data = await loadProblemReport(database(), systemClock, problemReportId);
 
   return (
     <Page title={teamMessages.terms["Problem report"]}>
-      <ProblemReportView data={data} />
+      <ProblemReportView data={data} role={member.role} />
     </Page>
   );
 }

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
+import { problemReportsOfMachine, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -143,6 +143,33 @@ describe("the visitor machine page", () => {
     if (!outcome.ok) throw new Error("not triaged");
 
     expect(await page("LG-042")).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
+  });
+
+  it("ST-018: Visitors see the title of the new defect", async () => {
+    const machineId = await registered("LG-042");
+    await reported(machineId, "Left flipper barely moves", "2026-10-02T15:00:00Z");
+    const [report] = await problemReportsOfMachine(db, machineId);
+    const recorded = await executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId: report.id,
+        version: 0,
+        title: "Left flipper weak",
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!recorded.ok) throw new Error(recorded.error);
+
+    const de = await page("LG-042");
+    expect(de).toContain("Bekannte Defekte");
+    expect(de).toContain("Left flipper weak");
+    expect(de).not.toContain("wartet noch auf die Sichtung");
+    // The title is shown untranslated – the technician wrote it for visitors.
+    expect(await page("LG-042", "en")).toContain("Left flipper weak");
   });
 });
 

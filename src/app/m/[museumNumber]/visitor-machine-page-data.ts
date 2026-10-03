@@ -1,13 +1,15 @@
 import { machineIdOf, visitorMachine, type VisitorMachine } from "@/modules/collection";
-import { untriagedProblemReportCount } from "@/modules/repair";
+import { openDefectTitles, untriagedProblemReportCount } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 
-/** The visitor machine page's data (RM-VisitorMachinePage, ST-010, ST-013); ST-018 adds the open defects' titles. */
+/** The visitor machine page's data (RM-VisitorMachinePage, ST-010, ST-013, ST-018). */
 export type VisitorMachinePageData = VisitorMachine & {
   /** Reporting is offered only for a machine on display (ST-013's rule). */
   reportingPossible: boolean;
   /** How many problem reports wait for triage – the number only, never their texts (HS-1). */
   untriagedProblemReports: number;
+  /** The titles of the machine's open defects – written by a technician for visitors, shown untranslated (ST-018). */
+  openDefects: string[];
 };
 
 /**
@@ -25,5 +27,6 @@ export async function loadVisitorMachinePage(
     ...machine,
     reportingPossible: machine.machineStatus !== "not-on-display",
     untriagedProblemReports: await untriagedProblemReportCount(db, machineId),
+    openDefects: await openDefectTitles(db, machineId),
   };
 }

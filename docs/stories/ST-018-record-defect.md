@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
 labels: [mvp, triage, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -30,6 +30,8 @@ Rules and invariants:
 - The form „Defekt erfassen“ (story review 2026-10-03): it shows the machine's current status in words; the status choice is „Status nicht ändern“ (preselected) plus only the stricter statuses above („Eingeschränkt“, „Außer Betrieb“). Priority options „hoch“, „normal“ (preselected), „niedrig“; „Für Helfer:innen geeignet“ is not set by default; the title is empty, with the hint „Wird Besucher:innen am Gerät angezeigt – kurz und verständlich.“
 - Confirmation: „Defekt „<title>“ an LG-042 erfasst.“, followed by „ LG-042 ist jetzt Außer Betrieb.“ (the new status) when the status was changed in the same step.
 - Rejections, shown at the form: „Bitte einen Titel angeben.“; „<Name> hat diese Meldung schon gesichtet. Zurück zur Sichtung.“ (back to the triage list); „LG-042 ist inzwischen ausgemustert. Es wurde nichts gespeichert.“
+
+**Decided in the test plan (user, 2026-10-03, during `/implement ST-018`):** (1) the command layer's `facts` also work for commands on an existing aggregate – CMD-RecordDefect reads the machine's current status from Collection in its transaction, and the "only stricter" rule stays in its pure decision; (2) when saving fails the version check, the layer loads the now-stored state and runs the decision again – a domain rejection ("already triaged") wins over `version-conflict` (Q11), for every command; (3) the form posts the machine version the technician saw (the inner CMD-ChangeMachineStatus checks it), and the status history entry's reason is the defect's title – no UI text in the data.
 
 **Foundation (moved from ST-074 on 2026-09-27).** HS-3 is the first case of one command running another: the status change belongs to `AGG-Machine` in the collection module, and a command belongs to one aggregate (architecture review 2026-09-27, Q12, ST-071). This story therefore builds `context.run(command, input)` (architecture review 2026-09-27, decision **Q6**): it runs another command – also another module's, imported through its `index.ts` – in the same transaction, as the same acting person, including that command's authorization check. A rejection of the inner command rejects everything; the inner command's error type becomes part of the outer command's result type. `context.runAsSystem` stays for automatic policies.
 
@@ -130,11 +132,11 @@ Scenario: Recording a defect is not offered on a triaged problem report
   Then recording a defect from it is not offered there
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q6)
-- [ ] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
-- [ ] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
-- [ ] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
-- [ ] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
+- [x] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
+- [x] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
+- [x] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
+- [x] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
+- [x] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
 
 ## Out of Scope
 - Changing priority or details later (ST-027, ST-031)
