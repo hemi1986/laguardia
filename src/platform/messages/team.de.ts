@@ -132,6 +132,9 @@ export const teamMessages = {
     reportedAt: "Gemeldet am",
     unknown: "Diese Meldung gibt es nicht.",
     alreadyTriaged: "Diese Meldung ist schon gesichtet.",
+    /** The section with the triage outcomes on a problem report's page (G21). */
+    outcomes: "Sichten",
+    recordDefect: "Defekt erfassen",
     back: "Zurück zur Sichtung",
   },
   reportProblem: {
