@@ -46,6 +46,7 @@ export const visitorDe = {
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
+    "machine-retired": "Dieses Gerät ist nicht mehr im Museum.",
     "not-authorized": "Das darfst du nicht.",
     "not-found": "Das gibt es nicht mehr.",
     "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",

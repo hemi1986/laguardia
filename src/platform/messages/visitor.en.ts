@@ -40,6 +40,7 @@ export const visitorEn: VisitorMessages = {
     "machine-not-on-display":
       "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     "machine-not-found": "There is no machine with this museum number.",
+    "machine-retired": "This machine is no longer in the museum.",
     "not-authorized": "You are not allowed to do that.",
     "not-found": "This no longer exists.",
     "version-conflict": "Someone has changed this in the meantime. Please reload the page and try again.",

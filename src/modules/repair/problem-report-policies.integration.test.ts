@@ -51,6 +51,7 @@ describe("automatic policies triggered by a command", () => {
     if (!outcome.ok)
       expectTypeOf(outcome.error).toEqualTypeOf<
         | "machine-not-found"
+        | "machine-retired"
         | "machine-not-on-display"
         | "description-required"
         | "description-too-long"
