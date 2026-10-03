@@ -1,4 +1,4 @@
-import { aggregateCommand, created, trigger } from "@/platform/command";
+import { aggregateCommand, created, trigger, type Database } from "@/platform/command";
 import { problemReports } from "./problem-reports";
 import { reportProblem } from "./report-problem";
 
@@ -154,3 +154,8 @@ export const changeWithoutVersionForTest = aggregateCommand({
   }),
   result: () => undefined,
 });
+
+/** A problem report as stored – for checks at the command seam that no read model shows yet (the reporter). */
+export async function storedProblemReport(db: Database, problemReportId: string) {
+  return (await problemReports.load(db, problemReportId))?.state;
+}

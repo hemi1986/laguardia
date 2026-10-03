@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, type Actor } from "@/platform/command";
+import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
-import { changeDescriptionForTest } from "./problem-report-stand-ins.test-support";
+import { changeDescriptionForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 
 const db = testDatabase();
@@ -57,5 +57,30 @@ describe("CMD-ReportProblem as a creating command", () => {
     const entries = await journalSinceRegistration(db, machineId);
     expect(entries.map((e) => [e.type, e.data])).toEqual([["EVT-ProblemReported", {}]]);
     expect(JSON.stringify(entries)).not.toContain("Coin door jammed");
+  });
+});
+
+describe("CMD-ReportProblem by a visitor", () => {
+  it("ST-013: Visitor reports a problem", async () => {
+    const machineId = await aRegisteredMachine(db);
+
+    const reported = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Ball stuck behind the left ramp" },
+      { ...deps, clock: fixedClock("2026-10-03T14:30:00Z") },
+    );
+
+    if (!reported.ok) throw new Error(reported.error);
+    const { problemReportId } = reported.result;
+    expect(await storedProblemReport(db, problemReportId)).toEqual({
+      id: problemReportId,
+      machineId,
+      description: "Ball stuck behind the left ramp",
+      reporter: { kind: "visitor" },
+      reportedAt: new Date("2026-10-03T14:30:00Z"),
+    });
+    expect((await journalOf(db, { aggregateId: problemReportId })).map((e) => [e.type, e.actor])).toEqual([
+      ["EVT-ProblemReported", { kind: "visitor" }],
+    ]);
   });
 });

@@ -23,6 +23,7 @@ Read model `RM-TriageList`; manual routine `POL-TriageProblemReports`. Fields: m
 - The list entry shows the machine, the description, the reporter and how long the problem report has been waiting, plus one way to open it; the four triage outcomes live on that problem report's own page (G5).
 - "Empty" is the good state here, and it still says so: the empty case and how many problem reports wait are both said in words (G7, G6).
 - The long wait is said in words next to the entry, not only by a colour (G6a).
+- The scenario "Report text is never interpreted" moved here from ST-013 (user, 2026-10-03): the triage list is the first page that shows problem report texts.
 
 ## Acceptance Criteria
 
@@ -73,6 +74,11 @@ Scenario: Triaging happens on the problem report's own page
   When a technician opens that problem report from the triage list
   Then its machine, description, reporter and waiting time are shown
   And the triage outcomes the technician may choose are offered there
+
+Scenario: Report text is never interpreted
+  Given a visitor reported a problem with the description "<script>alert(1)</script>"
+  When a technician opens the triage list
+  Then the description is shown as that literal text
 
 Scenario: Visitors cannot open the triage list
   Given nobody is logged in
