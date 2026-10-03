@@ -50,6 +50,13 @@
       "when": 1790922796748,
       "tag": "0006_machine_status_change_position",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791056499911,
+      "tag": "0007_machine_status_change_id_from_command",
+      "breakpoints": true
     }
   ]
 }

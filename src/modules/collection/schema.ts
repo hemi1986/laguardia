@@ -50,7 +50,8 @@ export const museumNumber = pgTable("museum_number", {
 export const machineStatusChange = pgTable(
   "machine_status_change",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
+    /** The entry's ID from the command's ID generator – the history is saved insert-only by it (Q13, ST-012). */
+    id: uuid("id").primaryKey(),
     /** The order the changes were stored in – changes of one command share their point in time (ST-007 review). */
     position: bigserial("position", { mode: "number" }).notNull(),
     machineId: uuid("machine_id")

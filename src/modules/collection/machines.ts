@@ -81,11 +81,10 @@ async function giveOut(tx: Database, state: Machine): Promise<void> {
 function saveStatusHistory(tx: Database, state: Machine): Promise<void> {
   return saveHistory(
     tx,
-    { table: machineStatusChange, owner: machineStatusChange.machineId },
+    { table: machineStatusChange, owner: "machineId" },
     state.id,
     state.statusHistory.map((change) => ({
       id: change.id,
-      machineId: state.id,
       previousStatus: change.previousStatus ?? null,
       newStatus: change.newStatus,
       reason: change.reason,

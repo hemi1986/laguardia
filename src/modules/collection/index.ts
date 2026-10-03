@@ -1,6 +1,6 @@
 /** Public interface of the Collection module (BC-Collection: machines, machine models, files) – ADR 0002. */
 export { changeMachineStatusCommand } from "./change-machine-status-command";
-export { machineStatusesSettableBy } from "./change-machine-status";
+export { machineStatusesToChangeTo } from "./change-machine-status";
 export type { ChangeMachineStatusError, ChangeMachineStatusInput } from "./change-machine-status";
 export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";

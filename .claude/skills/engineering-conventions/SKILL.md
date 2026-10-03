@@ -171,9 +171,9 @@ Rules:
 **Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
 status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
 with an ID from `context.newId()` and never changes or removes one. The store saves it with
-`saveHistory(tx, { table, owner }, aggregateId, rows)` (`src/platform/command/history.ts`): it inserts the entries
-whose ID is not stored yet and never updates or deletes a stored entry, whatever the state says about it. A history
-table has its own `id` (the entry's ID), the owner column and a `position bigserial` for the order entries were
+`saveHistory(tx, { table, owner: "machineId" }, aggregateId, rows)` (`src/platform/command/history.ts`) – `owner` names
+the column holding the aggregate's ID, which the helper fills in itself: it inserts the entries whose ID is not stored yet and never updates or deletes a stored entry, whatever the state says about it. A history
+table has its own `id` (the entry's ID, no database default), the owner column and a `position bigserial` for the order entries were
 stored in (entries of one command share their point in time); the store loads the list ordered by `position`.
 Example: `machines.ts` (`saveStatusHistory`). Proven by `src/platform/command/history.integration.test.ts` (a stand-in
 aggregate) and the machine status history test in `change-machine-status-command.integration.test.ts` – both install
@@ -218,7 +218,8 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   version its page loaded as hidden fields; the page reads them with a query that returns the version (e.g.
   `machineForStatusChange`). The input function converts a version that is not a whole number to `-1` – a version
   nobody saw, which the command layer answers with `version-conflict`. After a rejection the form keeps posting the
-  version the page loaded.
+  version the page loaded – it never picks up a newer one by itself: after `version-conflict` the person reloads the
+  page (the catalogue text says so), which loads the current state and version.
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
 - Forms with a photo ("store, run, delete on failure") come with ST-016.

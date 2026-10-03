@@ -152,9 +152,7 @@ const HIGHEST = 999;
  */
 function nextMuseumNumber(givenOut: ReadonlySet<string>): string | undefined {
   // Only numbers in the format count – one stored otherwise (by hand, an import) must not break the assignment.
-  const numbers = [...givenOut]
-    .filter((museumNumber) => MUSEUM_NUMBER.test(museumNumber))
-    .map((museumNumber) => Number(museumNumber.slice(3)));
+  const numbers = [...givenOut].filter((museumNumber) => MUSEUM_NUMBER.test(museumNumber)).map((museumNumber) => Number(museumNumber.slice(3)));
   const highest = Math.max(0, ...numbers);
   if (highest < HIGHEST) return museumNumberOf(highest + 1);
   for (let number = HIGHEST - 1; number >= 1; number--) {

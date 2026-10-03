@@ -1,4 +1,4 @@
-import { eq, inArray, and } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Database } from "../database";
 
@@ -8,25 +8,29 @@ import type { Database } from "../database";
  * the command's ID generator. Saving inserts the entries not stored yet, recognised by that ID, and never changes or
  * deletes a stored one – whatever the state says about it.
  */
-export type History<T extends PgTable & { id: PgColumn }> = {
+type HistoryTable = PgTable & { id: PgColumn };
+
+/** A history table and the name of its column that holds the owning aggregate's ID. */
+export type History<T extends HistoryTable, Owner extends keyof T["$inferInsert"] & keyof T> = {
   table: T;
-  /** The column naming the aggregate the entries belong to. */
-  owner: PgColumn;
+  owner: Owner;
 };
 
-export async function saveHistory<T extends PgTable & { id: PgColumn }>(
+/** Saves the history of the aggregate `ownerId`; the helper fills in the owner column of every entry itself. */
+export async function saveHistory<T extends HistoryTable, Owner extends keyof T["$inferInsert"] & keyof T>(
   tx: Database,
-  { table, owner }: History<T>,
+  { table, owner }: History<T, Owner>,
   ownerId: string,
-  entries: (T["$inferInsert"] & { id: string })[],
+  entries: (Omit<T["$inferInsert"], Owner> & { id: string })[],
 ): Promise<void> {
   if (entries.length === 0) return;
+  const ownerColumn = table[owner] as PgColumn;
   const stored = await tx
     .select({ id: table.id })
     .from(table as PgTable)
     .where(
       and(
-        eq(owner, ownerId),
+        eq(ownerColumn, ownerId),
         inArray(
           table.id,
           entries.map((entry) => entry.id),
@@ -34,6 +38,6 @@ export async function saveHistory<T extends PgTable & { id: PgColumn }>(
       ),
     );
   const storedIds = new Set(stored.map((row) => row.id as string));
-  const added = entries.filter((entry) => !storedIds.has(entry.id));
+  const added = entries.filter((entry) => !storedIds.has(entry.id)).map((entry) => ({ ...entry, [owner]: ownerId }));
   if (added.length > 0) await tx.insert(table).values(added as never);
 }

@@ -19,6 +19,19 @@ export function machineStatusesSettableBy(role: Role): readonly MachineStatus[] 
   return role === "technician" ? machineStatuses : ["out-of-order"];
 }
 
+/**
+ * The machine statuses a team member can change this machine to – what the machine record and the status change page
+ * offer (G11): none for a retired machine, and never the machine status it already has (user, 2026-10-03). Empty
+ * means there is nothing for them to change, so no action is shown.
+ */
+export function machineStatusesToChangeTo(
+  role: Role,
+  machine: { machineStatus: MachineStatus; retired: boolean },
+): MachineStatus[] {
+  if (machine.retired) return [];
+  return machineStatusesSettableBy(role).filter((status) => status !== machine.machineStatus);
+}
+
 /** What the acting person gave (ST-073, Q19): a missing machine status is "no value given"; the reason as typed. */
 export type ChangeMachineStatusInput = {
   machineId: string;

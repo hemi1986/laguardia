@@ -1,5 +1,5 @@
 import { Page } from "@/components/page";
-import { machineStatusesSettableBy } from "@/modules/collection";
+import { machineStatusesToChangeTo } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
@@ -13,10 +13,7 @@ import { MachineRecordView } from "./machine-record";
 export default async function MachineRecordPage({
   params,
   searchParams,
-}: {
-  params: Promise<{ museumNumber: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+}: PageProps<"/team/machines/[museumNumber]">) {
   const member = await requireTeamMember();
   const museumNumber = decodeURIComponent((await params).museumNumber);
   const record = await loadMachineRecord(database(), museumNumber);
@@ -28,8 +25,10 @@ export default async function MachineRecordPage({
         museumNumber={museumNumber}
         canChangeStatus={
           !!record &&
-          !record.retirement &&
-          machineStatusesSettableBy(member.role).some((status) => status !== record.machineStatus)
+          machineStatusesToChangeTo(member.role, {
+            machineStatus: record.machineStatus,
+            retired: record.retirement !== undefined,
+          }).length > 0
         }
         statusChanged={(await searchParams).statusChanged !== undefined}
       />

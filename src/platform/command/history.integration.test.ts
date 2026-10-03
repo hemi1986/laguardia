@@ -38,8 +38,8 @@ const logbookRows = aggregateStore({
   toRow: (state: Logbook) => ({ id: state.id }),
 });
 
-const entries = { table: logbookEntry, owner: logbookEntry.logbookId };
-const toEntryRow = (state: Logbook) => state.entries.map((entry) => ({ ...entry, logbookId: state.id }));
+const entries = { table: logbookEntry, owner: "logbookId" } as const;
+const toEntryRow = (state: Logbook) => state.entries;
 
 const logbooks: AggregateStore<Logbook> = {
   type: "AGG-TestLogbook",

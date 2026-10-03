@@ -117,6 +117,8 @@ export const teamMessages = {
     reasonHint: "Steht in der Status-Historie, z. B. „linker Flipper schwach“.",
     submit: "Status ändern",
     retired: "Dieses Gerät ist ausgemustert – sein Status lässt sich nicht mehr ändern.",
+    nothingToChange: (status: string) =>
+      `Das Gerät ist bereits ${status}. Einen anderen Status können nur Techniker:innen setzen.`,
     back: "Zurück zum Gerät",
   },
   accounts: {
