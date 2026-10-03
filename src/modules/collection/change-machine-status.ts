@@ -1,5 +1,5 @@
-import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
-import type { Machine, MachineStatus } from "./register-machine";
+import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
+import { machineStatuses, type Machine, type MachineStatus } from "./register-machine";
 
 /**
  * CMD-ChangeMachineStatus (AGG-Machine, ST-012): a team member changes a machine's status with a reason; the change
@@ -10,6 +10,14 @@ import type { Machine, MachineStatus } from "./register-machine";
 export const changingActors = ["helper", "technician"] as const;
 
 type ChangingPerson = ActorOf<(typeof changingActors)[number]>;
+
+/**
+ * The machine statuses a team member may set: technicians any, helpers only Out of order (AGG-Machine). That a
+ * helper does so only when the machine is unsafe is a matter of trust; the required reason documents it.
+ */
+export function machineStatusesSettableBy(role: Role): readonly MachineStatus[] {
+  return role === "technician" ? machineStatuses : ["out-of-order"];
+}
 
 /** What the acting person gave (ST-073, Q19): a missing machine status is "no value given"; the reason as typed. */
 export type ChangeMachineStatusInput = {
@@ -43,8 +51,7 @@ export function changeMachineStatus(
   if (machine.retirement) return { ok: false, error: "machine-retired" };
   const newStatus = input.machineStatus;
   if (!newStatus) return { ok: false, error: "machine-status-required" };
-  // Whether the machine is really unsafe is a matter of trust; the required reason documents it (ST-012).
-  if (actor.role === "helper" && newStatus !== "out-of-order") return { ok: false, error: "helpers-only-out-of-order" };
+  if (!machineStatusesSettableBy(actor.role).includes(newStatus)) return { ok: false, error: "helpers-only-out-of-order" };
   // No history entry without a change (user, 2026-10-03).
   if (newStatus === machine.machineStatus) return { ok: false, error: "machine-status-unchanged" };
   const reason = input.reason.trim();

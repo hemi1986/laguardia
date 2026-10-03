@@ -284,3 +284,30 @@ function retirementOf(row: {
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
 }
+
+/** What the status change page (ST-012) shows of a machine, with the version the team member saw (HS-16). */
+export type MachineForStatusChange = {
+  id: string;
+  museumNumber: string;
+  machineStatus: MachineStatus;
+  version: number;
+  retired: boolean;
+};
+
+/** The machine whose status is about to change, by its museum number – retired ones included, so the page can say so. */
+export async function machineForStatusChange(
+  db: Database,
+  museumNumber: string,
+): Promise<MachineForStatusChange | undefined> {
+  const [row] = await db
+    .select({
+      id: machine.id,
+      museumNumber: machine.museumNumber,
+      machineStatus: machine.machineStatus,
+      version: machine.version,
+      retiredAt: machine.retiredAt,
+    })
+    .from(machine)
+    .where(eq(machine.museumNumber, museumNumber));
+  return row && { id: row.id, museumNumber: row.museumNumber, machineStatus: row.machineStatus, version: row.version, retired: row.retiredAt !== null };
+}
