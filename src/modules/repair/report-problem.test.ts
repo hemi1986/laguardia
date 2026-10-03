@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { reportProblem } from "./report-problem";
+import { visitorMessages } from "@/platform/messages";
+import { DESCRIPTION_MAX_LENGTH, reportProblem } from "./report-problem";
 
 const visitor = { kind: "visitor" } as const;
 const context = { actor: visitor, clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };
@@ -50,5 +51,11 @@ describe("CMD-ReportProblem – the decision", () => {
       ok: false,
       error: "description-required",
     });
+  });
+
+  it("names the longest description it accepts in both visitor languages", () => {
+    for (const locale of ["de", "en"] as const) {
+      expect(visitorMessages(locale).commandErrors["description-too-long"]).toContain(String(DESCRIPTION_MAX_LENGTH));
+    }
   });
 });

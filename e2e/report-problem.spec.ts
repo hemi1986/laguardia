@@ -13,8 +13,8 @@ test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
 
-/** A playable machine registered by the e2e technician, who logs out again – returns its museum number. */
-async function aPlayableMachine(page: Page): Promise<string> {
+/** A machine registered by the e2e technician, who logs out again – returns its museum number. */
+async function aPlayableMachine(page: Page, machineStatus: "playable" | "not-on-display" = "playable"): Promise<string> {
   await page.goto("/login");
   await page.getByLabel("Benutzername").fill(username!);
   await page.getByLabel("Passwort").fill(password!);
@@ -30,6 +30,7 @@ async function aPlayableMachine(page: Page): Promise<string> {
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
   await page.getByLabel("Standort").fill("Hall 2, row 3");
+  await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
   await openMore(page);
@@ -62,19 +63,19 @@ async function pageWidth(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
-test("a visitor's problem report brings them back to the machine with a confirmation in their language", async ({
-  page,
-  browser,
-}) => {
+test("ST-013: Visitor reports a problem", async ({ page, browser }) => {
   const museumNumber = await aPlayableMachine(page);
 
-  for (const [locale, button, field, send, confirmation] of [
+  // The stored problem report (description, reporter visitor, time) is checked at the command seam
+  // (src/modules/repair/report-problem-command.integration.test.ts); here the visitor sees it arrive.
+  for (const [locale, button, field, send, confirmation, count] of [
     [
       "de-DE",
       "Problem melden",
       "Was ist das Problem?",
       "Meldung senden",
       "Danke! Deine Meldung ist beim Team angekommen.",
+      "Schon einmal gemeldet – noch nicht vom Team gesichtet.",
     ],
     [
       "en-GB",
@@ -82,6 +83,7 @@ test("a visitor's problem report brings them back to the machine with a confirma
       "What is the problem?",
       "Send report",
       "Thank you! Your report has reached the team.",
+      "Already reported 2 times – not yet checked by the team.",
     ],
   ]) {
     const phone = await visitor(browser, locale);
@@ -91,8 +93,49 @@ test("a visitor's problem report brings them back to the machine with a confirma
 
     await expect(phone).toHaveURL(new RegExp(`/m/${museumNumber}\\?`));
     await expect(phone.getByRole("main").getByRole("status")).toHaveText(confirmation);
+    await expect(phone.getByRole("main")).toContainText(count);
     expect(await pageWidth(phone)).toBeLessThanOrEqual(360);
   }
+});
+
+test("the report form shows no internal ID – the server finds the machine by its museum number", async ({
+  page,
+  browser,
+}) => {
+  const museumNumber = await aPlayableMachine(page);
+  const phone = await visitor(browser, "de-DE");
+
+  await openReportForm(phone, museumNumber);
+
+  expect(await phone.content()).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+});
+
+test("a machine not on display is refused at the report form, with the reason in words", async ({ page, browser }) => {
+  const museumNumber = await aPlayableMachine(page, "not-on-display");
+  const phone = await visitor(browser, "de-DE");
+
+  // Its visitor machine page offers no button (ST-010) – the report form is opened directly.
+  await phone.goto(`/m/${museumNumber}/melden`);
+  await phone.getByLabel("Was ist das Problem?").fill("Ball stuck");
+  await phone.getByRole("button", { name: "Meldung senden" }).click();
+
+  await expect(phone.getByRole("main").getByRole("alert")).toHaveText(
+    "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
+  );
+});
+
+test("without JavaScript a rejected report names the reason and keeps the description", async ({ page, browser }) => {
+  const museumNumber = await aPlayableMachine(page);
+  const phone = await visitor(browser, "de-DE", false);
+  await openReportForm(phone, museumNumber);
+  const overlong = `Ball stuck ${"x".repeat(2000)}`;
+
+  await phone.getByLabel("Was ist das Problem?").fill(overlong);
+  await phone.getByRole("button", { name: "Meldung senden" }).click();
+
+  await expect(phone.getByRole("main").getByRole("alert")).toHaveText("Bitte kürzer: höchstens 2000 Zeichen.");
+  await expect(phone.getByLabel("Was ist das Problem?")).toHaveValue(overlong);
+  await expect(phone.getByLabel("Was ist das Problem?")).toHaveAttribute("aria-invalid", "true");
 });
 
 test("ST-013: Description is required", async ({ page, browser }) => {

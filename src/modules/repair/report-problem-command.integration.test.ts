@@ -6,6 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
 import { changeDescriptionForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
+import { anExistingTeamMember } from "@/test-support/team-members";
 
 const db = testDatabase();
 const visitor: Actor = { kind: "visitor" };
@@ -61,7 +62,8 @@ describe("CMD-ReportProblem as a creating command", () => {
 });
 
 describe("CMD-ReportProblem by a visitor", () => {
-  it("ST-013: Visitor reports a problem", async () => {
+  // The scenario "ST-013: Visitor reports a problem" runs in the browser (e2e/report-problem.spec.ts); here what is stored.
+  it("stores a visitor's problem report with its description, the reporter visitor and the time it was reported", async () => {
     const machineId = await aRegisteredMachine(db);
 
     const reported = await executeCommand(
@@ -104,5 +106,29 @@ describe("CMD-ReportProblem by a visitor", () => {
       error: "description-too-long",
     });
     expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description.length)).toEqual([2000]);
+  });
+
+  it("rejects a problem report for a machine that does not exist, storing nothing", async () => {
+    expect(
+      await executeCommand(reportProblemCommand, { machineId: randomUUID(), description: "Ball stuck" }, deps),
+    ).toEqual({ ok: false, error: "machine-not-found" });
+    expect(await executeCommand(reportProblemCommand, { machineId: "", description: "Ball stuck" }, deps)).toEqual({
+      ok: false,
+      error: "machine-not-found",
+    });
+  });
+
+  it("lets a team member report for a machine not on display – the visitors' rule only", async () => {
+    const machineId = await aRegisteredMachine(db, "not-on-display");
+    const helper = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, helper);
+
+    const reported = await executeCommand(reportProblemCommand, { machineId, description: "Coil burnt" }, {
+      ...deps,
+      actor: helper,
+    });
+
+    expect(reported.ok).toBe(true);
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual(["Coil burnt"]);
   });
 });

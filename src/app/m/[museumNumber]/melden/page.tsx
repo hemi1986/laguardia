@@ -31,7 +31,6 @@ export default async function ReportProblemPage({ params }: PageProps<"/m/[museu
         </p>
         <ReportProblemForm
           action={reportProblemAction.bind(null, museumNumber)}
-          machineId={machine.machineId}
           messages={{ reportForm: messages.reportForm, commandErrors: messages.commandErrors }}
         />
         <Link href={machinePage} className="self-start text-sm underline underline-offset-4">

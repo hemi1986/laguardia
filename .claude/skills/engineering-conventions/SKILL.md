@@ -174,7 +174,9 @@ command rules"): the command's `facts` call the other module's **public** query 
 `reportingFacts` in `src/modules/repair/problem-reports.ts` calls Collection's `machineForReporting(tx, machineId)`
 – and the decision gets the result as plain data. The query is as narrow as the rule (a machine status and whether it
 is retired, not the machine). Only a context the context map names as upstream is read this way; nothing is stored
-twice, and the other module's tables are never imported.
+twice, and the other module's tables are never imported. Such a read takes **no lock**: it is a check against the
+current state at command time, not an invariant (context map) – a change in the same second is caught by the other
+module's events and policies (e.g. the retirement policies).
 
 **Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
 status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
@@ -228,10 +230,12 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   nobody saw, which the command layer answers with `version-conflict`. After a rejection the form keeps posting the
   version the page loaded – it never picks up a newer one by itself: after `version-conflict` the person reloads the
   page (the catalogue text says so), which loads the current state and version.
-- **A value the redirect needs that the command does not return** (first: ST-013, the museum number of the report
-  form): the page binds it – `reportProblemAction.bind(null, museumNumber)` – and the action builds its `formAction`
-  with it. A bound value comes back from the browser like a form field: use it only for where to go next, URL-encoded
-  under a fixed path, never as command input.
+- **A public page posts no internal ID** (first: ST-013, the report form): the page binds the museum number –
+  `reportProblemAction.bind(null, museumNumber)` – and the action finds the machine on the server
+  (`machineIdOf`) before it builds its `formAction`; the redirect uses the same museum number, URL-encoded under a
+  fixed path. A bound value comes back from the browser like a form field, so it is treated as one: it only names
+  which machine, and the command checks that machine again in its facts. Team pages may post IDs (`machineId`,
+  `version` in ST-012).
 - **A client form gets only strings from a catalogue**: a visitor catalogue holds functions (`alreadyReported`), which
   cannot cross to a client component – pass the sections the form shows (`{ reportForm, commandErrors }`).
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).

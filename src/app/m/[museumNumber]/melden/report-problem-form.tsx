@@ -14,11 +14,9 @@ import type { ReportProblemState } from "./actions";
  */
 export function ReportProblemForm({
   action: report,
-  machineId,
   messages,
 }: {
   action: (previous: ReportProblemState, formData: FormData) => Promise<ReportProblemState>;
-  machineId: string;
   /** Only the strings the form shows – a client component gets no functions from the catalogue. */
   messages: Pick<VisitorMessages, "reportForm" | "commandErrors">;
 }) {
@@ -31,7 +29,6 @@ export function ReportProblemForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="machineId" value={machineId} />
       <Field data-invalid={invalid}>
         <FieldLabel htmlFor="description">{texts.description}</FieldLabel>
         <Textarea

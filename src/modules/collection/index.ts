@@ -20,6 +20,7 @@ export {
   machineRecord,
   machineForStatusChange,
   machineForReporting,
+  machineIdOf,
   type MachineForStatusChange,
   visitorMachine,
   machineStatusCounts,

@@ -196,12 +196,8 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
   return counts;
 }
 
-/**
- * What the visitor machine page (RM-VisitorMachinePage, ST-010) shows of a machine – nothing internal. The machine ID
- * is there for the page data function only, which composes the Repair module's count with it and never passes it on.
- */
+/** What the visitor machine page (RM-VisitorMachinePage, ST-010) shows of a machine – no ID, nothing internal. */
 export type VisitorMachine = {
-  machineId: string;
   machineModelTitle: string;
   manufacturer: string;
   year?: number;
@@ -215,7 +211,6 @@ export type VisitorMachine = {
 export async function visitorMachine(db: Database, museumNumber: string): Promise<VisitorMachine | undefined> {
   const [row] = await db
     .select({
-      machineId: machine.id,
       machineModelTitle: machineModel.title,
       manufacturer: machineModel.manufacturer,
       year: machineModel.year,
@@ -330,4 +325,17 @@ export async function machineForReporting(
     .from(machine)
     .where(eq(machine.id, machineId));
   return row && { machineStatus: row.machineStatus, retired: row.retiredAt !== null };
+}
+
+/**
+ * The ID of an active machine by its museum number – for the server to compose other modules' data (the visitor
+ * machine page's count) or to run their commands (a visitor's problem report, ST-013) without the ID reaching a
+ * public page. Undefined for an unknown or retired museum number.
+ */
+export async function machineIdOf(db: Database, museumNumber: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ id: machine.id })
+    .from(machine)
+    .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
+  return row?.id;
 }
