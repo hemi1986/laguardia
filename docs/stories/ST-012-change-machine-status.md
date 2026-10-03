@@ -82,8 +82,8 @@ Scenario: After the change the team member sees the machine
   And a confirmation names "LG-042" and its new machine status
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q13)
-- [ ] The insert-only history helper, used by a test stand-in aggregate with a history list (its table exists only in the test database): two commands each add an entry; both entries are stored, the first unchanged, and an entry present at load is never updated (integration test).
-- [ ] The machine status history is saved through the same helper: two status changes of "LG-042" leave two status history entries, the first unchanged, and no existing entry is updated when the second change is saved (integration test at `executeCommand`).
+- [x] The insert-only history helper, used by a test stand-in aggregate with a history list (its table exists only in the test database): two commands each add an entry; both entries are stored, the first unchanged, and an entry present at load is never updated (integration test).
+- [x] The machine status history is saved through the same helper: two status changes of "LG-042" leave two status history entries, the first unchanged, and no existing entry is updated when the second change is saved (integration test at `executeCommand`).
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – histories as append-only lists and the insert-only helper.
 
 ## Out of Scope
