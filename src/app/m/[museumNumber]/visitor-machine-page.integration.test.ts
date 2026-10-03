@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { changeMachineStatusForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
@@ -62,8 +62,8 @@ describe("the visitor machine page", () => {
     expect(await page("LG-042")).toContain("Status: Spielbereit");
 
     const changed = await executeCommand(
-      changeMachineStatusForTest,
-      { machineId, version: 0, machineStatus: "out-of-order" },
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "coil burnt" },
       { actor: tom, db, newId: randomUUID },
     );
     if (!changed.ok) throw new Error("not changed");

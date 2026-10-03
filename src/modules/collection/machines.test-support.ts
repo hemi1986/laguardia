@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { aggregateCommand, type Database } from "@/platform/command";
 import { machines } from "./machines";
-import type { MachineStatus } from "./register-machine";
 
 /**
  * Test support for machines – only imported by tests. Empties the machine tables of an isolated test database
@@ -62,40 +61,3 @@ export const correctMuseumNumberForTest = aggregateCommand({
 export async function storedMachine(db: Database, machineId: string) {
   return (await machines.load(db, machineId))?.state;
 }
-
-/** Test stand-in for CMD-ChangeMachineStatus (ST-010): a new machine status, appended to the status history. */
-export const changeMachineStatusForTest = aggregateCommand({
-  id: "CMD-TestChangeMachineStatus",
-  allowedActors: ["technician"],
-  store: machines,
-  target: (input: { machineId: string; version: number; machineStatus: MachineStatus; reason?: string }) => ({
-    id: input.machineId,
-    version: input.version,
-  }),
-  decide: (machine, input, { actor, clock, newId }) => ({
-    ok: true as const,
-    state: {
-      ...machine,
-      machineStatus: input.machineStatus,
-      statusHistory: [
-        ...machine.statusHistory,
-        {
-          id: newId(),
-          previousStatus: machine.machineStatus,
-          newStatus: input.machineStatus,
-          reason: input.reason ?? "Coil burnt",
-          changedBy: actor.teamMemberId,
-          changedAt: clock.now(),
-        },
-      ],
-    },
-    events: [{ type: "EVT-TestMachineStatusChanged" as const }],
-  }),
-  journal: (event, machine) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Machine", id: machine.id },
-    machineId: machine.id,
-    data: {},
-  }),
-  result: () => ({}),
-});
