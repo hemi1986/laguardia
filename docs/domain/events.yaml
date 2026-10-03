@@ -277,6 +277,7 @@ commands:
       - If another technician triaged the problem report meanwhile, the command is rejected
       - Title is required and understandable for visitors
       - Priority defaults to normal
+      - "In the same step the machine status can only become stricter: Playable → Limited or Out of order; Limited → Out of order; a machine that is Out of order or Not on display keeps its status (user, 2026-10-03)"
   - id: CMD-LinkProblemReportToDefect
     aggregate: AGG-ProblemReport
     name: Link problem report to defect
@@ -478,7 +479,10 @@ policies:
     name: A new or reopened defect may change the machine status
     when: [EVT-DefectRecorded, EVT-DefectReopened]
     then: [CMD-ChangeMachineStatus]
-    description: Manual – the technician decides in the same step whether the machine becomes Limited or Out of order.
+    description: >-
+      Manual – the technician decides in the same step whether the machine becomes Limited or Out of order.
+      When recording a defect the status can only become stricter (rule on CMD-RecordDefect); a machine that is
+      Out of order or Not on display keeps its status.
   - id: POL-ResolvedDefectsReturnMachineToPlay
     name: Machines without open defects return to play
     when: [EVT-DefectResolved]
@@ -570,7 +574,7 @@ hotspots:
     question: Is the machine status changed as part of triage, or as a separate step?
     refs: [EVT-DefectRecorded, EVT-MachineStatusChanged]
     status: resolved
-    resolution: "Same step: recording a defect optionally includes a new machine status (two events, one action)."
+    resolution: "Same step: recording a defect optionally includes a new machine status (two events, one action). Only a stricter status is possible in that step – see the rule on CMD-RecordDefect (user, 2026-10-03)."
   - id: HS-4
     question: What happens when one problem report describes two different faults?
     refs: [EVT-ProblemReported, EVT-DefectRecorded]
