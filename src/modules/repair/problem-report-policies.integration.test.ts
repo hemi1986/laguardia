@@ -53,6 +53,7 @@ describe("automatic policies triggered by a command", () => {
         | "machine-not-found"
         | "machine-not-on-display"
         | "description-required"
+        | "description-too-long"
         | "policy-rejected"
         | "not-authorized"
         | "not-found"

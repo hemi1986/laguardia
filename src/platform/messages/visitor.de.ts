@@ -25,6 +25,7 @@ export const visitorDe = {
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {
     "description-required": "Bitte beschreibe das Problem.",
+    "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
     "not-authorized": "Das darfst du nicht.",

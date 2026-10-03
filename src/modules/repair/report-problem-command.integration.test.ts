@@ -94,4 +94,15 @@ describe("CMD-ReportProblem by a visitor", () => {
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await journalSinceRegistration(db, machineId)).toEqual([]);
   });
+
+  it("accepts a description of 2000 characters and rejects one of 2001, storing nothing", async () => {
+    const machineId = await aRegisteredMachine(db);
+
+    expect((await executeCommand(reportProblemCommand, { machineId, description: "x".repeat(2000) }, deps)).ok).toBe(true);
+    expect(await executeCommand(reportProblemCommand, { machineId, description: "y".repeat(2001) }, deps)).toEqual({
+      ok: false,
+      error: "description-too-long",
+    });
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description.length)).toEqual([2000]);
+  });
 });

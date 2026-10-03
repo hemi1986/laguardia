@@ -38,7 +38,14 @@ export type ReportProblemInput = { machineId: string; description: string };
 /** The machine as the Collection module knows it now – undefined for an unknown machine. */
 export type ReportingFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
 
-export type ReportProblemError = "machine-not-found" | "machine-not-on-display" | "description-required";
+export type ReportProblemError =
+  | "machine-not-found"
+  | "machine-not-on-display"
+  | "description-required"
+  | "description-too-long";
+
+/** The longest description a problem report may have (ST-013) – the rejection names it. */
+export const DESCRIPTION_MAX_LENGTH = 2000;
 
 export function reportProblem(
   { machine }: ReportingFacts,
@@ -52,6 +59,7 @@ export function reportProblem(
   }
   const description = input.description.trim();
   if (!description) return { ok: false, error: "description-required" };
+  if (description.length > DESCRIPTION_MAX_LENGTH) return { ok: false, error: "description-too-long" };
   const report: ProblemReport = {
     id: newId(),
     machineId: input.machineId,

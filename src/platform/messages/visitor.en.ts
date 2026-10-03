@@ -24,6 +24,7 @@ export const visitorEn: VisitorMessages = {
   },
   commandErrors: {
     "description-required": "Please describe the problem.",
+    "description-too-long": "Please keep it shorter: at most 2000 characters.",
     "machine-not-on-display":
       "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     "machine-not-found": "There is no machine with this museum number.",
