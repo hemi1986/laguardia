@@ -41,3 +41,4 @@ accepted with remarks (all four scenarios have real, passing tests; the remarks 
 - Hidden button for a retired machine: now tested at the record page seam (the refusal page for a retired machine stays untested – it is a direct read of `retired`).
 - Query names: the team confirmation is now `?problemReported`, like `?statusChanged`.
 - The Server Action itself: skipped – the runner seam with the form's own fields and input function is the catalogue's seam; the e2e runs the action.
+- User, 2026-10-03: accepted („abgenommen“).
