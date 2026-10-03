@@ -115,4 +115,60 @@ describe("the triage list", () => {
     expect(html).toContain("Anna · 03.10.2026, 15:10");
     expect(html.indexOf("LG-042")).toBeLessThan(html.indexOf("LG-007"));
   });
+
+  it("ST-017: Problem reports waiting longer than 72 hours are highlighted", async () => {
+    await reported(await registered("LG-042"), "Ball stuck", hoursBefore(73));
+    await reported(await registered("LG-007"), "Rubber cracked", hoursBefore(71));
+
+    const { entries } = await loadTriageList(db, fixedClock(NOW));
+
+    expect(entries.map((entry) => [entry.museumNumber, entry.waitingLong])).toEqual([
+      ["LG-042", true],
+      ["LG-007", false],
+    ]);
+    const html = await page();
+    const lg007 = html.indexOf("LG-007");
+    expect(html.indexOf("Wartet länger als 3 Tage")).toBeGreaterThan(-1);
+    expect(html.indexOf("Wartet länger als 3 Tage")).toBeLessThan(lg007);
+    expect(html.slice(lg007)).not.toContain("Wartet länger als 3 Tage");
+  });
+
+  it("ST-017: The long wait is said in words", async () => {
+    await reported(await registered("LG-042"), "Ball stuck", hoursBefore(73));
+
+    expect(await page()).toContain("wartet seit 3 Tagen");
+  });
+
+  it("ST-017: How many problem reports wait", async () => {
+    const machineId = await registered("LG-042");
+    for (let n = 0; n < 12; n++) await reported(machineId, `Problem ${n}`, hoursBefore(12 - n));
+
+    expect(await page()).toContain("12 Meldungen warten auf die Sichtung.");
+  });
+
+  it("ST-017: Triaged problem reports leave the list", async () => {
+    const machineId = await registered("LG-042");
+    const triaged = await reported(machineId, "Ball stuck", hoursBefore(5));
+    await reported(machineId, "Rubber cracked", hoursBefore(4));
+    const outcome = await executeCommand(
+      triageForTest,
+      { problemReportId: triaged, version: 0 },
+      { actor: eva, db, clock: fixedClock(NOW), newId: randomUUID },
+    );
+    if (!outcome.ok) throw new Error("not triaged");
+
+    const { entries } = await loadTriageList(db, fixedClock(NOW));
+
+    expect(entries.map((entry) => entry.description)).toEqual(["Rubber cracked"]);
+    expect(await page()).not.toContain("Ball stuck");
+  });
+
+  it("ST-017: Report text is never interpreted", async () => {
+    await reported(await registered("LG-042"), "<script>alert(1)</script>", hoursBefore(1));
+
+    const html = await page();
+
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).not.toContain("<script>");
+  });
 });
