@@ -27,7 +27,7 @@ export type MachineStatusChanged = {
   newStatus: MachineStatus;
 };
 
-export type ChangeMachineStatusError = "helpers-only-out-of-order";
+export type ChangeMachineStatusError = "helpers-only-out-of-order" | "reason-required";
 
 export function changeMachineStatus(
   machine: Machine,
@@ -38,6 +38,7 @@ export function changeMachineStatus(
   // Whether the machine is really unsafe is a matter of trust; the required reason documents it (ST-012).
   if (actor.role === "helper" && newStatus !== "out-of-order") return { ok: false, error: "helpers-only-out-of-order" };
   const reason = input.reason.trim();
+  if (!reason) return { ok: false, error: "reason-required" };
   const previousStatus = machine.machineStatus;
   return {
     ok: true,

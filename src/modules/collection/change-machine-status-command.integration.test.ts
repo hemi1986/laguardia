@@ -98,4 +98,19 @@ describe("CMD-ChangeMachineStatus", () => {
     }
     expect(await journalOf(db, { machineId })).toHaveLength(1);
   });
+
+  it("ST-012: A reason is required", async () => {
+    const machineId = await registered("LG-042");
+
+    for (const reason of ["", "   "]) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus: "limited", reason },
+        { actor: tom, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error: "reason-required" });
+    }
+    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
 });
