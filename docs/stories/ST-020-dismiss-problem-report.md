@@ -23,6 +23,7 @@ Command `CMD-DismissProblemReport` (technicians only). Rules and invariants:
 - The stored photo is deleted from object storage after the dismissal is committed; if that deletion fails, the failure is logged (without the photo or text) and can be retried. A short delay until a cached copy disappears from the storage provider's delivery network is acceptable, because photos are team-only anyway.
 - In the MVP this is the only protection against spam (decision D3).
 - The reason "machine retired" is set only automatically by `POL-RetirementDismissesProblemReports` (ST-039).
+- Its triage outcome is offered on the problem report's own page, which ST-017 builds and owns (G18); the assertion that the outcome is offered there – and, for technician-only outcomes, not to helpers – belongs to this story (moved from ST-017, user 2026-10-03).
 
 ## Acceptance Criteria
 

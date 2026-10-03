@@ -17,6 +17,10 @@ export const problemReports = aggregateStore({
         ? { kind: "team-member", teamMemberId: row.reporterTeamMemberId ?? missing("reporter_team_member_id", row.id) }
         : { kind: "visitor" },
     reportedAt: row.reportedAt,
+    triage:
+      row.triageOutcome && row.triagedBy && row.triagedAt
+        ? { outcome: row.triageOutcome, triagedBy: row.triagedBy, triagedAt: row.triagedAt }
+        : undefined,
   }),
   toRow: (report: ProblemReport) => ({
     id: report.id,
@@ -25,6 +29,9 @@ export const problemReports = aggregateStore({
     reporterKind: report.reporter.kind,
     reporterTeamMemberId: report.reporter.kind === "team-member" ? report.reporter.teamMemberId : null,
     reportedAt: report.reportedAt,
+    triageOutcome: report.triage?.outcome ?? null,
+    triagedBy: report.triage?.triagedBy ?? null,
+    triagedAt: report.triage?.triagedAt ?? null,
   }),
 });
 

@@ -23,6 +23,7 @@ Command `CMD-LinkProblemReportToDefect` (technicians only). Rules and invariants
 The triage list (ST-017) shows the open defects of the machine next to each problem report for linking. The open defects list shows the number of linked problem reports.
 Linking uses the same version check on the problem report as ST-018.
 Linking to a *resolved* defect reopens it automatically (`POL-LinkReopensResolvedDefect`) – see ST-053.
+Its triage outcome is offered on the problem report's own page, which ST-017 builds and owns (G18); the assertion that the outcome is offered there – and, for technician-only outcomes, not to helpers – belongs to this story (moved from ST-017, user 2026-10-03).
 
 ## Acceptance Criteria
 

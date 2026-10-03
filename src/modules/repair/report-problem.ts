@@ -15,13 +15,21 @@ export const reportingActors = ["visitor", "helper", "technician"] as const;
 
 type ReportingPerson = ActorOf<(typeof reportingActors)[number]>;
 
-/** AGG-ProblemReport – current state (docs/architecture/data-model.md). Triage follows with ST-018 ff. */
+/** The outcomes of triage (CONTEXT.md: Triage) – exactly one per triaged problem report. */
+export const triageOutcomes = ["defect-recorded", "linked", "resolved-on-the-spot", "dismissed"] as const;
+export type TriageOutcome = (typeof triageOutcomes)[number];
+
+/** The Triage value object of AGG-ProblemReport (data model); its defect, note or reason follow with ST-018 ff. */
+export type Triage = { outcome: TriageOutcome; triagedBy: TeamMemberId; triagedAt: Date };
+
+/** AGG-ProblemReport – current state (docs/architecture/data-model.md). Untriaged until `triage` is set. */
 export type ProblemReport = {
   id: string;
   machineId: string;
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  triage?: Triage;
 };
 
 export type ProblemReported = {

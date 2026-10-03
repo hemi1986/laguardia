@@ -25,6 +25,11 @@ Read model `RM-TriageList`; manual routine `POL-TriageProblemReports`. Fields: m
 - The long wait is said in words next to the entry, not only by a colour (G6a).
 - The scenario "Report text is never interpreted" moved here from ST-013 (user, 2026-10-03): the triage list is the first page that shows problem report texts.
 
+Decided in the test plan (user, 2026-10-03, during `/implement ST-017`):
+- ST-017 builds the problem report's own page (machine, description, reporter, waiting time) and owns it (G18). Each triage story adds its outcome there – ST-018 record defect, ST-019 resolve on the spot, ST-020 dismiss, ST-022 link; no dead buttons before.
+- The triage columns of the data model's Triage value object (outcome, triaged by, triaged at) are added now as foundation just in time, so "untriaged" means something. The triage list and the visitor count read only untriaged problem reports; ST-018 ff. set them.
+- Helpers see "Sichtung" in the team navigation too (G19, changed by the user the same day).
+
 ## Acceptance Criteria
 
 Scenario: Technician sees untriaged problem reports
@@ -73,7 +78,6 @@ Scenario: Triaging happens on the problem report's own page
   Given a problem report for "LG-042" is untriaged
   When a technician opens that problem report from the triage list
   Then its machine, description, reporter and waiting time are shown
-  And the triage outcomes the technician may choose are offered there
 
 Scenario: Report text is never interpreted
   Given a visitor reported a problem with the description "<script>alert(1)</script>"
