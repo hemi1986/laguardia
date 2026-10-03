@@ -31,7 +31,7 @@ export default async function MachineRecordPage({
           }).length > 0
         }
         statusChanged={query.statusChanged !== undefined}
-        problemReported={query.gemeldet !== undefined}
+        problemReported={query.problemReported !== undefined}
       />
     </Page>
   );

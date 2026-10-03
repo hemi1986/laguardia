@@ -16,10 +16,8 @@ const { reportProblem: texts } = teamMessages;
  */
 export function TeamReportProblemForm({
   action: report,
-  machineId,
 }: {
   action: (previous: TeamReportProblemState, formData: FormData) => Promise<TeamReportProblemState>;
-  machineId: string;
 }) {
   const [state, action, pending] = useActionState(report, null);
   const rejectionId = useId();
@@ -28,7 +26,6 @@ export function TeamReportProblemForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="machineId" value={machineId} />
       <Field data-invalid={invalid}>
         <FieldLabel htmlFor="description">{texts.description}</FieldLabel>
         <Textarea

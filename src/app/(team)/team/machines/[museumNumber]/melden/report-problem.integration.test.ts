@@ -34,11 +34,11 @@ describe("the team's report form", () => {
       newId: randomUUID,
     })(reportProblemCommand, {
       fields: teamReportProblemFields,
-      input: teamReportProblemInput,
+      input: (fields) => teamReportProblemInput(fields, machineId),
       onSuccess: async ({ problemReportId }) => void reported.push(problemReportId),
     });
 
-    expect(await action(null, post({ machineId, description: "Rubber on the left slingshot cracked" }))).toBeNull();
+    expect(await action(null, post({ description: "Rubber on the left slingshot cracked" }))).toBeNull();
 
     expect(await storedProblemReport(db, reported[0])).toMatchObject({
       machineId,

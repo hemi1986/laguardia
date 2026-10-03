@@ -58,4 +58,24 @@ describe("CMD-ReportProblem – the decision", () => {
       expect(visitorMessages(locale).commandErrors["description-too-long"]).toContain(String(DESCRIPTION_MAX_LENGTH));
     }
   });
+
+  // Who may report for which machine (CMD-ReportProblem rules, ST-013, ST-015).
+  it.each([
+    ["visitor", "playable", false, true],
+    ["visitor", "not-on-display", false, "machine-not-on-display"],
+    ["visitor", "playable", true, "machine-retired"],
+    ["helper", "not-on-display", false, true],
+    ["helper", "limited", true, "machine-retired"],
+    ["technician", "out-of-order", false, true],
+    ["technician", "not-on-display", true, "machine-retired"],
+  ] as const)("a %s, a %s machine, retired: %s → %s", (who, machineStatus, retired, expected) => {
+    const actor = who === "visitor" ? visitor : ({ kind: "team-member", teamMemberId: "tm-1", role: who } as const);
+    const decision = reportProblem(
+      { machine: { machineStatus, retired } },
+      { machineId: "m-1", description: "Ball stuck" },
+      { ...context, actor },
+    );
+
+    expect(decision.ok ? true : decision.error).toBe(expected);
+  });
 });

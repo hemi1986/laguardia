@@ -25,7 +25,7 @@ export default async function TeamReportProblemPage({ params }: PageProps<"/team
       ) : machine.retired ? (
         <p>{texts.retired}</p>
       ) : (
-        <TeamReportProblemForm action={teamReportProblemAction.bind(null, museumNumber)} machineId={machine.id} />
+        <TeamReportProblemForm action={teamReportProblemAction.bind(null, museumNumber)} />
       )}
       <Link
         href={`/team/machines/${encodeURIComponent(museumNumber)}`}
