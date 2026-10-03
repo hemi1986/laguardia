@@ -72,7 +72,7 @@ export const changeMachineStatusForTest = aggregateCommand({
     id: input.machineId,
     version: input.version,
   }),
-  decide: (machine, input, { actor, clock }) => ({
+  decide: (machine, input, { actor, clock, newId }) => ({
     ok: true as const,
     state: {
       ...machine,
@@ -80,6 +80,7 @@ export const changeMachineStatusForTest = aggregateCommand({
       statusHistory: [
         ...machine.statusHistory,
         {
+          id: newId(),
           previousStatus: machine.machineStatus,
           newStatus: input.machineStatus,
           reason: input.reason ?? "Coil burnt",

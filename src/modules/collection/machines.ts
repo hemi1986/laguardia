@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, type AggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import {
   machineStatuses,
@@ -54,16 +54,12 @@ export const machines: AggregateStore<Machine> = {
   async insert(tx, state) {
     await machineRows.insert(tx, state);
     await giveOut(tx, state);
-    await appendStatusChanges(tx, state, 0);
+    await saveStatusHistory(tx, state);
   },
   async update(tx, state, expectedVersion) {
     if (!(await machineRows.update(tx, state, expectedVersion))) return false;
     await giveOut(tx, state);
-    const stored = await tx
-      .select({ count: sql<number>`count(*)::int` })
-      .from(machineStatusChange)
-      .where(eq(machineStatusChange.machineId, state.id));
-    await appendStatusChanges(tx, state, stored[0].count);
+    await saveStatusHistory(tx, state);
     return true;
   },
 };
@@ -81,12 +77,14 @@ async function giveOut(tx: Database, state: Machine): Promise<void> {
   await tx.insert(museumNumber).values({ museumNumber: state.museumNumber, machineId: state.id });
 }
 
-/** The status history only grows: entries beyond the ones stored are appended. */
-async function appendStatusChanges(tx: Database, state: Machine, stored: number): Promise<void> {
-  const added = state.statusHistory.slice(stored);
-  if (added.length === 0) return;
-  await tx.insert(machineStatusChange).values(
-    added.map((change) => ({
+/** The status history is append-only (Q13): only the entries not stored yet are inserted. */
+function saveStatusHistory(tx: Database, state: Machine): Promise<void> {
+  return saveHistory(
+    tx,
+    { table: machineStatusChange, owner: machineStatusChange.machineId },
+    state.id,
+    state.statusHistory.map((change) => ({
+      id: change.id,
       machineId: state.id,
       previousStatus: change.previousStatus ?? null,
       newStatus: change.newStatus,
@@ -104,6 +102,7 @@ async function statusHistoryOf(db: Database, machineId: string): Promise<StatusC
     .where(eq(machineStatusChange.machineId, machineId))
     .orderBy(asc(machineStatusChange.position));
   return rows.map((row) => ({
+    id: row.id,
     previousStatus: row.previousStatus ?? undefined,
     newStatus: row.newStatus,
     reason: row.reason,

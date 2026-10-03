@@ -114,6 +114,7 @@ describe("CMD-RegisterMachine", () => {
     });
     expect(await machineStatusHistory(db, machineId)).toEqual([
       {
+        id: expect.any(String),
         previousStatus: undefined,
         newStatus: "playable",
         reason: "registration",
