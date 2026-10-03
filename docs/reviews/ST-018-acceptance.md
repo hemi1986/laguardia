@@ -62,3 +62,4 @@ No finding meets all three conditions (none is a security or data-loss risk that
 - R1, R2 – fixed: `record-defect-rejection.integration.test.ts` checks the named message after a real triage and the retired-meanwhile text.
 - Smaller remarks skipped: the visitor count with a second report (ST-013's count tests cover it); the helper on the form page route (`requireTechnician` plus the command).
 - Questions for the user (in the pull request): a defect on a retired machine without a status change; the generic version-conflict text at this form; a maximum title length.
+- User, 2026-10-04: accepted („abgenommen“); conventions approved; questions as recommended – a defect on a retired machine without a status change stays allowed (ST-039 closes the gap), the generic version-conflict text is enough, and the defect title gets no maximum length for now (no new story).

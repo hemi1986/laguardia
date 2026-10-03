@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-017]
 labels: [mvp, triage, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
@@ -136,7 +136,7 @@ Scenario: Recording a defect is not offered on a triaged problem report
 - [x] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
 - [x] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
 - [x] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
+- [x] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
 
 ## Out of Scope
 - Changing priority or details later (ST-027, ST-031)
