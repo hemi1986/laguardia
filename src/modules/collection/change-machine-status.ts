@@ -27,13 +27,15 @@ export type MachineStatusChanged = {
   newStatus: MachineStatus;
 };
 
-export type ChangeMachineStatusError = "helpers-only-out-of-order" | "reason-required";
+export type ChangeMachineStatusError = "machine-retired" | "helpers-only-out-of-order" | "reason-required";
 
 export function changeMachineStatus(
   machine: Machine,
   input: ChangeMachineStatusInput,
   { actor, clock, newId }: DecisionContext<ChangingPerson>,
 ): Decision<Machine, MachineStatusChanged, ChangeMachineStatusError> {
+  // A retired machine is final (AGG-Machine).
+  if (machine.retirement) return { ok: false, error: "machine-retired" };
   const newStatus = input.machineStatus!;
   // Whether the machine is really unsafe is a matter of trust; the required reason documents it (ST-012).
   if (actor.role === "helper" && newStatus !== "out-of-order") return { ok: false, error: "helpers-only-out-of-order" };

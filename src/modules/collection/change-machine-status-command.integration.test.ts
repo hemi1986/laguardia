@@ -12,7 +12,7 @@ import {
   registerMachineCommand,
   type MachineStatus,
 } from ".";
-import { withoutMachines } from "./machines.test-support";
+import { retireMachineForTest, withoutMachines } from "./machines.test-support";
 
 /**
  * CMD-ChangeMachineStatus (ST-012) through the command layer, observed through the machine record and the journal.
@@ -112,5 +112,20 @@ describe("CMD-ChangeMachineStatus", () => {
       expect(outcome).toEqual({ ok: false, error: "reason-required" });
     }
     expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
+
+  it("ST-012: Retired machines cannot change status", async () => {
+    const machineId = await registered("LG-013");
+    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, ...at("2026-03-01T11:00:00Z") });
+    if (!retired.ok) throw new Error("not retired");
+
+    const outcome = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 1, machineStatus: "limited", reason: "left flipper weak" },
+      { actor: tom, ...at("2026-03-02T14:00:00Z") },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "machine-retired" });
+    expect((await machineRecord(db, "LG-013"))?.statusHistory).toHaveLength(1);
   });
 });
