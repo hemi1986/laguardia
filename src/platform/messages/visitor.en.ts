@@ -24,6 +24,14 @@ export const visitorEn: VisitorMessages = {
     unknown: "There is no machine with this museum number.",
     toStart: "To the start page",
   },
+  reportForm: {
+    title: "Report a problem",
+    description: "What is the problem?",
+    descriptionHint: "What happens, and where on the machine? For example: ball stuck behind the left ramp.",
+    send: "Send report",
+    back: "Back to the machine",
+    reported: "Thank you! Your report has reached the team.",
+  },
   commandErrors: {
     "description-required": "Please describe the problem.",
     "description-too-long": "Please keep it shorter: at most 2000 characters.",

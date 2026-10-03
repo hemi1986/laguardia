@@ -25,6 +25,16 @@ export const visitorDe = {
     unknown: "Kein Gerät mit dieser Museumsnummer.",
     toStart: "Zur Startseite",
   },
+  /** The report form page (ST-013) – nothing but the form; no name, no e-mail, no account. */
+  reportForm: {
+    title: "Problem melden",
+    description: "Was ist das Problem?",
+    descriptionHint: "Was passiert, wo am Gerät? Zum Beispiel: Kugel hängt hinter der linken Rampe.",
+    send: "Meldung senden",
+    back: "Zurück zum Gerät",
+    /** Shown on the visitor machine page after a problem report (G3). */
+    reported: "Danke! Deine Meldung ist beim Team angekommen.",
+  },
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {
     "description-required": "Bitte beschreibe das Problem.",
