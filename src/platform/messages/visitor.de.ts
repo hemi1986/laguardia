@@ -18,6 +18,9 @@ export const visitorDe = {
       "not-on-display": "Nicht ausgestellt",
     },
     reportProblem: "Problem melden",
+    /** The number of untriaged problem reports (HS-1) – all of them, so no "heute" (user, 2026-09-26). */
+    alreadyReported: (count: number) =>
+      `Schon ${count === 1 ? "einmal" : `${count}×`} gemeldet – noch nicht vom Team gesichtet.`,
     notOnDisplay: "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     unknown: "Kein Gerät mit dieser Museumsnummer.",
     toStart: "Zur Startseite",

@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { machineForReporting } from "@/modules/collection";
 import { aggregateStore, type Database } from "@/platform/command";
 import type { ProblemReport, ReportingFacts } from "./report-problem";
@@ -47,4 +47,16 @@ export async function problemReportsOfMachine(db: Database, machineId: string) {
  */
 export async function reportingFacts(tx: Database, input: { machineId: string }): Promise<ReportingFacts> {
   return { machine: await machineForReporting(tx, input.machineId) };
+}
+
+/**
+ * How many problem reports of a machine wait for triage – all of them, not only today's (HS-1, ST-013). The visitor
+ * machine page shows only this number, never the texts. Until triage exists (ST-018) every problem report is untriaged.
+ */
+export async function untriagedProblemReportCount(db: Database, machineId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(problemReport)
+    .where(eq(problemReport.machineId, machineId));
+  return row.count;
 }

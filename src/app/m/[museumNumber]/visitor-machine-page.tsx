@@ -25,6 +25,7 @@ export function VisitorMachinePage({
       <p className="font-medium">
         {texts.status}: {texts.statuses[data.machineStatus]}
       </p>
+      {data.untriagedProblemReports > 0 && <p>{texts.alreadyReported(data.untriagedProblemReports)}</p>}
       {data.reportingPossible ? (
         <Link href={`/m/${museumNumber}/melden`} className={buttonVariants({ className: "self-start" })}>
           {texts.reportProblem}
