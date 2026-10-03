@@ -132,10 +132,10 @@ Scenario: Recording a defect is not offered on a triaged problem report
   Then recording a defect from it is not offered there
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q6)
-- [ ] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
-- [ ] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
-- [ ] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
-- [ ] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
+- [x] `context.run` runs an inner command in the same transaction as the same acting person: its events are journaled with that person; an inner command the person is not allowed to run makes the whole command `not-authorized`; an inner rejection rejects the whole command and stores nothing (integration tests with test stand-ins).
+- [x] The inner command's error type is part of the outer command's result type – shown by a type test (`expectTypeOf` or `@ts-expect-error`) that fails `npm run verify` if the inner error is missing.
+- [x] `context.runAsSystem` still runs policies journaled as the system; the existing policy tests stay green.
+- [x] Recording a defect with a status change runs `CMD-ChangeMachineStatus` through `context.run`, imported through `src/modules/collection/index.ts`.
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "Writing a command" – `context.run`.
 
 ## Out of Scope
