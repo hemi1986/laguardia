@@ -128,4 +128,22 @@ describe("CMD-ChangeMachineStatus", () => {
     expect(outcome).toEqual({ ok: false, error: "machine-retired" });
     expect((await machineRecord(db, "LG-013"))?.statusHistory).toHaveLength(1);
   });
+
+  it("rejects a change without a chosen machine status, and one to the machine status the machine already has", async () => {
+    const machineId = await registered("LG-042", "limited");
+
+    for (const [machineStatus, error] of [
+      [undefined, "machine-status-required"],
+      ["limited", "machine-status-unchanged"],
+    ] as const) {
+      const outcome = await executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version: 0, machineStatus, reason: "left flipper weak" },
+        { actor: tom, ...at("2026-03-02T14:00:00Z") },
+      );
+
+      expect(outcome).toEqual({ ok: false, error });
+    }
+    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+  });
 });

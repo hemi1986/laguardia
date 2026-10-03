@@ -27,7 +27,12 @@ export type MachineStatusChanged = {
   newStatus: MachineStatus;
 };
 
-export type ChangeMachineStatusError = "machine-retired" | "helpers-only-out-of-order" | "reason-required";
+export type ChangeMachineStatusError =
+  | "machine-retired"
+  | "machine-status-required"
+  | "helpers-only-out-of-order"
+  | "machine-status-unchanged"
+  | "reason-required";
 
 export function changeMachineStatus(
   machine: Machine,
@@ -36,9 +41,12 @@ export function changeMachineStatus(
 ): Decision<Machine, MachineStatusChanged, ChangeMachineStatusError> {
   // A retired machine is final (AGG-Machine).
   if (machine.retirement) return { ok: false, error: "machine-retired" };
-  const newStatus = input.machineStatus!;
+  const newStatus = input.machineStatus;
+  if (!newStatus) return { ok: false, error: "machine-status-required" };
   // Whether the machine is really unsafe is a matter of trust; the required reason documents it (ST-012).
   if (actor.role === "helper" && newStatus !== "out-of-order") return { ok: false, error: "helpers-only-out-of-order" };
+  // No history entry without a change (user, 2026-10-03).
+  if (newStatus === machine.machineStatus) return { ok: false, error: "machine-status-unchanged" };
   const reason = input.reason.trim();
   if (!reason) return { ok: false, error: "reason-required" };
   const previousStatus = machine.machineStatus;
