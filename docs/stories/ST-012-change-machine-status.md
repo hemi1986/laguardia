@@ -22,6 +22,11 @@ Command `CMD-ChangeMachineStatus`. Rules and invariants (`AGG-Machine`):
 - A reason is required; every change is kept in the status history (previous status, new status, reason, who, when – `docs/architecture/data-model.md`).
 UI wording (de): Spielbereit / Eingeschränkt / Außer Betrieb / Nicht ausgestellt.
 
+**Decided in the test plan (user, 2026-10-03, during `/implement ST-012`):**
+- The status change has its own page (G1): the action "Status ändern" in the details section of the machine record leads to `/team/machines/<museum number>/status`; on success the team member is back on the machine record with a confirmation. The action is not shown for a retired machine (G11).
+- Choosing the machine status the machine already has is rejected – no history entry without a change. So a helper does not see the action on a machine that is already Out of order.
+- Nothing is preselected for a technician (a status must be chosen); a helper's only option, Außer Betrieb, is preselected.
+
 **Foundation (moved from ST-074 on 2026-09-27).** The machine status history is the first real history, so this story builds the shared insert-only history helper (architecture review 2026-09-27, decision **Q13** – histories are append-only lists): histories (work log entries, machine status changes, defect resolutions, …) are lists in the state; the helper saves them by inserting the entries that were not present at load (recognised by their generated ID) and never changes existing entries. The open question on Q13 was answered in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, `OPEN_QUESTIONS.md`): build the helper and prove it with a test stand-in, and again with the machine status history – both proofs now live in this story.
 
 ## Acceptance Criteria
