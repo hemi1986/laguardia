@@ -53,3 +53,4 @@ None of the findings meets the follow-up hurdle; all are fixable in this story o
 - 3: the list page's width is now measured in e2e.
 - 4: skipped – the click from the list is in the untitled e2e.
 - 5: missing machine label unreachable (foreign key); long descriptions wrap (`overflow-wrap:anywhere`), not truncated – question for the user if wanted; concurrent triage belongs to ST-018.
+- User, 2026-10-03: accepted („abgenommen“) after migrating the local database; long descriptions stay unshortened (recommendation, no objection).
