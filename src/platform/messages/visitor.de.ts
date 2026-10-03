@@ -18,6 +18,8 @@ export const visitorDe = {
       "not-on-display": "Nicht ausgestellt",
     },
     reportProblem: "Problem melden",
+    /** The open defects' titles follow – untranslated, as the technician wrote them (ST-018). */
+    knownDefects: "Bekannte Defekte",
     /**
      * The number of untriaged problem reports (HS-1) – all of them, so no "heute" (user, 2026-09-26); worded as what
      * waits for the team (user, 2026-10-03). What is known shows as the open defects' titles (ST-018).
