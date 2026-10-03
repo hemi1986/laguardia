@@ -4,15 +4,20 @@
 
 **Progress: 8 of 57 domain stories done** · scenarios 74 of 396
 
-**80 stories** · In Progress: 0 · Ready: 56 · In Review: 0 · Draft: 4 · Done: 20
+**80 stories** · In Progress: 1 · Ready: 55 · In Review: 0 · Draft: 4 · Done: 20
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-012](ST-012-change-machine-status.md) | Change the machine status | story | Collection | must | M | low | ST-009 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-012](ST-012-change-machine-status.md) | Change the machine status | story | Collection | must | M | low | ST-009 |
 | [ST-013](ST-013-visitor-reports-problem.md) | Visitor reports a problem at the machine | story | Repair | must | M | medium | ST-010 |
 | [ST-015](ST-015-team-member-reports-problem.md) | Team member reports a problem from the machine record | story | Repair | must | S | low | ST-009, ST-013 |
 | [ST-017](ST-017-triage-list.md) | Triage list of untriaged problem reports | story | Repair | must | S | low | ST-013, ST-015 |

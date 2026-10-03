@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MachineStatusChanged]
 depends_on: [ST-009]
 labels: [mvp, collection, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
