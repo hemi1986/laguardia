@@ -1,6 +1,7 @@
-import { aggregateCommand, created, trigger, type Database } from "@/platform/command";
+import { changeMachineStatusCommand, type MachineStatus } from "@/modules/collection";
+import { aggregateCommand, created, run, trigger, type Database } from "@/platform/command";
 import { problemReports, reportingFacts } from "./problem-reports";
-import { reportProblem } from "./report-problem";
+import { reportProblem, reportingActors, type ReportProblemInput } from "./report-problem";
 
 /**
  * Test stand-ins for the triage commands to come (ST-018 ff.) – commands on an existing problem report.
@@ -190,4 +191,36 @@ export const triageForTest = aggregateCommand({
     data: {},
   }),
   result: () => ({}),
+});
+
+/**
+ * Test stand-in for `context.run` (ST-018): reports a problem like CMD-ReportProblem and then runs Collection's
+ * CMD-ChangeMachineStatus as the same acting person, in the same transaction.
+ */
+export const reportAndChangeStatusForTest = aggregateCommand({
+  id: "CMD-TestReportAndChangeStatus",
+  allowedActors: reportingActors,
+  store: problemReports,
+  creates: true,
+  facts: reportingFacts,
+  decide: (
+    facts,
+    input: ReportProblemInput & { machineVersion: number; machineStatus: MachineStatus; reason: string },
+    context,
+  ) => reportProblem(facts, input, context),
+  journal: (event) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
+    machineId: event.machineId,
+    data: {},
+  }),
+  runs: (report, _events, input) => [
+    run(changeMachineStatusCommand, {
+      machineId: report.machineId,
+      version: input.machineVersion,
+      machineStatus: input.machineStatus,
+      reason: input.reason,
+    }),
+  ],
+  result: (report) => ({ problemReportId: report.id }),
 });
