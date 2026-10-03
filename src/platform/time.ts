@@ -46,6 +46,11 @@ export function elapsedMoreThanHours(since: Date, now: Date, hours: number): boo
   return now.getTime() - since.getTime() > hours * 3_600_000;
 }
 
+/** Whole hours from `since` to `now` – how long something has been waiting (the triage list, ST-017). */
+export function elapsedHours(since: Date, now: Date): number {
+  return Math.floor((now.getTime() - since.getTime()) / 3_600_000);
+}
+
 const DAY_MS = 86_400_000;
 
 // Calendar arithmetic on UTC midnights – no time zone or summer time involved.

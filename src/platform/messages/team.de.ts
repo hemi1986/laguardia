@@ -112,6 +112,27 @@ export const teamMessages = {
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,
     statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
   },
+  /** The triage list and a problem report's own page (ST-017). */
+  triage: {
+    title: "Sichtung",
+    waiting: (count: number) =>
+      count === 1 ? "1 Meldung wartet auf die Sichtung." : `${count} Meldungen warten auf die Sichtung.`,
+    nothing: "Nichts wartet auf die Sichtung – alle Meldungen sind gesichtet.",
+    /** How long a problem report has been waiting, in words (G6). */
+    waitingFor: (hours: number) =>
+      hours < 1
+        ? "wartet seit weniger als 1 Stunde"
+        : hours < 24
+          ? `wartet seit ${hours} ${hours === 1 ? "Stunde" : "Stunden"}`
+          : `wartet seit ${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "Tag" : "Tagen"}`,
+    /** Waiting longer than 3 days (HS-2) – said in words, not only by a colour (G6a). */
+    longWait: "Wartet länger als 3 Tage",
+    reportedBy: "Gemeldet von",
+    reportedAt: "Gemeldet am",
+    unknown: "Diese Meldung gibt es nicht.",
+    alreadyTriaged: "Diese Meldung ist schon gesichtet.",
+    back: "Zurück zur Sichtung",
+  },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
     description: "Beschreibung",
