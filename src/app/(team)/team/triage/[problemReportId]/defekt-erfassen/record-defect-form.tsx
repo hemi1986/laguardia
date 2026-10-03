@@ -9,9 +9,10 @@ import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineStatus } from "@/modules/collection";
 import type { Priority } from "@/modules/repair";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
 import type { RecordDefectState } from "./actions";
 import type { RecordDefectField } from "./record-defect-input";
+import { rejectionText } from "./record-defect-rejection-text";
 
 const { recordDefect: texts, machines } = teamMessages;
 
@@ -119,11 +120,4 @@ export function RecordDefectForm({
       </Button>
     </form>
   );
-}
-
-/** The rejection in words – naming who triaged it first, or the machine retired meanwhile (story review 2026-10-03). */
-function rejectionText(state: NonNullable<RecordDefectState>, museumNumber: string): string {
-  if (state.error === "already-triaged" && state.triagedBy) return texts.alreadyTriagedBy(state.triagedBy);
-  if (state.error === "machine-retired") return texts.retiredMeanwhile(museumNumber);
-  return commandErrorText(teamMessages, state.error);
 }

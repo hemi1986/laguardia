@@ -9,7 +9,7 @@ import { withNames, type TriageListItem } from "../triage-list-data";
  * and the version the person sees – the triage forms (ST-018 ff.) post it (HS-16).
  */
 export type ProblemReportData =
-  | { report: TriageListItem; triaged: boolean; triagedBy: string | undefined; version: number }
+  | { report: TriageListItem; triaged: boolean; triagedByName: string | undefined; version: number }
   | undefined;
 
 export async function loadProblemReport(db: Database, clock: Clock, problemReportId: string): Promise<ProblemReportData> {
@@ -22,7 +22,7 @@ export async function loadProblemReport(db: Database, clock: Clock, problemRepor
   return {
     report,
     triaged: found.triagedBy !== undefined,
-    triagedBy: found.triagedBy && names.get(found.triagedBy),
+    triagedByName: found.triagedBy && names.get(found.triagedBy),
     version: found.version,
   };
 }

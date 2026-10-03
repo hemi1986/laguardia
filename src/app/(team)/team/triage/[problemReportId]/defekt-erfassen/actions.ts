@@ -8,8 +8,8 @@ import { systemClock } from "@/platform/clock";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../../team-session";
-import { loadProblemReport } from "../problem-report-data";
 import { recordDefectFields, recordDefectInput, type RecordDefectField } from "./record-defect-input";
+import { withWhoTriagedFirst } from "./record-defect-rejection";
 
 /** After a rejection: the error and the typed values – and who triaged it first, when that is the reason (ST-018). */
 export type RecordDefectState =
@@ -36,8 +36,6 @@ export async function recordDefectAction(
       redirect(`/team/triage?defectRecorded=${defectId}${statusChanged ? "&statusChanged=1" : ""}`);
     },
   })(previous, formData);
-  if (state?.error !== "already-triaged") return state;
   // Name who triaged it first – "Tom hat diese Meldung schon gesichtet." (story review 2026-10-03)
-  const report = await loadProblemReport(database(), systemClock, problemReportId);
-  return { ...state, triagedBy: report?.triagedBy };
+  return withWhoTriagedFirst(database(), systemClock, problemReportId, state);
 }
