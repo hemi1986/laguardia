@@ -92,7 +92,8 @@ reason is not purity: a Base UI control renders a `<button>` plus `role="listbox
 React, so there is no form control in the DOM at all – nothing to pick, nothing to submit. Checked on the copied
 file in ST-076, which is why shadcn's `select` was removed again and `NativeSelect` exists; `e2e/no-js-form.spec.ts`
 guards it. It is a test, not a blacklist: `Checkbox`, `Switch` and `RadioGroup` often *do* render a hidden native
-input and pass. Record the outcome here when you test one, so nobody tests it twice.
+input and pass. Record the outcome here when you test one, so nobody tests it twice. Tested so far: `NativeSelect` passes (ST-076);
+`textarea` passes – it is a styled native `<textarea>` (ST-013, `e2e/report-problem.spec.ts` without JavaScript).
 The skill's "Form inputs: `Input`, `Select`, `Combobox`, …" table has not run this test. A scripted component is
 still fine where the interaction needs JavaScript anyway (the camera photo, ST-002/ST-016).
 
@@ -168,6 +169,15 @@ Rules:
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 - **Set-based rules** (ST-007, HS-17): a creating command whose decision must know about the module's other aggregates declares `facts: (tx, input) => Promise<Facts>`; the layer reads them in the command's transaction and passes them to `decide(facts, input, context)` in place of the missing state. Facts that must stay true until the commit take a lock there – CMD-RegisterMachine takes `pg_advisory_xact_lock(hashtext('museum-number'))`, so concurrent registrations run one after the other – and a unique constraint stays the final guarantee (`museum_number`'s primary key).
 
+**A rule that needs another module's data** (first: ST-013, context map "Repair reads from Collection when checking
+command rules"): the command's `facts` call the other module's **public** query in the command's transaction – e.g.
+`reportingFacts` in `src/modules/repair/problem-reports.ts` calls Collection's `machineForReporting(tx, machineId)`
+– and the decision gets the result as plain data. The query is as narrow as the rule (a machine status and whether it
+is retired, not the machine). Only a context the context map names as upstream is read this way; nothing is stored
+twice, and the other module's tables are never imported. Such a read takes **no lock**: it is a check against the
+current state at command time, not an invariant (context map) – a change in the same second is caught by the other
+module's events and policies (e.g. the retirement policies).
+
 **Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
 status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
 with an ID from `context.newId()` and never changes or removes one. The store saves it with
@@ -220,6 +230,14 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   nobody saw, which the command layer answers with `version-conflict`. After a rejection the form keeps posting the
   version the page loaded – it never picks up a newer one by itself: after `version-conflict` the person reloads the
   page (the catalogue text says so), which loads the current state and version.
+- **A public page posts no internal ID** (first: ST-013, the report form): the page binds the museum number –
+  `reportProblemAction.bind(null, museumNumber)` – and the action finds the machine on the server
+  (`machineIdOf`) before it builds its `formAction`; the redirect uses the same museum number, URL-encoded under a
+  fixed path. A bound value comes back from the browser like a form field, so it is treated as one: it only names
+  which machine, and the command checks that machine again in its facts. Team pages may post IDs (`machineId`,
+  `version` in ST-012).
+- **A client form gets only strings from a catalogue**: a visitor catalogue holds functions (`alreadyReported`), which
+  cannot cross to a client component – pass the sections the form shows (`{ reportForm, commandErrors }`).
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
 - Forms with a photo ("store, run, delete on failure") come with ST-016.

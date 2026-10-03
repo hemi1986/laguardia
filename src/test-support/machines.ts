@@ -1,14 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand, type MachineStatus } from "@/modules/collection";
 import { executeCommand, journalOf, type Actor, type Database } from "@/platform/command";
 import { anExistingTeamMember } from "./team-members";
 
 /**
  * A registered machine for tests that need one to exist (a problem report refers to a registered machine, ST-007).
- * Set up through the commands (Q3): a machine model of its own and a machine with an assigned museum number.
+ * Set up through the commands (Q3): a machine model of its own and a machine with an assigned museum number,
+ * registered with the given machine status (Playable unless a test is about another one).
  * Returns the MachineId.
  */
-export async function aRegisteredMachine(db: Database): Promise<string> {
+export async function aRegisteredMachine(db: Database, machineStatus: MachineStatus = "playable"): Promise<string> {
   const technician: Actor = { kind: "team-member", teamMemberId: TEST_TECHNICIAN, role: "technician" };
   await anExistingTeamMember(db, technician);
   const dependencies = { actor: technician, db, newId: randomUUID };
@@ -25,7 +26,7 @@ export async function aRegisteredMachine(db: Database): Promise<string> {
       museumNumber: undefined,
       serialNumber: undefined,
       location: "Test hall",
-      machineStatus: "playable",
+      machineStatus,
     },
     dependencies,
   );

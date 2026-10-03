@@ -12,9 +12,11 @@ export async function anExistingTeamMember(
   /** The name pages show for the team member ("Tom"); the username when none is given. */
   name?: string,
 ): Promise<void> {
+  // No conflict target: parallel test files insert the same test team member, which hits the e-mail and username
+  // unique indexes as well as the primary key (ST-013 review).
   const username = `tm_${actor.teamMemberId.slice(0, 8)}`;
   await db.execute(sql`
     INSERT INTO team_member (id, name, email, username, role)
     VALUES (${actor.teamMemberId}, ${name ?? username}, ${`${username}@users.invalid`}, ${username}, ${actor.role})
-    ON CONFLICT (id) DO NOTHING`);
+    ON CONFLICT DO NOTHING`);
 }

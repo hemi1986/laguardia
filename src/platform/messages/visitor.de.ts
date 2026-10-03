@@ -18,13 +18,34 @@ export const visitorDe = {
       "not-on-display": "Nicht ausgestellt",
     },
     reportProblem: "Problem melden",
+    /**
+     * The number of untriaged problem reports (HS-1) – all of them, so no "heute" (user, 2026-09-26); worded as what
+     * waits for the team (user, 2026-10-03). What is known shows as the open defects' titles (ST-018).
+     */
+    alreadyReported: (count: number) =>
+      count === 1
+        ? "1 Meldung wartet noch auf die Sichtung durch das Team."
+        : `${count} Meldungen warten noch auf die Sichtung durch das Team.`,
     notOnDisplay: "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     unknown: "Kein Gerät mit dieser Museumsnummer.",
     toStart: "Zur Startseite",
   },
+  /** The report form page (ST-013) – nothing but the form; no name, no e-mail, no account. */
+  reportForm: {
+    title: "Problem melden",
+    description: "Was ist das Problem?",
+    descriptionHint: "Was passiert, wo am Gerät? Zum Beispiel: Kugel hängt hinter der linken Rampe.",
+    send: "Meldung senden",
+    back: "Zurück zum Gerät",
+    /** Shown on the visitor machine page after a problem report (G3). */
+    reported: "Danke! Deine Meldung ist beim Team angekommen.",
+  },
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {
     "description-required": "Bitte beschreibe das Problem.",
+    "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
+    "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
+    "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
     "not-authorized": "Das darfst du nicht.",
     "not-found": "Das gibt es nicht mehr.",
     "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",

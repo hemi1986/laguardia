@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { reportProblem } from "./report-problem";
+import { visitorMessages } from "@/platform/messages";
+import { DESCRIPTION_MAX_LENGTH, reportProblem } from "./report-problem";
 
 const visitor = { kind: "visitor" } as const;
 const context = { actor: visitor, clock: fixedClock("2026-09-27T10:00:00Z"), newId: () => "report-1" };
+const onDisplay = { machine: { machineStatus: "playable", retired: false } } as const;
 
 describe("CMD-ReportProblem – the decision", () => {
   it("records the problem report with its ID, machine, trimmed description, reporter and time", () => {
     const decision = reportProblem(
-      undefined,
+      onDisplay,
       { machineId: "m-1", description: "  Left flipper is weak  " },
       context,
     );
@@ -39,15 +41,21 @@ describe("CMD-ReportProblem – the decision", () => {
   it("takes the acting team member as the reporter", () => {
     const actor = { kind: "team-member", teamMemberId: "tm-1", role: "helper" } as const;
 
-    const decision = reportProblem(undefined, { machineId: "m-1", description: "Tilt" }, { ...context, actor });
+    const decision = reportProblem(onDisplay, { machineId: "m-1", description: "Tilt" }, { ...context, actor });
 
     expect(decision.ok && decision.state.reporter).toEqual({ kind: "team-member", teamMemberId: "tm-1" });
   });
 
   it.each(["", "   ", "\n\t"])("rejects a problem report without a description (%j)", (description) => {
-    expect(reportProblem(undefined, { machineId: "m-1", description }, context)).toEqual({
+    expect(reportProblem(onDisplay, { machineId: "m-1", description }, context)).toEqual({
       ok: false,
       error: "description-required",
     });
+  });
+
+  it("names the longest description it accepts in both visitor languages", () => {
+    for (const locale of ["de", "en"] as const) {
+      expect(visitorMessages(locale).commandErrors["description-too-long"]).toContain(String(DESCRIPTION_MAX_LENGTH));
+    }
   });
 });

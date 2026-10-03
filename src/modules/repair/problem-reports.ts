@@ -1,6 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
+import { machineForReporting } from "@/modules/collection";
 import { aggregateStore, type Database } from "@/platform/command";
-import type { ProblemReport } from "./report-problem";
+import type { ProblemReport, ReportingFacts } from "./report-problem";
 import { problemReport } from "./schema";
 
 /** How AGG-ProblemReport is stored: one row per problem report, versioned (HS-16). */
@@ -38,4 +39,24 @@ export async function problemReportsOfMachine(db: Database, machineId: string) {
     .from(problemReport)
     .where(eq(problemReport.machineId, machineId))
     .orderBy(desc(problemReport.reportedAt));
+}
+
+/**
+ * The facts of CMD-ReportProblem: the machine as the Collection module knows it now, read in the command's transaction
+ * through its public interface (context map, Collection → Repair). Repair never stores the machine status itself.
+ */
+export async function reportingFacts(tx: Database, input: { machineId: string }): Promise<ReportingFacts> {
+  return { machine: await machineForReporting(tx, input.machineId) };
+}
+
+/**
+ * How many problem reports of a machine wait for triage – all of them, not only today's (HS-1, ST-013). The visitor
+ * machine page shows only this number, never the texts. Until triage exists (ST-018) every problem report is untriaged.
+ */
+export async function untriagedProblemReportCount(db: Database, machineId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(problemReport)
+    .where(eq(problemReport.machineId, machineId));
+  return row.count;
 }

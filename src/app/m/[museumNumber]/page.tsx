@@ -14,7 +14,7 @@ import { VisitorMachinePage } from "./visitor-machine-page";
  * redirect a team member got. A config header would be overridden; `e2e/visitor-machine-page.spec.ts` checks the real
  * header against the preview. A logged-in team member is sent to the machine record (ST-011).
  */
-export default async function VisitorMachineRoute({ params }: { params: Promise<{ museumNumber: string }> }) {
+export default async function VisitorMachineRoute({ params, searchParams }: PageProps<"/m/[museumNumber]">) {
   const museumNumber = decodeURIComponent((await params).museumNumber); // Next.js answers 400 for a malformed one
   // The same QR sticker for everyone (ST-011): a logged-in team member gets the machine record.
   if (await teamMemberIfLoggedIn()) redirect(`/team/machines/${encodeURIComponent(museumNumber)}`);
@@ -28,7 +28,12 @@ export default async function VisitorMachineRoute({ params }: { params: Promise<
     <div lang={locale}>
       <Page title={data.machineModelTitle}>
         <VisitorLanguageSwitch locale={locale} messages={messages} back={`/m/${museumNumber}`} />
-        <VisitorMachinePage data={data} museumNumber={museumNumber} messages={messages} />
+        <VisitorMachinePage
+          data={data}
+          museumNumber={museumNumber}
+          messages={messages}
+          reported={(await searchParams).gemeldet !== undefined}
+        />
       </Page>
     </div>
   );

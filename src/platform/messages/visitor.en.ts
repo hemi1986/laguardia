@@ -18,12 +18,28 @@ export const visitorEn: VisitorMessages = {
       "not-on-display": "Not on display",
     },
     reportProblem: "Report a problem",
+    alreadyReported: (count: number) =>
+      count === 1
+        ? "1 report is waiting to be checked by the team."
+        : `${count} reports are waiting to be checked by the team.`,
     notOnDisplay: "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     unknown: "There is no machine with this museum number.",
     toStart: "To the start page",
   },
+  reportForm: {
+    title: "Report a problem",
+    description: "What is the problem?",
+    descriptionHint: "What happens, and where on the machine? For example: ball stuck behind the left ramp.",
+    send: "Send report",
+    back: "Back to the machine",
+    reported: "Thank you! Your report has reached the team.",
+  },
   commandErrors: {
     "description-required": "Please describe the problem.",
+    "description-too-long": "Please keep it shorter: at most 2000 characters.",
+    "machine-not-on-display":
+      "This machine is not on display at the moment. Problems can only be reported for machines on display.",
+    "machine-not-found": "There is no machine with this museum number.",
     "not-authorized": "You are not allowed to do that.",
     "not-found": "This no longer exists.",
     "version-conflict": "Someone has changed this in the meantime. Please reload the page and try again.",
