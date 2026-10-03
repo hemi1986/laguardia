@@ -97,3 +97,18 @@ export async function triageList(db: Database): Promise<TriageListEntry[]> {
     return { id, machineId, description, reporter, reportedAt };
   });
 }
+
+/**
+ * One problem report for its own page (ST-017), triaged or not – the page says when it is already triaged. Undefined
+ * for an unknown ID, or an address that is no ID at all.
+ */
+export async function problemReportForTriage(
+  db: Database,
+  problemReportId: string,
+): Promise<(TriageListEntry & { triaged: boolean }) | undefined> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
+  const [row] = await db.select().from(problemReport).where(eq(problemReport.id, problemReportId));
+  if (!row) return undefined;
+  const { id, machineId, description, reporter, reportedAt, triage } = problemReportOf(row);
+  return { id, machineId, description, reporter, reportedAt, triaged: triage !== undefined };
+}
