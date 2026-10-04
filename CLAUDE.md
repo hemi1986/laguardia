@@ -21,7 +21,7 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | Stories | `docs/stories/ST-NNN-*.md` | requirements-engineer; status `in-progress`/`done` by `/implement` |
 | Backlog (generated!) | `docs/stories/BACKLOG.md` | hook – never edit manually |
 | Open questions | `docs/stories/OPEN_QUESTIONS.md` | everyone |
-| Reviews | `docs/reviews/` | review-stories; per story `ST-NNN-code-review.md` (code-reviewer) and `ST-NNN-acceptance.md` (acceptance-tester) |
+| Reviews | `docs/reviews/` | review-stories; per story `ST-NNN-acceptance.md` (acceptance-tester) and, in the normal review lane, `ST-NNN-code-review.md` (code-reviewer) |
 | Engineering conventions, seam catalog | `.claude/skills/engineering-conventions/SKILL.md` | written after ST-003, user approves |
 | Application code and tests | repository root (`src/`, …) | `/implement` |
 
@@ -75,8 +75,8 @@ Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story who
 1. Prepare – branch, `in-progress`, context pack from the discovery artifacts
 2. Test plan – scenario → seam → test; **the user approves**
 3. Red → green per scenario (`tdd`)
-4. `verify.ts` – lint, module boundaries, types, tests, traceability
-5. Review in parallel, scaled to the story – `@code-reviewer` and `@acceptance-tester` always; `/code-review` for L/XL or shared platform code; `/security-review` for visitor, login/roles, uploads, files
+4. `verify.ts` – lint, module boundaries, types, tests, traceability; the full browser run once before the push, CI repeats it on the pull request
+5. Review, scaled to the risk of the diff – **light lane** (size S, no events/commands/migrations/form input/new dependency): `@acceptance-tester` only; **normal lane**: `@code-reviewer` and `@acceptance-tester` in parallel, `/code-review` for L/XL or shared platform code, `/security-review` when the diff touches input handling, login/roles/session, uploads/files or security headers
 6. Refactor – fix findings in the story; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
 7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**
 
