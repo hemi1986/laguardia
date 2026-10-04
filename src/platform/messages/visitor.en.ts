@@ -34,6 +34,16 @@ export const visitorEn: VisitorMessages = {
     send: "Send report",
     back: "Back to the machine",
     reported: "Thank you! Your report has reached the team.",
+    photo: {
+      label: "Photo (optional)",
+      take: "Take a photo",
+      choose: "Choose a photo",
+      remove: "Remove photo",
+      preparing: "Preparing the photo …",
+      notice:
+        "PLACEHOLDER – Only the museum's team members see the photo. We remove the GPS data from the image and keep it as long as the report.",
+      noticeLink: "Privacy notice",
+    },
   },
   legal: {
     label: "Legal",

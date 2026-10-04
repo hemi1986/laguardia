@@ -1,16 +1,19 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import Link from "next/link";
+import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, type VisitorMessages } from "@/platform/messages";
+import { PhotoField } from "../../../photo-field";
 import type { ReportProblemState } from "./actions";
 
 /**
- * The report form (ST-013): the description and nothing else – no name, no e-mail address, no account. A rejection
- * keeps the description, names the reason above the button and marks the field (G8), with and without JavaScript.
+ * The report form (ST-013): the description and an optional photo (ST-016) – no name, no e-mail address, no account. A
+ * rejection keeps the description, names the reason above the button and marks the field (G8), with and without
+ * JavaScript; a photo has to be chosen again after one (the form is reset), or left out.
  */
 export function ReportProblemForm({
   action: report,
@@ -21,6 +24,7 @@ export function ReportProblemForm({
   messages: Pick<VisitorMessages, "reportForm" | "commandErrors">;
 }) {
   const [state, action, pending] = useActionState(report, null);
+  const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   const texts = messages.reportForm;
   const kept = state ? JSON.stringify(state) : "empty";
@@ -42,12 +46,29 @@ export function ReportProblemForm({
         />
         <FieldDescription id="description-hint">{texts.descriptionHint}</FieldDescription>
       </Field>
+      <PhotoField
+        key={`photo-${kept}`}
+        name="photo"
+        texts={{
+          ...texts.photo,
+          tooLarge: messages.commandErrors["too-large"],
+          notAnImage: messages.commandErrors["not-an-image"],
+        }}
+        onPreparing={setPreparingPhoto}
+      >
+        <p className="text-sm text-muted-foreground">
+          {texts.photo.notice}{" "}
+          <Link href="/datenschutz" className="underline underline-offset-4">
+            {texts.photo.noticeLink}
+          </Link>
+        </p>
+      </PhotoField>
       {state && (
         <div id={rejectionId}>
           <Rejection>{commandErrorText(messages, state.error)}</Rejection>
         </div>
       )}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || preparingPhoto}>
         {texts.send}
       </Button>
     </form>

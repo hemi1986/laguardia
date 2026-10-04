@@ -204,6 +204,14 @@ export const teamMessages = {
     submit: "Meldung erfassen",
     retired: "Dieses Gerät ist ausgemustert – dafür gibt es keine Meldungen mehr.",
     back: "Zurück zum Gerät",
+    /** The optional photo (ST-016) – the browser's own rejections use the photo errors' texts below. */
+    photo: {
+      label: "Foto (freiwillig)",
+      take: "Foto aufnehmen",
+      choose: "Foto auswählen",
+      remove: "Foto entfernen",
+      preparing: "Foto wird vorbereitet …",
+    },
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status von ${museumNumber} ändern`,

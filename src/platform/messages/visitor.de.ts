@@ -98,6 +98,20 @@ export const visitorDe = {
     back: "Zurück zum Gerät",
     /** Shown on the visitor machine page after a problem report (G3). */
     reported: "Danke! Deine Meldung ist beim Team angekommen.",
+    /**
+     * The optional photo (ST-016). The notice about the photo is provided by the museum; until it is, a marked
+     * PLACEHOLDER (user, 2026-10-04) – replaced with the museum's texts as part of the go-live (ST-042).
+     */
+    photo: {
+      label: "Foto (freiwillig)",
+      take: "Foto aufnehmen",
+      choose: "Foto auswählen",
+      remove: "Foto entfernen",
+      preparing: "Foto wird vorbereitet …",
+      notice:
+        "PLATZHALTER – Das Foto sehen nur die Teammitglieder des Museums. Wir entfernen die GPS-Daten aus dem Bild und bewahren es so lange auf wie die Meldung.",
+      noticeLink: "Datenschutzhinweis",
+    },
   },
   legal,
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
