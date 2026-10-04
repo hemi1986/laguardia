@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-010]
 labels: [mvp, visitor, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
