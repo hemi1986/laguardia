@@ -164,6 +164,8 @@ export const teamMessages = {
   /** The open defects list and a defect's own page (ST-021). */
   defects: {
     title: "Defekte",
+    /** All open defects, whatever the filter (G6). */
+    open: (count: number) => (count === 1 ? "1 Defekt ist offen." : `${count} Defekte sind offen.`),
     priority: (priority: string) => `Priorität: ${priority}`,
     filter: "Defekte filtern",
     allMachines: "Alle Geräte",

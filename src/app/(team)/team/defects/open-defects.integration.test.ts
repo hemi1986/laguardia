@@ -188,6 +188,15 @@ describe("the open defects list", () => {
     expect(await page({ museumNumber: "LG-042" })).not.toContain("Display flickers");
   });
 
+  it("ST-021: How many defects are open", async () => {
+    const lg042 = await registered("LG-042");
+    for (const title of ["A", "B", "C", "D", "E", "F", "G"]) await anOpenDefect(lg042, `Defect ${title}`);
+
+    const html = await page({ suitableForHelpers: true });
+
+    expect(html).toContain("7 Defekte sind offen.");
+  });
+
   it("filters by priority, and combines the filters", async () => {
     const lg042 = await registered("LG-042");
     const lg007 = await registered("LG-007", attackFromMars);

@@ -17,6 +17,7 @@ const { defects: texts, recordDefect, terms } = teamMessages;
 export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
   return (
     <>
+      <p>{texts.open(data.total)}</p>
       <FilterForm machines={data.machines} filter={data.filter} />
       <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
         {data.entries.map((entry) => (
@@ -79,4 +80,3 @@ function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "fi
     </form>
   );
 }
-
