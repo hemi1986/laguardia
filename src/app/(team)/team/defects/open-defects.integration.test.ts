@@ -171,4 +171,53 @@ describe("the open defects list", () => {
     expect(html).toContain("Rubber cracked");
     expect(html).not.toContain("Display flickers");
   });
+
+  it("ST-021: Filter by machine", async () => {
+    const lg042 = await registered("LG-042");
+    const lg007 = await registered("LG-007", attackFromMars);
+    await anOpenDefect(lg042, "Left flipper weak", { at: daysBefore(3) });
+    await anOpenDefect(lg042, "Rubber cracked", { at: daysBefore(2) });
+    await anOpenDefect(lg007, "Display flickers");
+
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), { museumNumber: "LG-042" });
+
+    expect(entries.map((entry) => [entry.museumNumber, entry.title])).toEqual([
+      ["LG-042", "Left flipper weak"],
+      ["LG-042", "Rubber cracked"],
+    ]);
+    expect(await page({ museumNumber: "LG-042" })).not.toContain("Display flickers");
+  });
+
+  it("filters by priority, and combines the filters", async () => {
+    const lg042 = await registered("LG-042");
+    const lg007 = await registered("LG-007", attackFromMars);
+    await anOpenDefect(lg042, "Left flipper weak", { priority: "high" });
+    await anOpenDefect(lg042, "Rubber cracked", { priority: "high", suitableForHelpers: true });
+    await anOpenDefect(lg007, "Coil burnt", { priority: "high", suitableForHelpers: true });
+    await anOpenDefect(lg042, "Display flickers", { suitableForHelpers: true });
+
+    const titles = async (filter: OpenDefectsFilter) =>
+      (await loadOpenDefects(db, fixedClock(NOW), filter)).entries.map((entry) => entry.title).sort();
+
+    expect(await titles({ priority: "high" })).toEqual(["Coil burnt", "Left flipper weak", "Rubber cracked"]);
+    expect(await titles({ priority: "high", suitableForHelpers: true, museumNumber: "LG-042" })).toEqual([
+      "Rubber cracked",
+    ]);
+  });
+
+  it("offers the machines with open defects to filter by, and lists nothing for an unknown museum number", async () => {
+    const lg042 = await registered("LG-042");
+    const lg007 = await registered("LG-007", attackFromMars);
+    await registered("LG-100");
+    await anOpenDefect(lg042, "Left flipper weak");
+    await anOpenDefect(lg007, "Display flickers");
+
+    const data = await loadOpenDefects(db, fixedClock(NOW), { museumNumber: "LG-999" });
+
+    expect(data.machines).toEqual([
+      { museumNumber: "LG-007", machineModelTitle: "Attack from Mars" },
+      { museumNumber: "LG-042", machineModelTitle: "Medieval Madness" },
+    ]);
+    expect(data.entries).toEqual([]);
+  });
 });

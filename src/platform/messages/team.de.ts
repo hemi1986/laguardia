@@ -165,6 +165,11 @@ export const teamMessages = {
   defects: {
     title: "Defekte",
     priority: (priority: string) => `Priorität: ${priority}`,
+    filter: "Defekte filtern",
+    allMachines: "Alle Geräte",
+    allPriorities: "Alle Prioritäten",
+    onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
+    applyFilter: "Filtern",
     /** How long a defect has been open, in words (G6). */
     openFor: (hours: number) =>
       hours < 24
