@@ -86,6 +86,8 @@ export const teamMessages = {
     noMatch: (search: string) => `Kein Gerät passt zu „${search}“.`,
     clearSearch: "Suche zurücksetzen",
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
+    /** The open defects of a machine (ST-021) – never zero, a zero is not shown. */
+    openDefects: (count: number) => (count === 1 ? "1 offener Defekt" : `${count} offene Defekte`),
   },
   stickers: {
     title: "QR-Sticker drucken",

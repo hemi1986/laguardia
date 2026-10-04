@@ -13,6 +13,7 @@ export { priorities, type Defect, type Priority } from "./defect";
 export {
   defectDetails,
   defectTitle,
+  openDefectCounts,
   openDefects,
   openDefectTitles,
   type DefectDetails,

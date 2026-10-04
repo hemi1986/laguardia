@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
 import type { Defect, Priority } from "./defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
@@ -98,6 +98,20 @@ export async function openDefects(
       ),
     )
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
+}
+
+/**
+ * How many open defects each of the given machines has (ST-021) – what the machine overview shows per machine. A
+ * machine without open defects is not in the map.
+ */
+export async function openDefectCounts(db: Database, machineIds: readonly string[]): Promise<Map<string, number>> {
+  if (machineIds.length === 0) return new Map();
+  const rows = await db
+    .select({ machineId: defect.machineId, count: sql<number>`count(*)::int` })
+    .from(defect)
+    .where(and(eq(defect.state, "open"), inArray(defect.machineId, [...machineIds])))
+    .groupBy(defect.machineId);
+  return new Map(rows.map((row) => [row.machineId, row.count]));
 }
 
 /** A defect for its own page (ST-021), with its problem reports – the originating one first. */
