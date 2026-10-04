@@ -29,12 +29,8 @@ export type OpenDefectsData = { entries: OpenDefectsItem[] };
  * The open defects list's data: Repair's open defects with Collection's museum numbers and titles – the page composes
  * the modules' public queries (ST-009). How long a defect has been open is computed when the page loads.
  */
-export async function loadOpenDefects(
-  db: Database,
-  clock: Clock,
-  _filter: OpenDefectsFilter,
-): Promise<OpenDefectsData> {
-  const defects = await openDefects(db);
+export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDefectsFilter): Promise<OpenDefectsData> {
+  const defects = await openDefects(db, { suitableForHelpers: filter.suitableForHelpers });
   const machines = await machineLabels(
     db,
     defects.map((defect) => defect.machineId),

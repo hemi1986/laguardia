@@ -58,6 +58,12 @@ export type OpenDefect = {
   openSince: Date;
 };
 
+/** What RM-OpenDefects is narrowed to (ST-021) – all optional, they combine. */
+export type OpenDefectsQuery = {
+  /** Only the defects a helper may take on. */
+  suitableForHelpers?: boolean;
+};
+
 /** High first, then normal, then low (ST-021). */
 const priorityRank = sql`CASE ${defect.priority} WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END`;
 
@@ -65,7 +71,7 @@ const priorityRank = sql`CASE ${defect.priority} WHEN 'high' THEN 0 WHEN 'normal
  * RM-OpenDefects (ST-021): every open defect, by priority – high first –, within a priority the oldest first. Claim,
  * hold, work log and linked problem reports follow with ST-022, ST-024, ST-025 and ST-029.
  */
-export async function openDefects(db: Database): Promise<OpenDefect[]> {
+export async function openDefects(db: Database, { suitableForHelpers }: OpenDefectsQuery = {}): Promise<OpenDefect[]> {
   return db
     .select({
       id: defect.id,
@@ -76,6 +82,6 @@ export async function openDefects(db: Database): Promise<OpenDefect[]> {
       openSince: defect.recordedAt,
     })
     .from(defect)
-    .where(eq(defect.state, "open"))
+    .where(and(eq(defect.state, "open"), suitableForHelpers ? eq(defect.suitableForHelpers, true) : undefined))
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
 }

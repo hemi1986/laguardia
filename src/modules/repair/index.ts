@@ -10,5 +10,5 @@ export { reportProblemCommand } from "./report-problem-command";
 export { recordDefectCommand } from "./record-defect-command";
 export { stricterMachineStatuses, type RecordDefectError, type RecordDefectInput } from "./record-defect";
 export { priorities, type Defect, type Priority } from "./defect";
-export { defectTitle, openDefects, openDefectTitles, type OpenDefect } from "./defects";
+export { defectTitle, openDefects, openDefectTitles, type OpenDefect, type OpenDefectsQuery } from "./defects";
 export type { Reporter } from "./report-problem";

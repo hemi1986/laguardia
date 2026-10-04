@@ -158,4 +158,17 @@ describe("the open defects list", () => {
 
     expect(entries.map((entry) => entry.title)).toEqual(["Rubber cracked", "Display flickers"]);
   });
+
+  it("ST-021: Filter by suitable for helpers", async () => {
+    const lg042 = await registered("LG-042");
+    await anOpenDefect(lg042, "Rubber cracked", { suitableForHelpers: true });
+    await anOpenDefect(lg042, "Display flickers");
+
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), { suitableForHelpers: true });
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Rubber cracked"]);
+    const html = await page({ suitableForHelpers: true });
+    expect(html).toContain("Rubber cracked");
+    expect(html).not.toContain("Display flickers");
+  });
 });
