@@ -1,3 +1,9 @@
+/** A legal text of the visitor pages (ST-064), provided by the museum: a title and its sections. */
+export type LegalText = {
+  title: string;
+  sections: readonly { heading: string; paragraphs: readonly string[] }[];
+};
+
 /** German texts of the visitor pages; `visitor.en.ts` has the same keys. */
 export const visitorDe = {
   /** The start page – a placeholder until the visitor machine page (ST-010) and the legal pages (ST-064), ST-078. */
@@ -41,6 +47,47 @@ export const visitorDe = {
     back: "Zurück zum Gerät",
     /** Shown on the visitor machine page after a problem report (G3). */
     reported: "Danke! Deine Meldung ist beim Team angekommen.",
+  },
+  /**
+   * The legal pages (ST-064): the privacy notice at `/datenschutz` and the imprint at `/impressum`, linked from every
+   * visitor page. The museum provides the texts; until it does, the privacy notice is a marked PLACEHOLDER (user,
+   * 2026-10-04) – replacing it is part of the go-live (ST-042). No imprint (`null`) until the museum provides one: then
+   * none is offered. German and English must agree on whether there is one (the same keys, `messages.test.ts`).
+   */
+  legal: {
+    label: "Rechtliches",
+    privacyNoticeLink: "Datenschutz",
+    imprintLink: "Impressum",
+    privacyNotice: {
+      title: "Datenschutzhinweis",
+      sections: [
+        {
+          heading: "Platzhalter",
+          paragraphs: [
+            "PLATZHALTER – Das Museum ersetzt diesen Entwurf vor dem Start durch seinen eigenen Datenschutzhinweis.",
+          ],
+        },
+        {
+          heading: "Verantwortlich",
+          paragraphs: ["Flipper- & Arcade Museum Eschbach. [PLATZHALTER: Anschrift und Kontakt des Museums]"],
+        },
+        {
+          heading: "Meldungen",
+          paragraphs: [
+            "Auf diesen Seiten kannst du ein Problem an einem Gerät melden. Wir erheben keine Kontaktdaten: keinen Namen, keine E-Mail-Adresse, kein Konto.",
+            "Deine Meldung sehen nur die Teammitglieder des Museums.",
+          ],
+        },
+        {
+          heading: "Fotos",
+          paragraphs: [
+            "Wenn du ein Foto zu deiner Meldung hinzufügst, entfernen wir die Standortdaten aus dem Bild. Nur die Teammitglieder des Museums sehen das Foto.",
+            "Ein Foto wird so lange aufbewahrt wie seine Meldung.",
+          ],
+        },
+      ],
+    } as LegalText,
+    imprint: null as LegalText | null,
   },
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {

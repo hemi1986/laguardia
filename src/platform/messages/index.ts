@@ -7,7 +7,7 @@ import { visitorEn } from "./visitor.en";
  * Choosing the visitor's language from the browser comes with the visitor machine page (ST-010).
  */
 export { teamMessages };
-export type { VisitorMessages } from "./visitor.de";
+export type { LegalText, VisitorMessages } from "./visitor.de";
 
 export type VisitorLocale = "de" | "en";
 

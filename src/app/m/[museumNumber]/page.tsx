@@ -4,6 +4,7 @@ import { database } from "@/platform/database";
 import { teamMemberIfLoggedIn } from "../../team-session";
 import { currentVisitorMessages } from "../../visitor-locale";
 import { VisitorLanguageSwitch } from "../../visitor-language-switch";
+import { VisitorLegalLinks } from "../../visitor-legal-links";
 import { loadVisitorMachinePage } from "./visitor-machine-page-data";
 import { VisitorMachinePage } from "./visitor-machine-page";
 
@@ -34,6 +35,7 @@ export default async function VisitorMachineRoute({ params, searchParams }: Page
           messages={messages}
           reported={(await searchParams).gemeldet !== undefined}
         />
+        <VisitorLegalLinks messages={messages} />
       </Page>
     </div>
   );
