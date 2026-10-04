@@ -59,6 +59,26 @@ async function page(museumNumber: string, locale: "de" | "en" = "de"): Promise<s
 }
 
 describe("the visitor machine page", () => {
+  it("ST-016: Only team members can see the photo", async () => {
+    const machineId = await registered("LG-042");
+    const photoId = randomUUID();
+    const reported = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Right flipper dead", photo: `problem-reports/${photoId}.jpg` },
+      { actor: { kind: "visitor" }, db, newId: randomUUID },
+    );
+    if (!reported.ok) throw new Error(reported.error);
+
+    const data = await loadVisitorMachinePage(db, "LG-042");
+    const html = await page("LG-042");
+
+    // The page's data holds no photo – so there is no address it could issue, and none to open.
+    expect(JSON.stringify(data)).not.toContain(photoId);
+    expect(html).not.toContain(photoId);
+    expect(html).not.toContain("<img");
+    expect(html).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
+  });
+
   it("ST-010: Changes are visible immediately", async () => {
     const machineId = await registered("LG-042");
     expect(await page("LG-042")).toContain("Status: Spielbereit");
