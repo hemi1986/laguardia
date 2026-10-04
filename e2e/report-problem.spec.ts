@@ -171,10 +171,16 @@ test("ST-013: No contact data is asked for", async ({ page, browser }) => {
     const phone = await visitor(browser, "de-DE", javaScriptEnabled);
     await openReportForm(phone, museumNumber);
 
-    // The only thing a visitor fills in is the description – no name, e-mail address or other contact field.
-    const fields = phone.getByRole("main").locator("form").locator("input:not([type=hidden]), textarea, select");
+    // The only thing a visitor types or selects is the description – no name, e-mail address or other contact field.
+    // Besides it the form has only the optional photo's file fields (ST-016; a photo is no contact data – user,
+    // 2026-10-04, when ST-016 added them).
+    const form = phone.getByRole("main").locator("form");
+    const fields = form.locator("input:not([type=hidden]):not([type=file]), textarea, select");
     await expect(fields).toHaveCount(1);
     await expect(fields.first()).toHaveAttribute("name", "description");
+    for (const file of await form.locator("input[type=file]").all()) {
+      expect([null, "photo"]).toContain(await file.getAttribute("name")); // the photo, or a picker that sends nothing
+    }
     await phone.getByLabel("Was ist das Problem?").fill("Coin door jammed");
     await phone.getByRole("button", { name: "Meldung senden" }).click();
     await expect(phone.getByRole("main").getByRole("status")).toHaveText(

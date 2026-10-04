@@ -177,4 +177,39 @@ describe("module boundaries", () => {
     expect(runnerIntoInternals).toHaveLength(1);
     expect(moduleIntoRunner).toEqual([expect.stringContaining("app")]);
   });
+
+  it("reject @vercel/blob anywhere under src/ but the Blob adapter of the storage seam (ST-016)", async () => {
+    const importing = 'import { put } from "@vercel/blob";\nexport const x = put;\n';
+
+    expect(await importErrors("src/photo/deliberate-violation.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/app/deliberate-violation.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/app/_actions/deliberate-violation.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/app/deliberate.integration.test.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/platform/storage/blob-storage.ts", importing)).toEqual([]);
+  });
+
+  it("reject importing the photo module's internals – only its public interface (ST-016)", async () => {
+    const internals = 'import { acceptPhoto } from "@/photo/accept-photo";\nexport const x = acceptPhoto;\n';
+    const publicInterface = 'import { PHOTO_LIMITS } from "@/photo";\nexport const x = PHOTO_LIMITS;\n';
+
+    expect(await boundaryErrors("src/app/deliberate-violation.ts", internals)).toHaveLength(1);
+    expect(await boundaryErrors("src/modules/repair/deliberate-violation.ts", internals)).toHaveLength(1);
+    expect(await boundaryErrors("src/app/allowed.ts", publicInterface)).toEqual([]);
+    expect(await boundaryErrors("src/photo/allowed.ts", internals.replace("@/photo/", "./"))).toEqual([]);
+    // The photo module sits below the modules and the app, like the platform.
+    expect(
+      await boundaryErrors(
+        "src/photo/deliberate-violation.ts",
+        'import { reportProblemCommand } from "@/modules/repair";\nexport const x = reportProblemCommand;\n',
+      ),
+    ).toHaveLength(1);
+  });
 });

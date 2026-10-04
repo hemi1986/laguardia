@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { problemReportsOfMachine, reportProblemCommand } from ".";
+import { problemReportForTriage, problemReportsOfMachine, reportProblemCommand } from ".";
 import { changeDescriptionForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -174,5 +174,31 @@ describe("CMD-ReportProblem by a team member", () => {
       });
     }
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+  });
+});
+
+describe("CMD-ReportProblem with or without a photo (ST-016)", () => {
+  async function reportedWith(photo: string | undefined) {
+    const machineId = await aRegisteredMachine(db);
+    const reported = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Right flipper dead", photo },
+      deps,
+    );
+    if (!reported.ok) throw new Error(reported.error);
+    return (await problemReportForTriage(db, deps.clock, reported.result.problemReportId))!;
+  }
+
+  it("ST-016: Photo is optional", async () => {
+    const report = await reportedWith(undefined);
+
+    expect(report.description).toBe("Right flipper dead");
+    expect(report.photo).toBeUndefined();
+  });
+
+  it("keeps the reference of the stored photo with the problem report", async () => {
+    const report = await reportedWith("problem-reports/0b6b7d1e-8f43-4c5a-9a55-2f1c6c1e9a10.jpg");
+
+    expect(report.photo).toBe("problem-reports/0b6b7d1e-8f43-4c5a-9a55-2f1c6c1e9a10.jpg");
   });
 });

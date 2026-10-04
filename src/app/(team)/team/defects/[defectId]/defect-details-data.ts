@@ -4,6 +4,9 @@ import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
+import { photoViewAddresses } from "@/photo";
+import { blobStorage } from "@/platform/storage";
+import { photoAt, type PhotoSource } from "../../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../../reporter";
 
 /** A problem report on the defect's page, its reporter named. */
@@ -12,6 +15,8 @@ export type ShownDefectProblemReport = {
   description: string;
   reporter: ShownReporter;
   reportedAt: Date;
+  /** The photo (ST-016) at a short-lived address – issued only here, behind the team pages' access check (HS-1). */
+  photo: { address: string } | undefined;
   originating: boolean;
 };
 
@@ -36,14 +41,20 @@ export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
+  { storage = blobStorage() }: PhotoSource = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId);
   if (!defect) return undefined;
-  const [machines, names] = await Promise.all([
+  const [machines, names, photos] = await Promise.all([
     machineLabels(db, [defect.machineId]),
     teamMemberNames(
       db,
       defect.problemReports.flatMap(({ reporter }) => (reporter.kind === "team-member" ? [reporter.teamMemberId] : [])),
+    ),
+    photoViewAddresses(
+      storage,
+      clock,
+      defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
     ),
   ]);
   const machine = machines.get(defect.machineId);
@@ -60,6 +71,7 @@ export async function loadDefectDetails(
       description: report.description,
       reporter: shownReporter(report.reporter, names),
       reportedAt: report.reportedAt,
+      photo: photoAt(photos, report.photo),
       originating: report.originating,
     })),
   };

@@ -117,6 +117,10 @@ export const teamMessages = {
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,
     statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
   },
+  /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
+  problemReportPhoto: {
+    alt: "Foto zur Meldung",
+  },
   /** The triage list and a problem report's own page (ST-017). */
   triage: {
     title: "Sichtung",
@@ -200,6 +204,14 @@ export const teamMessages = {
     submit: "Meldung erfassen",
     retired: "Dieses Gerät ist ausgemustert – dafür gibt es keine Meldungen mehr.",
     back: "Zurück zum Gerät",
+    /** The optional photo (ST-016) – the browser's own rejections use the photo errors' texts below. */
+    photo: {
+      label: "Foto (freiwillig)",
+      take: "Foto aufnehmen",
+      choose: "Foto auswählen",
+      remove: "Foto entfernen",
+      preparing: "Foto wird vorbereitet …",
+    },
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status von ${museumNumber} ändern`,
@@ -244,6 +256,11 @@ export const teamMessages = {
    * Every error code of a command a team form runs needs one here – otherwise the form fails the type check.
    */
   commandErrors: {
+    /** The photo errors (ST-016), defined once in the photo module. */
+    "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
+    "not-an-image": "Das ist kein Foto. Bitte ein Foto wählen oder es weglassen.",
+    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
+    "not-stored": "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden.",
     "title-required": "Bitte einen Titel angeben.",
     "manufacturer-required": "Bitte einen Hersteller angeben.",
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",

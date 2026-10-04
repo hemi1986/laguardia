@@ -9,6 +9,7 @@ import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
+import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadProblemReport } from "./problem-report-data";
@@ -47,7 +48,7 @@ async function page(problemReportId: string, role: "helper" | "technician" = "te
   return renderToStaticMarkup(createElement(ProblemReportView, { data, role }));
 }
 
-async function anUntriagedProblemReport(museumNumber = "LG-042") {
+async function anUntriagedProblemReport(museumNumber = "LG-042", photo?: string) {
   const machine = await executeCommand(
     registerMachineCommand,
     { machineModelId, museumNumber, serialNumber: undefined, location: "Hall 2", machineStatus: "playable" },
@@ -56,7 +57,7 @@ async function anUntriagedProblemReport(museumNumber = "LG-042") {
   if (!machine.ok) throw new Error(machine.error);
   const reported = await executeCommand(
     reportProblemCommand,
-    { machineId: machine.result.machineId, description: "Left flipper barely moves" },
+    { machineId: machine.result.machineId, description: "Left flipper barely moves", photo },
     { actor: anna, db, clock: fixedClock("2026-10-03T11:00:00Z"), newId: randomUUID },
   );
   if (!reported.ok) throw new Error(reported.error);
@@ -66,6 +67,17 @@ async function anUntriagedProblemReport(museumNumber = "LG-042") {
 const recordDefectLink = (id: string) => `href="/team/triage/${id}/defekt-erfassen"`;
 
 describe("a problem report's own page", () => {
+  it("shows the problem report's photo to the technician who triages it (ST-016)", async () => {
+    const photo = `problem-reports/${randomUUID()}.jpg`;
+    const id = await anUntriagedProblemReport("LG-042", photo);
+
+    const data = await loadProblemReport(db, fixedClock(NOW), id, { storage: memoryStorage() });
+    const html = renderToStaticMarkup(createElement(ProblemReportView, { data, role: "technician" }));
+
+    expect(html).toContain(`<img src="memory://${photo}?valid-until=`);
+    expect(html).toContain('alt="Foto zur Meldung"');
+  });
+
   it("ST-017: Triaging happens on the problem report's own page", async () => {
     const machine = await executeCommand(
       registerMachineCommand,

@@ -20,8 +20,9 @@ src/
     team/           BC-Team – team members, roles
   components/       shared UI (ST-076): `page.tsx` (the 360 px page container), `ui/` the shadcn components
   lib/              `cn` re-export, the alias shadcn's components import
-  platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs
-  photo/            photo building block (ST-002)
+  platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs,
+                    storage seam (`storage/`, ST-016)
+  photo/            photo module (ST-002, ST-016): `index.ts` (server) and `browser.ts` (client) are its public interface
   test-support/     test data builders, test database – only for tests (ST-067 enforces it)
   proxy.ts          CSRF check for every POST to a page; renews the session cookie on every page request
 scripts/            one-off command-line scripts (e.g. `npm run setup:first-technician`), run with tsx
@@ -242,7 +243,17 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   cannot cross to a client component – pass the sections the form shows (`{ reportForm, commandErrors }`).
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
-- Forms with a photo ("store, run, delete on failure") come with ST-016.
+- **A form with a photo** (ST-016) uses `photoFormAction(command, { fields, photo: { field, owner }, input: (fields, photo) => …, onSuccess })`: the same runner, but the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `FormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
+
+## Photos and stored content (ST-016, ADR 0007)
+
+- **A photo is stored only through the photo module's `withStoredPhoto`** (store → run the command with the reference → delete if it fails) – in a Server Action via `photoFormAction`. Nobody calls the storage seam's `write` for a photo directly.
+- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page) is injected like the clock and the ID generator: `blobStorage()` in production (the only file that may import `@vercel/blob` – lint), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `blobStorage()` as its default (`PhotoSource`); a runner takes `storage`.
+- **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
+- **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when Blob cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
+- **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto` (`src/app/(team)/team/problem-report-photo.tsx`).
+- **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020) or a failed command – never as a compensation after a committed one.
+- Locally the dev server and the browser tests use a separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`); without it the photo browser tests skip.
 
 ## The event journal
 
@@ -359,6 +370,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | A page state the shared databases can never show (the empty machine overview) | the page's view component rendered with `renderToStaticMarkup` (`createElement`, no JSX in `.test.ts`) | unit | `src/app/(team)/team/machines/machine-overview.test.ts` |
 | Test infrastructure itself (the reset guard, preparing the browser-test database, ST-083) | the function in `src/test-support/` – a pure check as a unit test, anything touching PostgreSQL against a database of its own (never `laguardia_e2e_test`, which a browser test may be using) | unit / integration | `src/test-support/reset-test-database.test.ts`, `e2e-database.integration.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
+| Code that stores content (ST-016, user 2026-10-04): the photo module's store-run-delete, a form with a photo, a page that shows a photo | `withStoredPhoto` / `photoFormRunner({ …, storage: memoryStorage() })` / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. The Blob adapter itself only in the photo browser test (Development Blob store) | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
 | Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the browser tests' own dev server (port 3100, `laguardia_e2e_test`) and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |

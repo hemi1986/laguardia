@@ -2,6 +2,8 @@ import { problemReportForTriage } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
+import { blobStorage } from "@/platform/storage";
+import type { PhotoSource } from "../../problem-report-photo";
 import { withNames, type TriageListItem } from "../triage-list-data";
 
 /**
@@ -12,11 +14,16 @@ export type ProblemReportData =
   | { report: TriageListItem; triaged: boolean; triagedByName: string | undefined; version: number }
   | undefined;
 
-export async function loadProblemReport(db: Database, clock: Clock, problemReportId: string): Promise<ProblemReportData> {
+export async function loadProblemReport(
+  db: Database,
+  clock: Clock,
+  problemReportId: string,
+  { storage = blobStorage() }: PhotoSource = {},
+): Promise<ProblemReportData> {
   const found = await problemReportForTriage(db, clock, problemReportId);
   if (!found) return undefined;
   const [[report], names] = await Promise.all([
-    withNames(db, [found]),
+    withNames(db, [found], { clock, storage }),
     teamMemberNames(db, found.triagedBy ? [found.triagedBy] : []),
   ]);
   return {

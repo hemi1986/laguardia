@@ -6,7 +6,10 @@ import { journalOf, type Actor } from "@/platform/command";
 import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { formRunner } from "./form-runner";
+import sharp from "sharp";
+import { memoryStorage } from "@/platform/storage";
+import { withPhotoForTest } from "@/photo/photo-stand-in.test-support";
+import { formRunner, photoFormRunner } from "./form-runner";
 import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
 
@@ -108,5 +111,58 @@ describe("the Server Action runner", () => {
     runner(reportProblemCommand, { ...definition, onSuccess: async () => {} }, { kind: "visitor" });
     // @ts-expect-error – nor can a form definition carry one
     runner(reportProblemCommand, { ...definition, onSuccess: async () => {}, actor: { kind: "visitor" } });
+  });
+
+  describe("with a photo (ST-016, store, run, delete on failure)", () => {
+    async function aPhoto(): Promise<File> {
+      const jpeg = await sharp({ create: { width: 320, height: 240, channels: 3, background: "#c87828" } })
+        .jpeg()
+        .toBuffer();
+      return new File([new Uint8Array(jpeg)], "photo.jpg", { type: "image/jpeg" });
+    }
+
+    function photoFormActingAs(actor: Actor, storage = memoryStorage(), succeeded: (photo?: string) => void = () => {}) {
+      const action = photoFormRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
+        withPhotoForTest,
+        {
+          fields: ["outcome"],
+          photo: { field: "photo", owner: "problem-reports" },
+          input: ({ outcome }, photo) => ({ photo, outcome: outcome === "reject" ? ("reject" as const) : ("accept" as const) }),
+          onSuccess: async ({ photo }) => succeeded(photo),
+        },
+      );
+      return { action, storage };
+    }
+
+    it("runs the command with the stored photo's reference", async () => {
+      const received: (string | undefined)[] = [];
+      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) => received.push(photo));
+      const form = post({ outcome: "accept" });
+      form.append("photo", await aPhoto());
+
+      expect(await action(null, form)).toBeNull();
+      expect(received).toEqual(storage.names());
+      expect(storage.names()).toHaveLength(1);
+    });
+
+    it("returns { error, values } when the command is rejected, and no photo stays stored", async () => {
+      const { action, storage } = photoFormActingAs({ kind: "visitor" });
+      const form = post({ outcome: "reject" });
+      form.append("photo", await aPhoto());
+
+      expect(await action(null, form)).toEqual({ error: "rejected-for-test", values: { outcome: "reject" } });
+      expect(storage.names()).toEqual([]);
+    });
+
+    it("treats an empty file field as no photo", async () => {
+      const received: (string | undefined)[] = [];
+      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) => received.push(photo));
+      const form = post({ outcome: "accept" });
+      form.append("photo", new File([], ""));
+
+      expect(await action(null, form)).toBeNull();
+      expect(received).toEqual([undefined]);
+      expect(storage.names()).toEqual([]);
+    });
   });
 });

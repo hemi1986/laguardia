@@ -1,0 +1,1 @@
+ALTER TABLE "problem_report" ADD COLUMN "photo" text;

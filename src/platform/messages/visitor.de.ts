@@ -98,12 +98,31 @@ export const visitorDe = {
     back: "Zurück zum Gerät",
     /** Shown on the visitor machine page after a problem report (G3). */
     reported: "Danke! Deine Meldung ist beim Team angekommen.",
+    /**
+     * The optional photo (ST-016). The notice about the photo is provided by the museum; until it is, a marked
+     * PLACEHOLDER (user, 2026-10-04) – replaced with the museum's texts as part of the go-live (ST-042).
+     */
+    photo: {
+      label: "Foto (freiwillig)",
+      take: "Foto aufnehmen",
+      choose: "Foto auswählen",
+      remove: "Foto entfernen",
+      preparing: "Foto wird vorbereitet …",
+      notice:
+        "PLATZHALTER – Das Foto sehen nur die Teammitglieder des Museums. Wir entfernen die GPS-Daten aus dem Bild und bewahren es so lange auf wie die Meldung.",
+      noticeLink: "Datenschutzhinweis",
+    },
   },
   legal,
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */
   commandErrors: {
     "description-required": "Bitte beschreibe das Problem.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
+    /** The photo errors (ST-016), defined once in the photo module – the original limit people know is 20 MB. */
+    "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
+    "not-an-image": "Das ist kein Foto. Bitte wähle ein Foto aus oder lass es weg.",
+    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte wähle ein Foto (JPEG, PNG oder WebP) aus oder lass es weg.",
+    "not-stored": "Das Foto konnte nicht gesendet werden. Versuche es noch einmal oder sende die Meldung ohne Foto.",
     "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
     "machine-retired": "Dieses Gerät ist nicht mehr im Museum.",

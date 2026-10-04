@@ -3,6 +3,7 @@ import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../reporter";
+import { ProblemReportPhoto } from "../problem-report-photo";
 import type { DefectRecordedConfirmation, TriageListItem } from "./triage-list-data";
 
 const { triage: texts, recordDefect, machines } = teamMessages;
@@ -49,6 +50,7 @@ export function TriageListView({
                 {entry.museumNumber} · {entry.machineModelTitle}
               </Link>
               <p>{entry.description}</p>
+              {entry.photo && <ProblemReportPhoto address={entry.photo.address} />}
               <p className="text-muted-foreground">
                 {reporterName(entry.reporter)} · {formatDateTime(entry.reportedAt)} ·{" "}
                 {texts.waitingFor(entry.waitingHours)}

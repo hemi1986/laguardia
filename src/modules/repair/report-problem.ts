@@ -32,6 +32,8 @@ export type ProblemReport = {
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  /** The stored photo's reference (ST-016) – kept as long as the problem report; removed on spam dismissal (ST-020). */
+  photo?: string;
   triage?: Triage;
 };
 
@@ -42,9 +44,11 @@ export type ProblemReported = {
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  photo?: string;
 };
 
-export type ReportProblemInput = { machineId: string; description: string };
+/** `photo`: the reference of a photo the photo module has stored for this problem report (ST-016) – optional. */
+export type ReportProblemInput = { machineId: string; description: string; photo?: string };
 
 /** The machine as the Collection module knows it now – undefined for an unknown machine. */
 export type ReportingFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
@@ -80,6 +84,7 @@ export function reportProblem(
     description,
     reporter: reporterOf(actor),
     reportedAt: clock.now(),
+    ...(input.photo ? { photo: input.photo } : {}),
   };
   const { id: problemReportId, ...reported } = report;
   return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId, ...reported }] };
