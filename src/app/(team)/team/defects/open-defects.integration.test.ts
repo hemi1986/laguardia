@@ -197,6 +197,16 @@ describe("the open defects list", () => {
     expect(html).toContain("7 Defekte sind offen.");
   });
 
+  it("ST-021: A filter that matches nothing", async () => {
+    await anOpenDefect(await registered("LG-042"), "Display flickers");
+
+    const html = await page({ suitableForHelpers: true });
+
+    expect(html).not.toContain("Display flickers");
+    expect(html).toContain("Kein offener Defekt ist für Helfer:innen geeignet.");
+    expect(html).toMatch(/<a [^>]*href="\/team\/defects"[^>]*>Alle offenen Defekte anzeigen<\/a>/);
+  });
+
   it("filters by priority, and combines the filters", async () => {
     const lg042 = await registered("LG-042");
     const lg007 = await registered("LG-007", attackFromMars);

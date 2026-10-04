@@ -172,6 +172,11 @@ export const teamMessages = {
     allPriorities: "Alle Prioritäten",
     onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
     applyFilter: "Filtern",
+    noneOfMachine: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
+    noneWithPriority: (priority: string) => `Kein offener Defekt hat die Priorität ${priority}.`,
+    noneSuitableForHelpers: "Kein offener Defekt ist für Helfer:innen geeignet.",
+    noneMatch: "Kein offener Defekt passt zu diesem Filter.",
+    showAll: "Alle offenen Defekte anzeigen",
     /** How long a defect has been open, in words (G6). */
     openFor: (hours: number) =>
       hours < 24
