@@ -60,8 +60,14 @@ const eslintConfig = defineConfig([
             },
             {
               // The photo module (ST-016) is used through its public interface only – one way to store a photo.
-              from: { element: { type: ["app", "module", "platform", "ui", "shared"] } },
+              from: { element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "!**/*.test.ts" } },
               disallow: { to: { element: { type: "photo", fileInternalPath: "!{index,browser}.ts" } } },
+              message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
+            },
+            {
+              // A test may also use the photo module's test support (its stand-in command), like a module's.
+              from: { element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "**/*.test.ts" } },
+              disallow: { to: { element: { type: "photo", fileInternalPath: "!{index,browser,*.test-support}.ts" } } },
               message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
             },
             {
