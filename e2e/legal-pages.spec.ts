@@ -59,3 +59,22 @@ test("ST-064: Visitor opens the privacy notice", async ({ page, browser }) => {
   await expect(german.getByRole("heading", { level: 1, name: "Datenschutzhinweis" })).toBeVisible();
   await expect(phone.getByText("Wir erheben keine Kontaktdaten", { exact: false })).toBeVisible();
 });
+
+test("ST-064: Legal pages in English", async ({ browser }) => {
+  const phone = await visitor(browser, "de-DE");
+  await phone.getByRole("button", { name: "English" }).click();
+  const english = phone.locator('[lang="en"]');
+
+  await english.getByRole("link", { name: "Privacy" }).click();
+  await expect(phone).toHaveURL(/\/datenschutz$/);
+  await expect(english.getByRole("heading", { level: 1, name: "Privacy notice" })).toBeVisible();
+  await expect(english.getByText("We collect no contact data", { exact: false })).toBeVisible();
+
+  // The imprint is offered only once the museum provides one (ST-064) – then it is in English too.
+  const imprint = english.getByRole("link", { name: "Imprint" });
+  if ((await imprint.count()) > 0) {
+    await imprint.click();
+    await expect(phone).toHaveURL(/\/impressum$/);
+    await expect(english.getByRole("heading", { level: 1 })).not.toHaveText("Impressum");
+  }
+});

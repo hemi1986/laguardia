@@ -3,6 +3,7 @@ import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { currentVisitorMessages } from "./visitor-locale";
 import { VisitorLanguageSwitch } from "./visitor-language-switch";
+import { VisitorLegalLinks } from "./visitor-legal-links";
 
 /**
  * The start page (ST-078): a public placeholder with the museum's name and the way to the team login – replaced
@@ -13,11 +14,14 @@ export default async function Home() {
   const { locale, messages } = await currentVisitorMessages();
   const { home } = messages;
   return (
-    <Page title={home.museum}>
-      <VisitorLanguageSwitch locale={locale} messages={messages} back="/" />
-      <Link href="/login" className={buttonVariants({ variant: "link", className: "self-start px-0" })}>
-        {home.teamLogin}
-      </Link>
-    </Page>
+    <div lang={locale}>
+      <Page title={home.museum}>
+        <VisitorLanguageSwitch locale={locale} messages={messages} back="/" />
+        <Link href="/login" className={buttonVariants({ variant: "link", className: "self-start px-0" })}>
+          {home.teamLogin}
+        </Link>
+        <VisitorLegalLinks messages={messages} />
+      </Page>
+    </div>
   );
 }
