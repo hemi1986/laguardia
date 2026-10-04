@@ -9,7 +9,7 @@ risk: low
 events: [EVT-DefectRecorded]
 depends_on: [ST-008, ST-018]
 labels: [mvp, defect-work, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
