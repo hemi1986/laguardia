@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import { linkToDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -123,6 +124,63 @@ describe("a defect's own page", () => {
     expect(html).toContain("Ursprüngliche Meldung");
     expect(html).toContain("Left flipper barely moves");
     expect(html).toContain("Besucher:in · 29.09.2026, 11:30");
+  });
+
+  it("ST-021: Defect details show all linked problem reports", async () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, anna, "Anna");
+    const lg042 = await registered("LG-042");
+    const defectId = await recorded(
+      await reported(lg042, "Left flipper barely moves", "2026-09-29T09:30:00Z"),
+      "2026-09-29T10:00:00Z",
+    );
+    for (const [description, at, actor] of [
+      ["Flipper does not hold the ball", "2026-10-02T14:00:00Z", visitor],
+      ["Left flipper sticks", "2026-10-01T08:15:00Z", anna],
+    ] as const) {
+      const linked = await executeCommand(
+        linkToDefectForTest,
+        { problemReportId: await reported(lg042, description, at, actor), version: 0, defectId },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!linked.ok) throw new Error(linked.error);
+    }
+    await reported(lg042, "Coin door jammed", "2026-10-03T08:00:00Z");
+
+    const details = await loadDefectDetails(db, fixedClock(NOW), defectId);
+
+    expect(
+      details?.problemReports.map(({ originating, description, reporter, reportedAt }) => ({
+        originating,
+        description,
+        reporter,
+        reportedAt,
+      })),
+    ).toEqual([
+      {
+        originating: true,
+        description: "Left flipper barely moves",
+        reporter: { kind: "visitor" },
+        reportedAt: new Date("2026-09-29T09:30:00Z"),
+      },
+      {
+        originating: false,
+        description: "Left flipper sticks",
+        reporter: { kind: "team-member", name: "Anna" },
+        reportedAt: new Date("2026-10-01T08:15:00Z"),
+      },
+      {
+        originating: false,
+        description: "Flipper does not hold the ball",
+        reporter: { kind: "visitor" },
+        reportedAt: new Date("2026-10-02T14:00:00Z"),
+      },
+    ]);
+    const html = await page(defectId);
+    expect(html).toContain("Anna · 01.10.2026, 10:15");
+    expect(html).toContain("Besucher:in · 02.10.2026, 16:00");
+    expect(html.match(/Verknüpfte Meldung/g)).toHaveLength(2);
+    expect(html).not.toContain("Coin door jammed");
   });
 
   it("says that a defect does not exist, for an unknown ID or an address that is no ID", async () => {
