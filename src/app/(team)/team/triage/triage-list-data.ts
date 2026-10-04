@@ -3,9 +3,7 @@ import { defectTitle, triageList, type TriageListEntry } from "@/modules/repair"
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-
-/** Who reported a problem, as the team sees it: a visitor, or a team member by name. */
-export type ShownReporter = { kind: "visitor" } | { kind: "team-member"; name: string | undefined };
+import { shownReporter, type ShownReporter } from "../reporter";
 
 /** One entry of the triage list as the page shows it (RM-TriageList, ST-017). */
 export type TriageListItem = {
@@ -44,10 +42,7 @@ export async function withNames(db: Database, entries: TriageListEntry[]): Promi
     museumNumber: machines.get(entry.machineId)?.museumNumber ?? "",
     machineModelTitle: machines.get(entry.machineId)?.machineModelTitle ?? "",
     description: entry.description,
-    reporter:
-      entry.reporter.kind === "visitor"
-        ? { kind: "visitor" }
-        : { kind: "team-member", name: names.get(entry.reporter.teamMemberId) },
+    reporter: shownReporter(entry.reporter, names),
     reportedAt: entry.reportedAt,
     waitingHours: entry.waitingHours,
     waitingLong: entry.waitingLong,

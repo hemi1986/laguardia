@@ -3,7 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import { reporterName } from "../triage-list";
+import { reporterName } from "../../reporter";
 import type { ProblemReportData } from "./problem-report-data";
 
 const { triage: texts, terms } = teamMessages;

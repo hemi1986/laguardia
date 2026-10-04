@@ -20,6 +20,7 @@ export const teamMessages = {
     "Problem report": "Meldung",
     Triage: "Sichtung",
     Defect: "Defekt",
+    "Suitable for helpers": "Für Helfer:innen geeignet",
     "Maintenance task": "Wartungsaufgabe",
   },
   login: {
@@ -41,6 +42,7 @@ export const teamMessages = {
     machineModels: "Modelle",
     machines: "Geräte",
     triage: "Sichtung",
+    defects: "Defekte",
     ownPassword: "Passwort ändern",
   },
   machineModels: {
@@ -84,6 +86,8 @@ export const teamMessages = {
     noMatch: (search: string) => `Kein Gerät passt zu „${search}“.`,
     clearSearch: "Suche zurücksetzen",
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
+    /** The open defects of a machine (ST-021) – never zero, a zero is not shown. */
+    openDefects: (count: number) => (count === 1 ? "1 offener Defekt" : `${count} offene Defekte`),
   },
   stickers: {
     title: "QR-Sticker drucken",
@@ -156,7 +160,38 @@ export const teamMessages = {
     statusNow: (museumNumber: string, status: string) => ` ${museumNumber} ist jetzt ${status}.`,
     alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
     toTriage: "Zurück zur Sichtung",
-    retiredMeanwhile: (museumNumber: string) => `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
+    retiredMeanwhile: (museumNumber: string) =>
+      `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
+  },
+  /** The open defects list and a defect's own page (ST-021). */
+  defects: {
+    title: "Defekte",
+    /** All open defects, whatever the filter (G6). */
+    open: (count: number) => (count === 1 ? "1 Defekt ist offen." : `${count} Defekte sind offen.`),
+    /** No defect is open – and new ones come from triage (G7). */
+    none: "Kein Defekt ist offen. Neue Defekte entstehen bei der Sichtung von Meldungen.",
+    toTriage: "Zur Sichtung",
+    priority: (priority: string) => `Priorität: ${priority}`,
+    filter: "Defekte filtern",
+    allMachines: "Alle Geräte",
+    allPriorities: "Alle Prioritäten",
+    onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
+    applyFilter: "Filtern",
+    noneOfMachine: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
+    noneWithPriority: (priority: string) => `Kein offener Defekt hat die Priorität ${priority}.`,
+    noneSuitableForHelpers: "Kein offener Defekt ist für Helfer:innen geeignet.",
+    noneMatch: "Kein offener Defekt passt zu diesem Filter.",
+    showAll: "Alle offenen Defekte anzeigen",
+    /** How long a defect has been open, in words (G6) – the days are Berlin calendar days, counted by the page. */
+    openFor: (days: number) => (days === 0 ? "offen seit heute" : `offen seit ${days} ${days === 1 ? "Tag" : "Tagen"}`),
+    notSuitableForHelpers: "Nicht für Helfer:innen geeignet",
+    recordedAt: (dateTime: string) => `Erfasst am ${dateTime}`,
+    problemReports: "Meldungen",
+    /** The problem report the defect was recorded from, and those linked to it later (ST-022). */
+    originating: "Ursprüngliche Meldung",
+    linked: "Verknüpfte Meldung",
+    unknown: "Diesen Defekt gibt es nicht.",
+    back: "Zurück zu den Defekten",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,

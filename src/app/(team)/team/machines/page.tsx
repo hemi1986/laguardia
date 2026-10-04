@@ -1,19 +1,22 @@
 import { Page } from "@/components/page";
-import { machineOverview, machineStatusCounts, machineStatuses, type MachineStatus } from "@/modules/collection";
+import { machineStatuses, type MachineStatus } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
 import { MachineOverview } from "./machine-overview";
+import { loadMachineOverview } from "./machine-overview-data";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-/** The machine overview (ST-007, ST-008) – every team member sees it; registering is for technicians (G11). */
+/**
+ * The machine overview (ST-007, ST-008) – every team member sees it; registering is for technicians (G11). Each
+ * machine shows its open defects (ST-021).
+ */
 export default async function MachinesPage({ searchParams }: { searchParams: SearchParams }) {
   const member = await requireTeamMember();
   const params = await searchParams;
   const query = { search: single(params.search), machineStatus: statusOf(single(params.machineStatus)) };
-  const db = database();
-  const [machines, counts] = await Promise.all([machineOverview(db, query), machineStatusCounts(db)]);
+  const { machines, counts } = await loadMachineOverview(database(), query);
   const registered = single(params.registered);
 
   return (

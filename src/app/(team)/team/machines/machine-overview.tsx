@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
 import {
   machineStatuses,
-  type MachineOverviewEntry,
   type MachineOverviewQuery,
   type MachineStatus,
 } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
+import type { MachineOverviewItem } from "./machine-overview-data";
 
 const { machines: texts, machineModels } = teamMessages;
 
@@ -35,13 +35,13 @@ export function MachineOverview({
   canRegister,
   registered,
 }: {
-  machines: MachineOverviewEntry[];
+  machines: MachineOverviewItem[];
   /** Over all active machines – independent of the search and the filter (ST-008). */
   counts: Record<MachineStatus, number>;
   query: MachineOverviewQuery;
   canRegister: boolean;
   /** The machine just registered – named in the confirmation (G3). */
-  registered?: MachineOverviewEntry;
+  registered?: MachineOverviewItem;
 }) {
   const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
@@ -151,13 +151,18 @@ function NothingFound({ search, machineStatus }: MachineOverviewQuery) {
   return <p>{texts.noneWithStatus(texts.statuses[machineStatus])}</p>;
 }
 
-/** What tells a machine apart from its neighbours (G5); its title leads to its machine record (ST-009). */
-function MachineEntry({ machine }: { machine: MachineOverviewEntry }) {
+/**
+ * What tells a machine apart from its neighbours (G5) – with its open defects (ST-021); its title leads to its machine
+ * record (ST-009).
+ */
+function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
   const details = [
     machineModels.categories[machine.machineCategory],
     machine.technology && machineModels.technologies[machine.technology],
     machine.location,
     `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
+    // A count is labelled in words, and a zero is not shown (ST-008, G6).
+    machine.openDefects > 0 && texts.openDefects(machine.openDefects),
   ].filter(Boolean);
 
   return (

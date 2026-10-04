@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import type { DefectRecordedConfirmation, ShownReporter, TriageListItem } from "./triage-list-data";
+import { reporterName } from "../reporter";
+import type { DefectRecordedConfirmation, TriageListItem } from "./triage-list-data";
 
-const { triage: texts, terms, machineRecord, recordDefect, machines } = teamMessages;
+const { triage: texts, recordDefect, machines } = teamMessages;
 
 /**
  * The triage list (RM-TriageList, ST-017): every untriaged problem report, the oldest first. An entry shows its
@@ -49,7 +50,8 @@ export function TriageListView({
               </Link>
               <p>{entry.description}</p>
               <p className="text-muted-foreground">
-                {reporterName(entry.reporter)} · {formatDateTime(entry.reportedAt)} · {texts.waitingFor(entry.waitingHours)}
+                {reporterName(entry.reporter)} · {formatDateTime(entry.reportedAt)} ·{" "}
+                {texts.waitingFor(entry.waitingHours)}
               </p>
               {entry.waitingLong && <p className="font-medium">{texts.longWait}</p>}
             </article>
@@ -58,8 +60,4 @@ export function TriageListView({
       </ol>
     </>
   );
-}
-
-export function reporterName(reporter: ShownReporter): string {
-  return reporter.kind === "visitor" ? terms.Visitor : (reporter.name ?? machineRecord.unknownTeamMember);
 }

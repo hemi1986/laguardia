@@ -230,3 +230,57 @@ export const reportAndChangeStatusForTest = aggregateCommand({
 export async function storedDefect(db: Database, defectId: string) {
   return (await defects.load(db, defectId))?.state;
 }
+
+/** Test stand-in for CMD-ResolveDefect (ST-028): the defect is resolved at the version the team member saw. */
+export const resolveDefectForTest = aggregateCommand({
+  id: "CMD-TestResolveDefect",
+  allowedActors: ["helper", "technician"],
+  store: defects,
+  target: (input: { defectId: string; version: number }) => ({ id: input.defectId, version: input.version }),
+  decide: (defect) => ({
+    ok: true as const,
+    state: { ...defect, state: "resolved" as const },
+    events: [{ type: "EVT-TestDefectResolved" as const }],
+  }),
+  journal: (event, defect) => ({
+    type: event.type,
+    aggregate: { type: "AGG-Defect", id: defect.id },
+    machineId: defect.machineId,
+    data: {},
+  }),
+  result: () => ({}),
+});
+
+/**
+ * Test stand-in for CMD-LinkProblemReportToDefect (ST-022): the problem report is triaged as *linked* to the defect, at
+ * the version the technician saw.
+ */
+export const linkToDefectForTest = aggregateCommand({
+  id: "CMD-TestLinkToDefect",
+  allowedActors: ["technician"],
+  store: problemReports,
+  target: (input: { problemReportId: string; version: number; defectId: string }) => ({
+    id: input.problemReportId,
+    version: input.version,
+  }),
+  decide: (report, input, { actor, clock }) => ({
+    ok: true as const,
+    state: {
+      ...report,
+      triage: {
+        outcome: "linked" as const,
+        triagedBy: actor.teamMemberId,
+        triagedAt: clock.now(),
+        defectId: input.defectId,
+      },
+    },
+    events: [{ type: "EVT-TestLinkedToDefect" as const }],
+  }),
+  journal: (event, report) => ({
+    type: event.type,
+    aggregate: { type: "AGG-ProblemReport", id: report.id },
+    machineId: report.machineId,
+    data: {},
+  }),
+  result: () => ({}),
+});

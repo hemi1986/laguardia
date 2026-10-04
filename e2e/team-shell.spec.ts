@@ -31,6 +31,7 @@ test("every team page carries the same navigation, once per destination, with lo
     await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Sichtung" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeVisible();
     await openMore(page);
     await expect(page.getByRole("link", { name: "Modelle" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeVisible();
@@ -46,6 +47,8 @@ test("every team page carries the same navigation, once per destination, with lo
   await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Sichtung" })).toBeFocused(); // since ST-017, G19 row 3
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeFocused(); // since ST-021, G19 row 4
   await page.keyboard.press("Tab");
   await expect(page.getByRole("navigation").locator("summary")).toBeFocused();
   await page.keyboard.press("Enter");
