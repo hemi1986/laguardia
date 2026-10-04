@@ -40,12 +40,24 @@ The user's approval is the "confirmed seams" the tdd skill requires.
 ## 4. Verify
 `node .claude/skills/implement/scripts/verify.ts` (with `--e2e` when browser tests exist) must be green: lint incl. module boundaries, type check, tests, events and stories valid, scenario ↔ test and domain ID traceability. Language warnings: fix or justify.
 
+The full `--e2e` run happens **once, before the push**. During red → green run only the spec you are working on; after the refactor (step 6) run `verify.ts` without `--e2e` plus the specs the refactor touched – CI runs every browser test on the pull request anyway (check `e2e`).
+
 ## 5. Review (in parallel, scaled to the story)
-Push the branch (`git push -u origin st-NNN-<slug>`) so a preview deployment exists (Vercel MCP: `list_deployments` filtered by `branch` gives its URL and state; otherwise ask the user). Then start in **one** message:
-- Always: `code-reviewer` – task: story ID, base ref `main`, the context pack command. Writes `docs/reviews/ST-NNN-code-review.md`.
-- Always: `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known). Writes `docs/reviews/ST-NNN-acceptance.md`.
+Push the branch (`git push -u origin st-NNN-<slug>`) so a preview deployment exists (Vercel MCP: `list_deployments` filtered by `branch` gives its URL and state; without it, `gh pr view` shows the Vercel comment with the preview URL once the pull request exists; otherwise ask the user).
+
+Pick the lane first (user, 2026-10-04 – review effort follows the risk of the diff, not a fixed list):
+
+**Light lane** – when **all** of these hold: size **S**, `events: []`, no command, no migration, no form input (no Server Action or route handler added or changed), no new dependency. Typical: static pages, texts, a link, layout.
+- Only `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known), and: *also check the diff briefly against the engineering conventions (texts from the catalogs, the shared page frames, domain language) and list deviations as minors.* Writes `docs/reviews/ST-NNN-acceptance.md`.
+- No `code-reviewer`, no `code-review`, no `security-review`.
+
+**Normal lane** – everything else. Start in **one** message:
+- `code-reviewer` – task: story ID, base ref `main`, the context pack command. Writes `docs/reviews/ST-NNN-code-review.md`.
+- `acceptance-tester` – task: story ID, base ref `main`, the preview URL (if known). Writes `docs/reviews/ST-NNN-acceptance.md`.
 - Only for size **L/XL** or a story that changes the command layer or other shared platform code: the Skill tool for `code-review` (bugs in the diff).
-- Only when the story has the label `visitor`, touches login/roles, uploads or files: the Skill tool for `security-review`.
+- Only when the **diff** touches input handling (Server Actions, route handlers), login/roles/session, uploads or files, or security headers/CSP: the Skill tool for `security-review`. The label `visitor` alone is not a reason.
+
+Say which lane you picked and why in one line.
 
 Tell the reviewers the follow-up hurdle below, so they grade findings with it in mind.
 
@@ -58,7 +70,7 @@ Tell the reviewers the follow-up hurdle below, so they grade findings with it in
   Otherwise it stays a line in the review file ("skipped minor" or "revisit when …") – no story. Say for each follow-up why it passes the hurdle.
 - Follow-ups that pass: delegate to `requirements-engineer` as new tech-task stories (`status: draft`, label `follow-up`), referencing the review file. They go through `/review-stories` like any story.
 - **Foundation just in time**: technical groundwork goes into the first story that needs it, not into a separate tech task ahead of the domain stories – a `must` tech task with met dependencies jumps ahead of every domain story in the backlog order.
-- Refactor only with green tests; the tests must not change unless they were wrong (then say so). Run `node .claude/skills/implement/scripts/verify.ts` again.
+- Refactor only with green tests; the tests must not change unless they were wrong (then say so). Run `node .claude/skills/implement/scripts/verify.ts` again (without `--e2e`) plus the browser specs the refactor touched – see step 4.
 
 ## 7. Acceptance and merge → user checkpoint
 1. Open a pull request: title `ST-NNN: <story title>`, body = the scenarios as a checklist, links to the story and both review files, the preview URL, remaining minors. (No `gh` CLI, or it isn't authenticated: push and give the user the compare URL `git push` prints.)
