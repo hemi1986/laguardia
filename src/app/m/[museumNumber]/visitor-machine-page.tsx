@@ -30,6 +30,16 @@ export function VisitorMachinePage({
       <p className="font-medium">
         {texts.status}: {texts.statuses[data.machineStatus]}
       </p>
+      {data.openDefects.length > 0 && (
+        <section className="flex flex-col gap-1">
+          <h2 className="font-medium">{texts.knownDefects}</h2>
+          <ul className="list-disc ps-5 [overflow-wrap:anywhere]">
+            {data.openDefects.map((title, index) => (
+              <li key={index}>{title}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {data.untriagedProblemReports > 0 && <p>{texts.alreadyReported(data.untriagedProblemReports)}</p>}
       {data.reportingPossible ? (
         <Link href={`/m/${museumNumber}/melden`} className={buttonVariants({ className: "self-start" })}>

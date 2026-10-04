@@ -19,8 +19,11 @@ type ReportingPerson = ActorOf<(typeof reportingActors)[number]>;
 export const triageOutcomes = ["defect-recorded", "linked", "resolved-on-the-spot", "dismissed"] as const;
 export type TriageOutcome = (typeof triageOutcomes)[number];
 
-/** The Triage value object of AGG-ProblemReport (data model); its defect, note or reason follow with ST-018 ff. */
-export type Triage = { outcome: TriageOutcome; triagedBy: TeamMemberId; triagedAt: Date };
+/**
+ * The Triage value object of AGG-ProblemReport (data model): the defect for *defect recorded* and *linked* (ST-018,
+ * ST-022); its note and dismissal reason follow with ST-019 and ST-020.
+ */
+export type Triage = { outcome: TriageOutcome; triagedBy: TeamMemberId; triagedAt: Date; defectId?: string };
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Untriaged until `triage` is set. */
 export type ProblemReport = {

@@ -76,6 +76,19 @@ export function trigger<Input, Result, Error extends string>(
 }
 
 /**
+ * Another command this one runs after saving – also another module's –, in the same transaction, as the same acting
+ * person and with that command's own authorization check (`context.run`, architecture review Q6, ST-018).
+ */
+export type RunCall<Error extends string = string> = { command: Command<unknown, unknown, Error>; input: unknown };
+
+export function run<Input, Result, Error extends string>(
+  command: Command<Input, Result, Error>,
+  input: Input,
+): RunCall<Error> {
+  return { command: command as unknown as Command<unknown, unknown, Error>, input };
+}
+
+/**
  * What a decision gets besides state and input. `aggregateCommand` narrows the acting person to the command's allowed
  * actors (`ActorOf`), so a decision for team members only gets a team member.
  */
@@ -88,13 +101,26 @@ export type DecisionContext<ActingPerson extends Actor = Actor> = {
 export type Decision<State, Event, Error extends string> =
   { ok: true; state: State; events: Event[]; created?: Created[] } | { ok: false; error: Error };
 
-type Common<Allowed extends AllowedActor, State extends { id: string }, Event, Result, PolicyError extends string> = {
+type Common<
+  Input,
+  Allowed extends AllowedActor,
+  State extends { id: string },
+  Event,
+  Result,
+  PolicyError extends string,
+  RunError extends string,
+> = {
   id: `CMD-${string}`;
   allowedActors: readonly Allowed[];
   store: AggregateStore<State>;
   /** Maps a domain event onto its journal entry – references and non-personal facts only, never free text. */
   journal: (event: Event, state: State) => JournalEvent;
   result: (state: State) => Result;
+  /**
+   * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
+   * A rejection of one rejects the whole command; its errors are part of this command's result type.
+   */
+  runs?: (state: State, events: Event[], input: Input) => RunCall<RunError>[];
   /** Automatic policies to run after saving, as the system, in the same transaction. */
   policies?: (state: State, events: Event[]) => PolicyCall<PolicyError>[];
 };
@@ -112,9 +138,10 @@ type Creating<
   Result,
   Error extends string,
   PolicyError extends string,
+  RunError extends string,
   Allowed extends AllowedActor,
   Facts,
-> = Common<Allowed, State, Event, Result, PolicyError> & {
+> = Common<Input, Allowed, State, Event, Result, PolicyError, RunError> & {
   creates: true;
   decide: (facts: Facts, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
 } & ([Facts] extends [undefined]
@@ -125,6 +152,8 @@ type Creating<
 /**
  * A command on an existing aggregate: `target` names it and the version the acting person saw. Only a command run
  * by the system (a policy) may leave the version out – the row is then loaded with a lock.
+ * `facts` reads what the decision must know beyond its own aggregate – e.g. another module's machine status through
+ * that module's public interface (ST-018) – in the command's transaction, after the aggregate is loaded.
  */
 type Changing<
   Input,
@@ -133,14 +162,26 @@ type Changing<
   Result,
   Error extends string,
   PolicyError extends string,
+  RunError extends string,
   Allowed extends AllowedActor,
-> = Common<Allowed, State, Event, Result, PolicyError> & {
+  Facts,
+> = Common<Input, Allowed, State, Event, Result, PolicyError, RunError> & {
   creates?: false;
   target: (input: Input) => { id: string; version?: number };
-  decide: (state: State, input: Input, context: DecisionContext<ActorOf<Allowed>>) => Decision<State, Event, Error>;
-};
+  decide: (
+    state: State,
+    input: Input,
+    context: DecisionContext<ActorOf<Allowed>>,
+    facts: Facts,
+  ) => Decision<State, Event, Error>;
+} & ([Facts] extends [undefined]
+    ? { facts?: never }
+    : { facts: (tx: Database, input: Input, state: State) => Promise<Facts> });
 
-/** The command's result type includes the errors of the policies it triggers – a rejected policy rejects it. */
+/**
+ * The command's result type includes the errors of the commands it runs and the policies it triggers – a rejection of
+ * any of them rejects it.
+ */
 export function aggregateCommand<
   Input,
   State extends { id: string },
@@ -148,13 +189,14 @@ export function aggregateCommand<
   Result,
   Error extends string,
   PolicyError extends string = never,
+  RunError extends string = never,
   const Allowed extends AllowedActor = AllowedActor,
   Facts = undefined,
 >(
   definition:
-    | Creating<Input, State, Event, Result, Error, PolicyError, Allowed, Facts>
-    | Changing<Input, State, Event, Result, Error, PolicyError, Allowed>,
-): Command<Input, Result, Error | PolicyError> {
+    | Creating<Input, State, Event, Result, Error, PolicyError, RunError, Allowed, Facts>
+    | Changing<Input, State, Event, Result, Error, PolicyError, RunError, Allowed, Facts>,
+): Command<Input, Result, Error | PolicyError | RunError> {
   return {
     id: definition.id,
     allowedActors: definition.allowedActors,
@@ -166,6 +208,8 @@ export function aggregateCommand<
 
       let decision: Decision<State, Event, Error>;
       let expectedVersion: number | undefined;
+      /** Decides again on the state stored now – after a version conflict (Q11). Unset for a creating command. */
+      let decideOnStored: (() => Promise<Decision<State, Event, Error> | undefined>) | undefined;
       if (definition.creates) {
         const facts = definition.facts ? await definition.facts(tx, input) : (undefined as Facts);
         decision = definition.decide(facts, input, decisionContext);
@@ -181,7 +225,15 @@ export function aggregateCommand<
         const loaded = await store.load(tx, target.id, { lock: target.version === undefined });
         if (!loaded) throw new NotFound();
         // Decide on the fresh state first: a domain rejection explains more than a version conflict (Q11).
-        decision = definition.decide(loaded.state, input, decisionContext);
+        const decideOn = async (state: State) => {
+          const facts = definition.facts ? await definition.facts(tx, input, state) : (undefined as Facts);
+          return definition.decide(state, input, decisionContext, facts);
+        };
+        decision = await decideOn(loaded.state);
+        decideOnStored = async () => {
+          const stored = await store.load(tx, target.id);
+          return stored && decideOn(stored.state);
+        };
         expectedVersion = target.version ?? loaded.version;
         if (decision.ok && decision.state.id !== target.id)
           throw new Error(`${definition.id}: a decision must not change the aggregate's ID`);
@@ -200,8 +252,17 @@ export function aggregateCommand<
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
       for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
       if (expectedVersion === undefined) await store.insert(tx, decision.state);
-      else if (!(await store.update(tx, decision.state, expectedVersion))) throw new VersionConflict();
+      else if (!(await store.update(tx, decision.state, expectedVersion))) {
+        // Someone changed the aggregate since it was seen – often by committing the same decision a moment earlier.
+        // The domain's reason wins over the conflict (Q11, ST-018): decide again on what is stored now.
+        const again = await decideOnStored?.();
+        if (again && !again.ok) return again;
+        throw new VersionConflict();
+      }
 
+      for (const call of definition.runs?.(decision.state, decision.events, input) ?? []) {
+        await context.run(call.command, call.input);
+      }
       for (const call of definition.policies?.(decision.state, decision.events) ?? []) {
         await context.runAsSystem(call.policy, call.input);
       }

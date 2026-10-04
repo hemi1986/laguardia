@@ -18,6 +18,7 @@ export const visitorEn: VisitorMessages = {
       "not-on-display": "Not on display",
     },
     reportProblem: "Report a problem",
+    knownDefects: "Known defects",
     alreadyReported: (count: number) =>
       count === 1
         ? "1 report is waiting to be checked by the team."
