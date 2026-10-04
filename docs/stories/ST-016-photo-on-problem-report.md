@@ -22,7 +22,7 @@ As a visitor, I want to add a photo from my phone camera to my problem report, s
 - Visitor photos may show people and are personal data (`docs/adr/0005-hosting-vercel.md`); only team members can see them. Visitors never see photos of problem reports (HS-1).
 - One photo per problem report ("Photo (optional)").
 - This story owns showing the photo to team members: in the triage list (ST-017) and in the defect details with the originating and linked problem reports (ST-021).
-- The visitor report form shows a short privacy notice about the photo in German and English, linking to the full privacy notice (ST-064); the notice text is provided by the museum.
+- The visitor report form shows a short privacy notice about the photo in German and English, linking to the full privacy notice (ST-064); the notice text is provided by the museum. As for ST-064, until the museum provides it the notice is a clearly marked placeholder in the visitor catalogs (user, 2026-10-04), replaced as part of ST-042's go-live item about the museum's own texts.
 - A photo is kept as long as its problem report; it is only removed when the problem report is dismissed as spam (ST-020).
 - If sending the photo fails, the typed description is kept so the visitor does not have to type it again.
 
@@ -31,7 +31,8 @@ As a visitor, I want to add a photo from my phone camera to my problem report, s
 - **Q8 – one storage seam** in `src/platform/`, used by photos and by files (`AGG-File`, manuals and schematics). The photo rules – downscaling, limits, metadata removal (ST-002, `src/photo/limits.ts`) – stay in the photo module. For files, ADR 0007 applies the same rule to direct browser uploads: the content is uploaded before the attaching command, and that command deletes the uploaded content through the same seam when it is rejected; ST-037 and ST-038 build that on this seam.
 - **Q16 – injected adapter.** The storage adapter is injected like the clock and the ID generator: a Vercel Blob adapter in production, an in-memory adapter in integration tests. Browser tests on the preview use the real Blob store.
 - **Review findings:** photo IDs and times come from the injected ID generator and clock; the seam has a delete operation (needed by ST-020 to remove the photo of a spam report); one error vocabulary for photos (`too-large`, `not-an-image`, `unsupported-format`, …) mapped to catalogue texts; the photo module gets an `index.ts` as its public interface.
-- **Q22 – conversion.** Converts `src/photo/*`. The spike photo page (`src/app/spike/photos/`) stays its only other user until ST-066 removes it.
+- **Q22 – conversion.** Converts `src/photo/*`. The spike photo page (`src/app/spike/photos/`) was already removed by ST-078, so the photo module has no other user.
+- **Real Blob store check (user, 2026-10-04, /implement ST-016 test plan).** With the spike photo page gone, the Blob adapter is shown to store a photo in a real private Blob store by the browser test of the scenario "Visitor adds a photo taken with the phone camera", which runs locally against a separate Development Blob store; it replaces the former manual check on the preview's spike photo page.
 - **Forms with a photo (moved from ST-073).** A form with a photo runs its command through the photo module's "store, run, delete on failure", so a rejected form leaves no stored photo.
 
 ## Acceptance Criteria
@@ -105,7 +106,7 @@ Scenario: Only team members can see the photo
 - [ ] Deleting a stored photo through the seam makes it unreadable (integration test, in-memory adapter).
 - [ ] Every photo error code has a text in `team.de`, `visitor.de` and `visitor.en` (extends `src/platform/messages/messages.test.ts`); the error codes are defined once in the photo module.
 - [ ] The photo rules are unchanged: `src/photo/accept-photo.test.ts` and `src/photo/prepare-photo.test.ts` stay green without changed assertions.
-- [ ] The spike photo page still stores a photo in the private Blob store on the commit's preview through the Blob adapter (manual check on the preview, noted in the pull request).
+- [ ] The Blob adapter stores a photo in a real private Blob store: shown by the browser test of the scenario "Visitor adds a photo taken with the phone camera", which runs locally against a separate Development Blob store (its credentials in `.env.development.local`; without them the photo browser tests skip).
 - [ ] `docs/architecture/photos.md` describes the module's public interface and the store → run → delete-on-failure order instead of "orphaned, accepted for now", referring to ADR 0007.
 - [ ] Converts the existing code (no test weakened); `npm run verify` is green.
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): module layout (photo module, storage seam), "a photo is stored only through the photo module's store-run-delete operation", the injected storage adapter, the seam catalog row for code that stores content, and forms with a photo in the Server Action runner.
