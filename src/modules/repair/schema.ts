@@ -12,6 +12,8 @@ export const problemReport = pgTable("problem_report", {
   /** TeamMemberId (UUID from Better Auth); foreign key to team_member.id is added in the migration (ADR 0002: modules share IDs, not tables). */
   reporterTeamMemberId: uuid("reporter_team_member_id"),
   reportedAt: timestamp("reported_at", { withTimezone: true }).notNull(),
+  /** The stored photo's reference in the storage seam (ST-016) – optional; removed on spam dismissal (ST-020). */
+  photo: text("photo"),
   /**
    * The Triage value object – all three set together, or none (untriaged). Added in ST-017 so "untriaged" means
    * something; the triage stories (ST-018 ff.) set them, and their defect, note or dismissal reason. triaged_by is a

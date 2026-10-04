@@ -18,6 +18,7 @@ export const problemReports = aggregateStore({
     reporterKind: report.reporter.kind,
     reporterTeamMemberId: report.reporter.kind === "team-member" ? report.reporter.teamMemberId : null,
     reportedAt: report.reportedAt,
+    photo: report.photo ?? null,
     triageOutcome: report.triage?.outcome ?? null,
     triagedBy: report.triage?.triagedBy ?? null,
     triagedAt: report.triage?.triagedAt ?? null,
@@ -36,6 +37,7 @@ function problemReportOf(row: typeof problemReport.$inferSelect): ProblemReport 
         ? { kind: "team-member", teamMemberId: row.reporterTeamMemberId ?? missing("reporter_team_member_id", row.id) }
         : { kind: "visitor" },
     reportedAt: row.reportedAt,
+    ...(row.photo ? { photo: row.photo } : {}),
     triage: triageOf(row),
   };
 }
@@ -97,18 +99,21 @@ export type TriageListEntry = {
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  /** The stored photo's reference (ST-016) – the team page turns it into a short-lived address. */
+  photo: string | undefined;
   waitingHours: number;
   waitingLong: boolean;
 };
 
 function triageListEntry(report: ProblemReport, now: Date): TriageListEntry {
-  const { id, machineId, description, reporter, reportedAt } = report;
+  const { id, machineId, description, reporter, reportedAt, photo } = report;
   return {
     id,
     machineId,
     description,
     reporter,
     reportedAt,
+    photo,
     waitingHours: elapsedHours(reportedAt, now),
     waitingLong: elapsedMoreThanHours(reportedAt, now, LONG_WAIT_HOURS),
   };
@@ -150,6 +155,8 @@ export type DefectProblemReport = {
   description: string;
   reporter: Reporter;
   reportedAt: Date;
+  /** The stored photo's reference (ST-016). */
+  photo: string | undefined;
   /** The problem report the defect was recorded from (data model: Originating problem report). */
   originating: boolean;
 };
@@ -169,11 +176,12 @@ export async function problemReportsOfDefect(
     .orderBy(asc(problemReport.reportedAt), asc(problemReport.id));
   return rows
     .map(problemReportOf)
-    .map(({ id, description, reporter, reportedAt }) => ({
+    .map(({ id, description, reporter, reportedAt, photo }) => ({
       id,
       description,
       reporter,
       reportedAt,
+      photo,
       originating: id === defect.problemReportId,
     }))
     .sort((a, b) => Number(b.originating) - Number(a.originating));
