@@ -3,7 +3,8 @@ import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { blobStorage } from "@/platform/storage";
-import { withNames, type PhotoSource, type TriageListItem } from "../triage-list-data";
+import type { PhotoSource } from "../../problem-report-photo";
+import { withNames, type TriageListItem } from "../triage-list-data";
 
 /**
  * A problem report's own page's data (ST-017): what the triage list shows of it, whether it is triaged yet and by whom,

@@ -3,6 +3,7 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
 import type { DefectDetailsData } from "./defect-details-data";
+import { ProblemReportPhoto } from "../../problem-report-photo";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
 
@@ -49,6 +50,7 @@ export function DefectDetailsView({ details }: { details: DefectDetailsData | un
               <article className="flex flex-col gap-1 text-sm">
                 <p className="font-medium">{report.originating ? texts.originating : texts.linked}</p>
                 <p>{report.description}</p>
+                {report.photo && <ProblemReportPhoto address={report.photo.address} />}
                 <p className="text-muted-foreground">
                   {reporterName(report.reporter)} · {formatDateTime(report.reportedAt)}
                 </p>

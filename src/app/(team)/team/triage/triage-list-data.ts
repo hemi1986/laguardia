@@ -5,6 +5,7 @@ import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
+import type { PhotoSource } from "../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../reporter";
 
 /** One entry of the triage list as the page shows it (RM-TriageList, ST-017). */
@@ -20,9 +21,6 @@ export type TriageListItem = {
   waitingHours: number;
   waitingLong: boolean;
 };
-
-/** Where photos are read from – Vercel Blob unless a test injects the in-memory adapter (ST-016). */
-export type PhotoSource = { storage?: ContentStorage };
 
 /**
  * The triage list's data: Repair's untriaged problem reports with Collection's museum numbers and titles and Team's

@@ -1,4 +1,8 @@
 import { teamMessages } from "@/platform/messages";
+import type { ContentStorage } from "@/platform/storage";
+
+/** Where a team page's data reads photos from – Vercel Blob unless a test injects the in-memory adapter (ST-016). */
+export type PhotoSource = { storage?: ContentStorage };
 
 /**
  * The photo of a problem report on a team page (ST-016) – at its short-lived address, which only team pages issue

@@ -9,6 +9,7 @@ import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
 import { linkToDefectForTest, resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
+import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadDefectDetails } from "./defect-details-data";
@@ -57,10 +58,10 @@ async function registered(museumNumber: string) {
   return outcome.result.machineId;
 }
 
-async function reported(machineId: string, description: string, at: string, actor: Actor = visitor) {
+async function reported(machineId: string, description: string, at: string, actor: Actor = visitor, photo?: string) {
   const outcome = await executeCommand(
     reportProblemCommand,
-    { machineId, description },
+    { machineId, description, photo },
     { actor, db, clock: fixedClock(at), newId: randomUUID },
   );
   if (!outcome.ok) throw new Error(outcome.error);
@@ -207,5 +208,44 @@ describe("a defect's own page", () => {
     expect(await loadDefectDetails(db, fixedClock(NOW), randomUUID())).toBeUndefined();
     expect(await loadDefectDetails(db, fixedClock(NOW), "not-an-id")).toBeUndefined();
     expect(await page("not-an-id")).toContain("Diesen Defekt gibt es nicht.");
+  });
+
+  describe("with the photo of its originating problem report (ST-016)", () => {
+    async function aDefectFromAReportWithAPhoto() {
+      const photo = `problem-reports/${randomUUID()}.jpg`;
+      const machineId = await registered("LG-042");
+      const problemReportId = await reported(machineId, "Left flipper weak", "2026-10-01T09:00:00Z", visitor, photo);
+      const defectId = await recorded(problemReportId, "2026-10-01T10:00:00Z");
+      await reported(machineId, "Flipper weak again", "2026-10-02T09:00:00Z").then((id) =>
+        executeCommand(linkToDefectForTest, { problemReportId: id, version: 0, defectId }, { actor: tom, db, newId: randomUUID }),
+      );
+      return { photo, defectId };
+    }
+
+    async function shownAt(now: string, defectId: string) {
+      const details = await loadDefectDetails(db, fixedClock(now), defectId, { storage: memoryStorage() });
+      return { details, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
+    }
+
+    it("ST-016: Photo is shown in the defect details", async () => {
+      const { photo, defectId } = await aDefectFromAReportWithAPhoto();
+
+      const { details, html } = await shownAt(NOW, defectId);
+
+      const address = `memory://${photo}?valid-until=2026-10-04T10:05:00.000Z`;
+      expect(details!.problemReports.map((report) => [report.originating, report.photo?.address])).toEqual([
+        [true, address],
+        [false, undefined],
+      ]);
+      expect(html).toContain(`<img src="${address}" alt="Foto zur Meldung"`);
+    });
+
+    it("ST-016: Photo is kept with its problem report", async () => {
+      const { photo, defectId } = await aDefectFromAReportWithAPhoto();
+
+      const { html } = await shownAt("2027-10-04T10:00:00Z", defectId);
+
+      expect(html).toContain(`<img src="memory://${photo}?valid-until=2027-10-04T10:05:00.000Z" alt="Foto zur Meldung"`);
+    });
   });
 });
