@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
 import type { Defect, Priority } from "./defect";
+import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect } from "./schema";
 
 /** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16). */
@@ -39,7 +40,7 @@ export async function defectTitle(
   db: Database,
   defectId: string,
 ): Promise<{ title: string; machineId: string } | undefined> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(defectId)) return undefined;
+  if (!isId(defectId)) return undefined;
   const [row] = await db
     .select({ title: defect.title, machineId: defect.machineId })
     .from(defect)
@@ -97,4 +98,27 @@ export async function openDefects(
       ),
     )
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
+}
+
+/** A defect for its own page (ST-021), with its problem reports – the originating one first. */
+export type DefectDetails = OpenDefect & { problemReports: DefectProblemReport[] };
+
+/** A defect with its problem reports; undefined for an unknown ID, or an address that is no ID at all. */
+export async function defectDetails(db: Database, defectId: string): Promise<DefectDetails | undefined> {
+  if (!isId(defectId)) return undefined;
+  const [row] = await db.select().from(defect).where(eq(defect.id, defectId));
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    machineId: row.machineId,
+    title: row.title,
+    priority: row.priority,
+    suitableForHelpers: row.suitableForHelpers,
+    openSince: row.recordedAt,
+    problemReports: await problemReportsOfDefect(db, row),
+  };
+}
+
+function isId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

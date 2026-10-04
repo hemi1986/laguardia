@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { machineForReporting } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, type Database } from "@/platform/command";
@@ -142,4 +142,39 @@ export async function problemReportForTriage(
   if (!row) return undefined;
   const report = problemReportOf(row);
   return { ...triageListEntry(report, clock.now()), version: row.version, triagedBy: report.triage?.triagedBy };
+}
+
+/** One problem report on a defect's own page – the one it was recorded from, or one linked to it later (ST-022). */
+export type DefectProblemReport = {
+  id: string;
+  description: string;
+  reporter: Reporter;
+  reportedAt: Date;
+  /** The problem report the defect was recorded from (data model: Originating problem report). */
+  originating: boolean;
+};
+
+/**
+ * The problem reports of a defect (ST-021): the originating one first, then the linked ones by report time. A linked
+ * problem report refers to its defect through its triage (ST-022); the originating one through the defect.
+ */
+export async function problemReportsOfDefect(
+  db: Database,
+  defect: { id: string; problemReportId: string },
+): Promise<DefectProblemReport[]> {
+  const rows = await db
+    .select()
+    .from(problemReport)
+    .where(or(eq(problemReport.id, defect.problemReportId), eq(problemReport.triageDefectId, defect.id)))
+    .orderBy(asc(problemReport.reportedAt), asc(problemReport.id));
+  return rows
+    .map(problemReportOf)
+    .map(({ id, description, reporter, reportedAt }) => ({
+      id,
+      description,
+      reporter,
+      reportedAt,
+      originating: id === defect.problemReportId,
+    }))
+    .sort((a, b) => Number(b.originating) - Number(a.originating));
 }

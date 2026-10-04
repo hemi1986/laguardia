@@ -185,6 +185,14 @@ export const teamMessages = {
       hours < 24
         ? "offen seit heute"
         : `offen seit ${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "Tag" : "Tagen"}`,
+    notSuitableForHelpers: "Nicht für Helfer:innen geeignet",
+    recordedAt: (dateTime: string) => `Erfasst am ${dateTime}`,
+    problemReports: "Meldungen",
+    /** The problem report the defect was recorded from, and those linked to it later (ST-022). */
+    originating: "Ursprüngliche Meldung",
+    linked: "Verknüpfte Meldung",
+    unknown: "Diesen Defekt gibt es nicht.",
+    back: "Zurück zu den Defekten",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
