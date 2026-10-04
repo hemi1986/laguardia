@@ -4,15 +4,20 @@
 
 **Progress: 15 of 57 domain stories done** · scenarios 133 of 415
 
-**80 stories** · In Progress: 0 · Ready: 49 · In Review: 0 · Draft: 4 · Done: 27
+**80 stories** · In Progress: 1 · Ready: 48 · In Review: 0 · Draft: 4 · Done: 27
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-016](ST-016-photo-on-problem-report.md) | Add a photo to a problem report and show it to the team | story | Repair | must | L | medium | ST-002, ST-015, ST-017, ST-021, ST-064, ST-073 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-016](ST-016-photo-on-problem-report.md) | Add a photo to a problem report and show it to the team | story | Repair | must | L | medium | ST-002, ST-015, ST-017, ST-021, ST-064, ST-073 |
 | [ST-019](ST-019-resolve-problem-on-the-spot.md) | Triage – resolve a problem on the spot | story | Repair | must | S | low | ST-017 |
 | [ST-020](ST-020-dismiss-problem-report.md) | Triage – dismiss a problem report, removing spam content | story | Repair | must | M | medium | ST-017, ST-016 |
 | [ST-022](ST-022-link-problem-report-to-defect.md) | Triage – link a problem report to an open defect | story | Repair | must | S | low | ST-018, ST-021 |
