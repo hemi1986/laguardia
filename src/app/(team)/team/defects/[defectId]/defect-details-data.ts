@@ -22,8 +22,9 @@ export type DefectDetailsData = {
   machineModelTitle: string;
   priority: Priority;
   suitableForHelpers: boolean;
-  openSince: Date;
-  openDays: number;
+  recordedAt: Date;
+  /** Berlin calendar days it has been open – only for an open defect; resolved ones are shown by ST-028. */
+  openDays: number | undefined;
   problemReports: ShownDefectProblemReport[];
 };
 
@@ -52,8 +53,8 @@ export async function loadDefectDetails(
     machineModelTitle: machine?.machineModelTitle ?? "",
     priority: defect.priority,
     suitableForHelpers: defect.suitableForHelpers,
-    openSince: defect.openSince,
-    openDays: daysBetween(calendarDate(defect.openSince), today(clock)),
+    recordedAt: defect.recordedAt,
+    openDays: defect.state === "open" ? daysBetween(calendarDate(defect.recordedAt), today(clock)) : undefined,
     problemReports: defect.problemReports.map((report) => ({
       id: report.id,
       description: report.description,

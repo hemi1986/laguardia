@@ -34,7 +34,8 @@ export function DefectDetailsView({ details }: { details: DefectDetailsData | un
           {details.suitableForHelpers ? terms["Suitable for helpers"] : texts.notSuitableForHelpers}
         </p>
         <p className="text-muted-foreground text-sm">
-          {texts.recordedAt(formatDateTime(details.openSince))} · {texts.openFor(details.openDays)}
+          {texts.recordedAt(formatDateTime(details.recordedAt))}
+          {details.openDays !== undefined && ` · ${texts.openFor(details.openDays)}`}
         </p>
       </section>
       <section className="flex flex-col gap-3">

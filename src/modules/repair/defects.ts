@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
-import type { Defect, Priority } from "./defect";
+import type { Defect, DefectState, Priority } from "./defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect } from "./schema";
 
@@ -114,8 +114,19 @@ export async function openDefectCounts(db: Database, machineIds: readonly string
   return new Map(rows.map((row) => [row.machineId, row.count]));
 }
 
-/** A defect for its own page (ST-021), with its problem reports – the originating one first. */
-export type DefectDetails = OpenDefect & { problemReports: DefectProblemReport[] };
+/**
+ * A defect for its own page (ST-021), in whatever state it is – with its problem reports, the originating one first.
+ */
+export type DefectDetails = {
+  id: string;
+  machineId: string;
+  title: string;
+  priority: Priority;
+  suitableForHelpers: boolean;
+  recordedAt: Date;
+  state: DefectState;
+  problemReports: DefectProblemReport[];
+};
 
 /** A defect with its problem reports; undefined for an unknown ID, or an address that is no ID at all. */
 export async function defectDetails(db: Database, defectId: string): Promise<DefectDetails | undefined> {
@@ -128,7 +139,8 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
     title: row.title,
     priority: row.priority,
     suitableForHelpers: row.suitableForHelpers,
-    openSince: row.recordedAt,
+    recordedAt: row.recordedAt,
+    state: row.state,
     problemReports: await problemReportsOfDefect(db, row),
   };
 }

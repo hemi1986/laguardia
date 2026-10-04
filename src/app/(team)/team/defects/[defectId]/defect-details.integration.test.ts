@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
-import { linkToDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { linkToDefectForTest, resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -105,7 +105,8 @@ describe("a defect's own page", () => {
       title: "Left flipper weak",
       priority: "high",
       suitableForHelpers: true,
-      openSince: new Date("2026-09-29T10:00:00Z"),
+      recordedAt: new Date("2026-09-29T10:00:00Z"),
+      openDays: 5,
       problemReports: [
         {
           originating: true,
@@ -181,6 +182,25 @@ describe("a defect's own page", () => {
     expect(html).toContain("Besucher:in · 02.10.2026, 16:00");
     expect(html.match(/Verknüpfte Meldung/g)).toHaveLength(2);
     expect(html).not.toContain("Coin door jammed");
+  });
+
+  it("does not call a defect open that is no longer open", async () => {
+    const lg042 = await registered("LG-042");
+    const defectId = await recorded(
+      await reported(lg042, "Left flipper barely moves", "2026-09-29T09:30:00Z"),
+      "2026-09-29T10:00:00Z",
+    );
+    const resolved = await executeCommand(
+      resolveDefectForTest,
+      { defectId, version: 0 },
+      { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+
+    const html = await page(defectId);
+
+    expect(html).toContain("Erfasst am 29.09.2026, 12:00");
+    expect(html).not.toContain("offen seit");
   });
 
   it("says that a defect does not exist, for an unknown ID or an address that is no ID", async () => {
