@@ -30,3 +30,24 @@ I reviewed the committed branch (`git diff main...HEAD`, HEAD `09876e0`). While 
 
 Verdict: **ready to merge** (no blockers). Fix the two majors in this story first.
 Most important: commit the working tree's `deleteQuietly` fix (#1). Without it, a failed Blob delete after a rejected report throws away the visitor's typed description.
+
+## Resolution (2026-10-04, /implement refactor step)
+The `/code-review` pass found #1 and #3 independently, plus two bugs in the photo field (a repeated identical rejection kept a preview while the form reset had emptied the file field; two quick picks could enable sending while one was still being prepared) – both fixed in `src/app/photo-field.tsx` (clears on the form's `reset` event, only the latest pick counts), the first shown by the e2e test "after a rejection the photo is gone from the form – also when the same rejection comes again".
+
+| # | Outcome |
+|---|---|
+| 1 | Fixed – `deleteQuietly`; tested ("still answers with the command's rejection when deleting the photo fails …"). |
+| 2 | Fixed – the `@vercel/blob` pattern applies to every file under `src/` but the adapter, incl. `_actions/` and app tests; cases added to `module-boundaries.test.ts`. |
+| 3 | Fixed – `viewAddresses` (one read token per page, all addresses signed on the server); no addresses when Blob cannot sign – tested. |
+| 4 | Fixed – the `photo` element may not import modules or the app; case added. |
+| 5 | Skipped – a reference only ever comes from `withStoredPhoto` through the runner's input function; a form field cannot supply one. Revisit if a second way to set a photo appears (ST-032). |
+| 6 | Skipped – two short runner bodies; revisit when a third runner variant appears. The photo field definition stays per form (one line each, next to its input function). |
+| 7 | Skipped – `withNames` keeps its name for now; revisit in `/improve-codebase-architecture`. |
+| 8 | Skipped – one token request on a rejected "record defect", and a Blob failure no longer breaks the page (#3). |
+| 9 | Skipped – nothing deletes a photo before ST-020; ST-020's tests show that only a spam dismissal removes it. |
+| 10 | Fixed – "shows the problem report's photo to the technician who triages it (ST-016)". |
+| 11 | Skipped – the exports are small and used by tests or the photo field; trim with ST-032 if still unused. |
+| 12 | Fixed – the Blob error message is logged (no photo, no person). |
+| 13 | Skipped – ST-020 (spam dismissal) is the first real use of `delete`; its preview check covers it. |
+| 14 | Fixed – `sentPhoto` / `sentPhotoOf`. |
+| 15 | Fixed – `photos.md` and the conventions name `viewAddresses` and the failure behaviour. Approval by the user pending. |

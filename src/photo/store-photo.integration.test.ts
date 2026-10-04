@@ -30,8 +30,8 @@ function storeAndRun(
   outcome: WithPhotoInput["outcome"],
   { actor = visitor, command = withPhotoForTest } = {},
 ) {
-  return async (upload: Uint8Array | undefined) =>
-    withStoredPhoto(upload, "problem-reports", { storage, newId }, (photo) =>
+  return async (sentPhoto: Uint8Array | undefined) =>
+    withStoredPhoto(sentPhoto, "problem-reports", { storage, newId }, (photo) =>
       executeCommand(command, { photo, outcome }, { actor, db, clock, newId }),
     );
 }

@@ -20,26 +20,28 @@ export type PhotoDependencies = { storage: ContentStorage; newId: () => string }
 const VIEW_MINUTES = 5;
 
 /**
- * The one way to store a photo (ST-016, architecture review Q7/Q17, ADR 0007): accept the upload (size, real image,
+ * The one way to store a photo (ST-016, architecture review Q7/Q17, ADR 0007): accept the sent photo (size, real image,
  * re-encoded without metadata), store it under a name from the injected ID generator, run the command with its
- * reference – and delete the photo again if the command is rejected or throws. Without an upload the command runs
+ * reference – and delete the photo again if the command is rejected or throws. Without a sent photo the command runs
  * without a photo. Authorization stays in the command: a `not-authorized` command leaves nothing behind either.
  */
 export async function withStoredPhoto<Result, Error extends string>(
-  upload: Uint8Array | undefined,
+  sentPhoto: Uint8Array | undefined,
   owner: PhotoOwner,
   { storage, newId }: PhotoDependencies,
   run: (photo: PhotoReference | undefined) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: PhotoError }> {
-  if (!upload) return run(undefined);
+  if (!sentPhoto) return run(undefined);
 
-  const accepted = await acceptPhoto(upload);
+  const accepted = await acceptPhoto(sentPhoto);
   if (!accepted.ok) return accepted;
 
   const name = `${owner}/${newId()}.jpg`;
   try {
     await storage.write(name, accepted.photo.bytes, accepted.photo.contentType);
-  } catch {
+  } catch (error) {
+    // Visible in the function logs (a Blob outage); the photo itself and the person stay out of the log.
+    console.error("photo not stored:", error instanceof Error ? error.message : error);
     return { ok: false, error: "not-stored" };
   }
 

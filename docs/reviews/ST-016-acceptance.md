@@ -44,3 +44,10 @@ No finding meets the hurdle (none is a security or data-loss risk that cannot be
 
 ## Verdict: accepted with remarks
 Remarks: (1) the server-side 20 MB text for a >2 MB post has no form-level test; (2) "second photo replaces first" and the lost photo after a rejection have no test; (3) the sequential `await` in `photoViewAddresses` could be parallelised; (4) no-JS behavior should be written into the story notes.
+
+## Resolution (2026-10-04, /implement refactor step)
+1. Fixed – form-level test "answers a photo above the server's 2 MB guard with the 20 MB limit people know".
+2. Fixed in part – "the photo must be chosen again after a rejection" is now a browser test (incl. the same rejection twice, a bug `/code-review` found); "a second pick replaces the first" is guarded in code (only the latest pick counts), not tested in the browser.
+3. Fixed – one read token per page (`viewAddresses`).
+4. Noted – without JavaScript the report is sent without a photo (`PhotoField`, `docs/architecture/photos.md`).
+5–8. Left as they are – by design (private store, signed addresses only on team pages, 3 MB body limit, 5-minute addresses); 7: the team pages keep their 360 px browser checks from ST-017/ST-021.

@@ -84,7 +84,7 @@ export function photoFormRunner({ currentPerson, storage, ...dependencies }: Pho
       const fields = fieldsOf(formData, definition.fields);
       const actor = await currentPerson();
       const outcome = await withStoredPhoto(
-        await uploadOf(formData, definition.photo.field),
+        await sentPhotoOf(formData, definition.photo.field),
         definition.photo.owner,
         { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
         (photo) => executeCommand(command, definition.input(fields, photo), { ...dependencies, actor }),
@@ -97,7 +97,7 @@ export function photoFormRunner({ currentPerson, storage, ...dependencies }: Pho
 }
 
 /** The bytes of the posted file – none for a missing, empty or non-file field. */
-async function uploadOf(formData: FormData, field: string): Promise<Uint8Array | undefined> {
+async function sentPhotoOf(formData: FormData, field: string): Promise<Uint8Array | undefined> {
   const file = formData.get(field);
   if (!(file instanceof Blob) || file.size === 0) return undefined;
   return new Uint8Array(await file.arrayBuffer());
