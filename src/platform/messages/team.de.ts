@@ -182,11 +182,8 @@ export const teamMessages = {
     noneSuitableForHelpers: "Kein offener Defekt ist für Helfer:innen geeignet.",
     noneMatch: "Kein offener Defekt passt zu diesem Filter.",
     showAll: "Alle offenen Defekte anzeigen",
-    /** How long a defect has been open, in words (G6). */
-    openFor: (hours: number) =>
-      hours < 24
-        ? "offen seit heute"
-        : `offen seit ${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "Tag" : "Tagen"}`,
+    /** How long a defect has been open, in words (G6) – the days are Berlin calendar days, counted by the page. */
+    openFor: (days: number) => (days === 0 ? "offen seit heute" : `offen seit ${days} ${days === 1 ? "Tag" : "Tagen"}`),
     notSuitableForHelpers: "Nicht für Helfer:innen geeignet",
     recordedAt: (dateTime: string) => `Erfasst am ${dateTime}`,
     problemReports: "Meldungen",

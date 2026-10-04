@@ -2,7 +2,7 @@ import { machineIdOf, machineLabels } from "@/modules/collection";
 import { openDefects, priorities, type Priority } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { elapsedHours } from "@/platform/time";
+import { calendarDate, daysBetween, today } from "@/platform/time";
 
 /** What the open defects list is narrowed to (ST-021) – all optional, they combine. */
 export type OpenDefectsFilter = {
@@ -20,7 +20,8 @@ export type OpenDefectsItem = {
   priority: Priority;
   suitableForHelpers: boolean;
   openSince: Date;
-  openHours: number;
+  /** Berlin calendar days since it was recorded – 0 on the day itself. */
+  openDays: number;
 };
 
 /** A machine the filter offers – one with open defects. */
@@ -68,7 +69,7 @@ export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDe
     db,
     all.map((defect) => defect.machineId),
   );
-  const now = clock.now();
+  const now = today(clock);
   return {
     entries: matching.map((defect) => ({
       id: defect.id,
@@ -78,7 +79,7 @@ export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDe
       priority: defect.priority,
       suitableForHelpers: defect.suitableForHelpers,
       openSince: defect.openSince,
-      openHours: elapsedHours(defect.openSince, now),
+      openDays: daysBetween(calendarDate(defect.openSince), now),
     })),
     total: all.length,
     machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),

@@ -226,6 +226,21 @@ describe("the open defects list", () => {
     expect(await page()).not.toContain("Coin door jammed");
   });
 
+  it("counts how long a defect is open in Berlin calendar days, not in periods of 24 hours", async () => {
+    const lg042 = await registered("LG-042");
+    await anOpenDefect(lg042, "Left flipper weak", { at: "2026-10-03T21:00:00Z" }); // 23:00 in Berlin
+    await anOpenDefect(lg042, "Display flickers", { at: "2026-10-04T05:30:00Z" }); // 07:30 in Berlin
+
+    const html = renderToStaticMarkup(
+      createElement(OpenDefectsView, {
+        data: await loadOpenDefects(db, fixedClock("2026-10-04T06:00:00Z"), {}), // 08:00 in Berlin
+      }),
+    );
+
+    expect(html).toContain("03.10.2026, 23:00 · offen seit 1 Tag");
+    expect(html).toContain("04.10.2026, 07:30 · offen seit heute");
+  });
+
   it("filters by priority, and combines the filters", async () => {
     const lg042 = await registered("LG-042");
     const lg007 = await registered("LG-007", attackFromMars);

@@ -3,7 +3,7 @@ import { defectDetails, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { elapsedHours } from "@/platform/time";
+import { calendarDate, daysBetween, today } from "@/platform/time";
 import type { ShownReporter } from "../../triage/triage-list-data";
 
 /** A problem report on the defect's page, its reporter named. */
@@ -23,7 +23,7 @@ export type DefectDetailsData = {
   priority: Priority;
   suitableForHelpers: boolean;
   openSince: Date;
-  openHours: number;
+  openDays: number;
   problemReports: ShownDefectProblemReport[];
 };
 
@@ -53,7 +53,7 @@ export async function loadDefectDetails(
     priority: defect.priority,
     suitableForHelpers: defect.suitableForHelpers,
     openSince: defect.openSince,
-    openHours: elapsedHours(defect.openSince, clock.now()),
+    openDays: daysBetween(calendarDate(defect.openSince), today(clock)),
     problemReports: defect.problemReports.map((report) => ({
       id: report.id,
       description: report.description,

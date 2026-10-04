@@ -48,7 +48,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
                   {entry.suitableForHelpers && ` · ${terms["Suitable for helpers"]}`}
                 </p>
                 <p className="text-muted-foreground">
-                  {formatDateTime(entry.openSince)} · {texts.openFor(entry.openHours)}
+                  {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
                 </p>
               </article>
             </li>
