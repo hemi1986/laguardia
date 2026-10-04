@@ -78,3 +78,29 @@ test("ST-064: Legal pages in English", async ({ browser }) => {
     await expect(english.getByRole("heading", { level: 1 })).not.toHaveText("Impressum");
   }
 });
+
+test("ST-064: Legal pages are reachable from every visitor page", async ({ page, browser }) => {
+  needsMachines();
+  const museumNumber = await aPlayableMachine(page);
+  const phone = await visitor(browser, "de-DE");
+
+  /** The legal links at the end of a visitor page – the privacy notice, and the imprint if the museum provides one. */
+  async function expectLegalLinks() {
+    const legal = phone.getByRole("navigation", { name: "Rechtliches" });
+    await expect(legal.getByRole("link", { name: "Datenschutz" })).toHaveAttribute("href", "/datenschutz");
+    const imprint = legal.getByRole("link", { name: "Impressum" });
+    if ((await imprint.count()) > 0) await expect(imprint).toHaveAttribute("href", "/impressum");
+  }
+
+  await phone.goto(`/m/${museumNumber}`);
+  await expectLegalLinks();
+
+  await phone.getByRole("link", { name: "Problem melden" }).click();
+  await expect(phone).toHaveURL(new RegExp(`/m/${museumNumber}/melden$`));
+  await expectLegalLinks();
+
+  await phone.getByLabel("Was ist das Problem?").fill(`Kugel hängt ${Date.now().toString(36)}`);
+  await phone.getByRole("button", { name: "Meldung senden" }).click();
+  await expect(phone.getByText("Danke! Deine Meldung ist beim Team angekommen.")).toBeVisible();
+  await expectLegalLinks();
+});

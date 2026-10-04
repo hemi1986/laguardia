@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
 import { VisitorLanguageSwitch } from "../../visitor-language-switch";
+import { VisitorLegalLinks } from "../../visitor-legal-links";
 import { currentVisitorMessages } from "../../visitor-locale";
 
 /**
@@ -17,6 +18,7 @@ export default async function UnknownMachine() {
         <Link href="/" className="self-start underline underline-offset-4">
           {messages.machinePage.toStart}
         </Link>
+        <VisitorLegalLinks messages={messages} />
       </Page>
     </div>
   );

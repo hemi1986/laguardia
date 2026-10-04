@@ -4,6 +4,7 @@ import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { currentVisitorMessages } from "../../../visitor-locale";
 import { VisitorLanguageSwitch } from "../../../visitor-language-switch";
+import { VisitorLegalLinks } from "../../../visitor-legal-links";
 import { loadReportForm } from "./report-form-data";
 import { reportProblemAction } from "./actions";
 import { ReportProblemForm } from "./report-problem-form";
@@ -36,6 +37,7 @@ export default async function ReportProblemPage({ params }: PageProps<"/m/[museu
         <Link href={machinePage} className="self-start text-sm underline underline-offset-4">
           {messages.reportForm.back}
         </Link>
+        <VisitorLegalLinks messages={messages} />
       </Page>
     </div>
   );
