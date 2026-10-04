@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Page } from "@/components/page";
-import { VisitorLanguageSwitch } from "../../visitor-language-switch";
+import { VisitorPage } from "../../visitor-page";
 import { currentVisitorMessages } from "../../visitor-locale";
 
 /**
@@ -10,14 +9,11 @@ import { currentVisitorMessages } from "../../visitor-locale";
 export default async function UnknownMachine() {
   const { locale, messages } = await currentVisitorMessages();
   return (
-    <div lang={locale}>
-      <Page title={messages.home.museum}>
-        <VisitorLanguageSwitch locale={locale} messages={messages} back="/" />
-        <p>{messages.machinePage.unknown}</p>
-        <Link href="/" className="self-start underline underline-offset-4">
-          {messages.machinePage.toStart}
-        </Link>
-      </Page>
-    </div>
+    <VisitorPage title={messages.home.museum} locale={locale} messages={messages} back="/">
+      <p>{messages.machinePage.unknown}</p>
+      <Link href="/" className="self-start underline underline-offset-4">
+        {messages.machinePage.toStart}
+      </Link>
+    </VisitorPage>
   );
 }

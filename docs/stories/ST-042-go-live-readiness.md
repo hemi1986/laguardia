@@ -24,6 +24,7 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
    - Because a machine registered after a task's start date counts as last done on its registration date (HS-20 resolution, D5), the machines are entered first and the tasks' start dates are chosen on or after the day the machines were entered – otherwise the staggering is lost.
    - The technicians write a one or two sentence instruction per task; where none is written yet, the task name is used.
 5. **Operations**: environments, monitoring, backups and the update routine are in place (ST-061, ST-062, ST-063); the legal texts from the museum are online (ST-064).
+   - Decision (user, 2026-10-04, ST-064): because the museum has not delivered its texts yet, ST-064 ships the privacy notice with clearly marked placeholder texts in German and English, and shows no imprint until the museum provides one. Replacing them with the museum's own texts is part of this task.
 6. **No spike scaffolding is left** (story review 2026-09-29): the spike code, the password-gated test page on `/` and the spike pages are gone (ST-078), and the spike configuration and data are gone (ST-066). This is a go-live blocker, not housekeeping: the blobs under the `spike/` prefix may show identifiable people and must not remain without a DPA (ADR 0006), and a password-gated test page must not be reachable in production on the museum's first day.
 
 ## Acceptance Criteria
@@ -34,6 +35,7 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
 - [ ] Every maintenance task has an instruction (the technicians' text or the task name) and one start date on or after the day the machines were entered; start dates are staggered across tasks.
 - [ ] On go-live day the due maintenance list (ST-043) shows no flood: no maintenance task is due on more than the machines the technicians expect.
 - [ ] A test restore (ST-062) and a test alert (ST-061) have been done; the privacy notice is reachable from the visitor pages (ST-064).
+- [ ] The museum's own privacy notice (and imprint, if the museum decides one is needed) in German and English has replaced the placeholder texts in the visitor message catalogs (`src/platform/messages/visitor.de.ts`, `visitor.en.ts`, section `legal`); no placeholder text remains on `/datenschutz` or `/impressum`.
 
 ## Out of Scope
 - Maintenance records from before go-live

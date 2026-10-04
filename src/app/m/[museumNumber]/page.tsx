@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMemberIfLoggedIn } from "../../team-session";
 import { currentVisitorMessages } from "../../visitor-locale";
-import { VisitorLanguageSwitch } from "../../visitor-language-switch";
+import { VisitorPage } from "../../visitor-page";
 import { loadVisitorMachinePage } from "./visitor-machine-page-data";
 import { VisitorMachinePage } from "./visitor-machine-page";
 
@@ -25,16 +24,13 @@ export default async function VisitorMachineRoute({ params, searchParams }: Page
   if (!data) notFound();
 
   return (
-    <div lang={locale}>
-      <Page title={data.machineModelTitle}>
-        <VisitorLanguageSwitch locale={locale} messages={messages} back={`/m/${museumNumber}`} />
-        <VisitorMachinePage
-          data={data}
-          museumNumber={museumNumber}
-          messages={messages}
-          reported={(await searchParams).gemeldet !== undefined}
-        />
-      </Page>
-    </div>
+    <VisitorPage title={data.machineModelTitle} locale={locale} messages={messages} back={`/m/${museumNumber}`}>
+      <VisitorMachinePage
+        data={data}
+        museumNumber={museumNumber}
+        messages={messages}
+        reported={(await searchParams).gemeldet !== undefined}
+      />
+    </VisitorPage>
   );
 }

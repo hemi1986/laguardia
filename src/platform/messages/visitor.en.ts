@@ -35,6 +35,39 @@ export const visitorEn: VisitorMessages = {
     back: "Back to the machine",
     reported: "Thank you! Your report has reached the team.",
   },
+  legal: {
+    label: "Legal",
+    privacyNoticeLink: "Privacy",
+    imprintLink: "Imprint",
+    privacyNotice: {
+      title: "Privacy notice",
+      sections: [
+        {
+          heading: "Placeholder",
+          paragraphs: ["PLACEHOLDER – The museum replaces this draft with its own privacy notice before going live."],
+        },
+        {
+          heading: "Responsible",
+          paragraphs: ["Flipper- & Arcade Museum Eschbach. [PLACEHOLDER: the museum's address and contact]"],
+        },
+        {
+          heading: "Problem reports",
+          paragraphs: [
+            "On these pages you can report a problem with a machine. We collect no contact data: no name, no e-mail address, no account.",
+            "Only the museum's team members see your report.",
+          ],
+        },
+        {
+          heading: "Photos",
+          paragraphs: [
+            "If you add a photo to your report, we remove the GPS data from the image. Only the museum's team members see the photo.",
+            "A photo is kept as long as its report.",
+          ],
+        },
+      ],
+    },
+    imprint: null,
+  },
   commandErrors: {
     "description-required": "Please describe the problem.",
     "description-too-long": "Please keep it shorter: at most 2000 characters.",
