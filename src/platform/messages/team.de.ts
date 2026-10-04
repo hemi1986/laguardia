@@ -244,6 +244,11 @@ export const teamMessages = {
    * Every error code of a command a team form runs needs one here – otherwise the form fails the type check.
    */
   commandErrors: {
+    /** The photo errors (ST-016), defined once in the photo module. */
+    "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
+    "not-an-image": "Das ist kein Foto. Bitte ein Foto wählen oder es weglassen.",
+    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
+    "not-stored": "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden.",
     "title-required": "Bitte einen Titel angeben.",
     "manufacturer-required": "Bitte einen Hersteller angeben.",
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",

@@ -104,6 +104,11 @@ export const visitorDe = {
   commandErrors: {
     "description-required": "Bitte beschreibe das Problem.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
+    /** The photo errors (ST-016), defined once in the photo module – the original limit people know is 20 MB. */
+    "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
+    "not-an-image": "Das ist kein Foto. Bitte wähle ein Foto aus oder lass es weg.",
+    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte wähle ein Foto (JPEG, PNG oder WebP) aus oder lass es weg.",
+    "not-stored": "Das Foto konnte nicht gesendet werden. Versuche es noch einmal oder sende die Meldung ohne Foto.",
     "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
     "machine-retired": "Dieses Gerät ist nicht mehr im Museum.",
