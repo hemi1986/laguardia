@@ -1,7 +1,5 @@
-import { Page } from "@/components/page";
 import type { LegalText, VisitorLocale, VisitorMessages } from "@/platform/messages";
-import { VisitorLanguageSwitch } from "./visitor-language-switch";
-import { VisitorLegalLinks } from "./visitor-legal-links";
+import { VisitorPage } from "./visitor-page";
 
 /**
  * A legal page of the visitor pages (ST-064) – the privacy notice or the imprint, as the museum provides it, in the
@@ -20,19 +18,15 @@ export function LegalPage({
   path: string;
 }) {
   return (
-    <div lang={locale}>
-      <Page title={text.title}>
-        <VisitorLanguageSwitch locale={locale} messages={messages} back={path} />
-        {text.sections.map((section) => (
-          <section key={section.heading} className="flex flex-col gap-2">
-            <h2 className="font-medium">{section.heading}</h2>
-            {section.paragraphs.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </section>
-        ))}
-        <VisitorLegalLinks messages={messages} />
-      </Page>
-    </div>
+    <VisitorPage title={text.title} locale={locale} messages={messages} back={path}>
+      {text.sections.map((section, index) => (
+        <section key={index} className="flex flex-col gap-2">
+          <h2 className="font-medium">{section.heading}</h2>
+          {section.paragraphs.map((paragraph, paragraphIndex) => (
+            <p key={paragraphIndex}>{paragraph}</p>
+          ))}
+        </section>
+      ))}
+    </VisitorPage>
   );
 }

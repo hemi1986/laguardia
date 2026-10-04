@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { currentVisitorMessages } from "../../../visitor-locale";
-import { VisitorLanguageSwitch } from "../../../visitor-language-switch";
-import { VisitorLegalLinks } from "../../../visitor-legal-links";
+import { VisitorPage } from "../../../visitor-page";
 import { loadReportForm } from "./report-form-data";
 import { reportProblemAction } from "./actions";
 import { ReportProblemForm } from "./report-problem-form";
@@ -24,21 +22,17 @@ export default async function ReportProblemPage({ params }: PageProps<"/m/[museu
   const machinePage = `/m/${encodeURIComponent(museumNumber)}`;
 
   return (
-    <div lang={locale}>
-      <Page title={messages.reportForm.title}>
-        <VisitorLanguageSwitch locale={locale} messages={messages} back={`${machinePage}/melden`} />
-        <p className="text-muted-foreground">
-          {machine.machineModelTitle} · {museumNumber}
-        </p>
-        <ReportProblemForm
-          action={reportProblemAction.bind(null, museumNumber)}
-          messages={{ reportForm: messages.reportForm, commandErrors: messages.commandErrors }}
-        />
-        <Link href={machinePage} className="self-start text-sm underline underline-offset-4">
-          {messages.reportForm.back}
-        </Link>
-        <VisitorLegalLinks messages={messages} />
-      </Page>
-    </div>
+    <VisitorPage title={messages.reportForm.title} locale={locale} messages={messages} back={`${machinePage}/melden`}>
+      <p className="text-muted-foreground">
+        {machine.machineModelTitle} · {museumNumber}
+      </p>
+      <ReportProblemForm
+        action={reportProblemAction.bind(null, museumNumber)}
+        messages={{ reportForm: messages.reportForm, commandErrors: messages.commandErrors }}
+      />
+      <Link href={machinePage} className="self-start text-sm underline underline-offset-4">
+        {messages.reportForm.back}
+      </Link>
+    </VisitorPage>
   );
 }

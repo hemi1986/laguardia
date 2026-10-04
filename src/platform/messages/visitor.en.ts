@@ -60,7 +60,7 @@ export const visitorEn: VisitorMessages = {
         {
           heading: "Photos",
           paragraphs: [
-            "If you add a photo to your report, we remove the location data from the image. Only the museum's team members see the photo.",
+            "If you add a photo to your report, we remove the GPS data from the image. Only the museum's team members see the photo.",
             "A photo is kept as long as its report.",
           ],
         },

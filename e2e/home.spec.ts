@@ -1,8 +1,8 @@
 import { expect, test } from "./fixtures";
 
 /**
- * The start page after the spike scaffolding is gone (ST-078): a minimal public placeholder with the museum's name
- * and a link to the team login – until the visitor machine page (ST-010) and the legal pages (ST-064) exist.
+ * The start page after the spike scaffolding is gone (ST-078): a minimal public page with the museum's name, a link to
+ * the team login and the legal links (ST-064).
  * Runs against the preview too: it needs no account and no data. A German browser – the start page follows the
  * visitor's language since ST-010.
  */

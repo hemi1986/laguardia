@@ -70,12 +70,19 @@ test("ST-064: Legal pages in English", async ({ browser }) => {
   await expect(english.getByRole("heading", { level: 1, name: "Privacy notice" })).toBeVisible();
   await expect(english.getByText("We collect no contact data", { exact: false })).toBeVisible();
 
+  // The language switch of a legal page comes back to the same legal page.
+  await english.getByRole("button", { name: "Deutsch" }).click();
+  await expect(phone).toHaveURL(/\/datenschutz$/);
+  await expect(phone.locator('[lang="de"]').getByRole("heading", { level: 1, name: "Datenschutzhinweis" })).toBeVisible();
+  await phone.getByRole("button", { name: "English" }).click();
+  await expect(english.getByRole("heading", { level: 1, name: "Privacy notice" })).toBeVisible();
+
   // The imprint is offered only once the museum provides one (ST-064) – then it is in English too.
   const imprint = english.getByRole("link", { name: "Imprint" });
   if ((await imprint.count()) > 0) {
     await imprint.click();
     await expect(phone).toHaveURL(/\/impressum$/);
-    await expect(english.getByRole("heading", { level: 1 })).not.toHaveText("Impressum");
+    await expect(english.getByRole("heading", { level: 1 })).toBeVisible();
   }
 });
 
@@ -103,4 +110,14 @@ test("ST-064: Legal pages are reachable from every visitor page", async ({ page,
   await phone.getByRole("button", { name: "Meldung senden" }).click();
   await expect(phone.getByText("Danke! Deine Meldung ist beim Team angekommen.")).toBeVisible();
   await expectLegalLinks();
+});
+
+test("the imprint address is not found while the museum provides no imprint", async ({ browser }) => {
+  const phone = await visitor(browser, "de-DE");
+  // Once the museum provides an imprint, the start page offers it and this check no longer applies (ST-064).
+  test.skip((await phone.getByRole("link", { name: "Impressum" }).count()) > 0, "the museum provides an imprint");
+
+  const response = await phone.goto("/impressum");
+
+  expect(response?.status()).toBe(404);
 });
