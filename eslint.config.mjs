@@ -3,6 +3,12 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+/** ST-016: `@vercel/blob` belongs to the Blob adapter of the storage seam (`src/platform/storage/blob-storage.ts`). */
+const blobOnlyInTheAdapter = {
+  group: ["@vercel/blob", "@vercel/blob/*"],
+  message: "Store content only through the storage seam (src/platform/storage) – its Blob adapter is the one place for @vercel/blob (ST-016)",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -17,7 +23,8 @@ const eslintConfig = defineConfig([
         { type: "platform", pattern: "src/platform" },
         { type: "app", pattern: "src/app" },
         { type: "ui", pattern: "src/(components|lib)" },
-        { type: "shared", pattern: "src/(photo|test-support)" },
+        { type: "photo", pattern: "src/photo" },
+        { type: "shared", pattern: "src/test-support" },
       ],
     },
     rules: {
@@ -50,6 +57,12 @@ const eslintConfig = defineConfig([
               from: { element: { type: "module" } },
               disallow: { to: { element: { type: "app" } } },
               message: "A module must not depend on the app – ADR 0002",
+            },
+            {
+              // The photo module (ST-016) is used through its public interface only – one way to store a photo.
+              from: { element: { type: ["app", "module", "platform", "ui", "shared"] } },
+              disallow: { to: { element: { type: "photo", fileInternalPath: "!{index,browser}.ts" } } },
+              message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
             },
             {
               // Shared UI components (ST-076) carry no domain logic: a page may use them, they know nothing of
@@ -85,6 +98,14 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // ST-016 (architecture review Q8): Vercel Blob is reached only through the storage seam's Blob adapter.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/platform/storage/blob-storage.ts", "src/app/**"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [blobOnlyInTheAdapter] }],
+    },
+  },
+  {
     // Architecture review Q10 (ST-073): the Server Action runner in src/app/_actions/ is the only way from a form
     // to a command – it takes the acting person from currentPerson(), so no Server Action can pass its own actor.
     files: ["src/app/**/*.{ts,tsx}"],
@@ -94,6 +115,7 @@ const eslintConfig = defineConfig([
         "error",
         {
           patterns: [
+            blobOnlyInTheAdapter,
             {
               group: ["@/platform/command", "**/platform/command", "**/platform/command/index"],
               importNames: ["executeCommand"],
