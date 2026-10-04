@@ -47,3 +47,8 @@ No gap meets the follow-up hurdle. There is no security or data-loss risk and no
 
 ## Verdict
 **accepted with remarks.** All 11 scenarios have a correctly titled, passing test that checks its Then lines with literal values. The remarks are that "No defect is open" is tested at view level only and that the defect page does not distinguish a resolved defect. Neither needs a new story.
+
+## Resolution (2026-10-04, `/implement ST-021` step 6)
+- "No defect is open" now runs through the page's data on an emptied database (code review #3, 4ac3360).
+- The defect's page no longer calls a resolved defect open (code review #2, e0f049d); how it reads otherwise belongs to ST-028.
+- The overview count linking to the filtered list and pagination stay questions – the first goes with the open question on the machine record's section 4 (`docs/stories/OPEN_QUESTIONS.md`).

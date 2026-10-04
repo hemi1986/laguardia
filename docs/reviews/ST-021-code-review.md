@@ -26,3 +26,18 @@ rendered escaped by React.
 
 **Verdict: ready to merge** – no blockers; fix the two majors in this story (each well under an hour).
 Most important finding: #1 – "offen seit N Tagen" is calendar logic in the message catalogue counting 24-hour periods, so it can say "seit heute" for a defect recorded yesterday; compute calendar days with `time.ts` in the page data.
+
+## Resolution (2026-10-04, `/implement ST-021` step 6)
+
+| # | Outcome | Commit |
+|---|---|---|
+| 1 | Fixed – the page data counts Berlin calendar days (`daysBetween(calendarDate(…), today(clock))`); `openFor` only words them. New test at the day boundary (23:00 yesterday → "offen seit 1 Tag" at 08:00). | 2cc3616 |
+| 2 | Fixed – `DefectDetails` is its own type with the defect's state and `recordedAt`; "offen seit …" only for an open defect. New test with a resolved defect. How a resolved defect's page reads stays with ST-028. | e0f049d |
+| 3 | Fixed – "ST-021: No defect is open" runs through `loadOpenDefects` on an emptied isolated database; the nothing-matches wording stays a view table test. | 4ac3360 |
+| 4 | Fixed – `ShownReporter`, `shownReporter` and `reporterName` live in `src/app/(team)/team/reporter.ts`, used by the triage list, the problem report's page and the defect's page. | 4ac3360 |
+| 5 | Fixed – the `CASE` is built from `priorities`. | 1998497 |
+| 6 | Fixed on the defect page. The pre-existing link in `machine-overview.tsx` is ST-008's code and is left as it is – revisit when HS-18's corrected museum numbers come in. | 1998497 |
+| 7 | Skipped minor – the same fallback is the pattern of the triage list (ST-017); a shared "machine label" helper is worth it once a third page needs it. Revisit at `/improve-codebase-architecture`. | – |
+| 8 | Fixed – a machine the address names stays chosen in the select even when it is not offered. | 1998497 |
+
+No finding passes the follow-up hurdle; no new story.
