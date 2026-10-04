@@ -148,4 +148,14 @@ describe("the open defects list", () => {
     expect(html).toContain("Priorität: normal");
     expect(html.indexOf("Left flipper weak")).toBeLessThan(html.indexOf("Display flickers"));
   });
+
+  it("ST-021: Oldest first within a priority", async () => {
+    const lg042 = await registered("LG-042");
+    await anOpenDefect(lg042, "Display flickers", { at: daysBefore(2) });
+    await anOpenDefect(lg042, "Rubber cracked", { at: daysBefore(10) });
+
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), {});
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Rubber cracked", "Display flickers"]);
+  });
 });
