@@ -9,6 +9,7 @@ import { reportProblemCommand } from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
+import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadTriageList } from "./triage-list-data";
@@ -60,10 +61,10 @@ async function registered(museumNumber: string, machineModelId = medievalMadness
   return outcome.result.machineId;
 }
 
-async function reported(machineId: string, description: string, at: string, actor: Actor = visitor) {
+async function reported(machineId: string, description: string, at: string, actor: Actor = visitor, photo?: string) {
   const outcome = await executeCommand(
     reportProblemCommand,
-    { machineId, description },
+    { machineId, description, photo },
     { actor, db, clock: fixedClock(at), newId: randomUUID },
   );
   if (!outcome.ok) throw new Error(outcome.error);
@@ -170,5 +171,23 @@ describe("the triage list", () => {
 
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).not.toContain("<script>");
+  });
+
+  it("ST-016: Technician sees the photo in the triage list", async () => {
+    const photo = `problem-reports/${randomUUID()}.jpg`;
+    await reported(await registered("LG-042"), "Right flipper dead", hoursBefore(2), visitor, photo);
+    await reported(await registered("LG-007"), "Rubber cracked", hoursBefore(1));
+
+    const data = await loadTriageList(db, fixedClock(NOW), { storage: memoryStorage() });
+    const html = renderToStaticMarkup(createElement(TriageListView, { data }));
+
+    const address = `memory://${photo}?valid-until=2026-10-03T16:05:00.000Z`;
+    expect(data.entries.map((entry) => [entry.museumNumber, entry.photo?.address])).toEqual([
+      ["LG-042", address],
+      ["LG-007", undefined],
+    ]);
+    expect(html).toContain(`<img src="${address}" alt="Foto zur Meldung"`);
+    expect(html.match(/<img /g)).toHaveLength(1);
+    expect(html.indexOf("<img ")).toBeLessThan(html.indexOf("LG-007"));
   });
 });

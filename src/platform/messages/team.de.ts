@@ -117,6 +117,10 @@ export const teamMessages = {
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,
     statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
   },
+  /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
+  problemReportPhoto: {
+    alt: "Foto zur Meldung",
+  },
   /** The triage list and a problem report's own page (ST-017). */
   triage: {
     title: "Sichtung",

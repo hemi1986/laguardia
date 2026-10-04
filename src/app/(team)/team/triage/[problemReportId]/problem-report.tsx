@@ -4,6 +4,7 @@ import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
+import { ProblemReportPhoto } from "../../problem-report-photo";
 import type { ProblemReportData } from "./problem-report-data";
 
 const { triage: texts, terms } = teamMessages;
@@ -33,6 +34,7 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
     <>
       {triaged && <p className="font-medium">{texts.alreadyTriaged}</p>}
       <p className="whitespace-pre-line [overflow-wrap:anywhere]">{report.description}</p>
+      {report.photo && <ProblemReportPhoto address={report.photo.address} />}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (
           <div key={term} className="contents">
