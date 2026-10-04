@@ -20,6 +20,7 @@ export const teamMessages = {
     "Problem report": "Meldung",
     Triage: "Sichtung",
     Defect: "Defekt",
+    "Suitable for helpers": "Für Helfer:innen geeignet",
     "Maintenance task": "Wartungsaufgabe",
   },
   login: {
@@ -41,6 +42,7 @@ export const teamMessages = {
     machineModels: "Modelle",
     machines: "Geräte",
     triage: "Sichtung",
+    defects: "Defekte",
     ownPassword: "Passwort ändern",
   },
   machineModels: {
@@ -156,7 +158,18 @@ export const teamMessages = {
     statusNow: (museumNumber: string, status: string) => ` ${museumNumber} ist jetzt ${status}.`,
     alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
     toTriage: "Zurück zur Sichtung",
-    retiredMeanwhile: (museumNumber: string) => `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
+    retiredMeanwhile: (museumNumber: string) =>
+      `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
+  },
+  /** The open defects list and a defect's own page (ST-021). */
+  defects: {
+    title: "Defekte",
+    priority: (priority: string) => `Priorität: ${priority}`,
+    /** How long a defect has been open, in words (G6). */
+    openFor: (hours: number) =>
+      hours < 24
+        ? "offen seit heute"
+        : `offen seit ${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "Tag" : "Tagen"}`,
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,

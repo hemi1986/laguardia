@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
-import type { Defect } from "./defect";
+import type { Defect, Priority } from "./defect";
 import { defect } from "./schema";
 
 /** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16). */
@@ -45,4 +45,37 @@ export async function defectTitle(
     .from(defect)
     .where(eq(defect.id, defectId));
   return row;
+}
+
+/** One open defect as the open defects list shows it (RM-OpenDefects, ST-021) – its machine by ID; the page names it. */
+export type OpenDefect = {
+  id: string;
+  machineId: string;
+  title: string;
+  priority: Priority;
+  suitableForHelpers: boolean;
+  /** When it was recorded – it has been open since then (data model: Recorded at). */
+  openSince: Date;
+};
+
+/** High first, then normal, then low (ST-021). */
+const priorityRank = sql`CASE ${defect.priority} WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END`;
+
+/**
+ * RM-OpenDefects (ST-021): every open defect, by priority – high first –, within a priority the oldest first. Claim,
+ * hold, work log and linked problem reports follow with ST-022, ST-024, ST-025 and ST-029.
+ */
+export async function openDefects(db: Database): Promise<OpenDefect[]> {
+  return db
+    .select({
+      id: defect.id,
+      machineId: defect.machineId,
+      title: defect.title,
+      priority: defect.priority,
+      suitableForHelpers: defect.suitableForHelpers,
+      openSince: defect.recordedAt,
+    })
+    .from(defect)
+    .where(eq(defect.state, "open"))
+    .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
 }
