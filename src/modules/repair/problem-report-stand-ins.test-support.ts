@@ -230,3 +230,23 @@ export const reportAndChangeStatusForTest = aggregateCommand({
 export async function storedDefect(db: Database, defectId: string) {
   return (await defects.load(db, defectId))?.state;
 }
+
+/** Test stand-in for CMD-ResolveDefect (ST-028): the defect is resolved at the version the team member saw. */
+export const resolveDefectForTest = aggregateCommand({
+  id: "CMD-TestResolveDefect",
+  allowedActors: ["helper", "technician"],
+  store: defects,
+  target: (input: { defectId: string; version: number }) => ({ id: input.defectId, version: input.version }),
+  decide: (defect) => ({
+    ok: true as const,
+    state: { ...defect, state: "resolved" as const },
+    events: [{ type: "EVT-TestDefectResolved" as const }],
+  }),
+  journal: (event, defect) => ({
+    type: event.type,
+    aggregate: { type: "AGG-Defect", id: defect.id },
+    machineId: defect.machineId,
+    data: {},
+  }),
+  result: () => ({}),
+});

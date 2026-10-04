@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { recordDefectCommand, reportProblemCommand, type Priority } from "@/modules/repair";
+import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -205,6 +206,24 @@ describe("the open defects list", () => {
     expect(html).not.toContain("Display flickers");
     expect(html).toContain("Kein offener Defekt ist für Helfer:innen geeignet.");
     expect(html).toMatch(/<a [^>]*href="\/team\/defects"[^>]*>Alle offenen Defekte anzeigen<\/a>/);
+  });
+
+  it("ST-021: Resolved defects are not listed", async () => {
+    const lg042 = await registered("LG-042");
+    await anOpenDefect(lg042, "Left flipper weak");
+    const coinDoor = await anOpenDefect(lg042, "Coin door jammed");
+    const resolved = await executeCommand(
+      resolveDefectForTest,
+      { defectId: coinDoor, version: 0 },
+      { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+
+    const data = await loadOpenDefects(db, fixedClock(NOW), {});
+
+    expect(data.entries.map((entry) => entry.title)).toEqual(["Left flipper weak"]);
+    expect(data.total).toBe(1);
+    expect(await page()).not.toContain("Coin door jammed");
   });
 
   it("filters by priority, and combines the filters", async () => {
