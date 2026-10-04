@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-ProblemReported]
 depends_on: [ST-002, ST-015, ST-017, ST-021, ST-064, ST-073]
 labels: [mvp, visitor, triage, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
@@ -109,7 +109,7 @@ Scenario: Only team members can see the photo
 - [x] The Blob adapter stores a photo in a real private Blob store: shown by the browser test of the scenario "Visitor adds a photo taken with the phone camera", which runs locally against a separate Development Blob store (its credentials in `.env.development.local`; without them the photo browser tests skip).
 - [x] `docs/architecture/photos.md` describes the module's public interface and the store → run → delete-on-failure order instead of "orphaned, accepted for now", referring to ADR 0007.
 - [x] Converts the existing code (no test weakened); `npm run verify` is green.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): module layout (photo module, storage seam), "a photo is stored only through the photo module's store-run-delete operation", the injected storage adapter, the seam catalog row for code that stores content, and forms with a photo in the Server Action runner.
+- [x] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): module layout (photo module, storage seam), "a photo is stored only through the photo module's store-run-delete operation", the injected storage adapter, the seam catalog row for code that stores content, and forms with a photo in the Server Action runner.
 
 ## Out of Scope
 - Several photos per problem report
