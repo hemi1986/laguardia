@@ -187,6 +187,12 @@ describe("module boundaries", () => {
     expect(await importErrors("src/app/deliberate-violation.ts", importing)).toEqual([
       expect.stringContaining("storage seam"),
     ]);
+    expect(await importErrors("src/app/_actions/deliberate-violation.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/app/deliberate.integration.test.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
     expect(await importErrors("src/platform/storage/blob-storage.ts", importing)).toEqual([]);
   });
 
@@ -198,5 +204,12 @@ describe("module boundaries", () => {
     expect(await boundaryErrors("src/modules/repair/deliberate-violation.ts", internals)).toHaveLength(1);
     expect(await boundaryErrors("src/app/allowed.ts", publicInterface)).toEqual([]);
     expect(await boundaryErrors("src/photo/allowed.ts", internals.replace("@/photo/", "./"))).toEqual([]);
+    // The photo module sits below the modules and the app, like the platform.
+    expect(
+      await boundaryErrors(
+        "src/photo/deliberate-violation.ts",
+        'import { reportProblemCommand } from "@/modules/repair";\nexport const x = reportProblemCommand;\n',
+      ),
+    ).toHaveLength(1);
   });
 });

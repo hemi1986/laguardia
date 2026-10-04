@@ -54,6 +54,12 @@ const eslintConfig = defineConfig([
               message: "The platform must not depend on modules or the app – ADR 0002",
             },
             {
+              // The photo module (ST-016) sits below the modules and the app, like the platform.
+              from: { element: { type: "photo" } },
+              disallow: { to: { element: { type: ["module", "app"] } } },
+              message: "The photo module must not depend on modules or the app – ST-016",
+            },
+            {
               from: { element: { type: "module" } },
               disallow: { to: { element: { type: "app" } } },
               message: "A module must not depend on the app – ADR 0002",
@@ -106,7 +112,8 @@ const eslintConfig = defineConfig([
   {
     // ST-016 (architecture review Q8): Vercel Blob is reached only through the storage seam's Blob adapter.
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/platform/storage/blob-storage.ts", "src/app/**"],
+    // src/app/ outside the runner and its tests gets the same pattern from the next block (one rule, one list per file).
+    ignores: ["src/platform/storage/blob-storage.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [blobOnlyInTheAdapter] }],
     },

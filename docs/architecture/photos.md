@@ -22,7 +22,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 | `photoViewAddresses(storage, clock, photos)` | `src/photo/store-photo.ts` (server, ST-016) | Addresses valid for 5 minutes from the injected clock's time – only issued after the page's access check (team pages, HS-1). |
 | `photoFormAction` | `src/app/_actions/form-action.ts` (ST-016) | The Server Action runner for a form with a photo: the same runner (ST-073), the command run through `withStoredPhoto`. |
 | `PhotoField` | `src/app/photo-field.tsx` (browser, ST-016) | The form's photo: two pickers without a name ("Foto aufnehmen" with `capture`, "Foto auswählen"), `preparePhoto`, then the prepared JPEG goes into the form's file field (`DataTransfer`) – the form still posts natively. |
-| Storage seam | `src/platform/storage/` (ST-016) | `ContentStorage`: write, delete, view address. `blobStorage()` (the only importer of `@vercel/blob`, lint) and `memoryStorage()` for integration tests – injected like the clock. |
+| Storage seam | `src/platform/storage/` (ST-016) | `ContentStorage`: write, delete, `viewAddresses` (one read token per page, every address signed on the server). `blobStorage()` (the only importer of `@vercel/blob`, lint) and `memoryStorage()` for integration tests – injected like the clock. |
 
 **Public interface:** `src/photo/index.ts` (server) and `src/photo/browser.ts` (client components); lint refuses any other import of the module.
 | Limits | `src/photo/limits.ts` (`PHOTO_LIMITS`) | The numbers below, used by both halves. |
