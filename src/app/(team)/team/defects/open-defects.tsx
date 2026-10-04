@@ -61,12 +61,19 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
 
 /** Machine, priority and suitable for helpers (ST-021) – they combine; the form keeps what is chosen. */
 function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "filter">) {
+  // A machine the address names but the list does not offer (no open defects, or a link from elsewhere) stays chosen,
+  // so the form never claims "Alle Geräte" while the list is narrowed to one.
+  const unoffered =
+    filter.museumNumber && !machines.some((machine) => machine.museumNumber === filter.museumNumber)
+      ? filter.museumNumber
+      : undefined;
   return (
     <form action="/team/defects" role="search" aria-label={texts.filter} className="flex flex-col gap-3">
       <Field>
         <FieldLabel htmlFor="machine">{terms.Machine}</FieldLabel>
         <NativeSelect id="machine" name="machine" defaultValue={filter.museumNumber ?? ""}>
           <option value="">{texts.allMachines}</option>
+          {unoffered && <option value={unoffered}>{unoffered}</option>}
           {machines.map((machine) => (
             <option key={machine.museumNumber} value={machine.museumNumber}>
               {machine.museumNumber} · {machine.machineModelTitle}

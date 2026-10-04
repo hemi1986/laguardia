@@ -21,6 +21,19 @@ describe("a filter that matches nothing, in its own words", () => {
   });
 });
 
+describe("the machine filter", () => {
+  it("keeps a machine the address names even when it has no open defects, so the form says what is filtered", () => {
+    const html = view({
+      total: 3,
+      machines: [{ museumNumber: "LG-042", machineModelTitle: "Medieval Madness" }],
+      filter: { museumNumber: "LG-100" },
+    });
+
+    expect(html).toMatch(/<option value="LG-100" selected="">LG-100<\/option>/);
+    expect(html).toContain('<option value="LG-042">LG-042 · Medieval Madness</option>');
+  });
+});
+
 describe("the filter of the open defects list, from the address", () => {
   it.each([
     [{}, {}],

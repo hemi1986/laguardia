@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
-import type { Defect, DefectState, Priority } from "./defect";
+import { priorities, type Defect, type DefectState, type Priority } from "./defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect } from "./schema";
 
@@ -68,8 +68,11 @@ export type OpenDefectsQuery = {
   suitableForHelpers?: boolean;
 };
 
-/** High first, then normal, then low (ST-021). */
-const priorityRank = sql`CASE ${defect.priority} WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END`;
+/** In the order of `priorities` – high first, then normal, then low (ST-021). */
+const priorityRank = sql`CASE ${defect.priority} ${sql.join(
+  priorities.map((priority, rank) => sql`WHEN ${priority} THEN ${sql.raw(String(rank))}`),
+  sql` `,
+)} END`;
 
 /**
  * RM-OpenDefects (ST-021): every open defect, by priority – high first –, within a priority the oldest first. Claim,

@@ -26,7 +26,10 @@ export function DefectDetailsView({ details }: { details: DefectDetailsData | un
     <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
       <section className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">{details.title}</h2>
-        <Link href={`/team/machines/${details.museumNumber}`} className="self-start underline underline-offset-4">
+        <Link
+          href={`/team/machines/${encodeURIComponent(details.museumNumber)}`}
+          className="self-start underline underline-offset-4"
+        >
           {details.museumNumber} · {details.machineModelTitle}
         </Link>
         <p className="text-sm">{texts.priority(recordDefect.priorities[details.priority])}</p>
