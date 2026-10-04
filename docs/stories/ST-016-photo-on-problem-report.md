@@ -93,22 +93,22 @@ Scenario: Only team members can see the photo
   Then the photo is not shown and cannot be opened
 
 ### Foundation (moved from ST-072 and ST-073 on 2026-09-27 – architecture review Q7, Q8, Q16, Q17, Q22; ADR 0007)
-- [ ] A storage seam in `src/platform/` offers write, delete and a short-lived view address; it has a Vercel Blob adapter and an in-memory adapter, and domain code reaches Blob only through it.
-- [ ] `@vercel/blob` may be imported only by the Blob adapter: a deliberate import of `@vercel/blob` from any other file under `src/` makes `npm run verify` fail (lint rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
-- [ ] The storage adapter is injected like the clock and the ID generator; integration tests use the in-memory adapter and never reach Vercel Blob.
-- [ ] The photo module has an `index.ts`; other code imports only it (module boundary rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
-- [ ] The photo module's "store, run, delete on failure": with an accepted command the photo is stored and the command received exactly its reference (integration test with a test stand-in command, in-memory adapter).
-- [ ] A rejected command leaves no stored photo (integration test, in-memory adapter).
-- [ ] A command that throws leaves no stored photo, and the error still reaches the caller (integration test, in-memory adapter).
-- [ ] A command rejected with `not-authorized` leaves no stored photo (integration test, in-memory adapter).
-- [ ] A form with a photo runs through the photo module's store-run-delete via the Server Action runner (ST-073): when its command is rejected, the action returns `{ error, values }` and no photo is stored (integration test with a test stand-in command and the in-memory storage adapter; moved from ST-073).
-- [ ] A photo's ID and the validity of its view address come from the injected ID generator and clock: with a fixed ID and `fixedClock(…)` the stored name and the expiry (5 minutes after the clock's time) are exactly as expected (test with the in-memory adapter); no `randomUUID()` or `Date.now()` is left in `src/photo/`.
-- [ ] Deleting a stored photo through the seam makes it unreadable (integration test, in-memory adapter).
-- [ ] Every photo error code has a text in `team.de`, `visitor.de` and `visitor.en` (extends `src/platform/messages/messages.test.ts`); the error codes are defined once in the photo module.
-- [ ] The photo rules are unchanged: `src/photo/accept-photo.test.ts` and `src/photo/prepare-photo.test.ts` stay green without changed assertions.
-- [ ] The Blob adapter stores a photo in a real private Blob store: shown by the browser test of the scenario "Visitor adds a photo taken with the phone camera", which runs locally against a separate Development Blob store (its credentials in `.env.development.local`; without them the photo browser tests skip).
-- [ ] `docs/architecture/photos.md` describes the module's public interface and the store → run → delete-on-failure order instead of "orphaned, accepted for now", referring to ADR 0007.
-- [ ] Converts the existing code (no test weakened); `npm run verify` is green.
+- [x] A storage seam in `src/platform/` offers write, delete and a short-lived view address; it has a Vercel Blob adapter and an in-memory adapter, and domain code reaches Blob only through it.
+- [x] `@vercel/blob` may be imported only by the Blob adapter: a deliberate import of `@vercel/blob` from any other file under `src/` makes `npm run verify` fail (lint rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
+- [x] The storage adapter is injected like the clock and the ID generator; integration tests use the in-memory adapter and never reach Vercel Blob.
+- [x] The photo module has an `index.ts`; other code imports only it (module boundary rule in `eslint.config.mjs`, shown by a case in `src/platform/module-boundaries.test.ts`).
+- [x] The photo module's "store, run, delete on failure": with an accepted command the photo is stored and the command received exactly its reference (integration test with a test stand-in command, in-memory adapter).
+- [x] A rejected command leaves no stored photo (integration test, in-memory adapter).
+- [x] A command that throws leaves no stored photo, and the error still reaches the caller (integration test, in-memory adapter).
+- [x] A command rejected with `not-authorized` leaves no stored photo (integration test, in-memory adapter).
+- [x] A form with a photo runs through the photo module's store-run-delete via the Server Action runner (ST-073): when its command is rejected, the action returns `{ error, values }` and no photo is stored (integration test with a test stand-in command and the in-memory storage adapter; moved from ST-073).
+- [x] A photo's ID and the validity of its view address come from the injected ID generator and clock: with a fixed ID and `fixedClock(…)` the stored name and the expiry (5 minutes after the clock's time) are exactly as expected (test with the in-memory adapter); no `randomUUID()` or `Date.now()` is left in `src/photo/`.
+- [x] Deleting a stored photo through the seam makes it unreadable (integration test, in-memory adapter).
+- [x] Every photo error code has a text in `team.de`, `visitor.de` and `visitor.en` (extends `src/platform/messages/messages.test.ts`); the error codes are defined once in the photo module.
+- [x] The photo rules are unchanged: `src/photo/accept-photo.test.ts` and `src/photo/prepare-photo.test.ts` stay green without changed assertions.
+- [x] The Blob adapter stores a photo in a real private Blob store: shown by the browser test of the scenario "Visitor adds a photo taken with the phone camera", which runs locally against a separate Development Blob store (its credentials in `.env.development.local`; without them the photo browser tests skip).
+- [x] `docs/architecture/photos.md` describes the module's public interface and the store → run → delete-on-failure order instead of "orphaned, accepted for now", referring to ADR 0007.
+- [x] Converts the existing code (no test weakened); `npm run verify` is green.
 - [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): module layout (photo module, storage seam), "a photo is stored only through the photo module's store-run-delete operation", the injected storage adapter, the seam catalog row for code that stores content, and forms with a photo in the Server Action runner.
 
 ## Out of Scope
