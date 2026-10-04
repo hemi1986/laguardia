@@ -9,8 +9,11 @@ export type ContentStorage = {
   write(name: string, bytes: Uint8Array, contentType: string): Promise<void>;
   /** Removes the content for good – Blob has no restore (ADR 0006), so only for deliberate removal or a failed command. */
   delete(name: string): Promise<void>;
-  /** An address to show the content, valid until the given time – only issued after the page's access check. */
-  viewAddress(name: string, validUntil: Date): Promise<string>;
+  /**
+   * Addresses to show content, valid until the given time – one call per page, however many it shows. Only issued
+   * after the page's access check.
+   */
+  viewAddresses(names: readonly string[], validUntil: Date): Promise<Map<string, string>>;
 };
 
 export { memoryStorage, type MemoryStorage } from "./memory-storage";

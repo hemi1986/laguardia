@@ -6,7 +6,7 @@ import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
-import type { PhotoSource } from "../../problem-report-photo";
+import { photoAt, type PhotoSource } from "../../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../../reporter";
 
 /** A problem report on the defect's page, its reporter named. */
@@ -71,7 +71,7 @@ export async function loadDefectDetails(
       description: report.description,
       reporter: shownReporter(report.reporter, names),
       reportedAt: report.reportedAt,
-      photo: report.photo ? { address: photos.get(report.photo)! } : undefined,
+      photo: photoAt(photos, report.photo),
       originating: report.originating,
     })),
   };

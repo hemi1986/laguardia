@@ -5,7 +5,7 @@ import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
-import type { PhotoSource } from "../problem-report-photo";
+import { photoAt, type PhotoSource } from "../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../reporter";
 
 /** One entry of the triage list as the page shows it (RM-TriageList, ST-017). */
@@ -65,7 +65,7 @@ export async function withNames(
     description: entry.description,
     reporter: shownReporter(entry.reporter, names),
     reportedAt: entry.reportedAt,
-    photo: entry.photo ? { address: photos.get(entry.photo)! } : undefined,
+    photo: photoAt(photos, entry.photo),
     waitingHours: entry.waitingHours,
     waitingLong: entry.waitingLong,
   }));

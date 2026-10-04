@@ -40,8 +40,24 @@ export function PhotoField({
   const [preview, setPreview] = useState<string>();
   const [preparing, setPreparing] = useState(false);
   const [problem, setProblem] = useState<string>();
+  /** Only the latest pick counts: an earlier one still being prepared is dropped when it finishes. */
+  const latestPick = useRef(0);
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
+
+  // React resets the form after every action, which empties the file field – the preview must go with it, or it
+  // would promise a photo the next post does not send (also when the same rejection comes back twice).
+  useEffect(() => {
+    const form = field.current?.form;
+    const reset = () => {
+      latestPick.current++;
+      setPreview(undefined);
+      setPreparing(false);
+      onPreparing(false);
+    };
+    form?.addEventListener("reset", reset);
+    return () => form?.removeEventListener("reset", reset);
+  }, [onPreparing]);
 
   function attach(photo: File | undefined) {
     const transfer = new DataTransfer();
@@ -54,19 +70,22 @@ export function PhotoField({
     const original = event.target.files?.[0];
     event.target.value = ""; // the same photo can be picked again
     if (!original) return;
+    const pick = ++latestPick.current;
     setProblem(undefined);
     setPreparing(true);
     onPreparing(true);
+    let prepared: Blob | undefined;
+    let failure: unknown;
     try {
-      const prepared = await preparePhoto(original);
-      attach(new File([prepared], "photo.jpg", { type: "image/jpeg" }));
+      prepared = await preparePhoto(original);
     } catch (error) {
-      attach(undefined);
-      setProblem(error instanceof PhotoTooLargeError ? texts.tooLarge : texts.notAnImage);
-    } finally {
-      setPreparing(false);
-      onPreparing(false);
+      failure = error;
     }
+    if (pick !== latestPick.current) return; // a later pick (or a reset) took over
+    attach(prepared && new File([prepared], "photo.jpg", { type: "image/jpeg" }));
+    if (!prepared) setProblem(failure instanceof PhotoTooLargeError ? texts.tooLarge : texts.notAnImage);
+    setPreparing(false);
+    onPreparing(false);
   }
 
   const picker = buttonVariants({ variant: "outline", className: "cursor-pointer" });

@@ -47,16 +47,29 @@ export async function withStoredPhoto<Result, Error extends string>(
   try {
     outcome = await run(name);
   } catch (error) {
-    await storage.delete(name);
+    await deleteQuietly(storage, name);
     throw error;
   }
-  if (!outcome.ok) await storage.delete(name);
+  if (!outcome.ok) await deleteQuietly(storage, name);
   return outcome;
 }
 
 /**
+ * Deletes the photo of a failed command. If that fails too, the person still gets the command's answer: the photo stays
+ * behind unreferenced in the private store – the same leftover as after a crash (ADR 0007, Consequences).
+ */
+async function deleteQuietly(storage: ContentStorage, name: PhotoReference): Promise<void> {
+  try {
+    await storage.delete(name);
+  } catch {
+    // unreferenced and unreachable without a signed address – accepted (ADR 0007)
+  }
+}
+
+/**
  * Addresses for showing stored photos, valid for 5 minutes from the injected clock's time – only issued after the
- * page's access check (team members only, HS-1).
+ * page's access check (team members only, HS-1). When the storage cannot issue them, there are none: the page still
+ * shows its problem reports, without photos.
  */
 export async function photoViewAddresses(
   storage: ContentStorage,
@@ -64,7 +77,9 @@ export async function photoViewAddresses(
   photos: readonly PhotoReference[],
 ): Promise<Map<PhotoReference, string>> {
   const validUntil = new Date(clock.now().getTime() + VIEW_MINUTES * 60 * 1000);
-  const addresses = new Map<PhotoReference, string>();
-  for (const photo of photos) addresses.set(photo, await storage.viewAddress(photo, validUntil));
-  return addresses;
+  try {
+    return await storage.viewAddresses(photos, validUntil);
+  } catch {
+    return new Map();
+  }
 }

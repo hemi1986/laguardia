@@ -39,6 +39,18 @@ function post(description: string, photo?: File): FormData {
 const notAnImage = () => new File([new TextEncoder().encode("%PDF-1.7 not a photo")], "manual.jpg", { type: "image/jpeg" });
 
 describe("the visitor report form with a photo", () => {
+  it("answers a photo above the server's 2 MB guard with the 20 MB limit people know (user, 2026-10-04)", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const storage = memoryStorage();
+    const unprepared = new File([new Uint8Array(2_000_001)], "original.jpg", { type: "image/jpeg" });
+
+    const state = await reportForm(machineId, storage)(null, post("Ball stuck", unprepared));
+
+    expect(state).toEqual({ error: "too-large", values: { description: "Ball stuck" } });
+    expect(commandErrorText(visitorMessages("de"), state!.error)).toBe("Das Foto ist zu groß: höchstens 20 MB.");
+    expect(storage.names()).toEqual([]);
+  });
+
   it("ST-016: Non-image content is rejected", async () => {
     const machineId = await aRegisteredMachine(db);
     const storage = memoryStorage();

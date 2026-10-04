@@ -15,16 +15,24 @@ export function blobStorage(): ContentStorage {
     async delete(name) {
       await del(name);
     },
-    async viewAddress(name, validUntil) {
+    async viewAddresses(names, validUntil) {
+      if (names.length === 0) return new Map();
       const until = validUntil.getTime();
-      const token = await issueSignedToken({ pathname: name, operations: ["get"], validUntil: until });
-      const { presignedUrl } = await presignUrl(token, {
-        operation: "get",
-        pathname: name,
-        access: "private",
-        validUntil: until,
-      });
-      return presignedUrl;
+      // One request for a read token per page; every address is then signed here. The signing key stays on the
+      // server – an address only carries the delegation, so it opens its own content and nothing else.
+      const token = await issueSignedToken({ pathname: "*", operations: ["get"], validUntil: until });
+      const signed = await Promise.all(
+        names.map(async (name) => {
+          const { presignedUrl } = await presignUrl(token, {
+            operation: "get",
+            pathname: name,
+            access: "private",
+            validUntil: until,
+          });
+          return [name, presignedUrl] as const;
+        }),
+      );
+      return new Map(signed);
     },
   };
 }

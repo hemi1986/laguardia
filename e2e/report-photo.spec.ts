@@ -129,3 +129,24 @@ test("ST-016: Visitor sees the privacy notice", async ({ page, browser }) => {
   await expect(photo.getByRole("link", { name: "Privacy notice" })).toHaveAttribute("href", "/datenschutz");
   expect(await phone.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });
+
+test("after a rejection the photo is gone from the form – also when the same rejection comes again", async ({
+  page,
+  browser,
+}) => {
+  needsMachines();
+  const museumNumber = await aPlayableMachine(page);
+  const phone = await visitor(browser, "de-DE");
+  await phone.goto(`/m/${museumNumber}/melden`);
+  const photo = { name: "IMG_0002.jpg", mimeType: "image/jpeg", buffer: await aCameraPhoto() };
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    await phone.getByLabel("Foto auswählen").setInputFiles(photo);
+    await expect(phone.getByRole("button", { name: "Foto entfernen" })).toBeVisible();
+    await phone.getByRole("button", { name: "Meldung senden" }).click(); // no description: rejected
+
+    await expect(phone.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+    // The form was reset: no preview may promise a photo the next post would not send.
+    await expect(phone.getByRole("button", { name: "Foto entfernen" })).toHaveCount(0);
+  }
+});

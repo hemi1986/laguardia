@@ -6,14 +6,14 @@ import { memoryStorage } from "./memory-storage";
  * Shown with the in-memory adapter integration tests use; the Vercel Blob adapter is shown by the photo browser test.
  */
 describe("the storage seam", () => {
-  it("stores content under its name and gives a view address valid until the given time", async () => {
+  it("stores content under its name and gives view addresses valid until the given time", async () => {
     const storage = memoryStorage();
 
     await storage.write("problem-reports/a.jpg", new Uint8Array([1, 2, 3]), "image/jpeg");
 
     expect(storage.read("problem-reports/a.jpg")).toEqual({ bytes: new Uint8Array([1, 2, 3]), contentType: "image/jpeg" });
-    expect(await storage.viewAddress("problem-reports/a.jpg", new Date("2026-10-04T10:05:00Z"))).toBe(
-      "memory://problem-reports/a.jpg?valid-until=2026-10-04T10:05:00.000Z",
+    expect(await storage.viewAddresses(["problem-reports/a.jpg"], new Date("2026-10-04T10:05:00Z"))).toEqual(
+      new Map([["problem-reports/a.jpg", "memory://problem-reports/a.jpg?valid-until=2026-10-04T10:05:00.000Z"]]),
     );
   });
 

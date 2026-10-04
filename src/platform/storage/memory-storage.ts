@@ -20,8 +20,8 @@ export function memoryStorage(): MemoryStorage {
     async delete(name) {
       stored.delete(name);
     },
-    async viewAddress(name, validUntil) {
-      return `memory://${name}?valid-until=${validUntil.toISOString()}`;
+    async viewAddresses(names, validUntil) {
+      return new Map(names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}`]));
     },
     read: (name) => stored.get(name),
     names: () => [...stored.keys()],

@@ -122,4 +122,22 @@ describe("store, run, delete on failure", () => {
       ]),
     );
   });
+
+  it("still answers with the command's rejection when deleting the photo fails – and with its own error when it throws", async () => {
+    const storage = { ...memoryStorage(), delete: () => Promise.reject(new Error("Blob is down")) };
+
+    expect(await storeAndRun(storage as ReturnType<typeof memoryStorage>, "reject")(await aPhoneJpeg())).toEqual({
+      ok: false,
+      error: "rejected-for-test",
+    });
+    await expect(storeAndRun(storage as ReturnType<typeof memoryStorage>, "throw")(await aPhoneJpeg())).rejects.toThrow(
+      "the stand-in command failed",
+    );
+  });
+
+  it("gives no addresses when the storage cannot issue them – a page then shows its reports without photos", async () => {
+    const failing = { ...memoryStorage(), viewAddresses: () => Promise.reject(new Error("Blob is down")) };
+
+    expect(await photoViewAddresses(failing, clock, ["problem-reports/a.jpg"])).toEqual(new Map());
+  });
 });
