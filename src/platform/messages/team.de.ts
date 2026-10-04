@@ -166,6 +166,9 @@ export const teamMessages = {
     title: "Defekte",
     /** All open defects, whatever the filter (G6). */
     open: (count: number) => (count === 1 ? "1 Defekt ist offen." : `${count} Defekte sind offen.`),
+    /** No defect is open – and new ones come from triage (G7). */
+    none: "Kein Defekt ist offen. Neue Defekte entstehen bei der Sichtung von Meldungen.",
+    toTriage: "Zur Sichtung",
     priority: (priority: string) => `Priorität: ${priority}`,
     filter: "Defekte filtern",
     allMachines: "Alle Geräte",

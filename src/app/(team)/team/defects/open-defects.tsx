@@ -15,6 +15,17 @@ const { defects: texts, recordDefect, terms } = teamMessages;
  * defect's own page. Titles are plain text: React escapes them.
  */
 export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
+  if (data.total === 0) {
+    // Nothing to filter: say so, and where new defects come from (G7).
+    return (
+      <div className="flex flex-col gap-2">
+        <p>{texts.none}</p>
+        <Link href="/team/triage" className="self-start underline underline-offset-4">
+          {texts.toTriage}
+        </Link>
+      </div>
+    );
+  }
   return (
     <>
       <p>{texts.open(data.total)}</p>
