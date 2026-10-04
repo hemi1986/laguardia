@@ -189,6 +189,19 @@ describe("the open defects list", () => {
     expect(await page({ museumNumber: "LG-042" })).not.toContain("Display flickers");
   });
 
+  it("ST-021: No defect is open", async () => {
+    await registered("LG-042");
+
+    const data = await loadOpenDefects(db, fixedClock(NOW), {});
+
+    expect(data).toMatchObject({ entries: [], total: 0 });
+    const html = await page();
+    expect(html).toContain("Kein Defekt ist offen.");
+    expect(html).toMatch(/<a [^>]*href="\/team\/triage"[^>]*>Zur Sichtung<\/a>/);
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("<li");
+  });
+
   it("ST-021: How many defects are open", async () => {
     const lg042 = await registered("LG-042");
     for (const title of ["A", "B", "C", "D", "E", "F", "G"]) await anOpenDefect(lg042, `Defect ${title}`);

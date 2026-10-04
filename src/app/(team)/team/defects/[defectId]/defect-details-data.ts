@@ -4,7 +4,7 @@ import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
-import type { ShownReporter } from "../../triage/triage-list-data";
+import { shownReporter, type ShownReporter } from "../../reporter";
 
 /** A problem report on the defect's page, its reporter named. */
 export type ShownDefectProblemReport = {
@@ -58,10 +58,7 @@ export async function loadDefectDetails(
     problemReports: defect.problemReports.map((report) => ({
       id: report.id,
       description: report.description,
-      reporter:
-        report.reporter.kind === "visitor"
-          ? { kind: "visitor" }
-          : { kind: "team-member", name: names.get(report.reporter.teamMemberId) },
+      reporter: shownReporter(report.reporter, names),
       reportedAt: report.reportedAt,
       originating: report.originating,
     })),

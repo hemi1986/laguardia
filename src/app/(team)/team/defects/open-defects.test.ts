@@ -10,18 +10,6 @@ function view(data: Partial<OpenDefectsData>): string {
   );
 }
 
-/** The empty open defects list – the good state, still said in words (G7); no database shares it reliably. */
-describe("the empty open defects list", () => {
-  it("ST-021: No defect is open", () => {
-    const html = view({});
-
-    expect(html).toContain("Kein Defekt ist offen.");
-    expect(html).toMatch(/<a [^>]*href="\/team\/triage"[^>]*>Zur Sichtung<\/a>/);
-    expect(html).not.toContain("<form");
-    expect(html).not.toContain("<li");
-  });
-});
-
 describe("a filter that matches nothing, in its own words", () => {
   it.each<[OpenDefectsFilter, string]>([
     [{ museumNumber: "LG-042" }, "LG-042 hat keine offenen Defekte."],

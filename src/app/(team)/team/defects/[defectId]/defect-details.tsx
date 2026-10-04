@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import { reporterName } from "../../triage/triage-list";
+import { reporterName } from "../../reporter";
 import type { DefectDetailsData } from "./defect-details-data";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
