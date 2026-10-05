@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { problemReportsOfMachine, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import {
+  problemReportsOfMachine,
+  recordDefectCommand,
+  reportProblemCommand,
+  resolveProblemOnTheSpotCommand,
+} from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -45,7 +50,13 @@ beforeEach(() => withoutMachines(db));
 async function registered(museumNumber: string) {
   const outcome = await executeCommand(
     registerMachineCommand,
-    { machineModelId: medievalMadness, museumNumber, serialNumber: undefined, location: "Hall 2", machineStatus: "playable" },
+    {
+      machineModelId: medievalMadness,
+      museumNumber,
+      serialNumber: undefined,
+      location: "Hall 2",
+      machineStatus: "playable",
+    },
     { actor: tom, db, newId: randomUUID },
   );
   if (!outcome.ok) throw new Error(outcome.error);
@@ -55,7 +66,9 @@ async function registered(museumNumber: string) {
 async function page(museumNumber: string, locale: "de" | "en" = "de"): Promise<string> {
   const data = await loadVisitorMachinePage(db, museumNumber);
   if (!data) throw new Error(`no visitor machine page for ${museumNumber}`);
-  return renderToStaticMarkup(createElement(VisitorMachinePage, { data, museumNumber, messages: visitorMessages(locale) }));
+  return renderToStaticMarkup(
+    createElement(VisitorMachinePage, { data, museumNumber, messages: visitorMessages(locale) }),
+  );
 }
 
 describe("the visitor machine page", () => {
@@ -190,6 +203,25 @@ describe("the visitor machine page", () => {
     expect(de).not.toContain("wartet noch auf die Sichtung");
     // The title is shown untranslated – the technician wrote it for visitors.
     expect(await page("LG-042", "en")).toContain("Left flipper weak");
+  });
+
+  it("ST-019: Visitor machine page no longer counts it", async () => {
+    const machineId = await registered("LG-042");
+    await reported(machineId, "Ball stuck behind the left ramp", "2026-10-05T09:00:00Z");
+    const [report] = await problemReportsOfMachine(db, machineId);
+    expect(await page("LG-042")).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
+    const resolved = await executeCommand(
+      resolveProblemOnTheSpotCommand,
+      { problemReportId: report.id, version: 0, note: "Ball freed, ramp OK" },
+      { actor: hanna, db, newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+
+    const html = await page("LG-042");
+
+    expect(html).not.toContain("Sichtung");
+    // The note is for the team – the visitor page never shows it.
+    expect(html).not.toContain("Ball freed, ramp OK");
   });
 });
 
