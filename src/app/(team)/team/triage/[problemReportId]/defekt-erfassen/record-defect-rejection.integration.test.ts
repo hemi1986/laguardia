@@ -6,7 +6,7 @@ import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { withWhoTriagedFirst } from "./record-defect-rejection";
+import { withWhoTriagedFirst } from "../who-triaged-first";
 import { rejectionText } from "./record-defect-rejection-text";
 
 /**
