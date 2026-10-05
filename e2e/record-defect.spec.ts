@@ -138,3 +138,25 @@ test.describe("without JavaScript", () => {
     );
   });
 });
+
+test("a technician who loses the triage race keeps the title and learns who triaged first", async ({ page, browser }) => {
+  await logIn(page);
+  const museumNumber = await openRecordDefect(page, "playable");
+  await page.getByLabel("Titel").fill("Left flipper weak");
+
+  // Meanwhile on a second phone: the same problem report is resolved on the spot (ST-019).
+  const context = await browser.newContext({ viewport: { width: 360, height: 800 } });
+  const other = await context.newPage();
+  await logIn(other);
+  await other.goto(page.url().replace(/defekt-erfassen$/, "direkt-behoben"));
+  await other.getByLabel("Was wurde gemacht?").fill("Flipper adjusted");
+  await other.getByRole("button", { name: "Als direkt behoben eintragen" }).click();
+  await expect(other).toHaveURL(/\/team\/triage\?/);
+  await context.close();
+
+  await page.getByRole("button", { name: "Defekt erfassen" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(/ hat diese Meldung schon gesichtet\.$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Defekt erfassen · ${museumNumber}`);
+  await expect(page.getByLabel("Titel")).toHaveValue("Left flipper weak");
+});

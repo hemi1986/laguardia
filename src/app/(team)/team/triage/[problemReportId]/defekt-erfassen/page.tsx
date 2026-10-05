@@ -30,17 +30,18 @@ export default async function RecordDefectPage({
     <Page title={data ? texts.title(museumNumber) : teamMessages.terms["Problem report"]}>
       {!data || !machine ? (
         <p>{triage.unknown}</p>
-      ) : data.triaged ? (
-        <p>{triage.alreadyTriaged}</p>
       ) : (
         <>
           <p className="text-muted-foreground text-sm">
             {museumNumber} · {data.report.machineModelTitle}
           </p>
-          <p className="whitespace-pre-line [overflow-wrap:anywhere]">{data.report.description}</p>
+          <p className="[overflow-wrap:anywhere] whitespace-pre-line">{data.report.description}</p>
+          {/* Rendered for a triaged problem report too: an action re-renders this page (the session cookie is renewed),
+              and a rejection because someone triaged first must keep the form and what was typed (ST-019 review). */}
           <RecordDefectForm
             action={recordDefectAction.bind(null, problemReportId)}
             version={data.version}
+            triaged={data.triaged}
             museumNumber={museumNumber}
             machine={{
               status: machine.machineStatus,

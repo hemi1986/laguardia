@@ -17,7 +17,14 @@ import { rejectionText } from "./record-defect-rejection-text";
 const db = testDatabase();
 const clock = fixedClock("2026-10-04T09:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const values = { version: "0", title: "Flipper coil weak", priority: "", suitableForHelpers: "", machineStatus: "", machineVersion: "" };
+const values = {
+  version: "0",
+  title: "Flipper coil weak",
+  priority: "",
+  suitableForHelpers: "",
+  machineStatus: "",
+  machineVersion: "",
+};
 
 describe("a rejected „Defekt erfassen“", () => {
   it("names who triaged the problem report first, with the way back to the triage list", async () => {

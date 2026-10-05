@@ -230,9 +230,15 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **A form on an existing aggregate** (first: ST-012, `…/[museumNumber]/status/`) posts the aggregate's ID and the
   version its page loaded as hidden fields; the page reads them with a query that returns the version (e.g.
   `machineForTeamForm`). The input function converts a version that is not a whole number to `-1` – a version
-  nobody saw, which the command layer answers with `version-conflict`. After a rejection the form keeps posting the
-  version the page loaded – it never picks up a newer one by itself: after `version-conflict` the person reloads the
-  page (the catalogue text says so), which loads the current state and version.
+  nobody saw, which the command layer answers with `version-conflict`. **Every Server Action re-renders the page it
+  was posted from** (`currentPerson()` renews the session cookie, and a cookie change makes Next.js re-render the
+  current route in the action's response – ST-019 review, 2026-10-05). So after a rejection the form posts the version
+  stored *now*, not the one the page first loaded. That is safe because the decision runs first: a domain rejection
+  ("already triaged by Tom") explains a change made in between before the version is compared (*Version check*). A
+  form must therefore never rely on the first loaded version, and a page must **not swap its form for a "nothing to
+  do here" text when the aggregate changed meanwhile** – the form would unmount and drop the input and the rejection.
+  Render the form and let it show such a text only when there is no action state yet (`triaged && !state`, the triage
+  forms of ST-018/ST-019).
 - **A public page posts no internal ID** (first: ST-013, the report form): the page binds the museum number –
   `reportProblemAction.bind(null, museumNumber)` – and the action finds the machine on the server
   (`machineIdOf`) before it builds its `formAction`; the redirect uses the same museum number, URL-encoded under a

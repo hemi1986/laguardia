@@ -121,6 +121,9 @@ test("ST-019: A rejected resolution keeps what was typed", async ({ page, browse
   await page.getByRole("button", { name: "Als direkt behoben eintragen" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(/ hat diese Meldung schon gesichtet\.$/);
+  // Nothing is recorded: no confirmation, still on the form (the stored triage: resolve-on-the-spot-rejection test).
+  await expect(page).toHaveURL(/\/direkt-behoben$/);
+  await expect(page.getByRole("main").getByRole("status")).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Direkt behoben · ${museumNumber}`);
   await expect(note(page)).toHaveValue("Ball freed, ramp OK");
   await expect(page.getByRole("main").getByRole("link", { name: "Zurück zur Sichtung" })).toBeVisible();

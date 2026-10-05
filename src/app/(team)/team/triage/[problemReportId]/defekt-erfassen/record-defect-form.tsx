@@ -14,7 +14,7 @@ import type { RecordDefectState } from "./actions";
 import type { RecordDefectField } from "./record-defect-input";
 import { rejectionText } from "./record-defect-rejection-text";
 
-const { recordDefect: texts, machines } = teamMessages;
+const { recordDefect: texts, machines, triage } = teamMessages;
 
 type ErrorCode = NonNullable<RecordDefectState>["error"];
 
@@ -30,21 +30,25 @@ const priorityOrder: Priority[] = ["high", "normal", "low"];
  * The form „Defekt erfassen“ (ST-018, story review 2026-10-03): title, priority (normal preselected), the mark for
  * helpers and – only when there is a stricter one – the machine status in the same step, „Status nicht ändern“
  * preselected. There is no reason field: the status history's reason is the defect's title. A rejection keeps every
- * choice and marks the field (G8), with and without JavaScript.
+ * choice and marks the field (G8), with and without JavaScript. A problem report that was already triaged when the
+ * page loaded shows no form – but one triaged while the technician typed keeps the form, the input and the rejection.
  */
 export function RecordDefectForm({
   action: record,
   version,
+  triaged,
   museumNumber,
   machine,
 }: {
   action: (previous: RecordDefectState, formData: FormData) => Promise<RecordDefectState>;
   version: number;
+  triaged: boolean;
   museumNumber: string;
   machine: { status: MachineStatus; version: number; stricter: MachineStatus[] };
 }) {
   const [state, action, pending] = useActionState(record, null);
   const rejectionId = useId();
+  if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
   const kept = state ? JSON.stringify(state) : "empty";
   const invalid = state ? fieldOf[state.error] : undefined;
   const marked = (field: RecordDefectField, hint?: string) => {
@@ -57,12 +61,23 @@ export function RecordDefectForm({
       <input type="hidden" name="version" value={version} />
       <Field data-invalid={invalid === "title"}>
         <FieldLabel htmlFor="title">{texts.defectTitle}</FieldLabel>
-        <Input id="title" name="title" defaultValue={state?.values.title} key={`title-${kept}`} {...marked("title", "title-hint")} />
+        <Input
+          id="title"
+          name="title"
+          defaultValue={state?.values.title}
+          key={`title-${kept}`}
+          {...marked("title", "title-hint")}
+        />
         <FieldDescription id="title-hint">{texts.titleHint}</FieldDescription>
       </Field>
       <Field>
         <FieldLabel htmlFor="priority">{texts.priority}</FieldLabel>
-        <NativeSelect id="priority" name="priority" defaultValue={state?.values.priority || "normal"} key={`priority-${kept}`}>
+        <NativeSelect
+          id="priority"
+          name="priority"
+          defaultValue={state?.values.priority || "normal"}
+          key={`priority-${kept}`}
+        >
           {priorityOrder.map((priority) => (
             <option key={priority} value={priority}>
               {texts.priorities[priority]}

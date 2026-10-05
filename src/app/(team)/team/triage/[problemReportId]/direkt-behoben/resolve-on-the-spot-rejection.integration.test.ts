@@ -4,6 +4,7 @@ import { recordDefectCommand, reportProblemCommand, resolveProblemOnTheSpotComma
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
+import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { withWhoTriagedFirst } from "../who-triaged-first";
@@ -53,6 +54,11 @@ describe("a rejected „Direkt behoben“", () => {
     );
     expect(tried).toEqual({ ok: false, error: "already-triaged" });
     if (tried.ok) return;
+    // Nothing is recorded: the problem report keeps Tom's triage.
+    expect((await storedProblemReport(db, problemReportId))?.triage).toMatchObject({
+      outcome: "defect-recorded",
+      triagedBy: tom.teamMemberId,
+    });
 
     const state = await withWhoTriagedFirst(db, clock, problemReportId, { error: tried.error, values });
 
