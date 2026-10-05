@@ -3,7 +3,7 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
-import { loadDefectRecorded, loadTriageList } from "./triage-list-data";
+import { loadDefectRecorded, loadResolvedOnTheSpot, loadTriageList } from "./triage-list-data";
 import { TriageListView } from "./triage-list";
 
 /**
@@ -14,14 +14,16 @@ export default async function TriageListPage({ searchParams }: PageProps<"/team/
   await requireTeamMember();
   const query = await searchParams;
   const defectId = typeof query.defectRecorded === "string" ? query.defectRecorded : undefined;
-  const [data, defectRecorded] = await Promise.all([
+  const resolvedId = typeof query.resolvedOnTheSpot === "string" ? query.resolvedOnTheSpot : undefined;
+  const [data, defectRecorded, resolvedOnTheSpot] = await Promise.all([
     loadTriageList(database(), systemClock),
     defectId ? loadDefectRecorded(database(), defectId, query.statusChanged !== undefined) : undefined,
+    resolvedId ? loadResolvedOnTheSpot(database(), systemClock, resolvedId) : undefined,
   ]);
 
   return (
     <Page title={teamMessages.triage.title} wide>
-      <TriageListView data={data} defectRecorded={defectRecorded} />
+      <TriageListView data={data} defectRecorded={defectRecorded} resolvedOnTheSpot={resolvedOnTheSpot} />
     </Page>
   );
 }

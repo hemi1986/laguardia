@@ -4,9 +4,9 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../reporter";
 import { ProblemReportPhoto } from "../problem-report-photo";
-import type { DefectRecordedConfirmation, TriageListItem } from "./triage-list-data";
+import type { DefectRecordedConfirmation, ResolvedOnTheSpotConfirmation, TriageListItem } from "./triage-list-data";
 
-const { triage: texts, recordDefect, machines } = teamMessages;
+const { triage: texts, recordDefect, resolveOnTheSpot, machines } = teamMessages;
 
 /**
  * The triage list (RM-TriageList, ST-017): every untriaged problem report, the oldest first. An entry shows its
@@ -17,19 +17,24 @@ const { triage: texts, recordDefect, machines } = teamMessages;
 export function TriageListView({
   data,
   defectRecorded,
+  resolvedOnTheSpot,
 }: {
   data: { entries: TriageListItem[] };
   /** Just back from recording a defect (ST-018): the confirmation names it, its machine and its new status (G3). */
   defectRecorded?: DefectRecordedConfirmation;
+  /** Just back from resolving a problem on the spot (ST-019): the confirmation names the machine (G3). */
+  resolvedOnTheSpot?: ResolvedOnTheSpotConfirmation;
 }) {
   const { entries } = data;
-  const confirmation = defectRecorded && (
-    <Confirmation>
-      {recordDefect.recorded(defectRecorded.title, defectRecorded.museumNumber)}
-      {defectRecorded.newStatus &&
-        recordDefect.statusNow(defectRecorded.museumNumber, machines.statuses[defectRecorded.newStatus])}
-    </Confirmation>
-  );
+  const confirmation =
+    (defectRecorded && (
+      <Confirmation>
+        {recordDefect.recorded(defectRecorded.title, defectRecorded.museumNumber)}
+        {defectRecorded.newStatus &&
+          recordDefect.statusNow(defectRecorded.museumNumber, machines.statuses[defectRecorded.newStatus])}
+      </Confirmation>
+    )) ||
+    (resolvedOnTheSpot && <Confirmation>{resolveOnTheSpot.resolved(resolvedOnTheSpot.museumNumber)}</Confirmation>);
   if (entries.length === 0) {
     return (
       <>

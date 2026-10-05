@@ -1,5 +1,5 @@
 import { machineForTeamForm, machineLabels, type MachineStatus } from "@/modules/collection";
-import { defectTitle, triageList, type TriageListEntry } from "@/modules/repair";
+import { defectTitle, problemReportForTriage, triageList, type TriageListEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -88,4 +88,21 @@ export async function loadDefectRecorded(
   const museumNumber = (await machineLabels(db, [recorded.machineId])).get(recorded.machineId)?.museumNumber ?? "";
   const machine = statusChanged ? await machineForTeamForm(db, museumNumber) : undefined;
   return { title: recorded.title, museumNumber, newStatus: machine?.machineStatus };
+}
+
+/** What the confirmation after resolving a problem on the spot names (ST-019, G3): the machine. */
+export type ResolvedOnTheSpotConfirmation = { museumNumber: string };
+
+/**
+ * The confirmation after resolving a problem on the spot, from the problem report's ID in the address – only when it is
+ * stored as resolved on the spot; the address cannot make the page say anything that is not stored.
+ */
+export async function loadResolvedOnTheSpot(
+  db: Database,
+  clock: Clock,
+  problemReportId: string,
+): Promise<ResolvedOnTheSpotConfirmation | undefined> {
+  const report = await problemReportForTriage(db, clock, problemReportId);
+  if (report?.triageOutcome !== "resolved-on-the-spot") return undefined;
+  return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
 }
