@@ -23,6 +23,7 @@ export const problemReports = aggregateStore({
     triagedBy: report.triage?.triagedBy ?? null,
     triagedAt: report.triage?.triagedAt ?? null,
     triageDefectId: report.triage?.defectId ?? null,
+    triageNote: report.triage?.note ?? null,
   }),
 });
 
@@ -50,6 +51,7 @@ function triageOf(row: typeof problemReport.$inferSelect): ProblemReport["triage
     triagedBy: row.triagedBy ?? missing("triaged_by", row.id),
     triagedAt: row.triagedAt ?? missing("triaged_at", row.id),
     defectId: row.triageDefectId ?? undefined,
+    note: row.triageNote ?? undefined,
   };
 }
 

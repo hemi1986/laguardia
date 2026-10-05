@@ -9,6 +9,8 @@ export {
 export { reportProblemCommand } from "./report-problem-command";
 export { recordDefectCommand } from "./record-defect-command";
 export { stricterMachineStatuses, type RecordDefectError, type RecordDefectInput } from "./record-defect";
+export { resolveProblemOnTheSpotCommand } from "./resolve-problem-on-the-spot-command";
+export type { ResolveProblemOnTheSpotError, ResolveProblemOnTheSpotInput } from "./resolve-problem-on-the-spot";
 export { priorities, type Defect, type Priority } from "./defect";
 export {
   defectDetails,
