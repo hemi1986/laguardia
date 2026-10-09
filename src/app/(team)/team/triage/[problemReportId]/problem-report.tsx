@@ -23,7 +23,7 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
       </>
     );
   }
-  const { report, triaged } = data;
+  const { report, triaged, dismissedAsSpam } = data;
   const details: [string, string][] = [
     [terms.Machine, `${report.museumNumber} · ${report.machineModelTitle}`],
     [texts.reportedBy, reporterName(report.reporter)],
@@ -33,7 +33,11 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
   return (
     <>
       {triaged && <p className="font-medium">{texts.alreadyTriaged}</p>}
-      <p className="[overflow-wrap:anywhere] whitespace-pre-line">{report.description}</p>
+      {dismissedAsSpam ? (
+        <p>{teamMessages.dismiss.dismissedAsSpam}</p>
+      ) : (
+        <p className="[overflow-wrap:anywhere] whitespace-pre-line">{report.description}</p>
+      )}
       {report.photo && <ProblemReportPhoto address={report.photo.address} />}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (

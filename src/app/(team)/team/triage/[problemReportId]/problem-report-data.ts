@@ -11,7 +11,14 @@ import { withNames, type TriageListItem } from "../triage-list-data";
  * and the version the person sees – the triage forms (ST-018 ff.) post it (HS-16).
  */
 export type ProblemReportData =
-  | { report: TriageListItem; triaged: boolean; triagedByName: string | undefined; version: number }
+  | {
+      report: TriageListItem;
+      triaged: boolean;
+      triagedByName: string | undefined;
+      version: number;
+      /** Dismissed as spam (ST-020): its description and photo are gone – the page says so. */
+      dismissedAsSpam: boolean;
+    }
   | undefined;
 
 export async function loadProblemReport(
@@ -31,5 +38,6 @@ export async function loadProblemReport(
     triaged: found.triagedBy !== undefined,
     triagedByName: found.triagedBy && names.get(found.triagedBy),
     version: found.version,
+    dismissedAsSpam: found.dismissalReason === "spam",
   };
 }

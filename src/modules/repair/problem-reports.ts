@@ -3,7 +3,7 @@ import { machineForReporting } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, type Database } from "@/platform/command";
 import { elapsedHours, elapsedMoreThanHours } from "@/platform/time";
-import type { ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
+import type { DismissalReason, ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
 import { problemReport } from "./schema";
 
 /** How AGG-ProblemReport is stored: one row per problem report, versioned (HS-16). */
@@ -147,14 +147,19 @@ export async function triageList(db: Database, clock: Clock): Promise<TriageList
 
 /**
  * One problem report for its own page and its triage forms (ST-017, ST-018), triaged or not – with the version the
- * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019). Undefined for an unknown ID, or an address that is no ID at all.
+ * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019) and dismissal reason (ST-020). Undefined for an unknown ID, or an address that is no ID at all.
  */
 export async function problemReportForTriage(
   db: Database,
   clock: Clock,
   problemReportId: string,
 ): Promise<
-  | (TriageListEntry & { version: number; triagedBy: string | undefined; triageOutcome: TriageOutcome | undefined })
+  | (TriageListEntry & {
+      version: number;
+      triagedBy: string | undefined;
+      triageOutcome: TriageOutcome | undefined;
+      dismissalReason: DismissalReason | undefined;
+    })
   | undefined
 > {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
@@ -166,6 +171,7 @@ export async function problemReportForTriage(
     version: row.version,
     triagedBy: report.triage?.triagedBy,
     triageOutcome: report.triage?.outcome,
+    dismissalReason: report.triage?.dismissal?.reason,
   };
 }
 
