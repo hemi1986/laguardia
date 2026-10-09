@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { ProblemReportDescription } from "./problem-report-description";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
 import { ProblemReportPhoto } from "../../problem-report-photo";
@@ -33,11 +34,7 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
   return (
     <>
       {triaged && <p className="font-medium">{texts.alreadyTriaged}</p>}
-      {dismissedAsSpam ? (
-        <p>{teamMessages.dismiss.dismissedAsSpam}</p>
-      ) : (
-        <p className="[overflow-wrap:anywhere] whitespace-pre-line">{report.description}</p>
-      )}
+      <ProblemReportDescription report={report} dismissedAsSpam={dismissedAsSpam} />
       {report.photo && <ProblemReportPhoto address={report.photo.address} />}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (

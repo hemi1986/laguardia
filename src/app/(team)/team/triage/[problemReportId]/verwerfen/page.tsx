@@ -3,6 +3,7 @@ import { Page } from "@/components/page";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
+import { ProblemReportDescription } from "../problem-report-description";
 import { requireTechnician } from "../../../../../team-session";
 import { loadProblemReport } from "../problem-report-data";
 import { dismissAction } from "./actions";
@@ -29,11 +30,7 @@ export default async function DismissPage({ params }: PageProps<"/team/triage/[p
           <p className="text-muted-foreground text-sm">
             {museumNumber} · {data.report.machineModelTitle}
           </p>
-          {data.dismissedAsSpam ? (
-            <p>{texts.dismissedAsSpam}</p>
-          ) : (
-            <p className="[overflow-wrap:anywhere] whitespace-pre-line">{data.report.description}</p>
-          )}
+          <ProblemReportDescription report={data.report} dismissedAsSpam={data.dismissedAsSpam} />
           {/* Rendered for a triaged problem report too: an action re-renders this page (the session cookie is renewed),
               and a rejection because someone triaged first must keep the form and what was chosen (ST-019 review). */}
           <DismissForm

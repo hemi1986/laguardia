@@ -5,6 +5,7 @@ import { stricterMachineStatuses } from "@/modules/repair";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
+import { ProblemReportDescription } from "../problem-report-description";
 import { requireTechnician } from "../../../../../team-session";
 import { loadProblemReport } from "../problem-report-data";
 import { recordDefectAction } from "./actions";
@@ -35,7 +36,7 @@ export default async function RecordDefectPage({
           <p className="text-muted-foreground text-sm">
             {museumNumber} · {data.report.machineModelTitle}
           </p>
-          <p className="[overflow-wrap:anywhere] whitespace-pre-line">{data.report.description}</p>
+          <ProblemReportDescription report={data.report} dismissedAsSpam={data.dismissedAsSpam} />
           {/* Rendered for a triaged problem report too: an action re-renders this page (the session cookie is renewed),
               and a rejection because someone triaged first must keep the form and what was typed (ST-019 review). */}
           <RecordDefectForm
