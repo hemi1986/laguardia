@@ -5,8 +5,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
-import { linkToDefectForTest, resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { linkProblemReportToDefectCommand, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -141,7 +141,7 @@ describe("a defect's own page", () => {
       ["Left flipper sticks", "2026-10-01T08:15:00Z", anna],
     ] as const) {
       const linked = await executeCommand(
-        linkToDefectForTest,
+        linkProblemReportToDefectCommand,
         { problemReportId: await reported(lg042, description, at, actor), version: 0, defectId },
         { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
       );
@@ -217,7 +217,11 @@ describe("a defect's own page", () => {
       const problemReportId = await reported(machineId, "Left flipper weak", "2026-10-01T09:00:00Z", visitor, photo);
       const defectId = await recorded(problemReportId, "2026-10-01T10:00:00Z");
       await reported(machineId, "Flipper weak again", "2026-10-02T09:00:00Z").then((id) =>
-        executeCommand(linkToDefectForTest, { problemReportId: id, version: 0, defectId }, { actor: tom, db, newId: randomUUID }),
+        executeCommand(
+          linkProblemReportToDefectCommand,
+          { problemReportId: id, version: 0, defectId },
+          { actor: tom, db, newId: randomUUID },
+        ),
       );
       return { photo, defectId };
     }
@@ -245,7 +249,9 @@ describe("a defect's own page", () => {
 
       const { html } = await shownAt("2027-10-04T10:00:00Z", defectId);
 
-      expect(html).toContain(`<img src="memory://${photo}?valid-until=2027-10-04T10:05:00.000Z" alt="Foto zur Meldung"`);
+      expect(html).toContain(
+        `<img src="memory://${photo}?valid-until=2027-10-04T10:05:00.000Z" alt="Foto zur Meldung"`,
+      );
     });
   });
 });
