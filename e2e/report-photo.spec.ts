@@ -135,6 +135,7 @@ test("after a rejection the photo is gone from the form – also when the same r
   browser,
 }) => {
   needsMachines();
+  needsBlob(); // the photo is stored before the command rejects it – without the store the answer is not-stored
   const museumNumber = await aPlayableMachine(page);
   const phone = await visitor(browser, "de-DE");
   await phone.goto(`/m/${museumNumber}/melden`);
