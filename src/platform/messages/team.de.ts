@@ -237,6 +237,8 @@ export const teamMessages = {
     /** The problem report the defect was recorded from, and those linked to it later (ST-022). */
     originating: "Ursprüngliche Meldung",
     linked: "Verknüpfte Meldung",
+    /** How many problem reports were linked to an open defect (ST-022) – shown in the list only when there are any. */
+    linkedProblemReports: (count: number) => (count === 1 ? "1 verknüpfte Meldung" : `${count} verknüpfte Meldungen`),
     unknown: "Diesen Defekt gibt es nicht.",
     back: "Zurück zu den Defekten",
   },

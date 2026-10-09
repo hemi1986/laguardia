@@ -50,6 +50,9 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
                 <p className="text-muted-foreground">
                   {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
                 </p>
+                {entry.linkedProblemReports > 0 && (
+                  <p className="text-muted-foreground">{texts.linkedProblemReports(entry.linkedProblemReports)}</p>
+                )}
               </article>
             </li>
           ))}
