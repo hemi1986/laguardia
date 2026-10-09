@@ -9,7 +9,7 @@ risk: low
 events: [EVT-ProblemResolvedOnTheSpot]
 depends_on: [ST-017]
 labels: [mvp, triage, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
