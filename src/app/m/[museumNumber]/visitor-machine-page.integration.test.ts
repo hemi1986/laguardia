@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
+  linkProblemReportToDefectCommand,
   problemReportsOfMachine,
   recordDefectCommand,
   reportProblemCommand,
@@ -222,6 +223,41 @@ describe("the visitor machine page", () => {
     expect(html).not.toContain("Sichtung");
     // The note is for the team – the visitor page never shows it.
     expect(html).not.toContain("Ball freed, ramp OK");
+  });
+
+  it("ST-022: Visitor count drops after linking", async () => {
+    const machineId = await registered("LG-042");
+    await reported(machineId, "Left flipper barely moves", "2026-10-05T09:00:00Z");
+    const [first] = await problemReportsOfMachine(db, machineId);
+    const recorded = await executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId: first.id,
+        version: 0,
+        title: "Left flipper weak",
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!recorded.ok) throw new Error(recorded.error);
+    await reported(machineId, "Flipper on the left does nothing", "2026-10-05T10:00:00Z");
+    const [only] = await problemReportsOfMachine(db, machineId); // newest first – the only untriaged one
+    expect(await page("LG-042")).toContain("1 Meldung wartet noch auf die Sichtung durch das Team.");
+    const linked = await executeCommand(
+      linkProblemReportToDefectCommand,
+      { problemReportId: only.id, version: 0, defectId: recorded.result.defectId },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!linked.ok) throw new Error(linked.error);
+
+    const html = await page("LG-042");
+
+    expect(html).not.toContain("wartet noch auf die Sichtung");
+    expect(html).toContain("Bekannte Defekte");
+    expect(html).toContain("Left flipper weak");
   });
 });
 
