@@ -19,7 +19,7 @@ export type ProblemReportData =
       version: number;
       /** Dismissed as spam (ST-020): its description and photo are gone – the page says so. */
       dismissedAsSpam: boolean;
-      /** The machine's open defects, the oldest first – what „Mit Defekt verknüpfen“ offers (ST-022). */
+      /** The machine's open defects in the order of RM-OpenDefects – what „Mit Defekt verknüpfen“ offers (ST-022). */
       openDefects: { id: string; title: string; openSince: Date }[];
     }
   | undefined;
@@ -43,8 +43,6 @@ export async function loadProblemReport(
     triagedByName: found.triagedBy && names.get(found.triagedBy),
     version: found.version,
     dismissedAsSpam: found.dismissalReason === "spam",
-    openDefects: defects
-      .map(({ id, title, openSince }) => ({ id, title, openSince }))
-      .sort((a, b) => a.openSince.getTime() - b.openSince.getTime()),
+    openDefects: defects.map(({ id, title, openSince }) => ({ id, title, openSince })),
   };
 }

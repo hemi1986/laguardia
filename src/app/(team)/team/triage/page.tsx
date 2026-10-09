@@ -3,7 +3,12 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
-import { loadDefectRecorded, loadLinkedConfirmation, loadTriagedConfirmation, loadTriageList } from "./triage-list-data";
+import {
+  loadDefectRecorded,
+  loadLinkedConfirmation,
+  loadTriagedConfirmation,
+  loadTriageList,
+} from "./triage-list-data";
 import { TriageListView } from "./triage-list";
 
 /**

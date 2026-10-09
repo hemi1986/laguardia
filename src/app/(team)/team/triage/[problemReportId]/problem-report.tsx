@@ -83,9 +83,9 @@ function TriageOutcomes({
   const technician = role === "technician";
   const outcomes = [
     ...(technician && canLink ? [{ href: "verknuepfen", label: teamMessages.link.outcome }] : []),
-    ...(role === "technician" ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : []),
+    ...(technician ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : []),
     { href: "direkt-behoben", label: terms["Resolved on the spot"] },
-    ...(role === "technician" ? [{ href: "verwerfen", label: teamMessages.dismiss.outcome }] : []),
+    ...(technician ? [{ href: "verwerfen", label: teamMessages.dismiss.outcome }] : []),
   ];
   return (
     <section className="flex flex-col gap-3">

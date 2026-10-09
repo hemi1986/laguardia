@@ -16,7 +16,7 @@ const { link: texts, triage } = teamMessages;
  * The form „Mit Defekt verknüpfen“ (ST-022, story review 2026-10-03): the machine's open defects as native radio
  * buttons – they submit without JavaScript –, each with its title and since when it is open, none preselected. Linking
  * records a fact and asks nothing. A rejection keeps the chosen defect, if it is still offered, and is shown at the
- * form (G8). A problem report already triaged when the page loaded shows no form – but one triaged while the person
+ * form (G8). Without open defects there is no form. A problem report already triaged when the page loaded shows no form – but one triaged while the person
  * chose keeps the form and the rejection.
  */
 export function LinkToDefectForm({
@@ -33,6 +33,8 @@ export function LinkToDefectForm({
   const [state, action, pending] = useActionState(link, null);
   const rejectionId = useId();
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
+  // Nothing to choose: the page says so (G7) – no form that could only be rejected. After a rejection it stays.
+  if (openDefects.length === 0 && !state) return null;
   const kept = state ? JSON.stringify(state) : "empty";
   const invalid = state?.error === "defect-required" || state?.error === "defect-not-open";
 

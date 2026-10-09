@@ -159,8 +159,9 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
 
 /**
  * The facts of CMD-LinkProblemReportToDefect (ST-022): the chosen defect's machine and state, read in the command's
- * transaction. The row is locked for share until the command commits, so a defect cannot be resolved between the check
- * and the link – a concurrent resolution waits and then resolves it with the linked problem report.
+ * transaction. The row stays locked until the command commits, so a concurrent change of the defect (its resolution,
+ * ST-028) waits instead of slipping between the check and the link. `FOR UPDATE`, not `FOR SHARE`: from ST-053 on the
+ * same transaction reopens a resolved defect, and two links holding a share lock would deadlock on that write.
  */
 export async function linkingFacts(tx: Database, input: { defectId: string | undefined }): Promise<LinkingFacts> {
   if (!input.defectId || !isId(input.defectId)) return { defect: undefined };
@@ -168,7 +169,7 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
     .select({ id: defect.id, machineId: defect.machineId, state: defect.state })
     .from(defect)
     .where(eq(defect.id, input.defectId))
-    .for("share");
+    .for("update");
   return { defect: row };
 }
 
