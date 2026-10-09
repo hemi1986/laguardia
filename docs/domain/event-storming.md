@@ -92,6 +92,9 @@ flowchart LR
     RM_RepairTimes[("Repair times")]:::rm
     ACT_Visitor --> CMD_ReportProblem
     CMD_ReportProblem --> EVT_ProblemReported
+    CMD_ReportProblem --> EVT_DefectRecorded
+    CMD_ReportProblem --> EVT_ProblemReportLinkedToDefect
+    CMD_ReportProblem --> EVT_ProblemResolvedOnTheSpot
     ACT_Technician --> CMD_RecordDefect
     CMD_RecordDefect --> EVT_DefectRecorded
     ACT_Technician --> CMD_LinkProblemReportToDefect

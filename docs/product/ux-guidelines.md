@@ -1,6 +1,6 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G21, including G2a, G4a, G6a, G8a and G10a)
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G21, including G2a, G4a, G6a, G8a, G10a and G21a)
 > is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
 > now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
@@ -67,6 +67,21 @@ has open defects), „Defekt erfassen“, „Direkt behoben“, „Meldung verwe
 *Why:* the problem report has four triage outcomes, and the defect page, ST-039 and ST-044 will have more. Four
 inline forms on one page at 360 px put the rejection where nobody looks (G8).
 
+**G21a – Creating a thing and deciding its outcome in the same step follows G21, with the thing's own fields on
+every outcome page** (user, 2026-10-10, ST-023/ST-052).
+When a person may create a thing and decide its outcome at once, the page they reach first offers the outcomes as
+buttons, in G21's order and with G21's labels, and has no submit of its own. Each outcome leads to one form page
+that has the thing's fields and that outcome's fields, and sends them once; both are stored together or not at
+all. Every outcome lands where creating the thing alone would have landed, with the outcome's confirmation.
+Someone who may not decide sees the plain form (G11). Someone who may decide only one outcome and may also leave it
+undecided keeps the plain form as the default, with that outcome offered as one button above the first field.
+*First use:* reporting a problem from the machine record (`/melden`). A technician gets the section „Sichten“ with
+„Mit Defekt verknüpfen“ (only with open defects), „Defekt erfassen“, „Direkt behoben“ (ST-023, ST-052); a helper
+keeps ST-015's form, with „Schon selbst behoben?“ and the button „Direkt behoben“ above the description (ST-052).
+*Why:* without JavaScript, a single page shows every outcome's fields at once. With ST-052 the technician's report
+form would carry three outcomes' fields under one submit, which is the shape G21 rules out. The button sits above
+the first field because a link does not carry what was already typed.
+
 ## 2. Understanding what you are looking at
 
 **G4 – A list is for finding, not for reading.**
@@ -119,6 +134,9 @@ in the same message, and says what to do: "Bitte beschreibe das Problem. Das Fot
 The chooser shows itself as empty rather than pretending the file is still attached.
 *Why:* ST-016 is the first form with a photo, and ST-037, ST-054 and ST-032 follow. A visitor who taps "Senden"
 twice because the photo looked attached sends the problem report without it – and never learns why.
+*Not when the photo itself is rejected* (user, 2026-10-10, ST-023/ST-084): when the rejection is about the photo
+(ST-016's texts – not an image, over 20 MB), ST-016's text stands alone and the sentence „Das Foto muss erneut
+ausgewählt werden.“ is not added – ST-016's texts apply unchanged.
 
 **G9 – A rejection is recognisable without colour.**
 Red text alone is not a rejection; it carries a marker a person can see in daylight with a cracked screen
@@ -275,3 +293,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-01 | **Known exception recorded under G2a**: `/team/machine-models` keeps its form below the list until ST-036. | The user decided not to split ST-036 and not to pull it forward. A yardstick that hides a violation it knows about is worth nothing |
 | 2026-10-03 | **G19 row 3 (Triage list, "Sichtung")** is shown to everyone instead of technicians. | Helpers resolve problems on the spot from the triage list (ST-019, ST-017's helper scenario); the technician-only triage outcomes are hidden on the problem report's page (G11). The user decided during `/implement ST-017` |
 | 2026-10-03 | **G21 added** (several outcomes: one button each on the thing's page, one form page each, one common landing with a confirmation, only the permitted outcomes, in a fixed order, none once decided; first use the problem report's page). **G10 extended**: a triage outcome asks nothing; dismissing as spam asks once and names the description and photo it deletes. | Story review of ST-018/019/020/022 (`docs/reviews/2026-10-03-story-review.md`, Decisions 1 and 2): four triage outcomes on one 360 px page, more to come on the defect page, ST-039 and ST-044 |
+| 2026-10-10 | **G21a added** (creating a thing and deciding its outcome in one step: a choice page with one button per outcome, one form page each with the thing's fields, sent once and stored together; a person who may decide only one outcome and may leave it undecided keeps the plain form with that outcome as one button above the first field). **G8a narrowed**: no photo sentence after a rejection of the photo itself (ST-016's texts). | Story review of ST-023/ST-052 (`docs/reviews/2026-10-10-story-review.md`, Decision 3a; proposal `docs/reviews/ST-023-ux-form.md`, option B, and the helper path H2) |

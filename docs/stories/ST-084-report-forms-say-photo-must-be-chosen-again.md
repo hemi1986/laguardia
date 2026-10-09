@@ -20,7 +20,7 @@ Follow-up of ST-023 (ux-designer, `docs/reviews/ST-023-ux-form.md`, findings 5 a
 - **G8a is half built** on the two existing report forms – the team form `/team/machines/<museum number>/melden` (ST-015, ST-016) and the visitor form `/m/<museum number>/melden` (ST-013, ST-016): after a rejection the photo chooser shows itself as empty, but the rejection does not say that the photo must be chosen again. A chosen photo cannot be put back into the chooser, so the rejection says so in the same message (G8a): the reason, followed by „Das Foto muss erneut ausgewählt werden.“ (team and visitor German), „Please choose the photo again.“ (visitor English). Without a photo attached the sentence is not added.
 - **G13 wording** of the missing description in the team catalog: „Bitte beschreibe das Problem.“ addresses the reader as *du*; team texts use the plain imperative, so the team text becomes „Bitte das Problem beschreiben.“ The visitor text stays „Bitte beschreibe das Problem.“ The team text is shared by ST-023's form (`/melden/defekt-erfassen`), which shows the new wording too once this story is done.
 - ST-023 builds G8a for its own new form; this story brings the two existing forms in line with it. ST-037, ST-054 and ST-032 follow the same rule for their own photo and file forms.
-- [OPEN] Does the sentence also follow a rejection *of the photo itself* (not an image, above 20 MB, ST-016), whose texts already ask to choose another photo or leave it out? Recommendation: no – those texts already say what to do; the sentence follows every other rejection. The same answer applies to ST-023's form. See `docs/stories/OPEN_QUESTIONS.md`.
+- **After a rejection of the photo itself** (not an image, above 20 MB, ST-016) the sentence is not added: ST-016's texts apply unchanged, they already ask to choose another photo or leave it out (user, 2026-10-10, story review decision 3a; the same holds for ST-023's form). The sentence follows every other rejection of a form that had a photo attached.
 
 ## Acceptance Criteria
 
@@ -48,13 +48,21 @@ Scenario: No photo sentence without a photo
   Then the problem report is not stored
   And the rejection reads „Bitte das Problem beschreiben.“ and says nothing about a photo
 
+Scenario: A rejected photo gets no extra sentence about choosing it again
+  Given a helper reports "Left flipper weak" for "LG-042" from its machine record with a file that is not an image
+  When they submit it
+  Then the problem report is not stored
+  And the rejection is ST-016's text for a file that is not an image, unchanged
+  And it does not add that the photo must be chosen again
+  And the description "Left flipper weak" is still there
+
 ## Out of Scope
 - ST-023's own form (`/melden/defekt-erfassen`) – ST-023 builds G8a for it
 - Keeping the photo across a rejection (cannot be done; G8a)
 - Photo and file forms of ST-032, ST-037, ST-054
 
 ## Open Questions
-- [OPEN] Sentence after a rejection of the photo itself – see Context.
+- none (the sentence after a rejection of the photo itself was answered on 2026-10-10: not added)
 
 ## Notes
 Expected to be small (XS/S; lead-dev estimates): two message catalogs and the rejection on two forms.
