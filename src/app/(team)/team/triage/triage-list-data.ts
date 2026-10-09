@@ -108,3 +108,25 @@ export async function loadTriagedConfirmation(
   if (report?.triageOutcome !== outcome) return undefined;
   return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
 }
+
+/** What the confirmation after linking (ST-022) names (G3): the machine and the defect. */
+export type LinkedConfirmation = { museumNumber: string; title: string };
+
+/**
+ * The confirmation after linking a problem report, from its ID in the address – only when it is stored as linked; the
+ * defect's title is read now, so the address cannot make the page say anything that is not stored.
+ */
+export async function loadLinkedConfirmation(
+  db: Database,
+  clock: Clock,
+  problemReportId: string,
+): Promise<LinkedConfirmation | undefined> {
+  const report = await problemReportForTriage(db, clock, problemReportId);
+  if (report?.triageOutcome !== "linked" || !report.triageDefectId) return undefined;
+  const [labels, defect] = await Promise.all([
+    machineLabels(db, [report.machineId]),
+    defectTitle(db, report.triageDefectId),
+  ]);
+  if (!defect) return undefined;
+  return { museumNumber: labels.get(report.machineId)?.museumNumber ?? "", title: defect.title };
+}

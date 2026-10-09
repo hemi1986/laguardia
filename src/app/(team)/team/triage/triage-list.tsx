@@ -6,11 +6,12 @@ import { reporterName } from "../reporter";
 import { ProblemReportPhoto } from "../problem-report-photo";
 import type {
   DefectRecordedConfirmation,
+  LinkedConfirmation,
   TriagedConfirmation,
   TriageListItem,
 } from "./triage-list-data";
 
-const { triage: texts, recordDefect, resolveOnTheSpot, dismiss, machines } = teamMessages;
+const { triage: texts, recordDefect, resolveOnTheSpot, dismiss, link, machines } = teamMessages;
 
 /**
  * The triage list (RM-TriageList, ST-017): every untriaged problem report, the oldest first. An entry shows its
@@ -23,6 +24,7 @@ export function TriageListView({
   defectRecorded,
   resolvedOnTheSpot,
   dismissed,
+  linked,
 }: {
   data: { entries: TriageListItem[] };
   /** Just back from recording a defect (ST-018): the confirmation names it, its machine and its new status (G3). */
@@ -31,6 +33,8 @@ export function TriageListView({
   resolvedOnTheSpot?: TriagedConfirmation;
   /** Just back from dismissing a problem report (ST-020): the confirmation names the machine (G3). */
   dismissed?: TriagedConfirmation;
+  /** Just back from linking a problem report (ST-022): the confirmation names the machine and the defect (G3). */
+  linked?: LinkedConfirmation;
 }) {
   const { entries } = data;
   const confirmation =
@@ -42,7 +46,8 @@ export function TriageListView({
       </Confirmation>
     )) ||
     (resolvedOnTheSpot && <Confirmation>{resolveOnTheSpot.resolved(resolvedOnTheSpot.museumNumber)}</Confirmation>) ||
-    (dismissed && <Confirmation>{dismiss.dismissed(dismissed.museumNumber)}</Confirmation>);
+    (dismissed && <Confirmation>{dismiss.dismissed(dismissed.museumNumber)}</Confirmation>) ||
+    (linked && <Confirmation>{link.linked(linked.museumNumber, linked.title)}</Confirmation>);
   if (entries.length === 0) {
     return (
       <>
