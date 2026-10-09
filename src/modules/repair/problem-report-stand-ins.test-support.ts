@@ -181,7 +181,12 @@ export const triageForTest = aggregateCommand({
     ok: true as const,
     state: {
       ...report,
-      triage: { outcome: "dismissed" as const, triagedBy: actor.teamMemberId, triagedAt: clock.now() },
+      triage: {
+        outcome: "dismissed" as const,
+        triagedBy: actor.teamMemberId,
+        triagedAt: clock.now(),
+        dismissal: { reason: "not-a-fault" as const },
+      },
     },
     events: [{ type: "EVT-TestTriaged" as const }],
   }),

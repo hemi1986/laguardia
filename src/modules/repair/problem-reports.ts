@@ -24,6 +24,8 @@ export const problemReports = aggregateStore({
     triagedAt: report.triage?.triagedAt ?? null,
     triageDefectId: report.triage?.defectId ?? null,
     triageNote: report.triage?.note ?? null,
+    triageDismissalReason: report.triage?.dismissal?.reason ?? null,
+    triageDismissalText: report.triage?.dismissal?.text ?? null,
   }),
 });
 
@@ -32,7 +34,7 @@ function problemReportOf(row: typeof problemReport.$inferSelect): ProblemReport 
   return {
     id: row.id,
     machineId: row.machineId,
-    description: row.description,
+    description: row.description ?? undefined,
     reporter:
       row.reporterKind === "team-member"
         ? { kind: "team-member", teamMemberId: row.reporterTeamMemberId ?? missing("reporter_team_member_id", row.id) }
@@ -52,6 +54,12 @@ function triageOf(row: typeof problemReport.$inferSelect): ProblemReport["triage
     triagedAt: row.triagedAt ?? missing("triaged_at", row.id),
     defectId: row.triageDefectId ?? undefined,
     note: row.triageNote ?? undefined,
+    dismissal: row.triageDismissalReason
+      ? {
+          reason: row.triageDismissalReason,
+          ...(row.triageDismissalText !== null ? { text: row.triageDismissalText } : {}),
+        }
+      : undefined,
   };
 }
 
@@ -98,7 +106,8 @@ const LONG_WAIT_HOURS = 72;
 export type TriageListEntry = {
   id: string;
   machineId: string;
-  description: string;
+  /** None only on a problem report dismissed as spam (ST-020) – which its own page still shows, the triage list never. */
+  description: string | undefined;
   reporter: Reporter;
   reportedAt: Date;
   /** The stored photo's reference (ST-016) – the team page turns it into a short-lived address. */
@@ -188,7 +197,8 @@ export async function problemReportsOfDefect(
     .map(problemReportOf)
     .map(({ id, description, reporter, reportedAt, photo }) => ({
       id,
-      description,
+      // A defect's problem reports were triaged into it, never dismissed – so each has its description.
+      description: description ?? missing("description", id),
       reporter,
       reportedAt,
       photo,

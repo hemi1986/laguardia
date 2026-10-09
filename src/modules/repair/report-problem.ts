@@ -20,8 +20,18 @@ export const triageOutcomes = ["defect-recorded", "linked", "resolved-on-the-spo
 export type TriageOutcome = (typeof triageOutcomes)[number];
 
 /**
+ * Why a problem report was dismissed (CONTEXT.md: Dismissed): not a fault, spam, another reason given as free text –
+ * or, only automatically, the machine was retired (ST-039).
+ */
+export const dismissalReasons = ["not-a-fault", "spam", "other", "machine-retired"] as const;
+export type DismissalReason = (typeof dismissalReasons)[number];
+
+/** The dismissal of a problem report (ST-020): its reason, and the free text for the reason *other*. */
+export type Dismissal = { reason: DismissalReason; text?: string };
+
+/**
  * The Triage value object of AGG-ProblemReport (data model): the defect for *defect recorded* and *linked* (ST-018,
- * ST-022), the note for *resolved on the spot* (ST-019); its dismissal reason follows with ST-020.
+ * ST-022), the note for *resolved on the spot* (ST-019), the dismissal for *dismissed* (ST-020).
  */
 export type Triage = {
   outcome: TriageOutcome;
@@ -29,13 +39,15 @@ export type Triage = {
   triagedAt: Date;
   defectId?: string;
   note?: string;
+  dismissal?: Dismissal;
 };
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Untriaged until `triage` is set. */
 export type ProblemReport = {
   id: string;
   machineId: string;
-  description: string;
+  /** Required when reported; none only once the problem report is dismissed as spam (ST-020). */
+  description: string | undefined;
   reporter: Reporter;
   reportedAt: Date;
   /** The stored photo's reference (ST-016) – kept as long as the problem report; removed on spam dismissal (ST-020). */
@@ -60,11 +72,7 @@ export type ReportProblemInput = { machineId: string; description: string; photo
 export type ReportingFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
 
 export type ReportProblemError =
-  | "machine-not-found"
-  | "machine-retired"
-  | "machine-not-on-display"
-  | "description-required"
-  | "description-too-long";
+  "machine-not-found" | "machine-retired" | "machine-not-on-display" | "description-required" | "description-too-long";
 
 /** The longest description a problem report may have (ST-013) – the rejection names it. */
 export const DESCRIPTION_MAX_LENGTH = 2000;
@@ -93,7 +101,7 @@ export function reportProblem(
     ...(input.photo ? { photo: input.photo } : {}),
   };
   const { id: problemReportId, ...reported } = report;
-  return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId, ...reported }] };
+  return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId, ...reported, description }] };
 }
 
 /** The one place a reporter is derived from the acting person (Q5/Q20). */

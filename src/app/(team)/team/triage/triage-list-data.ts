@@ -13,7 +13,8 @@ export type TriageListItem = {
   id: string;
   museumNumber: string;
   machineModelTitle: string;
-  description: string;
+  /** None only on a problem report dismissed as spam (ST-020) – shown on its own page, never in the list. */
+  description: string | undefined;
   reporter: ShownReporter;
   reportedAt: Date;
   /** The photo (ST-016) at a short-lived address – issued only here, behind the team pages' access check (HS-1). */
