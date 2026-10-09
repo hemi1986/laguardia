@@ -6,7 +6,7 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { withStoredPhoto, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
+import { removePhoto, withStoredPhoto, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
 
 /**
@@ -30,25 +30,31 @@ export type FormDefinition<Input, Result, Field extends string> = {
   fields: readonly Field[];
   /** Reads and converts the fields (Q19): no validation, no default – a missing value stays "no value given". */
   input: (fields: FormFields<Field>) => Input;
+  /**
+   * The photo the command removed on purpose, if any (ST-020: a spam dismissal) – deleted from the storage after the
+   * command was committed, before `onSuccess`. A failed delete is logged and does not undo the command (ADR 0007).
+   */
+  removesPhoto?: (result: Result) => PhotoReference | undefined;
   /** After the command succeeded, e.g. `revalidatePath` and `redirect` (which ends the action). */
   onSuccess: (result: Result) => Promise<void>;
 };
 
-export type RunnerDependencies = Omit<CommandDependencies, "actor"> & { currentPerson: () => Promise<Actor> };
+/** `storage`: where a form's photo is stored (ST-016) or a removed one deleted (ST-020) – Vercel Blob unless a test injects another. */
+export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
+  currentPerson: () => Promise<Actor>;
+  storage?: ContentStorage;
+};
 
 /** A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference. */
 export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input"
+  "input" | "removesPhoto"
 > & {
   photo: { field: string; owner: PhotoOwner };
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
 };
 
-/** The runner of a form with a photo also needs the storage seam – Vercel Blob unless a test injects another. */
-export type PhotoRunnerDependencies = RunnerDependencies & { storage?: ContentStorage };
-
-export function formRunner({ currentPerson, ...dependencies }: RunnerDependencies) {
+export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
   return function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: FormDefinition<Input, Result, Field>,
@@ -63,6 +69,8 @@ export function formRunner({ currentPerson, ...dependencies }: RunnerDependencie
         actor: await currentPerson(),
       });
       if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
+      const removed = definition.removesPhoto?.(outcome.result);
+      if (removed) await removePhoto(storage ?? blobStorage(), removed);
       await definition.onSuccess(outcome.result);
       return null;
     };
@@ -74,7 +82,7 @@ export function formRunner({ currentPerson, ...dependencies }: RunnerDependencie
  * module's "store, run, delete on failure" – a rejected form leaves no stored photo, and a photo that cannot be
  * accepted or stored rejects the form like a command would, keeping the typed values.
  */
-export function photoFormRunner({ currentPerson, storage, ...dependencies }: PhotoRunnerDependencies) {
+export function photoFormRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
   return function photoFormAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: PhotoFormDefinition<Input, Result, Field>,

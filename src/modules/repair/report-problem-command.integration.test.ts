@@ -106,7 +106,7 @@ describe("CMD-ReportProblem by a visitor", () => {
       ok: false,
       error: "description-too-long",
     });
-    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description.length)).toEqual([2000]);
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description?.length)).toEqual([2000]);
   });
 
   it("rejects a problem report for a machine that does not exist, storing nothing", async () => {

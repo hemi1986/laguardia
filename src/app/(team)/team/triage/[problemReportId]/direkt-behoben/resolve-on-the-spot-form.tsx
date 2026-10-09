@@ -8,7 +8,7 @@ import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
 import type { ResolveOnTheSpotState } from "./actions";
-import { rejectionText } from "./resolve-on-the-spot-rejection-text";
+import { triageRejectionText } from "../triage-rejection-text";
 
 const { resolveOnTheSpot: texts, triage } = teamMessages;
 
@@ -50,10 +50,10 @@ export function ResolveOnTheSpotForm({
       </Field>
       {state && (
         <div id={rejectionId} className="flex flex-col gap-2">
-          <Rejection>{rejectionText(state)}</Rejection>
+          <Rejection>{triageRejectionText(state)}</Rejection>
           {state.error === "already-triaged" && (
             <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-              {texts.toTriage}
+              {triage.back}
             </Link>
           )}
         </div>

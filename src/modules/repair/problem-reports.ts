@@ -3,7 +3,7 @@ import { machineForReporting } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, type Database } from "@/platform/command";
 import { elapsedHours, elapsedMoreThanHours } from "@/platform/time";
-import type { ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
+import type { DismissalReason, ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
 import { problemReport } from "./schema";
 
 /** How AGG-ProblemReport is stored: one row per problem report, versioned (HS-16). */
@@ -14,7 +14,8 @@ export const problemReports = aggregateStore({
   toRow: (report: ProblemReport) => ({
     id: report.id,
     machineId: report.machineId,
-    description: report.description,
+    // null, not undefined: an update leaves out undefined columns, and a spam dismissal must remove the text (ST-020).
+    description: report.description ?? null,
     reporterKind: report.reporter.kind,
     reporterTeamMemberId: report.reporter.kind === "team-member" ? report.reporter.teamMemberId : null,
     reportedAt: report.reportedAt,
@@ -24,6 +25,8 @@ export const problemReports = aggregateStore({
     triagedAt: report.triage?.triagedAt ?? null,
     triageDefectId: report.triage?.defectId ?? null,
     triageNote: report.triage?.note ?? null,
+    triageDismissalReason: report.triage?.dismissal?.reason ?? null,
+    triageDismissalText: report.triage?.dismissal?.text ?? null,
   }),
 });
 
@@ -32,7 +35,7 @@ function problemReportOf(row: typeof problemReport.$inferSelect): ProblemReport 
   return {
     id: row.id,
     machineId: row.machineId,
-    description: row.description,
+    description: row.description ?? undefined,
     reporter:
       row.reporterKind === "team-member"
         ? { kind: "team-member", teamMemberId: row.reporterTeamMemberId ?? missing("reporter_team_member_id", row.id) }
@@ -52,6 +55,12 @@ function triageOf(row: typeof problemReport.$inferSelect): ProblemReport["triage
     triagedAt: row.triagedAt ?? missing("triaged_at", row.id),
     defectId: row.triageDefectId ?? undefined,
     note: row.triageNote ?? undefined,
+    dismissal: row.triageDismissalReason
+      ? {
+          reason: row.triageDismissalReason,
+          ...(row.triageDismissalText !== null ? { text: row.triageDismissalText } : {}),
+        }
+      : undefined,
   };
 }
 
@@ -98,7 +107,8 @@ const LONG_WAIT_HOURS = 72;
 export type TriageListEntry = {
   id: string;
   machineId: string;
-  description: string;
+  /** None only on a problem report dismissed as spam (ST-020) – which its own page still shows, the triage list never. */
+  description: string | undefined;
   reporter: Reporter;
   reportedAt: Date;
   /** The stored photo's reference (ST-016) – the team page turns it into a short-lived address. */
@@ -137,14 +147,19 @@ export async function triageList(db: Database, clock: Clock): Promise<TriageList
 
 /**
  * One problem report for its own page and its triage forms (ST-017, ST-018), triaged or not – with the version the
- * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019). Undefined for an unknown ID, or an address that is no ID at all.
+ * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019) and dismissal reason (ST-020). Undefined for an unknown ID, or an address that is no ID at all.
  */
 export async function problemReportForTriage(
   db: Database,
   clock: Clock,
   problemReportId: string,
 ): Promise<
-  | (TriageListEntry & { version: number; triagedBy: string | undefined; triageOutcome: TriageOutcome | undefined })
+  | (TriageListEntry & {
+      version: number;
+      triagedBy: string | undefined;
+      triageOutcome: TriageOutcome | undefined;
+      dismissalReason: DismissalReason | undefined;
+    })
   | undefined
 > {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
@@ -156,6 +171,7 @@ export async function problemReportForTriage(
     version: row.version,
     triagedBy: report.triage?.triagedBy,
     triageOutcome: report.triage?.outcome,
+    dismissalReason: report.triage?.dismissal?.reason,
   };
 }
 
@@ -188,7 +204,8 @@ export async function problemReportsOfDefect(
     .map(problemReportOf)
     .map(({ id, description, reporter, reportedAt, photo }) => ({
       id,
-      description,
+      // A defect's problem reports were triaged into it, never dismissed – so each has its description.
+      description: description ?? missing("description", id),
       reporter,
       reportedAt,
       photo,

@@ -1,13 +1,14 @@
 import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { defectStates, priorities } from "./defect";
-import { triageOutcomes } from "./report-problem";
+import { dismissalReasons, triageOutcomes } from "./report-problem";
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Its triage: outcome, by whom, when (ST-017). */
 export const problemReport = pgTable("problem_report", {
   id: uuid("id").primaryKey().defaultRandom(),
   /** MachineId (ST-007); foreign key to machine.id is added in the migration (ADR 0002: modules share IDs, not tables). */
   machineId: uuid("machine_id").notNull(),
-  description: text("description").notNull(),
+  /** Required – except after a dismissal as spam, which removes it (ST-020, CHECK). */
+  description: text("description"),
   reporterKind: text("reporter_kind", { enum: ["visitor", "team-member"] }).notNull(),
   /** TeamMemberId (UUID from Better Auth); foreign key to team_member.id is added in the migration (ADR 0002: modules share IDs, not tables). */
   reporterTeamMemberId: uuid("reporter_team_member_id"),
@@ -26,6 +27,10 @@ export const problemReport = pgTable("problem_report", {
   triageDefectId: uuid("triage_defect_id"),
   /** The note for the outcome *resolved on the spot* (ST-019) – set exactly then (CHECK). */
   triageNote: text("triage_note"),
+  /** The reason for the outcome *dismissed* (ST-020) – set exactly then (CHECK). */
+  triageDismissalReason: text("triage_dismissal_reason", { enum: dismissalReasons }),
+  /** The free text of the dismissal reason *other* (ST-020) – set exactly then (CHECK). */
+  triageDismissalText: text("triage_dismissal_text"),
   /** Optimistic version check (HS-16): the problem report is the consistency boundary of triage. */
   version: integer("version").notNull().default(0),
 });

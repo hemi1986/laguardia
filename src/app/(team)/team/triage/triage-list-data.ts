@@ -13,7 +13,8 @@ export type TriageListItem = {
   id: string;
   museumNumber: string;
   machineModelTitle: string;
-  description: string;
+  /** None only on a problem report dismissed as spam (ST-020) – shown on its own page, never in the list. */
+  description: string | undefined;
   reporter: ShownReporter;
   reportedAt: Date;
   /** The photo (ST-016) at a short-lived address – issued only here, behind the team pages' access check (HS-1). */
@@ -90,19 +91,20 @@ export async function loadDefectRecorded(
   return { title: recorded.title, museumNumber, newStatus: machine?.machineStatus };
 }
 
-/** What the confirmation after resolving a problem on the spot names (ST-019, G3): the machine. */
-export type ResolvedOnTheSpotConfirmation = { museumNumber: string };
+/** What the confirmation after resolving on the spot (ST-019) or dismissing (ST-020) names (G3): the machine. */
+export type TriagedConfirmation = { museumNumber: string };
 
 /**
- * The confirmation after resolving a problem on the spot, from the problem report's ID in the address – only when it is
- * stored as resolved on the spot; the address cannot make the page say anything that is not stored.
+ * The confirmation after a triage outcome that names only the machine, from the problem report's ID in the address –
+ * only when it is stored with that outcome; the address cannot make the page say anything that is not stored.
  */
-export async function loadResolvedOnTheSpot(
+export async function loadTriagedConfirmation(
   db: Database,
   clock: Clock,
   problemReportId: string,
-): Promise<ResolvedOnTheSpotConfirmation | undefined> {
+  outcome: "resolved-on-the-spot" | "dismissed",
+): Promise<TriagedConfirmation | undefined> {
   const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.triageOutcome !== "resolved-on-the-spot") return undefined;
+  if (report?.triageOutcome !== outcome) return undefined;
   return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
 }

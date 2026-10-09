@@ -24,3 +24,10 @@ export {
 } from "./defects";
 export type { DefectProblemReport } from "./problem-reports";
 export type { Reporter } from "./report-problem";
+export { dismissProblemReportCommand } from "./dismiss-problem-report-command";
+export {
+  reasonsByHand,
+  type DismissProblemReportError,
+  type DismissProblemReportInput,
+} from "./dismiss-problem-report";
+export type { DismissalReason } from "./report-problem";

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import { dismissProblemReportCommand, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -66,6 +66,7 @@ async function anUntriagedProblemReport(museumNumber = "LG-042", photo?: string)
 
 const recordDefectLink = (id: string) => `href="/team/triage/${id}/defekt-erfassen"`;
 const resolveOnTheSpotLink = (id: string) => `href="/team/triage/${id}/direkt-behoben"`;
+const dismissLink = (id: string) => `href="/team/triage/${id}/verwerfen"`;
 
 describe("a problem report's own page", () => {
   it("shows the problem report's photo to the technician who triages it (ST-016)", async () => {
@@ -187,5 +188,44 @@ describe("a problem report's own page", () => {
       expect(html).toContain("Diese Meldung ist schon gesichtet.");
       expect(html).not.toContain(resolveOnTheSpotLink(id));
     }
+  });
+
+  it("ST-020: Dismissing is offered on the problem report's page", async () => {
+    const id = await anUntriagedProblemReport();
+
+    const html = await page(id, "technician");
+
+    expect(html).toContain("Sichten");
+    expect(html).toContain(dismissLink(id));
+    expect(html).toContain("Meldung verwerfen");
+    // The order of the outcomes (G21): „Defekt erfassen“, „Direkt behoben“, „Meldung verwerfen“.
+    expect(html.indexOf(resolveOnTheSpotLink(id))).toBeLessThan(html.indexOf(dismissLink(id)));
+  });
+
+  it("ST-020: Dismissing is not offered on a triaged problem report", async () => {
+    const id = await anUntriagedProblemReport();
+    const triaged = await executeCommand(
+      triageForTest,
+      { problemReportId: id, version: 0 },
+      { actor: eva, db, newId: randomUUID },
+    );
+    if (!triaged.ok) throw new Error("not triaged");
+
+    const html = await page(id, "technician");
+
+    expect(html).toContain("Diese Meldung ist schon gesichtet.");
+    expect(html).not.toContain(dismissLink(id));
+  });
+
+  it("ST-020: Helpers cannot dismiss", async () => {
+    const id = await anUntriagedProblemReport();
+
+    expect(await page(id, "helper")).not.toContain(dismissLink(id));
+    const tried = await executeCommand(
+      dismissProblemReportCommand,
+      { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
+      { actor: anna, db, newId: randomUUID },
+    );
+    expect(tried).toEqual({ ok: false, error: "not-authorized" });
   });
 });

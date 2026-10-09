@@ -6,6 +6,7 @@ export { PHOTO_LIMITS } from "./limits";
 export {
   photoErrors,
   photoViewAddresses,
+  removePhoto,
   withStoredPhoto,
   type PhotoDependencies,
   type PhotoError,

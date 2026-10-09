@@ -69,6 +69,19 @@ async function deleteQuietly(storage: ContentStorage, name: PhotoReference): Pro
 }
 
 /**
+ * Deletes a photo its owner removed on purpose (ST-020, ADR 0007) – after the command that removed it was committed, so
+ * the removal stands whatever happens here. A failed delete is logged by the photo's stored name only, never with the
+ * photo or the owner's text, so it can be deleted by hand later; the person still gets their answer.
+ */
+export async function removePhoto(storage: ContentStorage, photo: PhotoReference): Promise<void> {
+  try {
+    await storage.delete(photo);
+  } catch (error) {
+    console.error(`photo not deleted, delete it by hand: ${photo}:`, error instanceof Error ? error.message : error);
+  }
+}
+
+/**
  * Addresses for showing stored photos, valid for 5 minutes from the injected clock's time – only issued after the
  * page's access check (team members only, HS-1). When the storage cannot issue them, there are none: the page still
  * shows its problem reports, without photos.

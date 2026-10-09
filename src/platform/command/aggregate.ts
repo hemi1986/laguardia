@@ -115,7 +115,8 @@ type Common<
   store: AggregateStore<State>;
   /** Maps a domain event onto its journal entry – references and non-personal facts only, never free text. */
   journal: (event: Event, state: State) => JournalEvent;
-  result: (state: State) => Result;
+  /** What the caller gets back – from the new state, and from the events where the state no longer holds it (ST-020). */
+  result: (state: State, events: Event[]) => Result;
   /**
    * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
    * A rejection of one rejects the whole command; its errors are part of this command's result type.
@@ -247,7 +248,7 @@ export function aggregateCommand<
       }
       if (!decision.ok) return decision;
       // No events: nothing happened – nothing is saved and the version stays (e.g. a policy with nothing to do).
-      if (decision.events.length === 0) return { ok: true, result: definition.result(decision.state), events: [] };
+      if (decision.events.length === 0) return { ok: true, result: definition.result(decision.state, decision.events), events: [] };
 
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
       for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
@@ -268,7 +269,7 @@ export function aggregateCommand<
       }
       return {
         ok: true,
-        result: definition.result(decision.state),
+        result: definition.result(decision.state, decision.events),
         events: decision.events.map((event) => definition.journal(event, decision.state)),
       };
     },
