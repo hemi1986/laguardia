@@ -9,7 +9,7 @@ risk: low
 events: [EVT-ProblemReported, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot]
 depends_on: [ST-019, ST-022, ST-023]
 labels: [mvp, triage, ui]
-status: ready
+status: review
 ---
 
 ## Story
