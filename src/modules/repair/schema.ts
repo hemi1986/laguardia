@@ -24,6 +24,8 @@ export const problemReport = pgTable("problem_report", {
   triagedAt: timestamp("triaged_at", { withTimezone: true }),
   /** The defect for the outcomes *defect recorded* and *linked* (ST-018, ST-022) – set exactly then (CHECK). */
   triageDefectId: uuid("triage_defect_id"),
+  /** The note for the outcome *resolved on the spot* (ST-019) – set exactly then (CHECK). */
+  triageNote: text("triage_note"),
   /** Optimistic version check (HS-16): the problem report is the consistency boundary of triage. */
   version: integer("version").notNull().default(0),
 });

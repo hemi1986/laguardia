@@ -3,7 +3,7 @@ import { machineForReporting } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, type Database } from "@/platform/command";
 import { elapsedHours, elapsedMoreThanHours } from "@/platform/time";
-import type { ProblemReport, Reporter, ReportingFacts } from "./report-problem";
+import type { ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
 import { problemReport } from "./schema";
 
 /** How AGG-ProblemReport is stored: one row per problem report, versioned (HS-16). */
@@ -23,6 +23,7 @@ export const problemReports = aggregateStore({
     triagedBy: report.triage?.triagedBy ?? null,
     triagedAt: report.triage?.triagedAt ?? null,
     triageDefectId: report.triage?.defectId ?? null,
+    triageNote: report.triage?.note ?? null,
   }),
 });
 
@@ -50,6 +51,7 @@ function triageOf(row: typeof problemReport.$inferSelect): ProblemReport["triage
     triagedBy: row.triagedBy ?? missing("triaged_by", row.id),
     triagedAt: row.triagedAt ?? missing("triaged_at", row.id),
     defectId: row.triageDefectId ?? undefined,
+    note: row.triageNote ?? undefined,
   };
 }
 
@@ -135,18 +137,26 @@ export async function triageList(db: Database, clock: Clock): Promise<TriageList
 
 /**
  * One problem report for its own page and its triage forms (ST-017, ST-018), triaged or not – with the version the
- * person sees (HS-16) and who triaged it, if anyone. Undefined for an unknown ID, or an address that is no ID at all.
+ * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019). Undefined for an unknown ID, or an address that is no ID at all.
  */
 export async function problemReportForTriage(
   db: Database,
   clock: Clock,
   problemReportId: string,
-): Promise<(TriageListEntry & { version: number; triagedBy: string | undefined }) | undefined> {
+): Promise<
+  | (TriageListEntry & { version: number; triagedBy: string | undefined; triageOutcome: TriageOutcome | undefined })
+  | undefined
+> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
   const [row] = await db.select().from(problemReport).where(eq(problemReport.id, problemReportId));
   if (!row) return undefined;
   const report = problemReportOf(row);
-  return { ...triageListEntry(report, clock.now()), version: row.version, triagedBy: report.triage?.triagedBy };
+  return {
+    ...triageListEntry(report, clock.now()),
+    version: row.version,
+    triagedBy: report.triage?.triagedBy,
+    triageOutcome: report.triage?.outcome,
+  };
 }
 
 /** One problem report on a defect's own page – the one it was recorded from, or one linked to it later (ST-022). */

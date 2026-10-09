@@ -33,7 +33,7 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
   return (
     <>
       {triaged && <p className="font-medium">{texts.alreadyTriaged}</p>}
-      <p className="whitespace-pre-line [overflow-wrap:anywhere]">{report.description}</p>
+      <p className="[overflow-wrap:anywhere] whitespace-pre-line">{report.description}</p>
       {report.photo && <ProblemReportPhoto address={report.photo.address} />}
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm [overflow-wrap:anywhere]">
         {details.map(([term, value]) => (
@@ -61,8 +61,10 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
  * Technician-only outcomes are not shown to helpers (G11); the commands refuse them anyway.
  */
 function TriageOutcomes({ problemReportId, role }: { problemReportId: string; role: Role }) {
-  const outcomes = role === "technician" ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : [];
-  if (outcomes.length === 0) return null;
+  const outcomes = [
+    ...(role === "technician" ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : []),
+    { href: "direkt-behoben", label: terms["Resolved on the spot"] },
+  ];
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-medium">{texts.outcomes}</h2>

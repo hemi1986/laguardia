@@ -22,6 +22,7 @@ export const teamMessages = {
     Defect: "Defekt",
     "Suitable for helpers": "Für Helfer:innen geeignet",
     "Maintenance task": "Wartungsaufgabe",
+    "Resolved on the spot": "Direkt behoben",
   },
   login: {
     title: "Anmelden",
@@ -145,6 +146,17 @@ export const teamMessages = {
     recordDefect: "Defekt erfassen",
     back: "Zurück zur Sichtung",
   },
+  /** The form „Direkt behoben“ (ST-019, story review 2026-10-03) and its confirmation on the triage list. */
+  resolveOnTheSpot: {
+    title: (museumNumber: string) => `Direkt behoben · ${museumNumber}`,
+    /** The field of the note (events.yaml) – UI wording only. */
+    note: "Was wurde gemacht?",
+    submit: "Als direkt behoben eintragen",
+    back: "Zurück zur Meldung",
+    resolved: (museumNumber: string) => `Meldung zu ${museumNumber} als direkt behoben eingetragen.`,
+    alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
+    toTriage: "Zurück zur Sichtung",
+  },
   /** The form „Defekt erfassen“ (ST-018, story review 2026-10-03) and its confirmation on the triage list. */
   recordDefect: {
     title: (museumNumber: string) => `Defekt erfassen · ${museumNumber}`,
@@ -259,7 +271,8 @@ export const teamMessages = {
     /** The photo errors (ST-016), defined once in the photo module. */
     "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
     "not-an-image": "Das ist kein Foto. Bitte ein Foto wählen oder es weglassen.",
-    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
+    "unsupported-format":
+      "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
     "not-stored": "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden.",
     "title-required": "Bitte einen Titel angeben.",
     "manufacturer-required": "Bitte einen Hersteller angeben.",
@@ -278,6 +291,7 @@ export const teamMessages = {
     "machine-not-on-display": "Dieses Gerät ist nicht ausgestellt.",
     "description-required": "Bitte beschreibe das Problem.",
     "already-triaged": "Diese Meldung ist schon gesichtet.",
+    "note-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",

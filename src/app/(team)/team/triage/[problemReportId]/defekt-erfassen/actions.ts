@@ -9,12 +9,11 @@ import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../../team-session";
 import { recordDefectFields, recordDefectInput, type RecordDefectField } from "./record-defect-input";
-import { withWhoTriagedFirst } from "./record-defect-rejection";
+import { withWhoTriagedFirst } from "../who-triaged-first";
 
 /** After a rejection: the error and the typed values – and who triaged it first, when that is the reason (ST-018). */
 export type RecordDefectState =
-  | (NonNullable<FormState<CommandError<typeof recordDefectCommand>, RecordDefectField>> & { triagedBy?: string })
-  | null;
+  (NonNullable<FormState<CommandError<typeof recordDefectCommand>, RecordDefectField>> & { triagedBy?: string }) | null;
 
 /**
  * CMD-RecordDefect from the form „Defekt erfassen“ (ST-018) – through the Server Action runner (ST-073). Afterwards the

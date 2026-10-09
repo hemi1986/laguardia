@@ -21,9 +21,15 @@ export type TriageOutcome = (typeof triageOutcomes)[number];
 
 /**
  * The Triage value object of AGG-ProblemReport (data model): the defect for *defect recorded* and *linked* (ST-018,
- * ST-022); its note and dismissal reason follow with ST-019 and ST-020.
+ * ST-022), the note for *resolved on the spot* (ST-019); its dismissal reason follows with ST-020.
  */
-export type Triage = { outcome: TriageOutcome; triagedBy: TeamMemberId; triagedAt: Date; defectId?: string };
+export type Triage = {
+  outcome: TriageOutcome;
+  triagedBy: TeamMemberId;
+  triagedAt: Date;
+  defectId?: string;
+  note?: string;
+};
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Untriaged until `triage` is set. */
 export type ProblemReport = {

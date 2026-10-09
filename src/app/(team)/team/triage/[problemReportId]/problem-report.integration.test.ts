@@ -65,6 +65,7 @@ async function anUntriagedProblemReport(museumNumber = "LG-042", photo?: string)
 }
 
 const recordDefectLink = (id: string) => `href="/team/triage/${id}/defekt-erfassen"`;
+const resolveOnTheSpotLink = (id: string) => `href="/team/triage/${id}/direkt-behoben"`;
 
 describe("a problem report's own page", () => {
   it("shows the problem report's photo to the technician who triages it (ST-016)", async () => {
@@ -81,7 +82,13 @@ describe("a problem report's own page", () => {
   it("ST-017: Triaging happens on the problem report's own page", async () => {
     const machine = await executeCommand(
       registerMachineCommand,
-      { machineModelId, museumNumber: "LG-042", serialNumber: undefined, location: "Hall 2", machineStatus: "playable" },
+      {
+        machineModelId,
+        museumNumber: "LG-042",
+        serialNumber: undefined,
+        location: "Hall 2",
+        machineStatus: "playable",
+      },
       { actor: eva, db, newId: randomUUID },
     );
     if (!machine.ok) throw new Error(machine.error);
@@ -150,5 +157,35 @@ describe("a problem report's own page", () => {
 
     expect(html).toContain("Diese Meldung ist schon gesichtet.");
     expect(html).not.toContain(recordDefectLink(id));
+  });
+
+  it("ST-019: Resolving on the spot is offered on the problem report's page", async () => {
+    const id = await anUntriagedProblemReport();
+
+    for (const role of ["helper", "technician"] as const) {
+      const html = await page(id, role);
+      expect(html).toContain("Sichten");
+      expect(html).toContain(resolveOnTheSpotLink(id));
+      expect(html).toContain("Direkt behoben");
+    }
+    // The order of the outcomes (G21): „Defekt erfassen“ before „Direkt behoben“.
+    const html = await page(id, "technician");
+    expect(html.indexOf(recordDefectLink(id))).toBeLessThan(html.indexOf(resolveOnTheSpotLink(id)));
+  });
+
+  it("ST-019: Resolving on the spot is not offered on a triaged problem report", async () => {
+    const id = await anUntriagedProblemReport();
+    const triaged = await executeCommand(
+      triageForTest,
+      { problemReportId: id, version: 0 },
+      { actor: eva, db, newId: randomUUID },
+    );
+    if (!triaged.ok) throw new Error("not triaged");
+
+    for (const role of ["helper", "technician"] as const) {
+      const html = await page(id, role);
+      expect(html).toContain("Diese Meldung ist schon gesichtet.");
+      expect(html).not.toContain(resolveOnTheSpotLink(id));
+    }
   });
 });
