@@ -148,6 +148,18 @@ export const teamMessages = {
     recordDefect: "Defekt erfassen",
     back: "Zurück zur Sichtung",
   },
+  /** The form „Mit Defekt verknüpfen“ (ST-022, story review 2026-10-03) and its confirmation on the triage list. */
+  link: {
+    title: (museumNumber: string) => `Mit Defekt verknüpfen · ${museumNumber}`,
+    outcome: "Mit Defekt verknüpfen",
+    /** A problem report's own page when its machine has nothing to link to (G7). */
+    noOpenDefects: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
+    defect: "Offener Defekt",
+    openSince: (when: string) => `offen seit ${when}`,
+    submit: "Mit Defekt verknüpfen",
+    back: "Zurück zur Meldung",
+    linked: (museumNumber: string, title: string) => `Meldung zu ${museumNumber} mit Defekt „${title}“ verknüpft.`,
+  },
   /** The form „Direkt behoben“ (ST-019, story review 2026-10-03) and its confirmation on the triage list. */
   resolveOnTheSpot: {
     title: (museumNumber: string) => `Direkt behoben · ${museumNumber}`,
@@ -313,6 +325,9 @@ export const teamMessages = {
     "note-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "dismissal-reason-required": "Bitte einen Grund auswählen.",
     "dismissal-reason-text-required": "Bitte den Grund beschreiben.",
+    "defect-required": "Bitte einen Defekt auswählen.",
+    "defect-of-another-machine": "Dieser Defekt gehört zu einem anderen Gerät.",
+    "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",

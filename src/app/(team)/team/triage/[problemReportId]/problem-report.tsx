@@ -50,7 +50,14 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
           {report.waitingLong && <span className="font-medium"> · {texts.longWait}</span>}
         </p>
       )}
-      {!triaged && <TriageOutcomes problemReportId={report.id} role={role} />}
+      {!triaged && (
+        <TriageOutcomes
+          problemReportId={report.id}
+          museumNumber={report.museumNumber}
+          role={role}
+          canLink={data.openDefects.length > 0}
+        />
+      )}
       <BackToTriage />
     </>
   );
@@ -61,8 +68,21 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
  * order Mit Defekt verknüpfen (ST-022), Defekt erfassen (ST-018), Direkt behoben (ST-019), Meldung verwerfen (ST-020).
  * Technician-only outcomes are not shown to helpers (G11); the commands refuse them anyway.
  */
-function TriageOutcomes({ problemReportId, role }: { problemReportId: string; role: Role }) {
+function TriageOutcomes({
+  problemReportId,
+  museumNumber,
+  role,
+  canLink,
+}: {
+  problemReportId: string;
+  museumNumber: string;
+  role: Role;
+  /** The machine has an open defect to link to (ST-022). */
+  canLink: boolean;
+}) {
+  const technician = role === "technician";
   const outcomes = [
+    ...(technician && canLink ? [{ href: "verknuepfen", label: teamMessages.link.outcome }] : []),
     ...(role === "technician" ? [{ href: "defekt-erfassen", label: texts.recordDefect }] : []),
     { href: "direkt-behoben", label: terms["Resolved on the spot"] },
     ...(role === "technician" ? [{ href: "verwerfen", label: teamMessages.dismiss.outcome }] : []),
@@ -81,6 +101,10 @@ function TriageOutcomes({ problemReportId, role }: { problemReportId: string; ro
           </Link>
         ))}
       </div>
+      {/* Linking is not offered without an open defect – said in words, not left out silently (G7). */}
+      {technician && !canLink && (
+        <p className="text-muted-foreground text-sm">{teamMessages.link.noOpenDefects(museumNumber)}</p>
+      )}
     </section>
   );
 }

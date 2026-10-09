@@ -1,4 +1,4 @@
-import { problemReportForTriage } from "@/modules/repair";
+import { openDefects, problemReportForTriage } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -8,7 +8,8 @@ import { withNames, type TriageListItem } from "../triage-list-data";
 
 /**
  * A problem report's own page's data (ST-017): what the triage list shows of it, whether it is triaged yet and by whom,
- * and the version the person sees – the triage forms (ST-018 ff.) post it (HS-16).
+ * and the version the person sees – the triage forms (ST-018 ff.) post it (HS-16) –, and its machine's open defects,
+ * the ones it can be linked to (ST-022).
  */
 export type ProblemReportData =
   | {
@@ -18,6 +19,8 @@ export type ProblemReportData =
       version: number;
       /** Dismissed as spam (ST-020): its description and photo are gone – the page says so. */
       dismissedAsSpam: boolean;
+      /** The machine's open defects, the oldest first – what „Mit Defekt verknüpfen“ offers (ST-022). */
+      openDefects: { id: string; title: string; openSince: Date }[];
     }
   | undefined;
 
@@ -29,9 +32,10 @@ export async function loadProblemReport(
 ): Promise<ProblemReportData> {
   const found = await problemReportForTriage(db, clock, problemReportId);
   if (!found) return undefined;
-  const [[report], names] = await Promise.all([
+  const [[report], names, defects] = await Promise.all([
     withNames(db, [found], { clock, storage }),
     teamMemberNames(db, found.triagedBy ? [found.triagedBy] : []),
+    openDefects(db, { machineId: found.machineId }),
   ]);
   return {
     report,
@@ -39,5 +43,8 @@ export async function loadProblemReport(
     triagedByName: found.triagedBy && names.get(found.triagedBy),
     version: found.version,
     dismissedAsSpam: found.dismissalReason === "spam",
+    openDefects: defects
+      .map(({ id, title, openSince }) => ({ id, title, openSince }))
+      .sort((a, b) => a.openSince.getTime() - b.openSince.getTime()),
   };
 }
