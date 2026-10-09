@@ -85,4 +85,45 @@ describe("CMD-LinkProblemReportToDefect", () => {
       data: { defectId },
     });
   });
+
+  it("ST-022: Defect of another machine cannot be linked", async () => {
+    const lg007 = await aRegisteredMachine(db);
+    const lg042 = await aRegisteredMachine(db);
+    const displayFlickers = await anOpenDefect(lg007, "Display flickers");
+    const problemReportId = await reported(lg042, "Flipper on the left does nothing");
+
+    expect(await link(problemReportId, displayFlickers)).toEqual({ ok: false, error: "defect-of-another-machine" });
+
+    expect((await problemReportForTriage(db, clock, problemReportId))?.triageOutcome).toBeUndefined();
+    expect((await openDefects(db, { machineId: lg007 }))[0]).toMatchObject({ linkedProblemReports: 0 });
+  });
+
+  it("ST-022: A defect resolved in the meantime cannot be linked", async () => {
+    const lg042 = await aRegisteredMachine(db);
+    const defectId = await anOpenDefect(lg042, "Left flipper weak");
+    const problemReportId = await reported(lg042, "Flipper on the left does nothing");
+    // The technician's page offered the open defect; a moment later it was resolved.
+    const resolved = await executeCommand(
+      resolveDefectForTest,
+      { defectId, version: 0 },
+      { actor: eva, db, clock, newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+
+    expect(await link(problemReportId, defectId)).toEqual({ ok: false, error: "defect-not-open" });
+
+    expect((await problemReportForTriage(db, clock, problemReportId))?.triageOutcome).toBeUndefined();
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+  });
+
+  it("rejects linking without a defect, or with one that does not exist", async () => {
+    const lg042 = await aRegisteredMachine(db);
+    await anOpenDefect(lg042, "Left flipper weak");
+    const problemReportId = await reported(lg042, "Flipper on the left does nothing");
+
+    expect(await link(problemReportId, undefined)).toEqual({ ok: false, error: "defect-required" });
+    expect(await link(problemReportId, randomUUID())).toEqual({ ok: false, error: "defect-required" });
+    expect(await link(problemReportId, "not-an-id")).toEqual({ ok: false, error: "defect-required" });
+    expect((await problemReportForTriage(db, clock, problemReportId))?.triageOutcome).toBeUndefined();
+  });
 });
