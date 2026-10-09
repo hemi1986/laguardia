@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-ProblemReportDismissed]
 depends_on: [ST-017, ST-016]
 labels: [mvp, triage, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
