@@ -35,7 +35,7 @@ export type ProblemReportDismissed = {
   removedPhoto: string | undefined;
 };
 
-export type DismissProblemReportError = "already-triaged" | "reason-required" | "reason-text-required";
+export type DismissProblemReportError = "already-triaged" | "dismissal-reason-required" | "dismissal-reason-text-required";
 
 export function dismissProblemReport(
   report: ProblemReport,
@@ -44,9 +44,9 @@ export function dismissProblemReport(
 ): Decision<ProblemReport, ProblemReportDismissed, DismissProblemReportError> {
   if (report.triage) return { ok: false, error: "already-triaged" };
   const reason = reasonsByHand.find((byHand) => byHand === input.reason);
-  if (!reason) return { ok: false, error: "reason-required" };
+  if (!reason) return { ok: false, error: "dismissal-reason-required" };
   const text = reason === "other" ? input.reasonText.trim() : undefined;
-  if (text === "") return { ok: false, error: "reason-text-required" };
+  if (text === "") return { ok: false, error: "dismissal-reason-text-required" };
 
   const spam = reason === "spam";
   const { photo, ...withoutPhoto } = report;

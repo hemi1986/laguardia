@@ -72,7 +72,7 @@ describe("CMD-DismissProblemReport", () => {
 
     expect(await dismiss(problemReportId, { reason: undefined, reasonText: "" })).toEqual({
       ok: false,
-      error: "reason-required",
+      error: "dismissal-reason-required",
     });
     expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
     expect(await untriagedIds()).toContain(problemReportId);
@@ -83,7 +83,7 @@ describe("CMD-DismissProblemReport", () => {
 
     expect(await dismiss(problemReportId, { reason: "other", reasonText: "  " })).toEqual({
       ok: false,
-      error: "reason-text-required",
+      error: "dismissal-reason-text-required",
     });
     expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
   });
@@ -112,7 +112,7 @@ describe("CMD-DismissProblemReport", () => {
     // Set only by POL-RetirementDismissesProblemReports (ST-039) – by hand it is no reason at all.
     expect(await dismiss(problemReportId, { reason: "machine-retired", reasonText: "" })).toEqual({
       ok: false,
-      error: "reason-required",
+      error: "dismissal-reason-required",
     });
     expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
     for (const reason of ["not-a-fault", "spam", "other"] as const) {
