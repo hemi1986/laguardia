@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 19 of 57 domain stories done** · scenarios 177 of 415
+**Progress: 19 of 58 domain stories done** · scenarios 177 of 428
 
-**80 stories** · In Progress: 0 · Ready: 44 · In Review: 1 · Draft: 4 · Done: 31
+**81 stories** · In Progress: 0 · Ready: 44 · In Review: 1 · Draft: 5 · Done: 31
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -61,7 +61,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-023](ST-023-technician-reports-and-triages.md) | Technician reports a problem and records a defect in the same step | story | Repair | must | M | medium | ST-015, ST-018 |
+| [ST-023](ST-023-technician-reports-and-triages.md) | Technician reports a problem and records a defect in the same step | story | Repair | must | M | medium | ST-015, ST-016, ST-018 |
 
 ## Draft
 
@@ -71,6 +71,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-080](ST-080-pre-runner-forms-onto-house-pattern.md) | Move the four pre-runner forms onto the house pattern | tech-task | Team | must | S | low | ST-007 |
 | [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Find a team member and act on one account at a time | story | Team | must | – | – | – |
 | [ST-082](ST-082-deactivation-asks-once-and-can-be-undone.md) | Deactivating a team member asks once, and can be undone | story | Team | must | – | – | ST-081 (draft) |
+| [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | should | – | – | ST-013, ST-015, ST-016 |
 
 ## Done
 

@@ -20,6 +20,7 @@ Second part of the split of ST-023 (story review 2026-09-26). All rules of `CMD-
 - Technicians may choose, besides recording a defect (ST-023), the outcomes *link to an open defect of the machine* and *resolve on the spot*. For technicians an outcome stays mandatory.
 - Helpers may report and resolve on the spot in the same step (e.g. a stuck ball they just freed) – the only triage outcome helpers may choose. Otherwise a helper's problem report waits in the triage list.
 - The problem report and its triage are stored together: if the triage part is rejected, the problem report is not stored either.
+- Form (ST-023, `docs/reviews/ST-023-ux-form.md`, user 2026-10-10; no change in scope): for technicians the outcomes „Mit Defekt verknüpfen“ (only when the machine has open defects; otherwise „LG-042 hat keine offenen Defekte.“) and „Direkt behoben“ become buttons in the section „Sichten“ of `/team/machines/<museum number>/melden`, in ST-023's order („Mit Defekt verknüpfen“, „Defekt erfassen“, „Direkt behoben“), each with a form page of its own that also has the problem report's fields (section „Meldung“), sent once, and each lands on the machine record with its confirmation. How a helper reaches „Direkt behoben“ in the same step – helpers see ST-015's plain form on `/melden` (G11) – is ST-052's open UX point.
 
 ## Acceptance Criteria
 
