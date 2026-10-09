@@ -107,3 +107,20 @@ export async function loadResolvedOnTheSpot(
   if (report?.triageOutcome !== "resolved-on-the-spot") return undefined;
   return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
 }
+
+/** What the confirmation after dismissing a problem report names (ST-020, G3): the machine. */
+export type DismissedConfirmation = { museumNumber: string };
+
+/**
+ * The confirmation after dismissing a problem report, from its ID in the address – only when it is stored as dismissed;
+ * the address cannot make the page say anything that is not stored.
+ */
+export async function loadDismissed(
+  db: Database,
+  clock: Clock,
+  problemReportId: string,
+): Promise<DismissedConfirmation | undefined> {
+  const report = await problemReportForTriage(db, clock, problemReportId);
+  if (report?.triageOutcome !== "dismissed") return undefined;
+  return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
+}
