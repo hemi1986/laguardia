@@ -31,3 +31,5 @@ export {
   type DismissProblemReportInput,
 } from "./dismiss-problem-report";
 export type { DismissalReason } from "./report-problem";
+export { linkProblemReportToDefectCommand } from "./link-problem-report-to-defect-command";
+export type { LinkProblemReportToDefectError, LinkProblemReportToDefectInput } from "./link-problem-report-to-defect";
