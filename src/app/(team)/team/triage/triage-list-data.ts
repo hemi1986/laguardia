@@ -91,36 +91,20 @@ export async function loadDefectRecorded(
   return { title: recorded.title, museumNumber, newStatus: machine?.machineStatus };
 }
 
-/** What the confirmation after resolving a problem on the spot names (ST-019, G3): the machine. */
-export type ResolvedOnTheSpotConfirmation = { museumNumber: string };
+/** What the confirmation after resolving on the spot (ST-019) or dismissing (ST-020) names (G3): the machine. */
+export type TriagedConfirmation = { museumNumber: string };
 
 /**
- * The confirmation after resolving a problem on the spot, from the problem report's ID in the address – only when it is
- * stored as resolved on the spot; the address cannot make the page say anything that is not stored.
+ * The confirmation after a triage outcome that names only the machine, from the problem report's ID in the address –
+ * only when it is stored with that outcome; the address cannot make the page say anything that is not stored.
  */
-export async function loadResolvedOnTheSpot(
+export async function loadTriagedConfirmation(
   db: Database,
   clock: Clock,
   problemReportId: string,
-): Promise<ResolvedOnTheSpotConfirmation | undefined> {
+  outcome: "resolved-on-the-spot" | "dismissed",
+): Promise<TriagedConfirmation | undefined> {
   const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.triageOutcome !== "resolved-on-the-spot") return undefined;
-  return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
-}
-
-/** What the confirmation after dismissing a problem report names (ST-020, G3): the machine. */
-export type DismissedConfirmation = { museumNumber: string };
-
-/**
- * The confirmation after dismissing a problem report, from its ID in the address – only when it is stored as dismissed;
- * the address cannot make the page say anything that is not stored.
- */
-export async function loadDismissed(
-  db: Database,
-  clock: Clock,
-  problemReportId: string,
-): Promise<DismissedConfirmation | undefined> {
-  const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.triageOutcome !== "dismissed") return undefined;
+  if (report?.triageOutcome !== outcome) return undefined;
   return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
 }

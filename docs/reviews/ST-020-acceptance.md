@@ -46,3 +46,11 @@ Traceability: `check-scenarios.ts ST-020` → 14/14 scenarios covered.
 | Dismissed-as-spam page for a helper | Context: page shows it as dismissed | Covered by shared `ProblemReportView` (technician role tested) |
 
 Verdict: accepted with remarks (no scenario gap, all tests pass; remarks above are questions or minor, none reaches the follow-up hurdle).
+
+## Resolution (2026-10-09, /implement step 6)
+
+- **Remarks 1 and 6 (photo deletion only with in-memory storage; spam question only on reports without a photo):** checked by the user on the preview, which has the Blob store – a spam dismissal of a report with a photo, in the acceptance step.
+- **Remark 2 (no maximum length for the „Anderer Grund“ text):** no change. The user decided on 2026-10-09 that no maximum length is needed for now (`OPEN_QUESTIONS.md`, ST-019 row).
+- **Remark 3 (free text ignored for other reasons):** no change. The field's label says „nur bei „Anderer Grund““, and the story stores a text only for *other*.
+- **Remark 4 (helper opening `/verwerfen` directly):** no change. The page and the action call `requireTechnician()`, as „Defekt erfassen“ does. The command refuses helpers, which is tested at the command and on the page.
+- **Remark 5 („Mit Defekt verknüpfen“ not offered):** belongs to ST-022 (link a problem report to an open defect).

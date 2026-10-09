@@ -6,8 +6,7 @@ import { reporterName } from "../reporter";
 import { ProblemReportPhoto } from "../problem-report-photo";
 import type {
   DefectRecordedConfirmation,
-  DismissedConfirmation,
-  ResolvedOnTheSpotConfirmation,
+  TriagedConfirmation,
   TriageListItem,
 } from "./triage-list-data";
 
@@ -29,9 +28,9 @@ export function TriageListView({
   /** Just back from recording a defect (ST-018): the confirmation names it, its machine and its new status (G3). */
   defectRecorded?: DefectRecordedConfirmation;
   /** Just back from resolving a problem on the spot (ST-019): the confirmation names the machine (G3). */
-  resolvedOnTheSpot?: ResolvedOnTheSpotConfirmation;
+  resolvedOnTheSpot?: TriagedConfirmation;
   /** Just back from dismissing a problem report (ST-020): the confirmation names the machine (G3). */
-  dismissed?: DismissedConfirmation;
+  dismissed?: TriagedConfirmation;
 }) {
   const { entries } = data;
   const confirmation =

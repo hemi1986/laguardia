@@ -8,7 +8,7 @@ import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
 import type { DismissState } from "./actions";
-import { rejectionText } from "./dismiss-rejection-text";
+import { triageRejectionText } from "../triage-rejection-text";
 
 const { dismiss: texts, triage } = teamMessages;
 
@@ -51,7 +51,7 @@ export function DismissForm({
             {texts.confirmSpam}
           </Button>
           <Button type="submit" name="step" value="back" variant="outline" disabled={pending}>
-            {texts.notYet}
+            {texts.questionBack}
           </Button>
         </div>
       </form>
@@ -98,10 +98,10 @@ export function DismissForm({
       </Field>
       {rejection && (
         <div id={rejectionId} className="flex flex-col gap-2">
-          <Rejection>{rejectionText(rejection)}</Rejection>
+          <Rejection>{triageRejectionText(rejection)}</Rejection>
           {rejection.error === "already-triaged" && (
             <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-              {texts.toTriage}
+              {triage.back}
             </Link>
           )}
         </div>

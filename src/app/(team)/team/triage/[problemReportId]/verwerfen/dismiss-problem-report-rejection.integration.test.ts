@@ -7,8 +7,8 @@ import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { triageRejectionText } from "../triage-rejection-text";
 import { withWhoTriagedFirst } from "../who-triaged-first";
-import { rejectionText } from "./dismiss-rejection-text";
 
 /**
  * What the form „Meldung verwerfen“ says when it is rejected (ST-020, story review 2026-10-03): who triaged the problem
@@ -55,14 +55,14 @@ describe("a rejected „Meldung verwerfen“", () => {
     const state = await withWhoTriagedFirst(db, clock, problemReportId, { error: tried.error, values });
 
     expect(state).toEqual({ error: "already-triaged", values, triagedBy: "Tom" });
-    expect(rejectionText(state!)).toBe("Tom hat diese Meldung schon gesichtet.");
+    expect(triageRejectionText(state!)).toBe("Tom hat diese Meldung schon gesichtet.");
   });
 
   it("asks for a reason, and for a description of the reason other, in the catalogue's words", async () => {
-    expect(rejectionText({ error: "dismissal-reason-required", values: { ...values, reason: "" } })).toBe(
+    expect(triageRejectionText({ error: "dismissal-reason-required" })).toBe(
       "Bitte einen Grund auswählen.",
     );
-    expect(rejectionText({ error: "dismissal-reason-text-required", values: { ...values, reason: "other" } })).toBe(
+    expect(triageRejectionText({ error: "dismissal-reason-text-required" })).toBe(
       "Bitte den Grund beschreiben.",
     );
   });

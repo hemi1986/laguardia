@@ -39,7 +39,7 @@ export type FormDefinition<Input, Result, Field extends string> = {
   onSuccess: (result: Result) => Promise<void>;
 };
 
-/** `storage`: where a removed photo is deleted (ST-020) – Vercel Blob unless a test injects another. */
+/** `storage`: where a form's photo is stored (ST-016) or a removed one deleted (ST-020) – Vercel Blob unless a test injects another. */
 export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
   currentPerson: () => Promise<Actor>;
   storage?: ContentStorage;
@@ -53,9 +53,6 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   photo: { field: string; owner: PhotoOwner };
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
 };
-
-/** The runner of a form with a photo also needs the storage seam – Vercel Blob unless a test injects another. */
-export type PhotoRunnerDependencies = RunnerDependencies;
 
 export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
   return function formAction<Input, Result, Error extends string, const Field extends string>(
@@ -85,7 +82,7 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
  * module's "store, run, delete on failure" – a rejected form leaves no stored photo, and a photo that cannot be
  * accepted or stored rejects the form like a command would, keeping the typed values.
  */
-export function photoFormRunner({ currentPerson, storage, ...dependencies }: PhotoRunnerDependencies) {
+export function photoFormRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
   return function photoFormAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: PhotoFormDefinition<Input, Result, Field>,

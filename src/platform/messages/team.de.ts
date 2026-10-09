@@ -141,6 +141,8 @@ export const teamMessages = {
     reportedAt: "Gemeldet am",
     unknown: "Diese Meldung gibt es nicht.",
     alreadyTriaged: "Diese Meldung ist schon gesichtet.",
+    /** A triage form rejected because someone triaged first – naming who (story review 2026-10-03). */
+    alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
     /** The section with the triage outcomes on a problem report's page (G21). */
     outcomes: "Sichten",
     recordDefect: "Defekt erfassen",
@@ -154,8 +156,6 @@ export const teamMessages = {
     submit: "Als direkt behoben eintragen",
     back: "Zurück zur Meldung",
     resolved: (museumNumber: string) => `Meldung zu ${museumNumber} als direkt behoben eingetragen.`,
-    alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
-    toTriage: "Zurück zur Sichtung",
   },
   /**
    * The form „Meldung verwerfen“ (ST-020, story review 2026-10-03), its spam question (G10) and its confirmation on the
@@ -171,13 +171,12 @@ export const teamMessages = {
     spamQuestion: (museumNumber: string) =>
       `Meldung zu ${museumNumber} als Spam verwerfen? Beschreibung und Foto werden endgültig gelöscht.`,
     confirmSpam: "Endgültig verwerfen",
-    notYet: "Zurück",
+    /** Going back from the spam question to the form, spam still chosen. */
+    questionBack: "Zurück",
     back: "Zurück zur Meldung",
     dismissed: (museumNumber: string) => `Meldung zu ${museumNumber} verworfen.`,
     /** A problem report's own page after a spam dismissal – the only place it is still shown (ST-020). */
     dismissedAsSpam: "Als Spam verworfen – Beschreibung und Foto sind gelöscht.",
-    alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
-    toTriage: "Zurück zur Sichtung",
   },
   /** The form „Defekt erfassen“ (ST-018, story review 2026-10-03) and its confirmation on the triage list. */
   recordDefect: {
@@ -196,8 +195,6 @@ export const teamMessages = {
     back: "Zurück zur Meldung",
     recorded: (title: string, museumNumber: string) => `Defekt „${title}“ an ${museumNumber} erfasst.`,
     statusNow: (museumNumber: string, status: string) => ` ${museumNumber} ist jetzt ${status}.`,
-    alreadyTriagedBy: (name: string) => `${name} hat diese Meldung schon gesichtet.`,
-    toTriage: "Zurück zur Sichtung",
     retiredMeanwhile: (museumNumber: string) =>
       `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
   },

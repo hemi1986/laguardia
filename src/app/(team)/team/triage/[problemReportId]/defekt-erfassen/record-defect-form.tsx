@@ -125,7 +125,7 @@ export function RecordDefectForm({
           <Rejection>{rejectionText(state, museumNumber)}</Rejection>
           {state.error === "already-triaged" && (
             <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-              {texts.toTriage}
+              {triage.back}
             </Link>
           )}
         </div>

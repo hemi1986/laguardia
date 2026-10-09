@@ -7,8 +7,8 @@ import { testDatabase } from "@/test-support/database";
 import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { triageRejectionText } from "../triage-rejection-text";
 import { withWhoTriagedFirst } from "../who-triaged-first";
-import { rejectionText } from "./resolve-on-the-spot-rejection-text";
 
 /**
  * What the form „Direkt behoben“ says when it is rejected (ST-019, story review 2026-10-03): who triaged the problem
@@ -63,13 +63,13 @@ describe("a rejected „Direkt behoben“", () => {
     const state = await withWhoTriagedFirst(db, clock, problemReportId, { error: tried.error, values });
 
     expect(state).toEqual({ error: "already-triaged", values, triagedBy: "Tom" });
-    expect(rejectionText(state!)).toBe("Tom hat diese Meldung schon gesichtet.");
+    expect(triageRejectionText(state!)).toBe("Tom hat diese Meldung schon gesichtet.");
   });
 
   it("asks for a note in the catalogue's words", async () => {
     const state = { error: "note-required" as const, values: { version: "0", note: "" } };
 
     expect(await withWhoTriagedFirst(db, clock, randomUUID(), state)).toBe(state);
-    expect(rejectionText(state)).toBe("Bitte kurz beschreiben, was gemacht wurde.");
+    expect(triageRejectionText(state)).toBe("Bitte kurz beschreiben, was gemacht wurde.");
   });
 });

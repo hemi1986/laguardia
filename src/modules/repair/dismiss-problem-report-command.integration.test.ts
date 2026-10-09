@@ -106,7 +106,7 @@ describe("CMD-DismissProblemReport", () => {
     expect(entry.data).toEqual({ reason: "other" });
   });
 
-  it('ST-020: "Machine retired" cannot be chosen by hand', async () => {
+  it('refuses "machine retired" by hand like a missing reason, and accepts the three reasons a person may choose', async () => {
     const { problemReportId } = await anUntriagedProblemReport();
 
     // Set only by POL-RetirementDismissesProblemReports (ST-039) – by hand it is no reason at all.

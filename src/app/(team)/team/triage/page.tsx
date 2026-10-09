@@ -3,7 +3,7 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../team-session";
-import { loadDefectRecorded, loadDismissed, loadResolvedOnTheSpot, loadTriageList } from "./triage-list-data";
+import { loadDefectRecorded, loadTriagedConfirmation, loadTriageList } from "./triage-list-data";
 import { TriageListView } from "./triage-list";
 
 /**
@@ -19,8 +19,8 @@ export default async function TriageListPage({ searchParams }: PageProps<"/team/
   const [data, defectRecorded, resolvedOnTheSpot, dismissed] = await Promise.all([
     loadTriageList(database(), systemClock),
     defectId ? loadDefectRecorded(database(), defectId, query.statusChanged !== undefined) : undefined,
-    resolvedId ? loadResolvedOnTheSpot(database(), systemClock, resolvedId) : undefined,
-    dismissedId ? loadDismissed(database(), systemClock, dismissedId) : undefined,
+    resolvedId ? loadTriagedConfirmation(database(), systemClock, resolvedId, "resolved-on-the-spot") : undefined,
+    dismissedId ? loadTriagedConfirmation(database(), systemClock, dismissedId, "dismissed") : undefined,
   ]);
 
   return (
