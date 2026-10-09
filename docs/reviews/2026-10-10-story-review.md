@@ -47,6 +47,8 @@ ux-designer proposes **G21a** (from `docs/reviews/ST-023-ux-form.md`) plus one s
 - Optional (lead-dev): a reusable browser assertion for G8a – inside ST-023, no task of its own.
 - Conventions after ST-023 (lead-dev): role-dependent content on one route; a creating command with a triage part in the seam catalog.
 
-## Decisions (user)
+## Decisions (user, 2026-10-10)
 
-_pending_
+1. **1a** – ST-023: all change requests 1–11 adopted; size L; ST-052 is built right after ST-023.
+2. **2a** – ST-052: helper path H2, the UX review's Context lines and eight scenarios, size M, risk medium, no split; a defect resolved in the meantime is rejected (reopening stays ST-053).
+3. **3a** – the ux-designer writes G21a with the H2 sentence into `docs/product/ux-guidelines.md`; no photo sentence after a rejection of the photo itself (ST-023 and ST-084).
