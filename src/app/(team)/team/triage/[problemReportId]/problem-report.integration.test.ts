@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { dismissProblemReportCommand, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import {
+  dismissProblemReportCommand,
+  linkProblemReportToDefectCommand,
+  recordDefectCommand,
+  reportProblemCommand,
+} from "@/modules/repair";
 import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -48,22 +53,52 @@ async function page(problemReportId: string, role: "helper" | "technician" = "te
   return renderToStaticMarkup(createElement(ProblemReportView, { data, role }));
 }
 
-async function anUntriagedProblemReport(museumNumber = "LG-042", photo?: string) {
+async function aRegisteredMachine(museumNumber: string) {
   const machine = await executeCommand(
     registerMachineCommand,
     { machineModelId, museumNumber, serialNumber: undefined, location: "Hall 2", machineStatus: "playable" },
     { actor: eva, db, newId: randomUUID },
   );
   if (!machine.ok) throw new Error(machine.error);
+  return machine.result.machineId;
+}
+
+async function reportedFor(machineId: string, description = "Left flipper barely moves", photo?: string) {
   const reported = await executeCommand(
     reportProblemCommand,
-    { machineId: machine.result.machineId, description: "Left flipper barely moves", photo },
+    { machineId, description, photo },
     { actor: anna, db, clock: fixedClock("2026-10-03T11:00:00Z"), newId: randomUUID },
   );
   if (!reported.ok) throw new Error(reported.error);
   return reported.result.problemReportId;
 }
 
+async function anUntriagedProblemReport(museumNumber = "LG-042", photo?: string) {
+  return reportedFor(await aRegisteredMachine(museumNumber), "Left flipper barely moves", photo);
+}
+
+/** An untriaged problem report of "LG-042", which has the open defect "Left flipper weak" (ST-022). */
+async function anUntriagedProblemReportBesideAnOpenDefect() {
+  const machineId = await aRegisteredMachine("LG-042");
+  const recorded = await executeCommand(
+    recordDefectCommand,
+    {
+      problemReportId: await reportedFor(machineId),
+      version: 0,
+      title: "Left flipper weak",
+      priority: undefined,
+      suitableForHelpers: false,
+      machineStatus: undefined,
+      machineVersion: undefined,
+    },
+    { actor: eva, db, clock: fixedClock("2026-10-03T12:00:00Z"), newId: randomUUID },
+  );
+  if (!recorded.ok) throw new Error(recorded.error);
+  const problemReportId = await reportedFor(machineId, "Flipper on the left does nothing");
+  return { problemReportId, defectId: recorded.result.defectId };
+}
+
+const linkLink = (id: string) => `href="/team/triage/${id}/verknuepfen"`;
 const recordDefectLink = (id: string) => `href="/team/triage/${id}/defekt-erfassen"`;
 const resolveOnTheSpotLink = (id: string) => `href="/team/triage/${id}/direkt-behoben"`;
 const dismissLink = (id: string) => `href="/team/triage/${id}/verwerfen"`;
@@ -224,6 +259,59 @@ describe("a problem report's own page", () => {
     const tried = await executeCommand(
       dismissProblemReportCommand,
       { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
+      { actor: anna, db, newId: randomUUID },
+    );
+    expect(tried).toEqual({ ok: false, error: "not-authorized" });
+  });
+
+  it("ST-022: Open defects of the machine are offered for linking", async () => {
+    const { problemReportId: id } = await anUntriagedProblemReportBesideAnOpenDefect();
+
+    const html = await page(id, "technician");
+
+    expect(html).toContain("Sichten");
+    expect(html).toContain(linkLink(id));
+    expect(html).toContain("Mit Defekt verknüpfen");
+    // The order of the outcomes (G21): „Mit Defekt verknüpfen“ first, before „Defekt erfassen“.
+    expect(html.indexOf(linkLink(id))).toBeLessThan(html.indexOf(recordDefectLink(id)));
+  });
+
+  it("ST-022: No open defect, nothing to link", async () => {
+    const id = await anUntriagedProblemReport();
+
+    const html = await page(id, "technician");
+
+    expect(html).not.toContain(linkLink(id));
+    expect(html).toContain("LG-042 hat keine offenen Defekte.");
+    // The other outcomes stay offered.
+    expect(html).toContain(recordDefectLink(id));
+  });
+
+  it("ST-022: Linking is not offered on a triaged problem report", async () => {
+    const { problemReportId: id } = await anUntriagedProblemReportBesideAnOpenDefect();
+    const triaged = await executeCommand(
+      triageForTest,
+      { problemReportId: id, version: 0 },
+      { actor: eva, db, newId: randomUUID },
+    );
+    if (!triaged.ok) throw new Error("not triaged");
+
+    const html = await page(id, "technician");
+
+    expect(html).toContain("Diese Meldung ist schon gesichtet.");
+    expect(html).not.toContain(linkLink(id));
+    expect(html).not.toContain("keine offenen Defekte");
+  });
+
+  it("ST-022: Helpers cannot link", async () => {
+    const { problemReportId: id, defectId } = await anUntriagedProblemReportBesideAnOpenDefect();
+
+    const html = await page(id, "helper");
+    expect(html).not.toContain(linkLink(id));
+    expect(html).not.toContain("keine offenen Defekte");
+    const tried = await executeCommand(
+      linkProblemReportToDefectCommand,
+      { problemReportId: id, version: 0, defectId },
       { actor: anna, db, newId: randomUUID },
     );
     expect(tried).toEqual({ ok: false, error: "not-authorized" });

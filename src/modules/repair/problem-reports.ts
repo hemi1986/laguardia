@@ -147,7 +147,7 @@ export async function triageList(db: Database, clock: Clock): Promise<TriageList
 
 /**
  * One problem report for its own page and its triage forms (ST-017, ST-018), triaged or not – with the version the
- * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019) and dismissal reason (ST-020). Undefined for an unknown ID, or an address that is no ID at all.
+ * person sees (HS-16), who triaged it, if anyone, and with which outcome (the confirmation after ST-019), defect (ST-022) and dismissal reason (ST-020). Undefined for an unknown ID, or an address that is no ID at all.
  */
 export async function problemReportForTriage(
   db: Database,
@@ -158,6 +158,8 @@ export async function problemReportForTriage(
       version: number;
       triagedBy: string | undefined;
       triageOutcome: TriageOutcome | undefined;
+      /** The defect it was recorded as or linked to (ST-022). */
+      triageDefectId: string | undefined;
       dismissalReason: DismissalReason | undefined;
     })
   | undefined
@@ -171,6 +173,7 @@ export async function problemReportForTriage(
     version: row.version,
     triagedBy: report.triage?.triagedBy,
     triageOutcome: report.triage?.outcome,
+    triageDefectId: report.triage?.defectId,
     dismissalReason: report.triage?.dismissal?.reason,
   };
 }

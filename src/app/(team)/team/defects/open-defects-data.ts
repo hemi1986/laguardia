@@ -22,6 +22,8 @@ export type OpenDefectsItem = {
   openSince: Date;
   /** Berlin calendar days since it was recorded – 0 on the day itself. */
   openDays: number;
+  /** How many problem reports were linked to it (ST-022). */
+  linkedProblemReports: number;
 };
 
 /** A machine the filter offers – one with open defects. */
@@ -80,6 +82,7 @@ export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDe
       suitableForHelpers: defect.suitableForHelpers,
       openSince: defect.openSince,
       openDays: daysBetween(calendarDate(defect.openSince), now),
+      linkedProblemReports: defect.linkedProblemReports,
     })),
     total: all.length,
     machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),

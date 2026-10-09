@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand, type Priority } from "@/modules/repair";
+import {
+  linkProblemReportToDefectCommand,
+  recordDefectCommand,
+  reportProblemCommand,
+  type Priority,
+} from "@/modules/repair";
 import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -285,5 +290,29 @@ describe("the open defects list", () => {
       { museumNumber: "LG-042", machineModelTitle: "Medieval Madness" },
     ]);
     expect(data.entries).toEqual([]);
+  });
+
+  it("shows how many problem reports are linked to a defect (ST-022)", async () => {
+    const lg042 = await registered("LG-042");
+    const leftFlipper = await anOpenDefect(lg042, "Left flipper weak");
+    await anOpenDefect(lg042, "Display flickers");
+    const reported = await executeCommand(
+      reportProblemCommand,
+      { machineId: lg042, description: "Flipper on the left does nothing" },
+      { actor: { kind: "visitor" }, db, clock: fixedClock(NOW), newId: randomUUID },
+    );
+    if (!reported.ok) throw new Error(reported.error);
+    const linked = await executeCommand(
+      linkProblemReportToDefectCommand,
+      { problemReportId: reported.result.problemReportId, version: 0, defectId: leftFlipper },
+      { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+    );
+    if (!linked.ok) throw new Error(linked.error);
+
+    const html = await page();
+
+    const entryOf = (title: string) => html.slice(html.indexOf(title)).split("</article>")[0];
+    expect(entryOf("Left flipper weak")).toContain("1 verknüpfte Meldung");
+    expect(entryOf("Display flickers")).not.toContain("verknüpfte");
   });
 });

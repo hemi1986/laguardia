@@ -255,37 +255,3 @@ export const resolveDefectForTest = aggregateCommand({
   }),
   result: () => ({}),
 });
-
-/**
- * Test stand-in for CMD-LinkProblemReportToDefect (ST-022): the problem report is triaged as *linked* to the defect, at
- * the version the technician saw.
- */
-export const linkToDefectForTest = aggregateCommand({
-  id: "CMD-TestLinkToDefect",
-  allowedActors: ["technician"],
-  store: problemReports,
-  target: (input: { problemReportId: string; version: number; defectId: string }) => ({
-    id: input.problemReportId,
-    version: input.version,
-  }),
-  decide: (report, input, { actor, clock }) => ({
-    ok: true as const,
-    state: {
-      ...report,
-      triage: {
-        outcome: "linked" as const,
-        triagedBy: actor.teamMemberId,
-        triagedAt: clock.now(),
-        defectId: input.defectId,
-      },
-    },
-    events: [{ type: "EVT-TestLinkedToDefect" as const }],
-  }),
-  journal: (event, report) => ({
-    type: event.type,
-    aggregate: { type: "AGG-ProblemReport", id: report.id },
-    machineId: report.machineId,
-    data: {},
-  }),
-  result: () => ({}),
-});
