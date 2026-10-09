@@ -22,3 +22,23 @@ export function dismissInput(fields: FormFields<DismissField>, problemReportId: 
 }
 
 const NO_VERSION_SEEN = -1;
+
+/**
+ * Where a post of the form stands (ST-020, G10): a spam dismissal asks once before it runs – „Endgültig verwerfen“
+ * posts `step=confirm`, „Zurück“ posts `step=back` and returns to the form with spam still chosen. Every other reason
+ * runs at once. Server-side, so it works without JavaScript.
+ */
+export function dismissStep(formData: FormData): "ask" | "back" | "run" {
+  const step = formData.get("step");
+  if (step === "back") return "back";
+  return formData.get("reason") === "spam" && step !== "confirm" ? "ask" : "run";
+}
+
+/** What was chosen and typed, kept while the spam question is asked and after „Zurück“. */
+export function keptValues(formData: FormData): { readonly [F in DismissField]: string } {
+  const value = (name: DismissField) => {
+    const posted = formData.get(name);
+    return typeof posted === "string" ? posted : "";
+  };
+  return { version: value("version"), reason: value("reason"), reasonText: value("reasonText") };
+}
