@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-MachineStatusChanged]
 depends_on: [ST-015, ST-018]
 labels: [mvp, triage, ui]
-status: in-progress
+status: review
 ---
 
 ## Story
@@ -21,6 +21,10 @@ As a technician, I want to report a fault I found and record it as a defect in t
 - This story covers the outcome *record a defect*, optionally with a machine status change (*Limited* or *Out of order*, as in ST-018). All rules of `CMD-ReportProblem` and `CMD-RecordDefect` apply. The outcomes *link* and *resolve on the spot*, and the helper variant, follow in ST-052.
 - The problem report and its triage are stored together: if the triage part is rejected, the problem report is not stored either.
 - A problem report describing two faults leads to one defect; the technician records further faults as own problem reports (HS-4).
+
+**Decided in the test plan (user, 2026-10-10, during `/implement ST-023`):** the obligation is enforced by `CMD-ReportProblem` itself – a technician's problem report without a triage part is rejected, not only by the form. Tests that need an untriaged problem report arrange it as a visitor or helper.
+
+[OPEN] The form (user, 2026-10-10: back to the ux-designer): where and how a technician chooses the triage outcome and enters the defect when reporting from the machine record (`/team/machines/<museum number>/melden`, ST-015) – the section, the outcome choice and its order with ST-052's outcomes in mind, the defect fields (as in ST-018's form?), the texts of the rejection „no outcome chosen“ and of the confirmation, where the technician lands afterwards. See `docs/stories/OPEN_QUESTIONS.md`.
 
 ## Acceptance Criteria
 
