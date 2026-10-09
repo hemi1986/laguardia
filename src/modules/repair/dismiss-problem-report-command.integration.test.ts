@@ -66,4 +66,71 @@ describe("CMD-DismissProblemReport", () => {
     });
     expect(await untriagedIds()).not.toContain(problemReportId);
   });
+
+  it("ST-020: A reason is required", async () => {
+    const { problemReportId } = await anUntriagedProblemReport();
+
+    expect(await dismiss(problemReportId, { reason: undefined, reasonText: "" })).toEqual({
+      ok: false,
+      error: "reason-required",
+    });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    expect(await untriagedIds()).toContain(problemReportId);
+  });
+
+  it('ST-020: Reason "other" needs a free text', async () => {
+    const { problemReportId } = await anUntriagedProblemReport();
+
+    expect(await dismiss(problemReportId, { reason: "other", reasonText: "  " })).toEqual({
+      ok: false,
+      error: "reason-text-required",
+    });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+  });
+
+  it('ST-020: Dismissing with the reason "other"', async () => {
+    const { problemReportId } = await anUntriagedProblemReport();
+
+    const dismissed = await dismiss(problemReportId, {
+      reason: "other",
+      reasonText: " Machine was switched off on purpose for an event ",
+    });
+
+    expect(dismissed.ok).toBe(true);
+    expect((await storedProblemReport(db, problemReportId))?.triage?.dismissal).toEqual({
+      reason: "other",
+      text: "Machine was switched off on purpose for an event",
+    });
+    // The free text is typed by a person: it lives in the problem report, never in the journal (ST-003).
+    const [entry] = (await journalOf(db, { aggregateId: problemReportId })).slice(-1);
+    expect(entry.data).toEqual({ reason: "other" });
+  });
+
+  it('ST-020: "Machine retired" cannot be chosen by hand', async () => {
+    const { problemReportId } = await anUntriagedProblemReport();
+
+    // Set only by POL-RetirementDismissesProblemReports (ST-039) – by hand it is no reason at all.
+    expect(await dismiss(problemReportId, { reason: "machine-retired", reasonText: "" })).toEqual({
+      ok: false,
+      error: "reason-required",
+    });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    for (const reason of ["not-a-fault", "spam", "other"] as const) {
+      const other = await anUntriagedProblemReport();
+      expect((await dismiss(other.problemReportId, { reason, reasonText: "For an event" })).ok).toBe(true);
+    }
+  });
+
+  it("is refused for helpers and visitors", async () => {
+    const { problemReportId } = await anUntriagedProblemReport();
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, anna, "Anna");
+
+    for (const actor of [anna, { kind: "visitor" } as const]) {
+      expect(await dismiss(problemReportId, { reason: "not-a-fault", reasonText: "" }, actor)).toEqual({
+        ok: false,
+        error: "not-authorized",
+      });
+    }
+  });
 });

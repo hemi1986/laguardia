@@ -14,7 +14,8 @@ export const problemReports = aggregateStore({
   toRow: (report: ProblemReport) => ({
     id: report.id,
     machineId: report.machineId,
-    description: report.description,
+    // null, not undefined: an update leaves out undefined columns, and a spam dismissal must remove the text (ST-020).
+    description: report.description ?? null,
     reporterKind: report.reporter.kind,
     reporterTeamMemberId: report.reporter.kind === "team-member" ? report.reporter.teamMemberId : null,
     reportedAt: report.reportedAt,
