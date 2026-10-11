@@ -4,10 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import type { DefectRecordedConfirmation } from "../../triage/triage-list-data";
 import type { MachineRecordData, NamedStatusChange } from "./machine-record-data";
+import type { TriagedWhenReporting } from "./triaged-when-reporting";
 
 const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
+
+/** The confirmations of the triage forms (ST-018, ST-019, ST-022) – the same words, whichever page they follow. */
+function triagedText(triaged: TriagedWhenReporting, museumNumber: string): string {
+  switch (triaged.outcome) {
+    case "defect-recorded":
+      return (
+        recordDefect.recorded(triaged.title, museumNumber) +
+        (triaged.newStatus ? recordDefect.statusNow(museumNumber, machines.statuses[triaged.newStatus]) : "")
+      );
+    case "linked":
+      return teamMessages.link.linked(museumNumber, triaged.title);
+    case "resolved-on-the-spot":
+      return teamMessages.resolveOnTheSpot.resolved(museumNumber);
+  }
+}
 
 /**
  * The machine record (RM-MachineRecord, ST-009). ST-009 owns the page (G18) and fixed its sections, top to bottom:
@@ -21,7 +36,7 @@ export function MachineRecordView({
   canChangeStatus = false,
   statusChanged = false,
   problemReported = false,
-  defectRecorded,
+  triagedWhenReporting,
 }: {
   record: MachineRecordData | undefined;
   museumNumber: string;
@@ -31,8 +46,8 @@ export function MachineRecordView({
   statusChanged?: boolean;
   /** Just back from a problem report: the confirmation names the machine and says it waits for triage (ST-015). */
   problemReported?: boolean;
-  /** Just back from reporting and recording a defect in the same step (ST-023): the confirmation of ST-018 (G3). */
-  defectRecorded?: DefectRecordedConfirmation;
+  /** Just back from reporting a problem and triaging it in the same step (ST-023, ST-052): its confirmation (G3). */
+  triagedWhenReporting?: TriagedWhenReporting;
 }) {
   if (!record) {
     return (
@@ -62,13 +77,7 @@ export function MachineRecordView({
         <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
       )}
       {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
-      {defectRecorded && (
-        <Confirmation>
-          {recordDefect.recorded(defectRecorded.title, defectRecorded.museumNumber)}
-          {defectRecorded.newStatus &&
-            recordDefect.statusNow(defectRecorded.museumNumber, machines.statuses[defectRecorded.newStatus])}
-        </Confirmation>
-      )}
+      {triagedWhenReporting && <Confirmation>{triagedText(triagedWhenReporting, record.museumNumber)}</Confirmation>}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(

@@ -178,6 +178,15 @@ It is one command object with two typed names – `reportProblemAndTriageCommand
 so a form needs texts only for the rejections it can cause. The decision is layered the same way:
 `reportProblemAndTriage` runs `reportProblem` first, then the triage outcome's own decision (`recordDefect`) on the new
 problem report, so the rules of both commands apply unchanged and the order of rejections is fixed (reporting first).
+Since ST-052 the triage part is one of three outcomes (`defect-recorded`, `linked`, `resolved-on-the-spot`): the
+decision checks who may choose which – resolving on the spot every team member, the others technicians only, else
+`not-authorized` – and dispatches to that outcome's own decision; the command's facts add the chosen defect, locked as
+in CMD-LinkProblemReportToDefect. Each triage event has **one** journal mapping (`journalDefectRecorded`,
+`journalProblemReportLinked`, `journalProblemResolvedOnTheSpot`), exported by its own command file and used by
+CMD-ReportProblem too. On the pages, the three forms that report and triage in one step share `ReportSection`, the
+rejection text and the photo marker in `…/[museumNumber]/melden/`; the defect's fields and their input function live
+beside the routes (`src/app/(team)/team/defect-fields.tsx`, `defect-input.ts`). The machine record confirms such a
+problem report from the ID in the address, only when it is stored for that machine (`triaged-when-reporting.ts`).
 A creating command may return `created` aggregates and `runs` like a changing one. Two rows that refer to each other
 and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY DEFERRED` (hand-written migration,
 `drizzle/0014_…`: the defect's reference to its problem report).
