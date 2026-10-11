@@ -95,3 +95,7 @@ Most important finding: the append-only resolution history cannot take the reope
 - **#7 skipped:** the duplicated e2e helpers are a line for the next architecture scan.
 
 Security review: done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` not run: size S, no change to the command layer.
+
+### After the merge (2026-10-11)
+
+- The user merged pull request #62 without asking for changes: the German texts (#5), the glossary term *Closing note* and the new conventions paragraph stand as written; the closing note has no maximum length.
