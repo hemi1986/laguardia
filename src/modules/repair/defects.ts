@@ -1,9 +1,17 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
-import { priorities, type Claim, type Defect, type DefectState, type Priority, type Resolution } from "./defect";
+import {
+  priorities,
+  type Claim,
+  type Defect,
+  type DefectState,
+  type Priority,
+  type Resolution,
+  type WorkLogEntry,
+} from "./defect";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
-import { defect, defectResolution, problemReport } from "./schema";
+import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
 
 const defectRows = aggregateStore({
   type: "AGG-Defect",
@@ -19,7 +27,8 @@ const defectRows = aggregateStore({
     recordedAt: row.recordedAt,
     state: row.state,
     ...(row.claimedBy && row.claimedAt ? { claim: { claimedBy: row.claimedBy, claimedAt: row.claimedAt } } : {}),
-    resolutions: [], // loaded separately – see `defects.load`
+    workLog: [], // both loaded separately – see `defects.load`
+    resolutions: [],
   }),
   // null, not undefined: an update leaves out undefined columns, and a claim must be removable (ST-026).
   toRow: (state: Defect) => ({
@@ -38,29 +47,52 @@ const defectRows = aggregateStore({
 });
 
 /**
- * How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), and its resolutions (ST-028) – an
- * append-only history (Q13).
+ * How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), with its work log (ST-024) and its
+ * resolutions (ST-028) – both append-only histories (Q13).
  */
 export const defects: AggregateStore<Defect> = {
   type: "AGG-Defect",
   async load(tx, id, options) {
     const loaded = await defectRows.load(tx, id, options);
     if (!loaded) return undefined;
-    return { ...loaded, state: { ...loaded.state, resolutions: await resolutionsOf(tx, id) } };
+    const [workLog, resolutions] = [await workLogOf(tx, id), await resolutionsOf(tx, id)];
+    return { ...loaded, state: { ...loaded.state, workLog, resolutions } };
   },
   async insert(tx, state) {
     await defectRows.insert(tx, state);
-    await saveResolutions(tx, state);
+    await saveHistories(tx, state);
   },
   async update(tx, state, expectedVersion) {
     if (!(await defectRows.update(tx, state, expectedVersion))) return false;
-    await saveResolutions(tx, state);
+    await saveHistories(tx, state);
     return true;
   },
 };
 
-function saveResolutions(tx: Database, state: Defect): Promise<void> {
-  return saveHistory(tx, { table: defectResolution, owner: "defectId" }, state.id, state.resolutions);
+async function saveHistories(tx: Database, state: Defect): Promise<void> {
+  await saveHistory(
+    tx,
+    { table: defectWorkLogEntry, owner: "defectId" },
+    state.id,
+    state.workLog.map((entry) => ({ ...entry, partsUsed: entry.partsUsed ?? null })),
+  );
+  await saveHistory(tx, { table: defectResolution, owner: "defectId" }, state.id, state.resolutions);
+}
+
+/** A defect's work log, the oldest entry first. */
+async function workLogOf(db: Database, defectId: string): Promise<WorkLogEntry[]> {
+  const rows = await db
+    .select()
+    .from(defectWorkLogEntry)
+    .where(eq(defectWorkLogEntry.defectId, defectId))
+    .orderBy(asc(defectWorkLogEntry.position));
+  return rows.map((row) => ({
+    id: row.id,
+    whatWasDone: row.whatWasDone,
+    partsUsed: row.partsUsed ?? undefined,
+    loggedBy: row.loggedBy,
+    loggedAt: row.loggedAt,
+  }));
 }
 
 async function resolutionsOf(db: Database, defectId: string): Promise<Resolution[]> {
@@ -116,6 +148,8 @@ export type OpenDefect = {
   claimedBy: string | undefined;
   /** How many problem reports were linked to it (ST-022) – not counting the one it was recorded from. */
   linkedProblemReports: number;
+  /** Who last logged work on it, and when (ST-024) – by ID; none while nobody has. */
+  lastWorkLogEntry: { loggedBy: string; loggedAt: Date } | undefined;
 };
 
 /** What RM-OpenDefects is narrowed to (ST-021) – all optional, they combine. */
@@ -137,8 +171,8 @@ const priorityRank = sql`CASE ${defect.priority} ${sql.join(
 
 /**
  * RM-OpenDefects (ST-021): every open defect, by priority – high first –, within a priority the oldest first, with the
- * number of problem reports linked to it (ST-022) and its claimant (ST-025). Hold and work log follow with ST-024 and
- * ST-029.
+ * number of problem reports linked to it (ST-022), its claimant (ST-025) and its last work log entry (ST-024). Its hold
+ * follows with ST-029.
  */
 export async function openDefects(
   db: Database,
@@ -154,6 +188,8 @@ export async function openDefects(
       openSince: defect.recordedAt,
       claimedBy: defect.claimedBy,
       linkedProblemReports: sql<number>`count(${problemReport.id})::int`,
+      lastLoggedBy: sql<string | null>`(${lastWorkLogEntry(defectWorkLogEntry.loggedBy)})`,
+      lastLoggedAt: sql`(${lastWorkLogEntry(defectWorkLogEntry.loggedAt)})`.mapWith(defectWorkLogEntry.loggedAt),
     })
     .from(defect)
     .leftJoin(
@@ -171,7 +207,16 @@ export async function openDefects(
     )
     .groupBy(defect.id)
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
-  return rows.map((row) => ({ ...row, claimedBy: row.claimedBy ?? undefined }));
+  return rows.map(({ lastLoggedBy, lastLoggedAt, ...row }) => ({
+    ...row,
+    claimedBy: row.claimedBy ?? undefined,
+    lastWorkLogEntry: lastLoggedBy && lastLoggedAt ? { loggedBy: lastLoggedBy, loggedAt: lastLoggedAt } : undefined,
+  }));
+}
+
+/** One column of the work log entry stored last for the defect of the surrounding query. */
+function lastWorkLogEntry(column: typeof defectWorkLogEntry.loggedBy | typeof defectWorkLogEntry.loggedAt) {
+  return sql`SELECT ${column} FROM ${defectWorkLogEntry} WHERE ${defectWorkLogEntry.defectId} = ${defect.id} ORDER BY ${defectWorkLogEntry.position} DESC LIMIT 1`;
 }
 
 /**
@@ -203,6 +248,8 @@ export type DefectDetails = {
   version: number;
   /** Its claim, if any (ST-025). */
   claim: Claim | undefined;
+  /** Its work log (ST-024), the oldest entry first – the page decides the order it shows. */
+  workLog: WorkLogEntry[];
   /** How it ended – the resolution that made it resolved (ST-028); none while it is open. */
   resolution: Omit<Resolution, "id"> | undefined;
   problemReports: DefectProblemReport[];
@@ -223,6 +270,7 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
     state: row.state,
     version: row.version,
     claim: row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined,
+    workLog: await workLogOf(db, row.id),
     resolution: row.state === "resolved" ? await latestResolution(db, row.id) : undefined,
     problemReports: await problemReportsOfDefect(db, row),
   };
