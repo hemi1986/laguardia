@@ -108,4 +108,19 @@ describe("CMD-ResolveDefect", () => {
       data: { resolvedBy: anna.teamMemberId },
     });
   });
+
+  it("ST-028: Helpers cannot resolve defects not suitable for helpers", async () => {
+    const { machineId, defectId } = await anOpenDefect("Display flickers");
+
+    expect(await resolve(defectId, 0, "Display cable plugged in again", anna)).toEqual({
+      ok: false,
+      error: "not-suitable-for-helpers",
+    });
+
+    // It stays open, without a resolution, and nothing was journaled.
+    expect(await defectDetails(db, defectId)).toMatchObject({ state: "open", resolution: undefined });
+    expect((await openDefects(db, { machineId })).map((defect) => defect.title)).toEqual(["Display flickers"]);
+    expect(await openDefectTitles(db, machineId)).toEqual(["Display flickers"]);
+    expect(await journalOf(db, { aggregateId: defectId })).toEqual([]);
+  });
 });
