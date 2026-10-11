@@ -21,13 +21,26 @@ const defect = (title: string, machineStatus?: MachineStatus): TriageInTheSameSt
   machineVersion: machineStatus && 0,
 });
 
-const machine = (machineStatus: MachineStatus, retired = false) => ({ machine: { machineStatus, retired } });
+const resolved = (note: string): TriageInTheSameStep => ({ outcome: "resolved-on-the-spot", note });
+const linked = (defectId?: string): TriageInTheSameStep => ({ outcome: "linked", defectId });
+
+type Facts = Parameters<typeof reportProblemAndTriage>[0];
+
+const machine = (machineStatus: MachineStatus, retired = false): Facts => ({
+  machine: { machineStatus, retired },
+  defect: undefined,
+});
+/** The chosen defect as stored now – the decision's machine is always "m-1". */
+const withDefect = (state: "open" | "resolved", machineId = "m-1"): Facts => ({
+  ...machine("playable"),
+  defect: { id: "d-1", machineId, state },
+});
 
 function decide(
   actor: typeof visitor | typeof helper | typeof technician,
   description: string,
   triage?: TriageInTheSameStep,
-  facts: { machine: { machineStatus: MachineStatus; retired: boolean } | undefined } = machine("playable"),
+  facts: Facts = machine("playable"),
 ) {
   let id = 0;
   const decision = reportProblemAndTriage(
@@ -76,7 +89,9 @@ describe("CMD-ReportProblem with a triage outcome in the same step – the decis
 
   it("checks the machine before anything of the triage outcome", () => {
     expect(decide(technician, " ", defect(" "), machine("playable", true))).toBe("machine-retired");
-    expect(decide(technician, "Ball stuck", defect("Ball trap"), { machine: undefined })).toBe("machine-not-found");
+    expect(decide(technician, "Ball stuck", defect("Ball trap"), { machine: undefined, defect: undefined })).toBe(
+      "machine-not-found",
+    );
     // Team members report for a machine not on display (ST-015) – a technician with a defect, whose status stays.
     expect(decide(technician, "Ball stuck", defect("Ball trap"), machine("not-on-display"))).toEqual([
       "EVT-ProblemReported",
@@ -85,6 +100,43 @@ describe("CMD-ReportProblem with a triage outcome in the same step – the decis
     expect(decide(technician, "Ball stuck", defect("Ball trap", "out-of-order"), machine("not-on-display"))).toBe(
       "machine-status-not-stricter",
     );
+  });
+
+  it.each([
+    [
+      "a helper who resolved it on the spot",
+      helper,
+      "Ball stuck",
+      resolved("Ball freed"),
+      ["EVT-ProblemReported", "EVT-ProblemResolvedOnTheSpot"],
+    ],
+    [
+      "a technician who resolved it on the spot",
+      technician,
+      "Ball stuck",
+      resolved("Ball freed"),
+      ["EVT-ProblemReported", "EVT-ProblemResolvedOnTheSpot"],
+    ],
+    ["a visitor who resolved it on the spot", visitor, "Ball stuck", resolved("Ball freed"), "not-authorized"],
+    ["resolved on the spot without a note", helper, "Ball stuck", resolved(" "), "note-required"],
+    ["no description, no note", helper, " ", resolved(" "), "description-required"],
+    ["a helper who links", helper, "Ball stuck", linked("d-1"), "not-authorized"],
+    ["a visitor who links", visitor, "Ball stuck", linked("d-1"), "not-authorized"],
+  ] as const)("%s → %j", (_case, actor, description, triage, expected) => {
+    expect(decide(actor, description, triage, withDefect("open"))).toEqual(expected);
+  });
+
+  it.each([
+    ["an open defect of the machine", withDefect("open"), ["EVT-ProblemReported", "EVT-ProblemReportLinkedToDefect"]],
+    ["no defect chosen, or an unknown one", machine("playable"), "defect-required"],
+    ["a defect resolved in the meantime", withDefect("resolved"), "defect-not-open"],
+    ["a defect of another machine", withDefect("open", "m-2"), "defect-of-another-machine"],
+  ] as const)("a technician links to %s → %j", (_case, facts, expected) => {
+    expect(decide(technician, "Ball stuck", linked("d-1"), facts)).toEqual(expected);
+  });
+
+  it("names the missing description before anything of the link", () => {
+    expect(decide(technician, " ", linked(undefined), machine("playable"))).toBe("description-required");
   });
 
   it("stores the technician's problem report already triaged, with the new defect", () => {

@@ -1,4 +1,10 @@
 import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
+import {
+  linkProblemReportToDefect,
+  type LinkingFacts,
+  type LinkProblemReportToDefectError,
+  type ProblemReportLinkedToDefect,
+} from "./link-problem-report-to-defect";
 import { recordDefect, type DefectRecorded, type RecordDefectError, type RecordDefectInput } from "./record-defect";
 import {
   reportProblem,
@@ -17,7 +23,8 @@ import {
 
 /**
  * CMD-ReportProblem with its triage outcome in the same step (ST-023, ST-052): a technician's own problem report is
- * triaged when it is reported – a defect recorded, or the problem resolved on the spot. The decision of reporting runs
+ * triaged when it is reported – a defect recorded, the problem report linked to an open defect, or the problem resolved
+ * on the spot, which a helper may choose too. The decision of reporting runs
  * first, then the decision of the triage outcome's own command on the new problem report, so all rules of both apply,
  * and the command layer stores the problem report, its triage and a new defect together or not at all.
  */
@@ -25,24 +32,31 @@ import {
 /** The triage outcome chosen when reporting, with what its own command takes. */
 export type TriageInTheSameStep =
   | ({ outcome: "defect-recorded" } & Omit<RecordDefectInput, "problemReportId" | "version">)
-  | { outcome: "resolved-on-the-spot"; note: string };
+  | { outcome: "resolved-on-the-spot"; note: string }
+  /** No defect chosen: undefined. */
+  | { outcome: "linked"; defectId: string | undefined };
+
+/**
+ * What the decision must know beyond the new problem report: the machine as Collection knows it now, and – for the
+ * outcome *linked* – the chosen defect as it is stored now (none for no or an unknown defect).
+ */
+export type ReportingAndTriageFacts = ReportingFacts & LinkingFacts;
 
 export type ReportProblemAndTriageInput = ReportProblemInput & { triage?: TriageInTheSameStep };
 
 /** A new problem report cannot have been triaged by someone else – every other rule of the outcome's command applies. */
 export type ReportProblemAndTriageError =
-  | ReportProblemError
-  | TriageRequired
-  | "not-authorized"
-  | Exclude<RecordDefectError | ResolveProblemOnTheSpotError, "already-triaged">;
+  ReportProblemError | TriageRequired | "not-authorized" | Exclude<TriageError, "already-triaged">;
+
+type TriageError = RecordDefectError | ResolveProblemOnTheSpotError | LinkProblemReportToDefectError;
 
 /** A technician's problem report without a triage outcome – rejected by the command itself (user, 2026-10-10). */
 export type TriageRequired = "triage-required";
 
-type TriageEvent = DefectRecorded | ProblemResolvedOnTheSpot;
+type TriageEvent = DefectRecorded | ProblemResolvedOnTheSpot | ProblemReportLinkedToDefect;
 
 export function reportProblemAndTriage(
-  facts: ReportingFacts,
+  facts: ReportingAndTriageFacts,
   input: ReportProblemAndTriageInput,
   context: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported | TriageEvent, ReportProblemAndTriageError> {
@@ -72,8 +86,8 @@ function triage(
   report: ProblemReport,
   chosen: TriageInTheSameStep,
   context: DecisionContext<ActorOf<"helper" | "technician">>,
-  facts: ReportingFacts,
-): Decision<ProblemReport, TriageEvent, RecordDefectError | ResolveProblemOnTheSpotError | "not-authorized"> {
+  facts: ReportingAndTriageFacts,
+): Decision<ProblemReport, TriageEvent, TriageError | "not-authorized"> {
   const target = { problemReportId: report.id, version: 0 };
   if (chosen.outcome === "resolved-on-the-spot") {
     return resolveProblemOnTheSpot(report, { ...target, note: chosen.note }, context);
@@ -81,6 +95,9 @@ function triage(
   const { actor } = context;
   if (actor.role !== "technician") return { ok: false, error: "not-authorized" };
   const asTechnician = { ...context, actor: { ...actor, role: actor.role } };
+  if (chosen.outcome === "linked") {
+    return linkProblemReportToDefect(report, { ...target, defectId: chosen.defectId }, asTechnician, facts);
+  }
   const { title, priority, suitableForHelpers, machineStatus, machineVersion } = chosen;
   return recordDefect(
     report,

@@ -26,6 +26,36 @@ function reportAndResolveOnTheSpot(machineId: string, description: string, note:
   );
 }
 
+/** An open defect of the machine – reported and recorded by the technician in one step (ST-023). Returns its ID. */
+async function anOpenDefect(machineId: string, title: string) {
+  const recorded = await executeCommand(
+    reportProblemAndTriageCommand,
+    {
+      machineId,
+      description: `${title} – first seen`,
+      triage: {
+        outcome: "defect-recorded",
+        title,
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+    },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!recorded.ok || !recorded.result.defectId) throw new Error("no defect recorded");
+  return recorded.result.defectId;
+}
+
+function reportAndLink(machineId: string, description: string, defectId: string | undefined) {
+  return executeCommand(
+    reportProblemAndTriageCommand,
+    { machineId, description, triage: { outcome: "linked", defectId } },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+}
+
 describe("CMD-ReportProblem with resolving on the spot or linking in the same step", () => {
   it("ST-052: Technician reports and resolves on the spot in one step", async () => {
     await anExistingTeamMember(db, tom, "Tom");
@@ -110,6 +140,49 @@ describe("CMD-ReportProblem with resolving on the spot or linking in the same st
         { actor: anna, db, clock, newId: randomUUID },
       ),
     ).toEqual({ ok: false, error: "not-authorized" });
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
+  });
+
+  it("ST-052: Technician reports and links in one step", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const defectId = await anOpenDefect(machineId, "Left flipper weak");
+
+    const reported = await reportAndLink(machineId, "Left flipper weak again during test", defectId);
+
+    if (!reported.ok) throw new Error(reported.error);
+    const { problemReportId } = reported.result;
+    expect(await storedProblemReport(db, problemReportId)).toMatchObject({
+      description: "Left flipper weak again during test",
+      reporter: { kind: "team-member", teamMemberId: tom.teamMemberId },
+      triage: { outcome: "linked", triagedBy: tom.teamMemberId, defectId },
+    });
+    expect(reported.result.defectId).toBe(defectId);
+    // No defect is created: the machine still has the one it had.
+    expect(await openDefectTitles(db, machineId)).toEqual(["Left flipper weak"]);
+    expect((await triageList(db, clock)).map((entry) => entry.id)).not.toContain(problemReportId);
+    expect(
+      (await journalOf(db, { machineId })).slice(-2).map((entry) => [entry.type, entry.actor, entry.data]),
+    ).toEqual([
+      ["EVT-ProblemReported", tom, {}],
+      ["EVT-ProblemReportLinkedToDefect", tom, { defectId }],
+    ]);
+  });
+
+  it("links only to a defect of the same machine, and only when one is chosen – else nothing is stored", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const defectElsewhere = await anOpenDefect(await aRegisteredMachine(db), "Tilt bob missing");
+    const journalBefore = (await journalOf(db, { machineId })).length;
+
+    expect(await reportAndLink(machineId, "Tilt does not trigger", defectElsewhere)).toEqual({
+      ok: false,
+      error: "defect-of-another-machine",
+    });
+    expect(await reportAndLink(machineId, "Tilt does not trigger", undefined)).toEqual({
+      ok: false,
+      error: "defect-required",
+    });
     expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
   });
 });
