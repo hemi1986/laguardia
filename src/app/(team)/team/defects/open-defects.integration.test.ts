@@ -362,6 +362,6 @@ describe("the open defects list", () => {
     expect(mineWithHighPriority.data.entries).toEqual([]);
     expect(mineWithHighPriority.html).toContain("Kein offener Defekt passt zu diesem Filter.");
     // Alone and matching nothing, it says what it was filtered for.
-    expect((await page({ claimedByMe: true }))).toContain("Du hast keinen offenen Defekt übernommen.");
+    expect(await page({ claimedByMe: true })).toContain("Du hast keinen offenen Defekt übernommen.");
   });
 });
