@@ -66,3 +66,8 @@ Most important finding: the machine record's confirmation loader – the code be
 - **Known gaps stay:** "stays at the form" after `defect-not-open` (decision 2a) and `retired && !state` have no browser test; no concurrency test for a link in the same step (the lock is the one proven for CMD-LinkProblemReportToDefect).
 
 Security review (`/security-review`): done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` was not run: size M, no change to the command layer.
+
+### After the user's acceptance (2026-10-12)
+
+- The new paragraph of the engineering conventions is approved by the user.
+- The section „Defekt“ above the legend „Offener Defekt“ on the link page stays as it is (user).
