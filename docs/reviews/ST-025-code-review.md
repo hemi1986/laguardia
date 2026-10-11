@@ -62,3 +62,8 @@ Most important finding: `events.yaml` does not know the `takenOverFrom` the code
 - **#13 fixed:** the browser test "a claim made meanwhile…" (acceptance minor) walks conflict → takeover and expects no rejection left after it.
 
 Security review: done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` not run: size S, no change to the command layer.
+
+### After the user's acceptance (2026-10-11)
+
+- **#8 confirmed by the user:** the three texts not from the story stay as written („Du hast keinen offenen Defekt übernommen.“, „Dieser Defekt ist nicht für Helfer:innen geeignet.“, „Du hast diesen Defekt schon übernommen.“).
+- The two new paragraphs of the engineering conventions are approved by the user.
