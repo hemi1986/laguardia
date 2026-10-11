@@ -58,7 +58,7 @@ Verdict: accepted with remarks
 
 ## Resolution (implementation, 2026-10-11)
 
-- **#1 maximum length:** not built – the story names none; a question for the user at acceptance (as in ST-028).
+- **#1 maximum length:** not built – the story names none, and the user wants none (2026-10-11; the same holds for ST-028's closing note).
 - **#2 closed on retirement:** refused by `logWorkRefusal`; its test comes with ST-039.
 - **#3 on hold:** a hold is a sub-state of *open* (data model), so the rule lets work be logged; the scenario is ST-029's.
 - **#4 glossary:** *Work log entry* („Arbeitsschritt“) is in `CONTEXT.md`.
