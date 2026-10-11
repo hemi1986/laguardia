@@ -6,7 +6,8 @@ export {
   untriagedProblemReportCount,
   type TriageListEntry,
 } from "./problem-reports";
-export { reportProblemCommand } from "./report-problem-command";
+export { reportProblemAndTriageCommand, reportProblemCommand } from "./report-problem-command";
+export type { ReportProblemAndTriageInput, TriageInTheSameStep } from "./report-problem-and-triage";
 export { recordDefectCommand } from "./record-defect-command";
 export { stricterMachineStatuses, type RecordDefectError, type RecordDefectInput } from "./record-defect";
 export { resolveProblemOnTheSpotCommand } from "./resolve-problem-on-the-spot-command";
