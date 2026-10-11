@@ -3,10 +3,12 @@ import { problemReports, reportingFacts } from "./problem-reports";
 import { journalDefectRecorded, statusChangeWithDefect } from "./record-defect-command";
 import { reportingActors, type ReportProblemError, type ReportProblemInput } from "./report-problem";
 import { reportProblemAndTriage, type TriageRequired } from "./report-problem-and-triage";
+import { journalProblemResolvedOnTheSpot } from "./resolve-problem-on-the-spot-command";
 
 /**
  * CMD-ReportProblem through the command layer: a creating command on AGG-ProblemReport, emits EVT-ProblemReported –
- * and, when a technician triages it in the same step (ST-023), EVT-DefectRecorded with the new defect. A stricter
+ * and the event of the triage outcome chosen in the same step (ST-023, ST-052): EVT-DefectRecorded with the new defect,
+ * or EVT-ProblemResolvedOnTheSpot. A stricter
  * machine status in that step runs Collection's CMD-ChangeMachineStatus as the same technician, in the same
  * transaction, as CMD-RecordDefect does (HS-3) – its rejection rejects the problem report too.
  */
@@ -17,18 +19,26 @@ export const reportProblemAndTriageCommand = aggregateCommand({
   creates: true,
   facts: reportingFacts,
   decide: reportProblemAndTriage,
-  journal: (event) =>
-    event.type === "EVT-ProblemReported"
-      ? {
+  journal: (event) => {
+    switch (event.type) {
+      case "EVT-ProblemReported":
+        return {
           type: event.type,
           aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
           machineId: event.machineId,
           data: {}, // the reporter is the journal's actor; the description stays in the problem report only
-        }
-      : journalDefectRecorded(event),
+        };
+      case "EVT-DefectRecorded":
+        return journalDefectRecorded(event);
+      case "EVT-ProblemResolvedOnTheSpot":
+        return journalProblemResolvedOnTheSpot(event);
+    }
+  },
   runs: (_report, events, input) =>
     events.flatMap((event) =>
-      event.type === "EVT-DefectRecorded" && input.triage ? statusChangeWithDefect(event, input.triage) : [],
+      event.type === "EVT-DefectRecorded" && input.triage?.outcome === "defect-recorded"
+        ? statusChangeWithDefect(event, input.triage)
+        : [],
     ),
   result: (report) => ({ problemReportId: report.id, defectId: report.triage?.defectId }),
 });
