@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 /**
@@ -10,6 +11,22 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/login");
 });
 
+/**
+ * The hidden fields that name the login's Server Action – what a browser without JavaScript posts with the form. The
+ * server-rendered HTML carries them (hydration removes them from the live page).
+ */
+async function serverActionFields(page: Page): Promise<Record<string, string>> {
+  const html = await (await page.request.get("/login")).text();
+  const fields: Record<string, string> = {};
+  for (const [input] of html.matchAll(/<input[^>]*name="\$ACTION[^"]*"[^>]*>/g)) {
+    const name = input.match(/name="([^"]*)"/)![1];
+    const value = input.match(/value="([^"]*)"/)?.[1] ?? "";
+    fields[name] = value.replaceAll("&quot;", '"').replaceAll("&amp;", "&");
+  }
+  expect(Object.keys(fields).length).toBeGreaterThan(0);
+  return fields;
+}
+
 // A forged cross-site form post, sent the way an attacker's page would: the form fields of the real login (including
 // its Server Action ID) with the victim's cookies, but a foreign or missing Origin.
 for (const [name, origin] of [
@@ -17,13 +34,10 @@ for (const [name, origin] of [
   ["no origin", undefined],
 ] as const) {
   test(`a Server Action submitted with ${name} is rejected and creates no session`, async ({ page }) => {
-    // The server-rendered HTML carries the form's action field (hydration removes it from the live page).
-    const html = await (await page.request.get("/login")).text();
-    const actionField = html.match(/name="(\$ACTION_ID_[0-9a-f]+)"/)?.[1];
-    expect(actionField).toBeDefined();
+    const actionFields = await serverActionFields(page);
 
     const response = await page.request.post("/login", {
-      multipart: { [actionField!]: "", username: "forged", password: "forged-password-1" },
+      multipart: { ...actionFields, username: "forged", password: "forged-password-1" },
       headers: origin ? { origin } : {},
       maxRedirects: 0,
     });
@@ -38,19 +52,22 @@ for (const [name, origin] of [
 // The control: the same post from the page's own origin reaches the action (a failed login redirects back), so the
 // rejections above come from the Origin check – not from a stale action ID.
 test("the same Server Action submitted from the page's own origin reaches the action", async ({ page, baseURL }) => {
-  const html = await (await page.request.get("/login")).text();
-  const actionField = html.match(/name="(\$ACTION_ID_[0-9a-f]+)"/)?.[1];
-  expect(actionField).toBeDefined();
+  const actionFields = await serverActionFields(page);
+  const username = `nobody_${Date.now().toString(36)}`;
 
   const response = await page.request.post("/login", {
-    multipart: { [actionField!]: "", username: `nobody_${Date.now().toString(36)}`, password: "wrong-password-1" },
+    multipart: { ...actionFields, username, password: "wrong-password-1" },
     headers: { origin: new URL(baseURL!).origin },
     maxRedirects: 0,
   });
 
-  // The login action ran: an unknown account is sent back to the login page with the error code.
-  expect(response.status()).toBe(303);
-  expect(response.headers()["location"]).toContain("/login?error=");
+  // The login action ran: an unknown account gets the login page back with the rejection and the username it typed
+  // (the login keeps its input since the backlog grooming of 2026-10-11 – before, it redirected with an error code).
+  expect(response.status()).toBe(200);
+  const answer = await response.text();
+  expect(answer).toContain("Anmeldung fehlgeschlagen.");
+  expect(answer).toContain(`value="${username}"`);
+  expect(response.headers()["set-cookie"] ?? "").not.toContain("session");
 });
 
 test("pages are served with the security headers", async ({ page }) => {

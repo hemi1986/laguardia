@@ -106,9 +106,13 @@ explicitly, so this costs us none of the no-JavaScript guarantee.
 Until the migration is finished **both patterns exist, and that is the one thing to avoid spreading**: the first
 form on the new pattern is ST-007 (`src/app/(team)/team/machines/new/register-machine-form.tsx` – `Field` with
 `data-invalid`, `FieldLabel htmlFor`, the control with `aria-invalid` and `aria-describedby` pointing at the
-rejection, `FieldDescription` for a hint), and the four forms that predate it (login, team members, own password,
-machine models) follow in their own tech task. The hand-rolled field is renamed `LabelledField`
-(`src/components/ui/labelled-field.tsx`) until then. Write no new form on `LabelledField`.
+rejection, `FieldDescription` for a hint). Of the four forms that predate it, the login and the own-password page were
+moved directly (backlog grooming 2026-10-11); the team members page follows with ST-081 and the machine models page with
+ST-036. The hand-rolled field is renamed `LabelledField` (`src/components/ui/labelled-field.tsx`) until then. Write no
+new form on `LabelledField`.
+**A form whose action is not a command** (the login – `logIn` of the Team module, backed by Better Auth) cannot use
+`formAction`; its Server Action mirrors the contract by hand: `(previous, formData) => { error, values } | null`, used
+with `useActionState`, and `values` never holds a password (`src/app/login/actions.ts`, `log-in-form.tsx`).
 
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
 `Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in the bundle.

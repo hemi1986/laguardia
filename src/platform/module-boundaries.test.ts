@@ -70,6 +70,28 @@ describe("module boundaries", () => {
     expect(ownInternals).toEqual([]);
   });
 
+  it("reject test support in production code – and allow it in a test and in a module's test support (ST-067)", async () => {
+    const code = 'import { aRegisteredMachine } from "@/test-support/machines";\nexport const x = aRegisteredMachine;\n';
+
+    for (const production of [
+      "src/app/deliberate-violation.ts",
+      "src/modules/repair/deliberate-violation.ts",
+      "src/platform/deliberate-violation.ts",
+      "src/photo/deliberate-violation.ts",
+    ]) {
+      expect(await boundaryErrors(production, code), production).toEqual([
+        "Test support (src/test-support) is only imported by tests – ST-067",
+      ]);
+    }
+    for (const test of [
+      "src/app/deliberate.integration.test.ts",
+      "src/modules/repair/deliberate.test.ts",
+      "src/modules/repair/deliberate.test-support.ts",
+    ]) {
+      expect(await boundaryErrors(test, code), test).toEqual([]);
+    }
+  });
+
   it("reject imports against the direction app → modules → platform", async () => {
     const platformImportsModule = await boundaryErrors(
       "src/platform/deliberate-violation.ts",
