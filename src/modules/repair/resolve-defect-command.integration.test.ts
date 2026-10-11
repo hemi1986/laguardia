@@ -174,4 +174,13 @@ describe("CMD-ResolveDefect", () => {
       (await journalSinceRegistration(db, machineId)).slice(machineEventsBefore).map((entry) => entry.type),
     ).toEqual(["EVT-DefectResolved"]);
   });
+
+  it("tells a helper that a resolved defect is no longer open, also when it was not suitable for helpers", async () => {
+    const { defectId } = await anOpenDefect("Display flickers");
+    const first = await resolve(defectId, 0, "Display cable replaced", tom);
+    if (!first.ok) throw new Error(first.error);
+
+    // The state is the reason that explains more – it comes first.
+    expect(await resolve(defectId, 1, "Cable plugged in again", anna)).toEqual({ ok: false, error: "defect-not-open" });
+  });
 });

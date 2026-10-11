@@ -337,7 +337,7 @@ describe("a defect's own page", () => {
       // The address alone (`?resolved=1`) makes the page say nothing.
       expect(toms.html).not.toContain("behoben");
       const annas = await seenBy(defectId, asAnna);
-      expect(annas.details).toMatchObject({ canResolve: false, whyNotResolvable: "not-suitable-for-helpers" });
+      expect(annas.details).toMatchObject({ canResolve: false });
       expect(annas.html).not.toContain("/beheben");
     });
 
@@ -353,7 +353,6 @@ describe("a defect's own page", () => {
       const annas = await seenBy(defectId, asAnna);
       expect(annas.details).toMatchObject({
         canResolve: false,
-        whyNotResolvable: "defect-not-open",
         resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna", you: true },
       });
       expect(annas.html).toContain("Du hast „Left flipper weak“ behoben.");

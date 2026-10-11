@@ -282,8 +282,8 @@ export const teamMessages = {
     takenOverFrom: (name: string) => ` Vorher: ${name}.`,
     /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
     onlyClaimedByMe: "Nur von mir übernommene",
-    noneClaimedByYou:
-      "Du hast keinen offenen Defekt übernommen." /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */,
+    noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
+    /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */
     resolve: "Beheben",
     resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,
     resolveSubmit: "Als behoben eintragen",

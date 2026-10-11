@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
+import {
+  claimDefectCommand,
+  defectDetails,
+  reportProblemAndTriageCommand,
+  resolveDefectCommand,
+} from "@/modules/repair";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
@@ -114,6 +119,21 @@ describe("the form „Defekt beheben“", () => {
       const state = await formFor(defectId, tom).action(null, post({ version, closingNote: "Display cable replaced" }));
       expect(state?.error).toBe("version-conflict");
     }
+    // Meanwhile Tom claims it: the version the form showed is no longer the stored one.
+    const claimed = await executeCommand(
+      claimDefectCommand,
+      { defectId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!claimed.ok) throw new Error(claimed.error);
+    const state = await formFor(defectId, tom).action(
+      null,
+      post({ version: "0", closingNote: "Display cable replaced" }),
+    );
+    expect(state).toEqual({
+      error: "version-conflict",
+      values: { version: "0", closingNote: "Display cable replaced" },
+    });
     expect((await defectDetails(db, defectId))?.state).toBe("open");
   });
 });

@@ -1,12 +1,5 @@
 import { machineLabels } from "@/modules/collection";
-import {
-  claimRefusal,
-  defectDetails,
-  resolveRefusal,
-  takenOverFrom,
-  type Priority,
-  type ResolveDefectError,
-} from "@/modules/repair";
+import { claimRefusal, defectDetails, resolveRefusal, takenOverFrom, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -51,11 +44,11 @@ export type DefectDetailsData = {
    */
   takenOverFrom: string | undefined;
   /** Whether the team member looking at the page may claim it – or take it over (G11). */
-  canClaim: boolean; /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
+  canClaim: boolean;
+  /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
   resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date; you: boolean } | undefined;
-  /** Whether the team member looking at the page may resolve it (G11) – and CMD-ResolveDefect's reason if not. */
+  /** Whether the team member looking at the page may resolve it (G11). */
   canResolve: boolean;
-  whyNotResolvable: ResolveDefectError | undefined;
 };
 
 /**
@@ -98,7 +91,6 @@ export async function loadDefectDetails(
     ),
   ]);
   const machine = machines.get(defect.machineId);
-  const whyNotResolvable = viewer && resolveRefusal(defect, viewer);
   return {
     title: defect.title,
     museumNumber: machine?.museumNumber ?? "",
@@ -128,7 +120,6 @@ export async function loadDefectDetails(
       you: defect.resolution.resolvedBy === viewer?.id,
     },
     // CMD-ResolveDefect's own rule, asked like the claim's (G11).
-    canResolve: !!viewer && whyNotResolvable === undefined,
-    whyNotResolvable,
+    canResolve: !!viewer && resolveRefusal(defect, viewer) === undefined,
   };
 }
