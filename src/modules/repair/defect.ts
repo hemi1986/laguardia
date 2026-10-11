@@ -18,7 +18,20 @@ export type Claim = { claimedBy: TeamMemberId; claimedAt: Date };
  */
 export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
 
-/** AGG-Defect – current state (docs/architecture/data-model.md); its hold and work log follow with their stories. */
+/**
+ * A work log entry of AGG-Defect (data model, ST-024): what a team member did on the defect, and with which parts. Its
+ * photos follow with ST-032.
+ */
+export type WorkLogEntry = {
+  id: string;
+  whatWasDone: string;
+  /** Free text; none when no parts were used. */
+  partsUsed: string | undefined;
+  loggedBy: TeamMemberId;
+  loggedAt: Date;
+};
+
+/** AGG-Defect – current state (docs/architecture/data-model.md); its hold follows with its story. */
 export type Defect = {
   id: string;
   machineId: string;
@@ -31,6 +44,8 @@ export type Defect = {
   state: DefectState;
   /** None while nobody has claimed it – a defect has at most one claimant. */
   claim?: Claim;
+  /** The oldest first – only added to, never changed or removed (Q13). */
+  workLog: WorkLogEntry[];
   /** One per resolve, the oldest first – only added to, never changed (Q13). */
   resolutions: Resolution[];
 };

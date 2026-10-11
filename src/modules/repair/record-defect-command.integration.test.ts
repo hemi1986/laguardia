@@ -72,7 +72,8 @@ describe("CMD-RecordDefect", () => {
       recordedBy: tom.teamMemberId,
       recordedAt: new Date("2026-10-03T19:00:00Z"),
       state: "open",
-      // A recorded defect has not been resolved yet (ST-028).
+      // Nobody has worked on a recorded defect yet (ST-024), and it has not been resolved (ST-028).
+      workLog: [],
       resolutions: [],
     });
     expect((await storedProblemReport(db, problemReportId))?.triage).toEqual({

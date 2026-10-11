@@ -17,13 +17,15 @@ const { defects: texts, recordDefect, terms } = teamMessages;
  * for helpers, how long it is open and who has claimed it – with the buttons to claim it or take it over (ST-025) and to
  * resolve it (ST-028, G21) –, for a resolved defect how it ended (closing note, by whom, when), then
  * the problem reports it came from: the originating one first, then the
- * linked ones (ST-022). Work log entries (ST-024) and photos (ST-016) are added by their stories. Texts are plain text.
+ * linked ones (ST-022). Before them its work log, the newest entry first, with the button to log work (ST-024, G21).
+ * Texts are plain text.
  */
 export function DefectDetailsView({
   details,
   claimAction,
   justClaimed = false,
   justResolved = false,
+  justLoggedWork = false,
 }: {
   details: DefectDetailsData | undefined;
   /** CMD-ClaimDefect for this defect (ST-025) – none where the page is only looked at (e.g. a test of its data). */
@@ -32,6 +34,8 @@ export function DefectDetailsView({
   justClaimed?: boolean;
   /** Just back from resolving: the confirmation names the defect (G3). */
   justResolved?: boolean;
+  /** Just back from logging work: the confirmation names the defect (G3). */
+  justLoggedWork?: boolean;
 }) {
   if (!details) {
     return (
@@ -54,6 +58,7 @@ export function DefectDetailsView({
       )}
       {/* Only who resolved it is told so – the address alone cannot make the page say it. */}
       {justResolved && details.resolution?.you && <Confirmation>{texts.resolved(details.title)}</Confirmation>}
+      {justLoggedWork && details.youLoggedLast && <Confirmation>{texts.workLogged(details.title)}</Confirmation>}
       <section className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">{details.title}</h2>
         <Link
@@ -79,6 +84,14 @@ export function DefectDetailsView({
             offered={details.canClaim}
           />
         )}
+        {details.canLogWork && (
+          <Link
+            href={`/team/defects/${details.id}/arbeitsschritt`}
+            className={buttonVariants({ variant: "outline", className: "self-start" })}
+          >
+            {texts.logWork}
+          </Link>
+        )}
         {details.canResolve && (
           <Link
             href={`/team/defects/${details.id}/beheben`}
@@ -97,6 +110,26 @@ export function DefectDetailsView({
           </p>
         </section>
       )}
+      <section className="flex flex-col gap-3">
+        <h2 className="font-semibold">{texts.workLog}</h2>
+        {details.workLog.length === 0 ? (
+          <p className="text-muted-foreground text-sm">{texts.noWorkLogged}</p>
+        ) : (
+          <ol className="flex flex-col gap-4">
+            {details.workLog.map((entry) => (
+              <li key={entry.id}>
+                <article className="flex flex-col gap-1 text-sm">
+                  <p className="whitespace-pre-line">{entry.whatWasDone}</p>
+                  {entry.partsUsed && <p className="whitespace-pre-line">{texts.partsUsedLine(entry.partsUsed)}</p>}
+                  <p className="text-muted-foreground">
+                    {entry.loggedBy} · {formatDateTime(entry.loggedAt)}
+                  </p>
+                </article>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">{texts.problemReports}</h2>
         <ol className="flex flex-col gap-4">

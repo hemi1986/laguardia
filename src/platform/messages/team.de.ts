@@ -24,6 +24,7 @@ export const teamMessages = {
     "Maintenance task": "Wartungsaufgabe",
     "Resolved on the spot": "Direkt behoben",
     "Closing note": "Abschlussnotiz",
+    "Work log entry": "Arbeitsschritt",
   },
   login: {
     title: "Anmelden",
@@ -291,6 +292,23 @@ export const teamMessages = {
     /** How a resolved defect ended, on its page – and the confirmation for who resolved it (G3). */
     resolvedBy: (name: string, dateTime: string) => `Behoben von ${name} am ${dateTime}`,
     resolved: (title: string) => `Du hast „${title}“ behoben.`,
+    /** The work log (ST-024) on the defect's page, newest entry first, and its last entry in the open defects list. */
+    workLog: "Arbeitsschritte",
+    noWorkLogged: "Noch kein Arbeitsschritt eingetragen.",
+    partsUsedLine: (partsUsed: string) => `Verwendete Teile: ${partsUsed}`,
+    lastWorkLogEntry: (dateTime: string, name: string) => `Letzter Arbeitsschritt: ${dateTime} · ${name}`,
+    /** Logging work: the button on the defect's page (G14, G21), the form's own page and the confirmation (G3). */
+    logWork: "Arbeitsschritt eintragen",
+    logWorkTitle: (museumNumber: string) => `Arbeitsschritt eintragen · ${museumNumber}`,
+    whatWasDone: "Was wurde gemacht?",
+    partsUsed: "Verwendete Teile (optional)",
+    workLogged: (title: string) => `Arbeitsschritt zu „${title}“ eingetragen.`,
+    /**
+     * A change of the defect made meanwhile (a claim, another work log entry) – the expected rejection of this form.
+     * The form already shows the defect as it is now and keeps the texts, so sending again is all it takes.
+     */
+    logWorkConflict:
+      "Jemand hat den Defekt inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal eintragen.",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
@@ -385,6 +403,7 @@ export const teamMessages = {
     "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
     "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
     "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
+    "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",

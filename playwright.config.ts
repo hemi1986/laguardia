@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
@@ -23,6 +24,9 @@ export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Locally every worker drives the one dev server: with the default (half the cores, 8 on 16) the longest tests ran
+  // into the 30 s timeout once the suite had 126 tests; capped at 4 the whole run is as fast and green (ST-024).
+  workers: baseURL ? undefined : Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2))),
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     browserName: "chromium",

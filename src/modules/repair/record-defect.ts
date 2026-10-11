@@ -75,6 +75,7 @@ export function recordDefect(
     recordedBy: actor.teamMemberId,
     recordedAt: now,
     state: "open",
+    workLog: [],
     resolutions: [],
   };
   return {

@@ -3,6 +3,7 @@ import { openDefects, priorities, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
+import { teamMessages } from "@/platform/messages";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
 
@@ -30,6 +31,8 @@ export type OpenDefectsItem = {
   linkedProblemReports: number;
   /** Its claimant, if any (ST-025). */
   claimant: ShownClaimant | undefined;
+  /** Who last logged work on it, by name, and when (ST-024) – none while nobody has. */
+  lastWorkLogEntry: { loggedBy: string; loggedAt: Date } | undefined;
 };
 
 /** A machine the filter offers – one with open defects. */
@@ -93,7 +96,10 @@ export async function loadOpenDefects(
     ),
     teamMemberNames(
       db,
-      matching.flatMap((defect) => (defect.claimedBy ? [defect.claimedBy] : [])),
+      matching.flatMap((defect) => [
+        ...(defect.claimedBy ? [defect.claimedBy] : []),
+        ...(defect.lastWorkLogEntry ? [defect.lastWorkLogEntry.loggedBy] : []),
+      ]),
     ),
   ]);
   const now = today(clock);
@@ -109,6 +115,10 @@ export async function loadOpenDefects(
       openDays: daysBetween(calendarDate(defect.openSince), now),
       linkedProblemReports: defect.linkedProblemReports,
       claimant: shownClaimant(defect.claimedBy, names, viewer),
+      lastWorkLogEntry: defect.lastWorkLogEntry && {
+        loggedBy: names.get(defect.lastWorkLogEntry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+        loggedAt: defect.lastWorkLogEntry.loggedAt,
+      },
     })),
     total: all.length,
     machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),

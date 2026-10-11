@@ -12,7 +12,7 @@ export { recordDefectCommand } from "./record-defect-command";
 export { stricterMachineStatuses, type RecordDefectError, type RecordDefectInput } from "./record-defect";
 export { resolveProblemOnTheSpotCommand } from "./resolve-problem-on-the-spot-command";
 export type { ResolveProblemOnTheSpotError, ResolveProblemOnTheSpotInput } from "./resolve-problem-on-the-spot";
-export { priorities, type Defect, type Priority } from "./defect";
+export { priorities, type Defect, type Priority, type WorkLogEntry } from "./defect";
 export {
   defectDetails,
   defectTitle,
@@ -38,3 +38,5 @@ export { claimDefectCommand, takenOverFrom } from "./claim-defect-command";
 export { claimRefusal, type ClaimDefectError, type ClaimDefectInput } from "./claim-defect";
 export { resolveDefectCommand } from "./resolve-defect-command";
 export { resolveRefusal, type ResolveDefectError, type ResolveDefectInput } from "./resolve-defect";
+export { logWorkCommand } from "./log-work-command";
+export { logWorkRefusal, type LogWorkError, type LogWorkInput } from "./log-work";

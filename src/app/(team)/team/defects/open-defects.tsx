@@ -52,6 +52,14 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
                   {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
                 </p>
                 {entry.claimant && <p className="text-muted-foreground">{claimantText(entry.claimant)}</p>}
+                {entry.lastWorkLogEntry && (
+                  <p className="text-muted-foreground">
+                    {texts.lastWorkLogEntry(
+                      formatDateTime(entry.lastWorkLogEntry.loggedAt),
+                      entry.lastWorkLogEntry.loggedBy,
+                    )}
+                  </p>
+                )}
                 {entry.linkedProblemReports > 0 && (
                   <p className="text-muted-foreground">{texts.linkedProblemReports(entry.linkedProblemReports)}</p>
                 )}

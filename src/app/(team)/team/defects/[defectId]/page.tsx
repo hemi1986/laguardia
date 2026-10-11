@@ -16,6 +16,7 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
   const [{ defectId }, query] = await Promise.all([params, searchParams]);
   const justClaimed = query.claimed !== undefined;
   const justResolved = query.resolved !== undefined;
+  const justLoggedWork = query.logged !== undefined;
   const details = await loadDefectDetails(database(), systemClock, defectId, { viewer: member, justClaimed });
 
   return (
@@ -25,6 +26,7 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
         claimAction={details && claimDefectAction.bind(null, details.id)}
         justClaimed={justClaimed}
         justResolved={justResolved}
+        justLoggedWork={justLoggedWork}
       />
     </Page>
   );
