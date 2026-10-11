@@ -23,6 +23,9 @@ export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Locally every worker drives the one dev server: with the default (half the cores, 8 here) the longest tests ran
+  // into the 30 s timeout once the suite had 126 tests; with 4 the whole run is as fast and green (ST-024).
+  workers: baseURL ? undefined : 4,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     browserName: "chromium",
