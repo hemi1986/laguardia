@@ -8,7 +8,10 @@ export type Priority = (typeof priorities)[number];
 export const defectStates = ["open", "resolved", "closed-on-retirement"] as const;
 export type DefectState = (typeof defectStates)[number];
 
-/** AGG-Defect – current state (docs/architecture/data-model.md); its claim, hold and work log follow with their stories. */
+/** The Claim value object of AGG-Defect (data model, ST-025): who took the defect on, and since when. */
+export type Claim = { claimedBy: TeamMemberId; claimedAt: Date };
+
+/** AGG-Defect – current state (docs/architecture/data-model.md); its hold and work log follow with their stories. */
 export type Defect = {
   id: string;
   machineId: string;
@@ -19,4 +22,6 @@ export type Defect = {
   recordedBy: TeamMemberId;
   recordedAt: Date;
   state: DefectState;
+  /** None while nobody has claimed it – a defect has at most one claimant. */
+  claim?: Claim;
 };

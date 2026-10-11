@@ -71,7 +71,7 @@ None of these meets the follow-up hurdle; R2 and R3 can be fixed in this story w
 ## Verdict
 accepted with remarks
 
-## Resolution (implementation, 2026-10-12)
+## Resolution (implementation, 2026-10-11)
 
 - **R1 not changed:** one test per scenario title; the redirect of a helper is the untitled browser test beside it, as in ST-023.
 - **R2 fixed:** a runner test covers a machine retired while either new form was open – nothing stored, the text, and the photo sentence only where a photo was attached. A machine already retired when the page loads shows no form (`retired && !state`), without a browser test – retiring has no UI before ST-039.

@@ -38,7 +38,7 @@ export const problemReport = pgTable("problem_report", {
 /**
  * AGG-Defect – current state (docs/architecture/data-model.md, ST-018). Created only through triage of a problem
  * report (HS-16). machine_id and recorded_by are IDs of other modules – their foreign keys are added in the migration.
- * Claims, holds, work log entries and resolutions follow with their stories.
+ * Holds, work log entries and resolutions follow with their stories.
  * The foreign key of problem_report_id is DEFERRABLE INITIALLY DEFERRED (hand-written, drizzle/0014, ST-023): a
  * technician's problem report and its defect refer to each other and are inserted together. Drizzle cannot express
  * that – a generated migration that touches this constraint must keep the deferral by hand.
@@ -55,6 +55,12 @@ export const defect = pgTable("defect", {
   recordedBy: uuid("recorded_by").notNull(),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
   state: text("state", { enum: defectStates }).notNull(),
+  /**
+   * The Claim value object (ST-025) – both set together, or none (unclaimed; CHECK in the migration). claimed_by is a
+   * TeamMemberId; its foreign key to team_member.id is added in the migration.
+   */
+  claimedBy: uuid("claimed_by"),
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
   /** Optimistic version check (HS-16). */
   version: integer("version").notNull().default(0),
 });

@@ -19,8 +19,14 @@ export const defects = aggregateStore({
     recordedBy: row.recordedBy,
     recordedAt: row.recordedAt,
     state: row.state,
+    ...(row.claimedBy && row.claimedAt ? { claim: { claimedBy: row.claimedBy, claimedAt: row.claimedAt } } : {}),
   }),
-  toRow: (state: Defect) => ({ ...state }),
+  // null, not undefined: an update leaves out undefined columns, and a claim must be removable (ST-026).
+  toRow: ({ claim, ...state }: Defect) => ({
+    ...state,
+    claimedBy: claim?.claimedBy ?? null,
+    claimedAt: claim?.claimedAt ?? null,
+  }),
 });
 
 /**
@@ -58,6 +64,8 @@ export type OpenDefect = {
   suitableForHelpers: boolean;
   /** When it was recorded – it has been open since then (data model: Recorded at). */
   openSince: Date;
+  /** Its claimant, if any (ST-025) – by ID; the page names them. */
+  claimedBy: string | undefined;
   /** How many problem reports were linked to it (ST-022) – not counting the one it was recorded from. */
   linkedProblemReports: number;
 };
@@ -69,6 +77,8 @@ export type OpenDefectsQuery = {
   priority?: Priority;
   /** Only the defects a helper may take on. */
   suitableForHelpers?: boolean;
+  /** Only the defects this team member has claimed (ST-025, "claimed by me"). */
+  claimedBy?: string;
 };
 
 /** In the order of `priorities` – high first, then normal, then low (ST-021). */
@@ -79,13 +89,14 @@ const priorityRank = sql`CASE ${defect.priority} ${sql.join(
 
 /**
  * RM-OpenDefects (ST-021): every open defect, by priority – high first –, within a priority the oldest first, with the
- * number of problem reports linked to it (ST-022). Claim, hold and work log follow with ST-024, ST-025 and ST-029.
+ * number of problem reports linked to it (ST-022) and its claimant (ST-025). Hold and work log follow with ST-024 and
+ * ST-029.
  */
 export async function openDefects(
   db: Database,
-  { machineId, priority, suitableForHelpers }: OpenDefectsQuery = {},
+  { machineId, priority, suitableForHelpers, claimedBy }: OpenDefectsQuery = {},
 ): Promise<OpenDefect[]> {
-  return db
+  const rows = await db
     .select({
       id: defect.id,
       machineId: defect.machineId,
@@ -93,6 +104,7 @@ export async function openDefects(
       priority: defect.priority,
       suitableForHelpers: defect.suitableForHelpers,
       openSince: defect.recordedAt,
+      claimedBy: defect.claimedBy,
       linkedProblemReports: sql<number>`count(${problemReport.id})::int`,
     })
     .from(defect)
@@ -106,10 +118,12 @@ export async function openDefects(
         machineId ? eq(defect.machineId, machineId) : undefined,
         priority ? eq(defect.priority, priority) : undefined,
         suitableForHelpers ? eq(defect.suitableForHelpers, true) : undefined,
+        claimedBy ? eq(defect.claimedBy, claimedBy) : undefined,
       ),
     )
     .groupBy(defect.id)
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
+  return rows.map((row) => ({ ...row, claimedBy: row.claimedBy ?? undefined }));
 }
 
 /**

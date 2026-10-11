@@ -50,7 +50,7 @@ acceptance-tester uses port 3100) – both were read, not executed; their green 
 **Verdict: ready to merge** once the two majors are settled in this story – no blocker; no finding passes the follow-up hurdle.
 Most important finding: the machine record's confirmation loader – the code behind "only when it is stored for that machine" – has no test that CI runs (finding 1).
 
-## Resolution (implementation, 2026-10-12)
+## Resolution (implementation, 2026-10-11)
 
 - **#1 fixed:** `triaged-when-reporting.integration.test.ts` tests the loader at its own seam: each outcome's confirmation, and nothing for an ID of another machine, a problem report of this machine under the wrong parameter, an unknown or malformed ID, or a parameter given twice.
 - **#2 fixed:** `melden/report-and-triage-action.ts` is the one Server Action body of the three forms (access check, machine by museum number, runner with photo, landing, photo marker); each `actions.ts` only names its fields, its input function and what the machine record confirms. The composition of runner and `withPhotoToChooseAgain` now exists once – still without a test of its own, because it reads the request's session (known gap, as in ST-023).
@@ -67,7 +67,7 @@ Most important finding: the machine record's confirmation loader – the code be
 
 Security review (`/security-review`): done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` was not run: size M, no change to the command layer.
 
-### After the user's acceptance (2026-10-12)
+### After the user's acceptance (2026-10-11)
 
 - The new paragraph of the engineering conventions is approved by the user.
 - The section „Defekt“ above the legend „Offener Defekt“ on the link page stays as it is (user).
