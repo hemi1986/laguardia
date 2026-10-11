@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { PhotoField } from "../../../../../photo-field";
 import type { TeamReportProblemState } from "./actions";
+import { isAboutDescription } from "./report-section";
 
 const { reportProblem: texts } = teamMessages;
 
@@ -29,7 +30,7 @@ export function TeamReportProblemForm({
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   const kept = state ? JSON.stringify(state) : "empty";
-  const invalid = state?.error === "description-required" || state?.error === "description-too-long";
+  const invalid = isAboutDescription(state?.error);
 
   return (
     <form action={action} className="flex flex-col gap-5">

@@ -1,48 +1,22 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { machineForTeamForm } from "@/modules/collection";
-import { reportProblemAndTriageCommand } from "@/modules/repair";
-import { photoFormAction, type FormState } from "@/app/_actions/form-action";
-import type { PhotoError } from "@/photo";
-import type { CommandError } from "@/platform/command";
-import { database } from "@/platform/database";
-import { requireTeamMember } from "../../../../../../team-session";
-import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
+import { reportAndTriage, type ReportAndTriageState } from "../report-and-triage-action";
 import { reportAndLinkFields, reportAndLinkInput, type ReportAndLinkField } from "./report-and-link-input";
 
-/** After a rejection: the error, the typed values, and whether the photo must be chosen again (G8a). */
-export type ReportAndLinkState =
-  | (NonNullable<FormState<CommandError<typeof reportProblemAndTriageCommand> | PhotoError, ReportAndLinkField>> & {
-      photoAgain?: boolean;
-    })
-  | null;
+export type ReportAndLinkState = ReportAndTriageState<ReportAndLinkField>;
 
 /**
- * CMD-ReportProblem with the triage outcome *linked* in the same step (ST-052) – through the Server Action runner, as
- * the signed-in technician; everything is sent once and stored together. Afterwards the technician is back on the
- * machine record, which confirms it naming the defect (G3). The page binds the museum number; the server finds the
- * machine by it, and the command checks that machine and the chosen defect again.
+ * CMD-ReportProblem with the triage outcome *linked* in the same step (ST-052) – technicians only, which the command
+ * checks; it checks the chosen defect again too. The machine record then confirms it naming the defect, as ST-022 does.
  */
 export async function reportAndLinkAction(
   museumNumber: string,
   previous: ReportAndLinkState,
   formData: FormData,
 ): Promise<ReportAndLinkState> {
-  // The page's access check. Who may link when reporting is the command's: a helper who sends this form anyway is
-  // rejected there, with nothing stored (G11), and the page then leads to the plain report form.
-  await requireTeamMember();
-  const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
-  const machine = await machineForTeamForm(database(), museumNumber);
-  const state = await photoFormAction(reportProblemAndTriageCommand, {
+  return reportAndTriage(museumNumber, previous, formData, {
     fields: reportAndLinkFields,
-    photo: reportAndTriagePhoto,
-    input: (fields, photo) => reportAndLinkInput(fields, machine?.id, photo),
-    onSuccess: async ({ problemReportId }) => {
-      revalidatePath(record);
-      redirect(`${record}?linked=${problemReportId}`);
-    },
-  })(previous, formData);
-  return withPhotoToChooseAgain(state, formData);
+    input: reportAndLinkInput,
+    confirms: ({ problemReportId }) => `linked=${problemReportId}`,
+  });
 }

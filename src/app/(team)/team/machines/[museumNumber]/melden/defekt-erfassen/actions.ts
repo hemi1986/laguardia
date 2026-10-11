@@ -1,53 +1,28 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { machineForTeamForm } from "@/modules/collection";
-import { reportProblemAndTriageCommand } from "@/modules/repair";
-import { photoFormAction, type FormState } from "@/app/_actions/form-action";
-import type { PhotoError } from "@/photo";
-import type { CommandError } from "@/platform/command";
-import { database } from "@/platform/database";
-import { requireTeamMember } from "../../../../../../team-session";
+import { reportAndTriage, type ReportAndTriageState } from "../report-and-triage-action";
 import {
   reportAndRecordDefectFields,
   reportAndRecordDefectInput,
   type ReportAndRecordDefectField,
 } from "./report-and-record-defect-input";
-import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
 
-/** After a rejection: the error, the typed values, and whether the photo must be chosen again (G8a). */
-export type ReportAndRecordDefectState =
-  | (NonNullable<
-      FormState<CommandError<typeof reportProblemAndTriageCommand> | PhotoError, ReportAndRecordDefectField>
-    > & { photoAgain?: boolean })
-  | null;
+export type ReportAndRecordDefectState = ReportAndTriageState<ReportAndRecordDefectField>;
 
 /**
- * CMD-ReportProblem with the triage outcome *record a defect* in the same step (ST-023) – through the Server Action
- * runner, as the signed-in technician; everything is sent once and stored together. Afterwards the technician is back
- * on the machine record, which confirms the defect and – when it changed – the machine's new status (G3). The page
- * binds the museum number; the server finds the machine by it, and the command checks that machine again.
+ * CMD-ReportProblem with the triage outcome *record a defect* in the same step (ST-023) – technicians only, which the
+ * command checks. The machine record then confirms the defect and – when the form changed it – the machine's new
+ * status, as ST-018 does.
  */
 export async function reportAndRecordDefectAction(
   museumNumber: string,
   previous: ReportAndRecordDefectState,
   formData: FormData,
 ): Promise<ReportAndRecordDefectState> {
-  // The page's access check. Who may record a defect when reporting is the command's: a helper who sends this form
-  // anyway is rejected there, with nothing stored (G11), and the page then leads to the plain report form.
-  await requireTeamMember();
-  const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
-  const machine = await machineForTeamForm(database(), museumNumber);
   const statusChanged = Boolean(formData.get("machineStatus"));
-  const state = await photoFormAction(reportProblemAndTriageCommand, {
+  return reportAndTriage(museumNumber, previous, formData, {
     fields: reportAndRecordDefectFields,
-    photo: reportAndTriagePhoto,
-    input: (fields, photo) => reportAndRecordDefectInput(fields, machine?.id, photo),
-    onSuccess: async ({ defectId }) => {
-      revalidatePath(record);
-      redirect(`${record}?defectRecorded=${defectId ?? ""}${statusChanged ? "&statusChanged=1" : ""}`);
-    },
-  })(previous, formData);
-  return withPhotoToChooseAgain(state, formData);
+    input: reportAndRecordDefectInput,
+    confirms: ({ defectId }) => `defectRecorded=${defectId ?? ""}${statusChanged ? "&statusChanged=1" : ""}`,
+  });
 }

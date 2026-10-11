@@ -9,7 +9,7 @@ import { DefectFields } from "../../../../defect-fields";
 import type { ReportAndRecordDefectState } from "./actions";
 import type { ReportAndRecordDefectField } from "./report-and-record-defect-input";
 import { rejectionText } from "../report-and-triage-rejection-text";
-import { ReportSection } from "../report-section";
+import { isAboutDescription, ReportSection } from "../report-section";
 
 const { reportAndRecordDefect: texts, reportProblem } = teamMessages;
 
@@ -17,8 +17,6 @@ type ErrorCode = NonNullable<ReportAndRecordDefectState>["error"];
 
 /** The field that caused a rejection – marked at the form (G8). */
 const fieldOf: Partial<Record<ErrorCode, ReportAndRecordDefectField>> = {
-  "description-required": "description",
-  "description-too-long": "description",
   "title-required": "title",
   "machine-status-not-stricter": "machineStatus",
 };
@@ -45,7 +43,7 @@ export function ReportAndRecordDefectForm({
   const rejectionId = useId();
   if (machine.retired && !state) return <p>{reportProblem.retired}</p>;
   const kept = state ? JSON.stringify(state) : "empty";
-  const invalid = state ? fieldOf[state.error] : undefined;
+  const invalid = state ? (isAboutDescription(state.error) ? "description" : fieldOf[state.error]) : undefined;
 
   return (
     <form action={action} className="flex flex-col gap-8">
@@ -57,7 +55,7 @@ export function ReportAndRecordDefectForm({
         onPreparingPhoto={setPreparingPhoto}
       />
       <section className="flex flex-col gap-5">
-        <h2 className="font-medium">{texts.defect}</h2>
+        <h2 className="font-medium">{teamMessages.terms.Defect}</h2>
         <DefectFields
           values={state?.values}
           kept={kept}

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { openDefectTitles, problemReportsOfMachine, reportProblemAndTriageCommand } from "@/modules/repair";
-import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { resolveDefectForTest, storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -177,6 +178,43 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     ).toBeNull();
 
     expect(storage.names()).toHaveLength(1);
-    expect(await problemReportsOfMachine(db, machineId)).toHaveLength(1);
+    const [report] = await problemReportsOfMachine(db, machineId);
+    expect((await storedProblemReport(db, report.id))?.photo).toBe(storage.names()[0]);
+  });
+
+  it("stores nothing and says so when the machine was retired while either form was open", async () => {
+    await anExistingTeamMember(db, anna, "Anna");
+    const { machineId, defectId } = await aMachineWithAnOpenDefect();
+    const link = linkFormFor(machineId);
+    const resolve = resolveFormFor(machineId);
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error("not retired");
+    const before = await stored(machineId, link.storage);
+    const linkForm = post({ description: "Left flipper weak again during test", defectId }, await aPhoto());
+    const resolveForm = post({ description: "Ball stuck behind the left ramp", note: "Ball freed" });
+
+    const rejectedLink = withPhotoToChooseAgain(await link.action(null, linkForm), linkForm);
+    const rejectedResolution = withPhotoToChooseAgain(await resolve.action(null, resolveForm), resolveForm);
+
+    expect(rejectedLink).toMatchObject({
+      error: "machine-retired",
+      values: { description: "Left flipper weak again during test", defectId },
+    });
+    expect(rejectedResolution).toMatchObject({
+      error: "machine-retired",
+      values: { description: "Ball stuck behind the left ramp", note: "Ball freed" },
+    });
+    expect(rejectionText(rejectedLink!, "LG-042")).toBe(
+      "LG-042 ist inzwischen ausgemustert. Es wurde nichts gespeichert. Das Foto muss erneut ausgewählt werden.",
+    );
+    expect(rejectionText(rejectedResolution!, "LG-042")).toBe(
+      "LG-042 ist inzwischen ausgemustert. Es wurde nichts gespeichert.",
+    );
+    expect(await stored(machineId, link.storage)).toEqual(before);
+    expect(resolve.storage.names()).toEqual([]);
   });
 });

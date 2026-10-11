@@ -1,11 +1,18 @@
-import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
 import {
+  linkingActors,
   linkProblemReportToDefect,
   type LinkingFacts,
   type LinkProblemReportToDefectError,
   type ProblemReportLinkedToDefect,
 } from "./link-problem-report-to-defect";
-import { recordDefect, type DefectRecorded, type RecordDefectError, type RecordDefectInput } from "./record-defect";
+import {
+  recordDefect,
+  recordingActors,
+  type DefectRecorded,
+  type RecordDefectError,
+  type RecordDefectInput,
+} from "./record-defect";
 import {
   reportProblem,
   type ProblemReport,
@@ -17,6 +24,7 @@ import {
 } from "./report-problem";
 import {
   resolveProblemOnTheSpot,
+  resolvingActors,
   type ProblemResolvedOnTheSpot,
   type ResolveProblemOnTheSpotError,
 } from "./resolve-problem-on-the-spot";
@@ -62,17 +70,16 @@ export function reportProblemAndTriage(
 ): Decision<ProblemReport, ProblemReported | TriageEvent, ReportProblemAndTriageError> {
   const { actor } = context;
   const teamMember = actor.kind === "team-member" ? actor : undefined;
-  const technician = teamMember?.role === "technician";
-  // Who may choose which triage outcome is the rule of that outcome's own command: resolving on the spot is for every
-  // team member, everything else for technicians only. A problem report with an outcome its reporter may not choose is
-  // rejected as a whole, never stored without it (CMD-ReportProblem rules; user, 2026-10-11).
-  if (input.triage && !(technician || (teamMember && input.triage.outcome === "resolved-on-the-spot"))) {
+  // Who may choose which triage outcome is the rule of that outcome's own command. A problem report with an outcome
+  // its reporter may not choose is rejected as a whole, never stored without it (CMD-ReportProblem rules; user,
+  // 2026-10-11).
+  if (input.triage && !(teamMember && mayChoose(teamMember.role, input.triage.outcome))) {
     return { ok: false, error: "not-authorized" };
   }
   const reported = reportProblem(facts, input, context);
   if (!reported.ok || !teamMember) return reported;
   // A technician's problem report is never stored untriaged, whatever form sent it; a helper's may be.
-  if (!input.triage) return technician ? { ok: false, error: "triage-required" } : reported;
+  if (!input.triage) return teamMember.role === "technician" ? { ok: false, error: "triage-required" } : reported;
   const triaged = triage(reported.state, input.triage, { ...context, actor: teamMember }, facts);
   if (!triaged.ok) {
     if (triaged.error === "already-triaged") throw new Error("CMD-ReportProblem: a new problem report is untriaged");
@@ -81,19 +88,33 @@ export function reportProblemAndTriage(
   return { ...triaged, events: [...reported.events, ...triaged.events] };
 }
 
-/** The triage outcome's own decision on the new problem report – at version 0, which nobody else has seen. */
+/** The allowed actors of each triage outcome's own command – resolving on the spot is for helpers too. */
+const actorsOf: Record<TriageInTheSameStep["outcome"], readonly Role[]> = {
+  "defect-recorded": recordingActors,
+  linked: linkingActors,
+  "resolved-on-the-spot": resolvingActors,
+};
+
+function mayChoose(role: Role, outcome: TriageInTheSameStep["outcome"]): boolean {
+  return actorsOf[outcome].includes(role);
+}
+
+/**
+ * The triage outcome's own decision on the new problem report – at version 0, which nobody else has seen. Called only
+ * for a team member who may choose that outcome.
+ */
 function triage(
   report: ProblemReport,
   chosen: TriageInTheSameStep,
   context: DecisionContext<ActorOf<"helper" | "technician">>,
   facts: ReportingAndTriageFacts,
-): Decision<ProblemReport, TriageEvent, TriageError | "not-authorized"> {
+): Decision<ProblemReport, TriageEvent, TriageError> {
   const target = { problemReportId: report.id, version: 0 };
   if (chosen.outcome === "resolved-on-the-spot") {
     return resolveProblemOnTheSpot(report, { ...target, note: chosen.note }, context);
   }
   const { actor } = context;
-  if (actor.role !== "technician") return { ok: false, error: "not-authorized" };
+  if (actor.role !== "technician") throw new Error(`CMD-ReportProblem: ${chosen.outcome} is for technicians only`);
   const asTechnician = { ...context, actor: { ...actor, role: actor.role } };
   if (chosen.outcome === "linked") {
     return linkProblemReportToDefect(report, { ...target, defectId: chosen.defectId }, asTechnician, facts);

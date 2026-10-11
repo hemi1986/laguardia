@@ -57,7 +57,7 @@ export function ReportSection({
   );
 }
 
-/** The description is the field a rejection is about. */
-export function descriptionRejected(error: string | undefined): boolean {
+/** Whether a form's error is about the description – then that field is marked (G8). */
+export function isAboutDescription(error: string | undefined): boolean {
   return error === "description-required" || error === "description-too-long";
 }

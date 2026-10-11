@@ -7,7 +7,7 @@ import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
 import { rejectionText } from "../report-and-triage-rejection-text";
-import { descriptionRejected, ReportSection } from "../report-section";
+import { isAboutDescription, ReportSection } from "../report-section";
 import type { ReportAndResolveState } from "./actions";
 
 const { reportAndResolveOnTheSpot: texts, resolveOnTheSpot, reportProblem } = teamMessages;
@@ -40,12 +40,12 @@ export function ReportAndResolveForm({
       <ReportSection
         description={state?.values.description}
         kept={kept}
-        invalid={descriptionRejected(state?.error)}
+        invalid={isAboutDescription(state?.error)}
         rejectionId={rejectionId}
         onPreparingPhoto={setPreparingPhoto}
       />
       <section className="flex flex-col gap-5">
-        <h2 className="font-medium">{texts.resolved}</h2>
+        <h2 className="font-medium">{teamMessages.terms["Resolved on the spot"]}</h2>
         <Field data-invalid={noteInvalid}>
           <FieldLabel htmlFor="note">{resolveOnTheSpot.note}</FieldLabel>
           <Textarea

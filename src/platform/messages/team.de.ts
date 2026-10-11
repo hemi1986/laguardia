@@ -227,19 +227,16 @@ export const teamMessages = {
   /** … with the outcome *defect recorded* (ST-023) – technicians only. */
   reportAndRecordDefect: {
     title: (museumNumber: string) => `Problem melden und Defekt erfassen · ${museumNumber}`,
-    defect: "Defekt",
     submit: "Melden und Defekt erfassen",
   },
   /** … with the outcome *linked* (ST-052) – technicians only; the choice and the confirmation are ST-022's. */
   reportAndLink: {
     title: (museumNumber: string) => `Problem melden und mit Defekt verknüpfen · ${museumNumber}`,
-    defect: "Defekt",
     submit: "Melden und mit Defekt verknüpfen",
   },
   /** … with the outcome *resolved on the spot* (ST-052) – every team member; the field and the confirmation are ST-019's. */
   reportAndResolveOnTheSpot: {
     title: (museumNumber: string) => `Problem melden und als direkt behoben eintragen · ${museumNumber}`,
-    resolved: "Direkt behoben",
     submit: "Melden und als direkt behoben eintragen",
   },
   /** The open defects list and a defect's own page (ST-021). */

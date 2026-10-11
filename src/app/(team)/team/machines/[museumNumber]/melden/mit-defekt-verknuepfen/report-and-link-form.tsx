@@ -7,7 +7,7 @@ import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { rejectionText } from "../report-and-triage-rejection-text";
-import { descriptionRejected, ReportSection } from "../report-section";
+import { isAboutDescription, ReportSection } from "../report-section";
 import type { ReportAndLinkState } from "./actions";
 
 const { reportAndLink: texts, link, reportProblem } = teamMessages;
@@ -44,14 +44,16 @@ export function ReportAndLinkForm({
       <ReportSection
         description={state?.values.description}
         kept={kept}
-        invalid={descriptionRejected(state?.error)}
+        invalid={isAboutDescription(state?.error)}
         rejectionId={rejectionId}
         onPreparingPhoto={setPreparingPhoto}
       />
       <section className="flex flex-col gap-5">
-        <h2 className="font-medium">{texts.defect}</h2>
+        <h2 className="font-medium">{teamMessages.terms.Defect}</h2>
         <FieldSet data-invalid={defectInvalid || undefined} aria-describedby={defectInvalid ? rejectionId : undefined}>
           <FieldLegend variant="label">{link.defect}</FieldLegend>
+          {/* After a rejection the form stays – also when no defect is open any more: said in words (G7). */}
+          {openDefects.length === 0 && <p className="text-sm">{link.noOpenDefects(museumNumber)}</p>}
           {openDefects.map((defect) => (
             <label key={`${defect.id}-${kept}`} className="flex items-start gap-2 text-sm [overflow-wrap:anywhere]">
               <input

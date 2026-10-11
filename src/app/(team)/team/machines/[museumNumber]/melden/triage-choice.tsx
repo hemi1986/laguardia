@@ -39,6 +39,8 @@ export function TriageChoice({
         <h2 className="font-medium">{texts.triage}</h2>
         <p className="text-sm">{texts.triagedWhenReporting}</p>
         {triageRequired && <Rejection>{commandErrorText(teamMessages, "triage-required")}</Rejection>}
+        {/* Linking is not offered without an open defect – said in words in its place, not left out silently (G7). */}
+        {!canLink && <p className="text-muted-foreground text-sm">{link.noOpenDefects(museumNumber)}</p>}
         <div className="flex flex-wrap gap-2">
           {outcomes.map((outcome) => (
             <Link
@@ -50,8 +52,6 @@ export function TriageChoice({
             </Link>
           ))}
         </div>
-        {/* Linking is not offered without an open defect – said in words, not left out silently (G7). */}
-        {!canLink && <p className="text-muted-foreground text-sm">{link.noOpenDefects(museumNumber)}</p>}
       </section>
     </>
   );

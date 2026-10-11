@@ -34,14 +34,16 @@ export async function loadTriagedWhenReporting(
     const newStatus = query.statusChanged !== undefined ? machine.machineStatus : undefined;
     return { outcome: "defect-recorded", title: recorded.title, newStatus };
   }
-  const problemReportId = one(query.linked) ?? one(query.resolvedOnTheSpot);
-  if (!problemReportId) return undefined;
-  const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.machineId !== machine.id) return undefined;
-  if (query.resolvedOnTheSpot !== undefined) {
-    return report.triageOutcome === "resolved-on-the-spot" ? { outcome: "resolved-on-the-spot" } : undefined;
+  const resolvedId = one(query.resolvedOnTheSpot);
+  if (resolvedId) {
+    const report = await problemReportForTriage(db, clock, resolvedId);
+    const stored = report?.machineId === machine.id && report.triageOutcome === "resolved-on-the-spot";
+    return stored ? { outcome: "resolved-on-the-spot" } : undefined;
   }
-  if (report.triageOutcome !== "linked" || !report.triageDefectId) return undefined;
+  const linkedId = one(query.linked);
+  if (!linkedId) return undefined;
+  const report = await problemReportForTriage(db, clock, linkedId);
+  if (report?.machineId !== machine.id || report.triageOutcome !== "linked" || !report.triageDefectId) return undefined;
   const linkedTo = await defectTitle(db, report.triageDefectId);
   return linkedTo && { outcome: "linked", title: linkedTo.title };
 }
