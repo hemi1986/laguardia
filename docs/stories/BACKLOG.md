@@ -4,9 +4,15 @@
 
 **Progress: 20 of 58 domain stories done** · scenarios 195 of 441
 
-**81 stories** · In Progress: 0 · Ready: 44 · In Review: 0 · Draft: 5 · Done: 32
+**81 stories** · In Progress: 1 · Ready: 43 · In Review: 0 · Draft: 5 · Done: 32
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-052](ST-052-report-and-link-or-resolve-on-the-spot.md) | Report a problem and link it or resolve it on the spot in the same step | story | Repair | must | M | medium | ST-019, ST-022, ST-023 |
 
 ## Ready
 
@@ -37,7 +43,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-047](ST-047-maintenance-on-machine-record-and-overview.md) | Maintenance on the machine record | story | Maintenance | must | S | low | ST-009, ST-044, ST-056 |
 | [ST-048](ST-048-technician-dashboard.md) | Technician dashboard – untriaged problem reports and machines ready to return to play | story | Repair | must | S | low | ST-012, ST-017, ST-028 |
 | [ST-049](ST-049-helper-dashboard.md) | Helper dashboard | story | Repair | must | M | low | ST-026, ST-027, ST-029, ST-030, ST-031, ST-043 |
-| [ST-052](ST-052-report-and-link-or-resolve-on-the-spot.md) | Report a problem and link it or resolve it on the spot in the same step | story | Repair | must | M | medium | ST-019, ST-022, ST-023 |
 | [ST-053](ST-053-link-reopens-resolved-defect.md) | Linking a problem report to a recently resolved defect reopens it | story | Repair | must | S | medium | ST-022, ST-030 |
 | [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | must | M | medium | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | must | M | medium | ST-007, ST-013, ST-059 |
