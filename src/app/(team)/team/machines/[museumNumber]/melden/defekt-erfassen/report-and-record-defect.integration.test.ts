@@ -1,13 +1,22 @@
 import { randomUUID } from "node:crypto";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { openDefectTitles, problemReportsOfMachine, reportProblemAndTriageCommand } from "@/modules/repair";
+import {
+  openDefectTitles,
+  problemReportsOfMachine,
+  reportProblemAndTriageCommand,
+  reportProblemCommand,
+} from "@/modules/repair";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { memoryStorage } from "@/platform/storage";
 import { photoFormRunner } from "@/app/_actions/form-runner";
+import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "../report-problem-input";
+import { TriageChoice } from "../triage-choice";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -168,5 +177,35 @@ describe("the form for reporting a problem and recording a defect", () => {
     expect(rejected?.error).toBe("not-authorized");
     expect(reported).toEqual([]);
     await expectNothingStored(machineId, journalBefore, storage);
+  });
+
+  it("ST-023: A report form loaded before sends nothing for a technician", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    const storage = memoryStorage();
+    // ST-015's plain form, as a page loaded before the change still sends it – now as a technician.
+    const plainForm = photoFormRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
+      reportProblemCommand,
+      {
+        fields: teamReportProblemFields,
+        photo: teamReportProblemPhoto,
+        input: (fields, photo) => teamReportProblemInput(fields, machineId, photo),
+        onSuccess: async () => {},
+      },
+    );
+
+    const rejected = await plainForm(null, post({ description: "Left flipper coil stop broken" }));
+
+    expect(rejected?.error).toBe("triage-required");
+    await expectNothingStored(machineId, journalBefore, storage);
+    // Where the action sends the technician with that rejection: the choice page, asking to choose.
+    const choicePage = renderToStaticMarkup(
+      createElement(TriageChoice, { museumNumber: "LG-042", machineModelTitle: "Medieval Madness", triageRequired: true }),
+    );
+    expect(choicePage).toContain("Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.");
+    expect(choicePage).toMatch(/<a[^>]*href="\/team\/machines\/LG-042\/melden\/defekt-erfassen"[^>]*>Defekt erfassen<\/a>/);
+    expect(choicePage).not.toContain("Left flipper coil stop broken");
+    expect(choicePage).not.toMatch(/<textarea|<form|<button/);
   });
 });

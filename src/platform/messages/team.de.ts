@@ -212,6 +212,9 @@ export const teamMessages = {
   },
   /** Reporting a problem and recording a defect in the same step (ST-023) – a technician's own problem report. */
   reportAndRecordDefect: {
+    /** The choice page a technician sees instead of the plain report form (G21a). */
+    triage: "Sichten",
+    triagedWhenReporting: "Meldungen von Techniker:innen werden gleich beim Melden gesichtet.",
     /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
     photoAgain: "Das Foto muss erneut ausgewählt werden.",
   },
