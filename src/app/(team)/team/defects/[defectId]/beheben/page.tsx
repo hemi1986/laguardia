@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
+import { resolveRefusal } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
-import { loadDefectToResolve } from "./defect-to-resolve-data";
+import { loadDefectForForm } from "../defect-form-data";
 import { resolveDefectAction } from "./actions";
 import { ResolveDefectForm } from "./resolve-defect-form";
 
@@ -16,7 +17,7 @@ const { defects: texts } = teamMessages;
 export default async function ResolveDefectPage({ params }: PageProps<"/team/defects/[defectId]/beheben">) {
   const member = await requireTeamMember();
   const { defectId } = await params;
-  const details = await loadDefectToResolve(database(), defectId, member);
+  const details = await loadDefectForForm(database(), defectId, (defect) => resolveRefusal(defect, member));
 
   return (
     <Page title={details ? texts.resolveTitle(details.museumNumber) : teamMessages.terms.Defect}>

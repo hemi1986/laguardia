@@ -8,6 +8,7 @@ import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
   linkProblemReportToDefectCommand,
+  logWorkCommand,
   recordDefectCommand,
   reportProblemCommand,
   type Priority,
@@ -315,6 +316,34 @@ describe("the open defects list", () => {
     const entryOf = (title: string) => html.slice(html.indexOf(title)).split("</article>")[0];
     expect(entryOf("Left flipper weak")).toContain("1 verknüpfte Meldung");
     expect(entryOf("Display flickers")).not.toContain("verknüpfte");
+  });
+
+  it("shows who last logged work on a defect and when (ST-024), and nothing where nobody has", async () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, anna, "Anna");
+    const lg042 = await registered("LG-042");
+    const leftFlipper = await anOpenDefect(lg042, "Left flipper weak");
+    await anOpenDefect(lg042, "Display flickers");
+    for (const [version, actor, at, whatWasDone] of [
+      [0, tom, "2026-10-05T08:00:00Z", "Checked the coil"],
+      [1, anna, "2026-10-06T09:30:00Z", "Cleaned the flipper mechanism"],
+    ] as const) {
+      const logged = await executeCommand(
+        logWorkCommand,
+        { defectId: leftFlipper, version, whatWasDone, partsUsed: "" },
+        { actor, db, clock: fixedClock(at), newId: randomUUID },
+      );
+      if (!logged.ok) throw new Error(logged.error);
+    }
+
+    const html = await page();
+
+    const entryOf = (title: string) => html.slice(html.indexOf(title)).split("</article>")[0];
+    expect(entryOf("Left flipper weak")).toContain("Letzter Arbeitsschritt: 06.10.2026, 11:30 · Anna");
+    // When and who – what was done is on the defect's page (G5).
+    expect(entryOf("Left flipper weak")).not.toContain("Cleaned the flipper mechanism");
+    expect(entryOf("Left flipper weak")).not.toContain("05.10.2026");
+    expect(entryOf("Display flickers")).not.toContain("Arbeitsschritt");
   });
 
   it('ST-025: Filter "claimed by me"', async () => {
