@@ -183,6 +183,18 @@ test("ST-023: Report without a description stores nothing", async ({ page }) => 
   await expectNothingStored(page, museumNumber, defectTitle);
 });
 
+test("with neither a description nor a title, the description is the one marked", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber } = await aMachine(page);
+  await openForm(page, museumNumber);
+
+  await send(page).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+  await expect(page.getByLabel("Beschreibung")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Titel")).not.toHaveAttribute("aria-invalid", "true");
+});
+
 test("ST-023: A rejected report keeps what was typed", async ({ page }) => {
   await logIn(page);
   const { museumNumber } = await aMachine(page);

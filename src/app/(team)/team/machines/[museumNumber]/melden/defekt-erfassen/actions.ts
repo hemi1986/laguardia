@@ -8,7 +8,7 @@ import { photoFormAction, type FormState } from "@/app/_actions/form-action";
 import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
-import { requireTechnician } from "../../../../../../team-session";
+import { requireTeamMember } from "../../../../../../team-session";
 import {
   reportAndRecordDefectFields,
   reportAndRecordDefectInput,
@@ -35,7 +35,9 @@ export async function reportAndRecordDefectAction(
   previous: ReportAndRecordDefectState,
   formData: FormData,
 ): Promise<ReportAndRecordDefectState> {
-  await requireTechnician(); // the page's access check; who may record a defect when reporting is the command's
+  // The page's access check. Who may record a defect when reporting is the command's: a helper who sends this form
+  // anyway is rejected there, with nothing stored (G11), and the page then leads to the plain report form.
+  await requireTeamMember();
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   const machine = await machineForTeamForm(database(), museumNumber);
   const statusChanged = Boolean(formData.get("machineStatus"));

@@ -25,7 +25,12 @@ const clock = fixedClock("2026-10-11T09:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 
 /** A technician reports and records a defect in the same step – no status change unless the test asks for one. */
-function reportAndRecordDefect(machineId: string, description: string, title: string) {
+function reportAndRecordDefect(
+  machineId: string,
+  description: string,
+  title: string,
+  status: { machineStatus?: "limited" | "out-of-order"; machineVersion?: number } = {},
+) {
   return executeCommand(
     reportProblemAndTriageCommand,
     {
@@ -36,8 +41,8 @@ function reportAndRecordDefect(machineId: string, description: string, title: st
         title,
         priority: undefined,
         suitableForHelpers: false,
-        machineStatus: undefined,
-        machineVersion: undefined,
+        machineStatus: status.machineStatus,
+        machineVersion: status.machineVersion,
       },
     },
     { actor: tom, db, clock, newId: randomUUID },
@@ -154,6 +159,36 @@ describe("CMD-ReportProblem by a technician", () => {
     expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
     expect(await openDefectTitles(db, machineId)).toEqual([]);
     expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
+  });
+
+  it("stores neither the problem report nor the defect when the status change in the same step is refused", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const outOfOrder = await aRegisteredMachine(db, "out-of-order");
+    const changedMeanwhile = await aRegisteredMachine(db, "playable");
+    const journalBefore = (await journalOf(db, { machineId: changedMeanwhile })).length;
+
+    // Not stricter than the machine's status now – the decision refuses it.
+    expect(
+      await reportAndRecordDefect(outOfOrder, "Left flipper coil stop broken", "Left flipper sticks", {
+        machineStatus: "limited",
+        machineVersion: 0,
+      }),
+    ).toEqual({ ok: false, error: "machine-status-not-stricter" });
+    // A version of the machine nobody saw – CMD-ChangeMachineStatus refuses it after the problem report was saved,
+    // and the whole command is rolled back.
+    expect(
+      await reportAndRecordDefect(changedMeanwhile, "Left flipper coil stop broken", "Left flipper sticks", {
+        machineStatus: "limited",
+        machineVersion: 7,
+      }),
+    ).toEqual({ ok: false, error: "version-conflict" });
+
+    for (const machineId of [outOfOrder, changedMeanwhile]) {
+      expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+      expect(await openDefectTitles(db, machineId)).toEqual([]);
+    }
+    expect(await journalOf(db, { machineId: changedMeanwhile })).toHaveLength(journalBefore);
+    expect((await machineRecord(db, await museumNumberOf(changedMeanwhile)))?.machineStatus).toBe("playable");
   });
 });
 

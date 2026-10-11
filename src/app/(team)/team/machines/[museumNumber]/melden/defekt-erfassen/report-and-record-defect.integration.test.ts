@@ -12,7 +12,7 @@ import {
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
-import { teamMessages } from "@/platform/messages";
+import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { memoryStorage } from "@/platform/storage";
 import { photoFormRunner } from "@/app/_actions/form-runner";
 import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "../report-problem-input";
@@ -213,5 +213,8 @@ describe("the form for reporting a problem and recording a defect", () => {
     );
     expect(choicePage).not.toContain("Left flipper coil stop broken");
     expect(choicePage).not.toMatch(/<textarea|<form|<button/);
+    // The visitors' report form, sent by a logged-in technician, ends the same way – its catalogues say where to report.
+    expect(commandErrorText(visitorMessages("de"), "triage-required")).toContain("Es wurde nichts gespeichert.");
+    expect(commandErrorText(visitorMessages("en"), "triage-required")).toContain("Nothing was saved.");
   });
 });
