@@ -1,5 +1,12 @@
 import { machineLabels } from "@/modules/collection";
-import { claimRefusal, defectDetails, resolveRefusal, takenOverFrom, type Priority } from "@/modules/repair";
+import {
+  claimRefusal,
+  defectDetails,
+  logWorkRefusal,
+  resolveRefusal,
+  takenOverFrom,
+  type Priority,
+} from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -49,6 +56,21 @@ export type DefectDetailsData = {
   resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date; you: boolean } | undefined;
   /** Whether the team member looking at the page may resolve it (G11). */
   canResolve: boolean;
+  /** Its work log (ST-024), the newest entry first – who logged it by name. */
+  workLog: ShownWorkLogEntry[];
+  /** Whether the newest entry is the viewer's own – for the confirmation just after logging work (G3). */
+  youLoggedLast: boolean;
+  /** Whether work can be logged on it as it is – every team member may (HS-8, G11). */
+  canLogWork: boolean;
+};
+
+/** A work log entry on the defect's page. */
+export type ShownWorkLogEntry = {
+  id: string;
+  whatWasDone: string;
+  partsUsed: string | undefined;
+  loggedBy: string;
+  loggedAt: Date;
 };
 
 /**
@@ -83,6 +105,7 @@ export async function loadDefectDetails(
       ...(defect.claim ? [defect.claim.claimedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
       ...(defect.resolution ? [defect.resolution.resolvedBy] : []),
+      ...defect.workLog.map((entry) => entry.loggedBy),
     ]),
     photoViewAddresses(
       storage,
@@ -121,5 +144,13 @@ export async function loadDefectDetails(
     },
     // CMD-ResolveDefect's own rule, asked like the claim's (G11).
     canResolve: !!viewer && resolveRefusal(defect, viewer) === undefined,
+    workLog: defect.workLog
+      .map((entry) => ({
+        ...entry,
+        loggedBy: names.get(entry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+      }))
+      .reverse(),
+    youLoggedLast: !!viewer && defect.workLog.at(-1)?.loggedBy === viewer.id,
+    canLogWork: !!viewer && logWorkRefusal(defect) === undefined,
   };
 }

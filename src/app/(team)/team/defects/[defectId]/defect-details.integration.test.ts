@@ -8,6 +8,7 @@ import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
   linkProblemReportToDefectCommand,
+  logWorkCommand,
   recordDefectCommand,
   reportProblemCommand,
   resolveDefectCommand,
@@ -293,6 +294,124 @@ describe("a defect's own page", () => {
       if (!resolved.ok) throw new Error("not resolved");
 
       expect((await seenBy(defectId, asTom)).canClaim).toBe(false);
+    });
+  });
+
+  describe("its work log (ST-024)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    async function logged(
+      defectId: string,
+      version: number,
+      actor: Actor,
+      at: string,
+      whatWasDone: string,
+      partsUsed = "",
+    ) {
+      const outcome = await executeCommand(
+        logWorkCommand,
+        { defectId, version, whatWasDone, partsUsed },
+        { actor, db, clock: fixedClock(at), newId: randomUUID },
+      );
+      if (!outcome.ok) throw new Error(outcome.error);
+    }
+
+    async function seenByAnna(defectId: string, justLoggedWork = false) {
+      const details = await loadDefectDetails(db, fixedClock("2026-10-08T10:00:00Z"), defectId, {
+        storage: memoryStorage(),
+        viewer: asAnna,
+      });
+      return { details, html: renderToStaticMarkup(createElement(DefectDetailsView, { details, justLoggedWork })) };
+    }
+
+    it("ST-024: Defect details show all work log entries newest first", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", "2026-10-04T10:00:00Z"),
+        "2026-10-04T10:00:00Z",
+      );
+      // Monday, Tuesday and Wednesday.
+      await logged(defectId, 0, tom, "2026-10-05T08:00:00Z", "Checked the coil", "");
+      await logged(defectId, 1, anna, "2026-10-06T09:30:00Z", "Cleaned the flipper mechanism");
+      await logged(
+        defectId,
+        2,
+        tom,
+        "2026-10-07T16:15:00Z",
+        "Replaced coil stop and EOS switch",
+        "1x coil stop, 1x EOS switch",
+      );
+
+      const { details, html } = await seenByAnna(defectId);
+
+      expect(details?.workLog).toEqual([
+        {
+          id: expect.any(String),
+          whatWasDone: "Replaced coil stop and EOS switch",
+          partsUsed: "1x coil stop, 1x EOS switch",
+          loggedBy: "Tom",
+          loggedAt: new Date("2026-10-07T16:15:00Z"),
+        },
+        {
+          id: expect.any(String),
+          whatWasDone: "Cleaned the flipper mechanism",
+          partsUsed: undefined,
+          loggedBy: "Anna",
+          loggedAt: new Date("2026-10-06T09:30:00Z"),
+        },
+        {
+          id: expect.any(String),
+          whatWasDone: "Checked the coil",
+          partsUsed: undefined,
+          loggedBy: "Tom",
+          loggedAt: new Date("2026-10-05T08:00:00Z"),
+        },
+      ]);
+      // The page shows all three, Wednesday's first, each with who and when – and the parts where there are any.
+      expect(html).toContain("Arbeitsschritte");
+      const positions = ["Tom · 07.10.2026, 18:15", "Anna · 06.10.2026, 11:30", "Tom · 05.10.2026, 10:00"].map((text) =>
+        html.indexOf(text),
+      );
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+      expect(html).toContain("Replaced coil stop and EOS switch");
+      expect(html).toContain("Cleaned the flipper mechanism");
+      expect(html).toContain("Checked the coil");
+      expect(html.match(/Verwendete Teile: /g)).toHaveLength(1);
+      expect(html).toContain("Verwendete Teile: 1x coil stop, 1x EOS switch");
+    });
+
+    it("says that nobody has logged work yet, and offers logging work on an open defect only", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
+
+      const open = await seenByAnna(defectId, true);
+      expect(open.details).toMatchObject({ canLogWork: true, workLog: [] });
+      expect(open.html).toContain("Noch kein Arbeitsschritt eingetragen.");
+      expect(open.html).toContain(`href="/team/defects/${defectId}/arbeitsschritt"`);
+      // The address alone (`?logged=1`) confirms nothing.
+      expect(open.html).not.toContain("Arbeitsschritt zu „");
+
+      await logged(defectId, 0, anna, "2026-10-06T09:30:00Z", "Cleaned the flipper mechanism");
+      const afterLogging = await seenByAnna(defectId, true);
+      expect(afterLogging.html).toContain("Arbeitsschritt zu „Left flipper weak“ eingetragen.");
+      expect(afterLogging.html).not.toContain("Noch kein Arbeitsschritt");
+
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 1, closingNote: "Fixed" },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+      const closed = await seenByAnna(defectId);
+      expect(closed.details?.canLogWork).toBe(false);
+      expect(closed.html).not.toContain("/arbeitsschritt");
+      // What was done stays on the page.
+      expect(closed.html).toContain("Cleaned the flipper mechanism");
     });
   });
 
