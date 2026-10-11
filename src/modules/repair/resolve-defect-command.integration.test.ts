@@ -135,4 +135,26 @@ describe("CMD-ResolveDefect", () => {
     expect(await openDefectTitles(db, machineId)).toEqual(["Left flipper weak"]);
     expect(await journalOf(db, { aggregateId: defectId })).toEqual([]);
   });
+
+  it("ST-028: A resolved defect cannot be resolved again", async () => {
+    const { defectId } = await anOpenDefect("Coin door jammed", true);
+    const first = await resolve(defectId, 0, "Lock replaced", tom, "2026-10-13T10:00:00Z");
+    if (!first.ok) throw new Error(first.error);
+    const journalBefore = await journalOf(db, { aggregateId: defectId });
+
+    for (const teamMember of [tom, anna]) {
+      expect(await resolve(defectId, 1, "Lock oiled as well", teamMember, "2026-10-14T10:00:00Z")).toEqual({
+        ok: false,
+        error: "defect-not-open",
+      });
+    }
+
+    // How it ended stays as it was – a resolved defect can only be reopened.
+    expect((await defectDetails(db, defectId))?.resolution).toEqual({
+      closingNote: "Lock replaced",
+      resolvedBy: tom.teamMemberId,
+      resolvedAt: new Date("2026-10-13T10:00:00Z"),
+    });
+    expect(await journalOf(db, { aggregateId: defectId })).toEqual(journalBefore);
+  });
 });
