@@ -212,6 +212,13 @@ export const teamMessages = {
   },
   /** Reporting a problem and recording a defect in the same step (ST-023) – a technician's own problem report. */
   reportAndRecordDefect: {
+    title: (museumNumber: string) => `Problem melden und Defekt erfassen · ${museumNumber}`,
+    /** The form's two sections: the problem report and the defect recorded from it. */
+    report: "Meldung",
+    defect: "Defekt",
+    /** As on the team's report form, without its sentence about triage – this problem report is triaged right here. */
+    descriptionHint: "Was ist kaputt, wo am Gerät?",
+    submit: "Melden und Defekt erfassen",
     /** The choice page a technician sees instead of the plain report form (G21a). */
     triage: "Sichten",
     triagedWhenReporting: "Meldungen von Techniker:innen werden gleich beim Melden gesichtet.",

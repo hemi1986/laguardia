@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { expect, openMore, reportAsVisitor, test } from "./fixtures";
 
 /**
  * Resolving a problem on the spot on a phone (ST-019): a helper goes from the triage list to the problem report's page,
@@ -52,10 +52,7 @@ async function aProblemReportAndAHelper(page: Page) {
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  await page.goto(`/team/machines/${museumNumber}/melden`);
-  await page.getByLabel("Beschreibung").fill("Ball stuck behind the left ramp");
-  await page.getByRole("button", { name: "Meldung erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(museumNumber);
+  await reportAsVisitor(page, museumNumber, "Ball stuck behind the left ramp");
   const helper = { username: unique("anna"), password: "e2e-secret-10" };
   await page.goto("/team/members");
   await page.getByLabel("Name", { exact: true }).fill(`Anna ${helper.username}`);

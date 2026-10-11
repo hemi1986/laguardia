@@ -201,10 +201,16 @@ describe("the form for reporting a problem and recording a defect", () => {
     await expectNothingStored(machineId, journalBefore, storage);
     // Where the action sends the technician with that rejection: the choice page, asking to choose.
     const choicePage = renderToStaticMarkup(
-      createElement(TriageChoice, { museumNumber: "LG-042", machineModelTitle: "Medieval Madness", triageRequired: true }),
+      createElement(TriageChoice, {
+        museumNumber: "LG-042",
+        machineModelTitle: "Medieval Madness",
+        triageRequired: true,
+      }),
     );
     expect(choicePage).toContain("Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.");
-    expect(choicePage).toMatch(/<a[^>]*href="\/team\/machines\/LG-042\/melden\/defekt-erfassen"[^>]*>Defekt erfassen<\/a>/);
+    expect(choicePage).toMatch(
+      /<a[^>]*href="\/team\/machines\/LG-042\/melden\/defekt-erfassen"[^>]*>Defekt erfassen<\/a>/,
+    );
     expect(choicePage).not.toContain("Left flipper coil stop broken");
     expect(choicePage).not.toMatch(/<textarea|<form|<button/);
   });

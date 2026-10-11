@@ -3,18 +3,15 @@
 import Link from "next/link";
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
-import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineStatus } from "@/modules/collection";
-import type { Priority } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import type { RecordDefectState } from "./actions";
+import { DefectFields } from "./defect-fields";
 import type { RecordDefectField } from "./record-defect-input";
 import { rejectionText } from "./record-defect-rejection-text";
 
-const { recordDefect: texts, machines, triage } = teamMessages;
+const { recordDefect: texts, triage } = teamMessages;
 
 type ErrorCode = NonNullable<RecordDefectState>["error"];
 
@@ -23,8 +20,6 @@ const fieldOf: Partial<Record<ErrorCode, RecordDefectField>> = {
   "title-required": "title",
   "machine-status-not-stricter": "machineStatus",
 };
-
-const priorityOrder: Priority[] = ["high", "normal", "low"];
 
 /**
  * The form „Defekt erfassen“ (ST-018, story review 2026-10-03): title, priority (normal preselected), the mark for
@@ -51,75 +46,17 @@ export function RecordDefectForm({
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
   const kept = state ? JSON.stringify(state) : "empty";
   const invalid = state ? fieldOf[state.error] : undefined;
-  const marked = (field: RecordDefectField, hint?: string) => {
-    const describedBy = [hint, invalid === field ? rejectionId : undefined].filter(Boolean).join(" ");
-    return { "aria-invalid": invalid === field || undefined, "aria-describedby": describedBy || undefined };
-  };
-
   return (
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="version" value={version} />
-      <Field data-invalid={invalid === "title"}>
-        <FieldLabel htmlFor="title">{texts.defectTitle}</FieldLabel>
-        <Input
-          id="title"
-          name="title"
-          defaultValue={state?.values.title}
-          key={`title-${kept}`}
-          {...marked("title", "title-hint")}
-        />
-        <FieldDescription id="title-hint">{texts.titleHint}</FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="priority">{texts.priority}</FieldLabel>
-        <NativeSelect
-          id="priority"
-          name="priority"
-          defaultValue={state?.values.priority || "normal"}
-          key={`priority-${kept}`}
-        >
-          {priorityOrder.map((priority) => (
-            <option key={priority} value={priority}>
-              {texts.priorities[priority]}
-            </option>
-          ))}
-        </NativeSelect>
-      </Field>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="suitableForHelpers"
-          defaultChecked={state ? state.values.suitableForHelpers !== "" : false}
-          key={`suitableForHelpers-${kept}`}
-          className="size-4"
-        />
-        {texts.suitableForHelpers}
-      </label>
-      {machine.stricter.length === 0 ? (
-        <p className="text-sm">{texts.statusStays(museumNumber, machines.statuses[machine.status])}</p>
-      ) : (
-        <Field data-invalid={invalid === "machineStatus"}>
-          <FieldLabel htmlFor="machineStatus">{texts.status}</FieldLabel>
-          <FieldDescription id="machineStatus-hint">
-            {texts.currentStatus(museumNumber, machines.statuses[machine.status])}
-          </FieldDescription>
-          <input type="hidden" name="machineVersion" value={machine.version} />
-          <NativeSelect
-            id="machineStatus"
-            name="machineStatus"
-            defaultValue={state?.values.machineStatus ?? ""}
-            key={`machineStatus-${kept}`}
-            {...marked("machineStatus", "machineStatus-hint")}
-          >
-            <option value="">{texts.keepStatus}</option>
-            {machine.stricter.map((status) => (
-              <option key={status} value={status}>
-                {machines.statuses[status]}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
-      )}
+      <DefectFields
+        values={state?.values}
+        kept={kept}
+        invalid={invalid}
+        rejectionId={rejectionId}
+        museumNumber={museumNumber}
+        machine={machine}
+      />
       {state && (
         <div id={rejectionId} className="flex flex-col gap-2">
           <Rejection>{rejectionText(state, museumNumber)}</Rejection>

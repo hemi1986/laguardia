@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, reportAsVisitor, test } from "./fixtures";
 
 /**
  * Recording a defect on a phone (ST-018): from the triage list to the problem report's page, to the form „Defekt
@@ -43,10 +43,7 @@ async function openRecordDefect(page: Page, machineStatus: "playable" | "limited
   await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  await page.goto(`/team/machines/${museumNumber}/melden`);
-  await page.getByLabel("Beschreibung").fill("Left flipper barely moves");
-  await page.getByRole("button", { name: "Meldung erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(museumNumber); // stored before we go on
+  await reportAsVisitor(page, museumNumber, "Left flipper barely moves");
   await page.goto("/team/triage");
   await page.getByRole("link", { name: `${museumNumber} · ${title}` }).click();
   await page.getByRole("link", { name: "Defekt erfassen" }).click();

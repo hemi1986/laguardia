@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, reportAsVisitor, test } from "./fixtures";
 
 /**
  * Linking a problem report to an open defect on a phone (ST-022): a technician goes from the triage list to the problem
@@ -27,10 +27,7 @@ async function logIn(page: Page) {
 }
 
 async function report(page: Page, museumNumber: string, description: string) {
-  await page.goto(`/team/machines/${museumNumber}/melden`);
-  await page.getByLabel("Beschreibung").fill(description);
-  await page.getByRole("button", { name: "Meldung erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(museumNumber);
+  await reportAsVisitor(page, museumNumber, description);
 }
 
 /**

@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import type { DefectRecordedConfirmation } from "../../triage/triage-list-data";
 import type { MachineRecordData, NamedStatusChange } from "./machine-record-data";
 
-const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
+const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
 
 /**
  * The machine record (RM-MachineRecord, ST-009). ST-009 owns the page (G18) and fixed its sections, top to bottom:
@@ -20,6 +21,7 @@ export function MachineRecordView({
   canChangeStatus = false,
   statusChanged = false,
   problemReported = false,
+  defectRecorded,
 }: {
   record: MachineRecordData | undefined;
   museumNumber: string;
@@ -29,6 +31,8 @@ export function MachineRecordView({
   statusChanged?: boolean;
   /** Just back from a problem report: the confirmation names the machine and says it waits for triage (ST-015). */
   problemReported?: boolean;
+  /** Just back from reporting and recording a defect in the same step (ST-023): the confirmation of ST-018 (G3). */
+  defectRecorded?: DefectRecordedConfirmation;
 }) {
   if (!record) {
     return (
@@ -58,6 +62,13 @@ export function MachineRecordView({
         <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
       )}
       {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
+      {defectRecorded && (
+        <Confirmation>
+          {recordDefect.recorded(defectRecorded.title, defectRecorded.museumNumber)}
+          {defectRecorded.newStatus &&
+            recordDefect.statusNow(defectRecorded.museumNumber, machines.statuses[defectRecorded.newStatus])}
+        </Confirmation>
+      )}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(

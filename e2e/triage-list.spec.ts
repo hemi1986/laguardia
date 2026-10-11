@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { expect, openMore, reportAsVisitor, test } from "./fixtures";
 
 /**
  * The triage list on a phone (ST-017). The login check needs no account and runs against the preview too; the others
@@ -35,10 +35,7 @@ async function aProblemReport(page: Page, description: string): Promise<string> 
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  await page.goto(`/team/machines/${museumNumber}/melden`);
-  await page.getByLabel("Beschreibung").fill(description);
-  await page.getByRole("button", { name: "Meldung erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(museumNumber);
+  await reportAsVisitor(page, museumNumber, description);
   return museumNumber;
 }
 
