@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, pageWidth, test, uniqueId as unique } from "./fixtures";
 
 /**
  * The account pages rebuilt from the shared UI components (ST-077): the accessibility contract of ST-005 and the
@@ -19,10 +19,6 @@ test.beforeEach(async ({ page }) => {
   await expect(page).toHaveURL(/\/team$/);
 });
 
-function unique(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
 async function createAccount(page: Page, name: string, accountUsername: string) {
   await page.goto("/team/members");
   await page.getByLabel("Name", { exact: true }).fill(name);
@@ -30,10 +26,6 @@ async function createAccount(page: Page, name: string, accountUsername: string) 
   await page.getByLabel("Anfangspasswort").fill("e2e-secret-10");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-}
-
-async function pageWidth(page: Page): Promise<number> {
-  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 test("every label on the account pages resolves to exactly one field", async ({ page }) => {

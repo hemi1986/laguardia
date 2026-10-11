@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, unique } from "./fixtures";
 
 /**
  * The open defects list and a defect's own page on a phone (ST-021), without JavaScript – the filter is a plain GET
@@ -14,18 +14,6 @@ test.use({ javaScriptEnabled: false });
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /** A machine with a problem report, recorded as a defect the way a technician does it. Returns the museum number. */
 async function aRecordedDefect(page: Page, modelTitle: string, defectTitle: string) {
@@ -51,10 +39,6 @@ async function aRecordedDefect(page: Page, modelTitle: string, defectTitle: stri
   await page.getByRole("button", { name: "Defekt erfassen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toContainText(defectTitle);
   return museumNumber;
-}
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 test("the open defects list on a phone: filtered by machine without JavaScript, then a defect opened", async ({

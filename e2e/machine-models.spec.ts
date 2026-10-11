@@ -1,4 +1,4 @@
-import { expect, openMore, test } from "./fixtures";
+import { expect, logIn, openMore, test } from "./fixtures";
 
 /**
  * The machine model page on a phone (ST-006) and the Server Action runner in the browser (ST-073): a rejected
@@ -8,14 +8,6 @@ import { expect, openMore, test } from "./fixtures";
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
-
-async function logIn(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
