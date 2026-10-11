@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import {
   machineStatuses,
@@ -11,15 +11,33 @@ import {
 } from "./register-machine";
 import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
 
-/**
- * How AGG-Machine is stored (ST-007): the machine row (versioned, HS-16), its status history, and its museum
- * number in the set of all museum numbers ever given out. A museum number row is never deleted – a corrected-away
- * number (ST-035) stays there as reserved, a retired machine keeps its own.
- */
+/** The status history of a machine – append-only (Q13): only the entries not stored yet are inserted. */
+const statusHistory = history({
+  table: machineStatusChange,
+  owner: "machineId",
+  toEntry: (row): StatusChange => ({
+    id: row.id,
+    previousStatus: row.previousStatus ?? undefined,
+    newStatus: row.newStatus,
+    reason: row.reason,
+    changedBy: row.changedBy,
+    changedAt: row.changedAt,
+  }),
+  toRow: (change) => ({
+    id: change.id,
+    previousStatus: change.previousStatus ?? null,
+    newStatus: change.newStatus,
+    reason: change.reason,
+    changedBy: change.changedBy,
+    changedAt: change.changedAt,
+  }),
+});
+
 const machineRows = aggregateStore({
   type: "AGG-Machine",
   table: machine,
-  toState: (row): Machine => ({
+  histories: { statusHistory },
+  toState: (row, histories): Machine => ({
     id: row.id,
     museumNumber: row.museumNumber,
     machineModelId: row.machineModelId,
@@ -27,7 +45,7 @@ const machineRows = aggregateStore({
     location: row.location,
     machineStatus: row.machineStatus,
     registeredAt: row.registeredAt,
-    statusHistory: [], // loaded separately – see `machines.load`
+    statusHistory: histories.statusHistory,
     retirement: retirementOf(row),
   }),
   toRow: (state: Machine) => ({
@@ -44,22 +62,20 @@ const machineRows = aggregateStore({
   }),
 });
 
+/**
+ * How AGG-Machine is stored (ST-007): the machine row (versioned, HS-16) with its status history, and its museum
+ * number in the set of all museum numbers ever given out. A museum number row is never deleted – a corrected-away
+ * number (ST-035) stays there as reserved, a retired machine keeps its own.
+ */
 export const machines: AggregateStore<Machine> = {
-  type: "AGG-Machine",
-  async load(tx, id, options) {
-    const loaded = await machineRows.load(tx, id, options);
-    if (!loaded) return undefined;
-    return { ...loaded, state: { ...loaded.state, statusHistory: await statusHistoryOf(tx, id) } };
-  },
+  ...machineRows,
   async insert(tx, state) {
     await machineRows.insert(tx, state);
     await giveOut(tx, state);
-    await saveStatusHistory(tx, state);
   },
   async update(tx, state, expectedVersion) {
     if (!(await machineRows.update(tx, state, expectedVersion))) return false;
     await giveOut(tx, state);
-    await saveStatusHistory(tx, state);
     return true;
   },
 };
@@ -77,37 +93,8 @@ async function giveOut(tx: Database, state: Machine): Promise<void> {
   await tx.insert(museumNumber).values({ museumNumber: state.museumNumber, machineId: state.id });
 }
 
-/** The status history is append-only (Q13): only the entries not stored yet are inserted. */
-function saveStatusHistory(tx: Database, state: Machine): Promise<void> {
-  return saveHistory(
-    tx,
-    { table: machineStatusChange, owner: "machineId" },
-    state.id,
-    state.statusHistory.map((change) => ({
-      id: change.id,
-      previousStatus: change.previousStatus ?? null,
-      newStatus: change.newStatus,
-      reason: change.reason,
-      changedBy: change.changedBy,
-      changedAt: change.changedAt,
-    })),
-  );
-}
-
 async function statusHistoryOf(db: Database, machineId: string): Promise<StatusChange[]> {
-  const rows = await db
-    .select()
-    .from(machineStatusChange)
-    .where(eq(machineStatusChange.machineId, machineId))
-    .orderBy(asc(machineStatusChange.position));
-  return rows.map((row) => ({
-    id: row.id,
-    previousStatus: row.previousStatus ?? undefined,
-    newStatus: row.newStatus,
-    reason: row.reason,
-    changedBy: row.changedBy,
-    changedAt: row.changedAt,
-  }));
+  return (await statusHistory.load(db, [machineId])).get(machineId) ?? [];
 }
 
 /**
@@ -294,10 +281,7 @@ export type MachineForTeamForm = {
 };
 
 /** The machine a team form acts on, by its museum number – retired ones included, so the page can say so. */
-export async function machineForTeamForm(
-  db: Database,
-  museumNumber: string,
-): Promise<MachineForTeamForm | undefined> {
+export async function machineForTeamForm(db: Database, museumNumber: string): Promise<MachineForTeamForm | undefined> {
   const [row] = await db
     .select({
       id: machine.id,
@@ -308,7 +292,15 @@ export async function machineForTeamForm(
     })
     .from(machine)
     .where(eq(machine.museumNumber, museumNumber));
-  return row && { id: row.id, museumNumber: row.museumNumber, machineStatus: row.machineStatus, version: row.version, retired: row.retiredAt !== null };
+  return (
+    row && {
+      id: row.id,
+      museumNumber: row.museumNumber,
+      machineStatus: row.machineStatus,
+      version: row.version,
+      retired: row.retiredAt !== null,
+    }
+  );
 }
 
 /**

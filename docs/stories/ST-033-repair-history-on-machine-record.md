@@ -16,7 +16,7 @@ status: ready
 As a technician, I want to see a machine's open defects and its complete repair history on its machine record, so that I know what was already tried and done before I start a repair.
 
 ## Context
-Read model `RM-MachineRecord` – sections "Open defects" and "Repair history". Repair history (`CONTEXT.md`): all defects of a machine with their work log entries (and photos, if any), plus problem reports resolved on the spot. Each resolution keeps its closing note and, if reopened, the reopen reason (`docs/architecture/data-model.md`). Defects closed on retirement are shown as *closed on retirement*, not as resolved.
+Read model `RM-MachineRecord` – sections "Open defects" and "Repair history". Repair history (`CONTEXT.md`): all defects of a machine with their work log entries (and photos, if any), plus problem reports resolved on the spot. Each resolution keeps its closing note; a reopening is an entry of its own with the reopen reason, shown after the resolution it followed (`docs/architecture/data-model.md`). Defects closed on retirement are shown as *closed on retirement*, not as resolved.
 - The machine record shows the open defects and the most recent repairs by default; the rest of the history is reached from there (G4a) – this story may not put five years of history on one phone page.
 - A machine with nothing repaired yet says so (G7).
 

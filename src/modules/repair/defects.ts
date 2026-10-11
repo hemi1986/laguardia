@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, history, type Database } from "@/platform/command";
 import {
   priorities,
   type Claim,
@@ -14,10 +14,39 @@ import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
 
-const defectRows = aggregateStore({
+/** The work log of a defect (ST-024) – append-only (Q13). */
+const workLog = history({
+  table: defectWorkLogEntry,
+  owner: "defectId",
+  toEntry: (row): WorkLogEntry => ({
+    id: row.id,
+    whatWasDone: row.whatWasDone,
+    partsUsed: row.partsUsed ?? undefined,
+    loggedBy: row.loggedBy,
+    loggedAt: row.loggedAt,
+  }),
+  toRow: (entry) => ({ ...entry, partsUsed: entry.partsUsed ?? null }),
+});
+
+/** The resolutions of a defect (ST-028) – append-only (Q13). */
+const resolutions = history({
+  table: defectResolution,
+  owner: "defectId",
+  toEntry: (row): Resolution => ({
+    id: row.id,
+    closingNote: row.closingNote,
+    resolvedBy: row.resolvedBy,
+    resolvedAt: row.resolvedAt,
+  }),
+  toRow: (resolution) => resolution,
+});
+
+/** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), with its work log and its resolutions. */
+export const defects = aggregateStore({
   type: "AGG-Defect",
   table: defect,
-  toState: (row): Defect => ({
+  histories: { workLog, resolutions },
+  toState: (row, histories): Defect => ({
     id: row.id,
     machineId: row.machineId,
     problemReportId: row.problemReportId,
@@ -28,8 +57,8 @@ const defectRows = aggregateStore({
     recordedAt: row.recordedAt,
     state: row.state,
     ...(row.claimedBy && row.claimedAt ? { claim: { claimedBy: row.claimedBy, claimedAt: row.claimedAt } } : {}),
-    workLog: [], // both loaded separately – see `defects.load`
-    resolutions: [],
+    workLog: histories.workLog,
+    resolutions: histories.resolutions,
   }),
   // null, not undefined: an update leaves out undefined columns, and a claim must be removable (ST-026).
   toRow: (state: Defect) => ({
@@ -46,69 +75,6 @@ const defectRows = aggregateStore({
     claimedAt: state.claim?.claimedAt ?? null,
   }),
 });
-
-/**
- * How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), with its work log (ST-024) and its
- * resolutions (ST-028) – both append-only histories (Q13).
- */
-export const defects: AggregateStore<Defect> = {
-  type: "AGG-Defect",
-  async load(tx, id, options) {
-    const loaded = await defectRows.load(tx, id, options);
-    if (!loaded) return undefined;
-    const [workLog, resolutions] = [await workLogOf(tx, id), await resolutionsOf(tx, id)];
-    return { ...loaded, state: { ...loaded.state, workLog, resolutions } };
-  },
-  async insert(tx, state) {
-    await defectRows.insert(tx, state);
-    await saveHistories(tx, state);
-  },
-  async update(tx, state, expectedVersion) {
-    if (!(await defectRows.update(tx, state, expectedVersion))) return false;
-    await saveHistories(tx, state);
-    return true;
-  },
-};
-
-async function saveHistories(tx: Database, state: Defect): Promise<void> {
-  await saveHistory(
-    tx,
-    { table: defectWorkLogEntry, owner: "defectId" },
-    state.id,
-    state.workLog.map((entry) => ({ ...entry, partsUsed: entry.partsUsed ?? null })),
-  );
-  await saveHistory(tx, { table: defectResolution, owner: "defectId" }, state.id, state.resolutions);
-}
-
-/** A defect's work log, the oldest entry first. */
-async function workLogOf(db: Database, defectId: string): Promise<WorkLogEntry[]> {
-  const rows = await db
-    .select()
-    .from(defectWorkLogEntry)
-    .where(eq(defectWorkLogEntry.defectId, defectId))
-    .orderBy(asc(defectWorkLogEntry.position));
-  return rows.map((row) => ({
-    id: row.id,
-    whatWasDone: row.whatWasDone,
-    partsUsed: row.partsUsed ?? undefined,
-    loggedBy: row.loggedBy,
-    loggedAt: row.loggedAt,
-  }));
-}
-
-async function resolutionsOf(db: Database, defectId: string): Promise<Resolution[]> {
-  const rows = await db
-    .select()
-    .from(defectResolution)
-    .where(eq(defectResolution.defectId, defectId))
-    .orderBy(asc(defectResolution.position));
-  return rows.map((row) => ({
-    id: row.id,
-    closingNote: row.closingNote,
-    resolvedBy: row.resolvedBy,
-    resolvedAt: row.resolvedAt,
-  }));
-}
 
 /**
  * The titles of a machine's open defects, the oldest first – what the visitor machine page shows (RM-VisitorMachinePage,
@@ -285,7 +251,7 @@ export async function defectDetails(
     version: row.version,
     claim,
     actions: teamMember && defectActionRefusals({ ...row, claim }, teamMember),
-    workLog: await workLogOf(db, row.id),
+    workLog: (await workLog.load(db, [row.id])).get(row.id) ?? [],
     resolution: row.state === "resolved" ? await latestResolution(db, row.id) : undefined,
     problemReports: await problemReportsOfDefect(db, row),
   };
@@ -308,7 +274,7 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
 }
 
 async function latestResolution(db: Database, defectId: string): Promise<Omit<Resolution, "id"> | undefined> {
-  const latest = (await resolutionsOf(db, defectId)).at(-1);
+  const latest = (await resolutions.load(db, [defectId])).get(defectId)?.at(-1);
   return latest && { closingNote: latest.closingNote, resolvedBy: latest.resolvedBy, resolvedAt: latest.resolvedAt };
 }
 

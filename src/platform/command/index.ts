@@ -29,7 +29,7 @@ export {
   type DecisionContext,
   type RunCall,
 } from "./aggregate";
-export { saveHistory, type History } from "./history";
+export { history, type History } from "./history";
 
 export type Role = "helper" | "technician";
 

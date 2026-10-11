@@ -6,11 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { aggregateCommand, aggregateStore, executeCommand, saveHistory, type AggregateStore, type Database } from ".";
+import { aggregateCommand, aggregateStore, executeCommand, history, type Database } from ".";
 
 /**
- * Histories are append-only lists (architecture review 2026-09-27, Q13; ST-012): a stand-in aggregate with a history,
- * whose tables exist only in this test's own database. A trigger refuses every UPDATE of a history entry, so a save
+ * Histories are append-only lists (architecture review 2026-09-27, Q13; ST-012): a stand-in aggregate whose store
+ * names a history (architecture review 2026-10-11), with tables that exist only in this test's own database. A trigger refuses every UPDATE of a history entry, so a save
  * that touched a stored entry would fail the command.
  */
 const isolated = isolatedTestDatabase("history");
@@ -31,34 +31,22 @@ const logbookEntry = pgTable("test_logbook_entry", {
 type Entry = { id: string; note: string };
 type Logbook = { id: string; entries: Entry[] };
 
-const logbookRows = aggregateStore({
+const entries = history({
+  table: logbookEntry,
+  owner: "logbookId",
+  toEntry: (row): Entry => ({ id: row.id, note: row.note }),
+  toRow: (entry) => entry,
+});
+
+const logbooks = aggregateStore({
   type: "AGG-TestLogbook",
   table: logbook,
-  toState: (row): Logbook => ({ id: row.id, entries: [] }),
+  histories: { entries },
+  toState: (row, histories): Logbook => ({ id: row.id, entries: histories.entries }),
   toRow: (state: Logbook) => ({ id: state.id }),
 });
 
-const entries = { table: logbookEntry, owner: "logbookId" } as const;
-const toEntryRow = (state: Logbook) => state.entries;
-
-const logbooks: AggregateStore<Logbook> = {
-  type: "AGG-TestLogbook",
-  async load(tx, id, options) {
-    const loaded = await logbookRows.load(tx, id, options);
-    if (!loaded) return undefined;
-    return { ...loaded, state: { ...loaded.state, entries: await entriesOf(tx, id) } };
-  },
-  async insert(tx, state) {
-    await logbookRows.insert(tx, state);
-    await saveHistory(tx, entries, state.id, toEntryRow(state));
-  },
-  async update(tx, state, expectedVersion) {
-    if (!(await logbookRows.update(tx, state, expectedVersion))) return false;
-    await saveHistory(tx, entries, state.id, toEntryRow(state));
-    return true;
-  },
-};
-
+/** The stored entries, read past the store – the oldest first. */
 async function entriesOf(tx: Database, logbookId: string): Promise<Entry[]> {
   return tx
     .select({ id: logbookEntry.id, note: logbookEntry.note })
@@ -129,7 +117,7 @@ beforeAll(async () => {
 
 afterAll(() => isolated.close());
 
-describe("the insert-only history helper", () => {
+describe("an aggregate store with a history", () => {
   it("stores the entries two commands add, keeps the first unchanged and never updates an entry present at load", async () => {
     const dependencies = { actor: technician, db, clock: fixedClock("2026-10-03T10:00:00Z"), newId: randomUUID };
     const opened = await executeCommand(openLogbook, { note: "first" }, dependencies);

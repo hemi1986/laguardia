@@ -163,6 +163,11 @@ A defect that is open but temporarily cannot progress – waiting for a part, wa
 _Avoid_: Paused, blocked, parked
 _UI (de)_: Pausiert (Wartet auf Ersatzteil / Wartet auf Techniker:in / Anderer Grund)
 
+**Reopen**:
+Returning a resolved defect to open because the fault came back, with a reason; the earlier resolution and its closing note stay in the repair history.
+_Avoid_: Unresolve, reactivate, revive
+_UI (de)_: Wieder öffnen
+
 **Closing note**:
 What a team member writes when resolving a defect – how it ended; required, and kept with the resolution for the repair history.
 _Avoid_: Resolution text, final comment, summary

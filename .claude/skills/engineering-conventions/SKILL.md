@@ -215,8 +215,7 @@ never from the address alone, and without a state field per action.
 defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`, `…/arbeitsschritt/`), which repeats the
 defect, loads only what it shows (`loadDefectForForm(db, defectId, viewer, action)`) and lands on the defect's page. The
 form page shows the command's reason in place of the form to someone it would refuse, unless there is an action state to
-keep. A history on the defect (work log, resolutions) is stored like the machine status history – the store wraps the
-row store with `saveHistory`.
+keep.
 
 **Two transactions racing for one row** in a test: `whileHoldingRow(db, sql\`SELECT … FOR UPDATE\`, race)` from
 `src/test-support/held-row.ts` – it counts only the sessions blocked by its own holding transaction, so tests running
@@ -231,17 +230,30 @@ twice, and the other module's tables are never imported. Such a read takes **no 
 current state at command time, not an invariant (context map) – a change in the same second is caught by the other
 module's events and policies (e.g. the retirement policies).
 
-**Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
-status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
-with an ID from `context.newId()` and never changes or removes one. The store saves it with
-`saveHistory(tx, { table, owner: "machineId" }, aggregateId, rows)` (`src/platform/command/history.ts`) – `owner` names
-the column holding the aggregate's ID, which the helper fills in itself: it inserts the entries whose ID is not stored yet and never updates or deletes a stored entry, whatever the state says about it. A history
-table has its own `id` (the entry's ID, no database default), the owner column and a `position bigserial` for the order entries were
-stored in (entries of one command share their point in time); the store loads the list ordered by `position`.
-Example: `machines.ts` (`saveStatusHistory`). Proven by `src/platform/command/history.integration.test.ts` (a stand-in
-aggregate) and the machine status history test in `change-machine-status-command.integration.test.ts` – both install
-a trigger in their own database that refuses UPDATE. The real tables get no such trigger: an entry's free text (a
-reason) may one day have to be removed.
+**Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012; the store keeps them since
+the architecture review 2026-10-11). A history – the machine status history, a work log, defect resolutions – is a list
+in the aggregate's state; the decision appends an entry with an ID from `context.newId()` and never changes or removes
+one. The module describes it once – `history({ table, owner: "defectId", toEntry, toRow })`
+(`src/platform/command/history.ts`) – and names it in its store under the name of the list in the state:
+`aggregateStore({ …, histories: { workLog, resolutions }, toState: (row, histories) => … })`. The store loads the lists
+into the state (the oldest entry first), and saves them with the aggregate: it inserts the entries whose ID is not
+stored yet and never updates or deletes a stored entry, whatever the state says about it. No module writes a store by
+hand for a history. A history table has its own `id` (the entry's ID, no database default), the owner column and a
+`position bigserial` for the order entries were stored in (entries of one command share their point in time).
+- **A fact that comes later is an entry of its own** – a reopening after a resolution (data model, ST-030) is appended
+  as a *Reopening*, never written onto the stored *Resolution*; the page puts the two in order.
+- **A list inside a history entry** (the photos of a work log entry, ST-032) is a history of its own on the aggregate,
+  each entry naming the entry it belongs to – the store has no nested lists.
+- **Read models load a history through its description** – `workLog.load(db, defectIds)` gives the entries of many
+  aggregates in one query, by aggregate ID (the repair history of a machine, ST-033) – and never map the rows a second
+  time.
+- A list whose entries are changed or removed (the tasks of the maintenance plan, ST-040) is not a history; the store
+  gets that kind when its first story needs it.
+Examples: `defects.ts`, `machines.ts` (which wraps its store only to keep the museum number register). Proven by
+`src/platform/command/history.integration.test.ts` (a stand-in aggregate, with a trigger in its own database that
+refuses UPDATE), the machine status history test in `change-machine-status-command.integration.test.ts` and
+"ST-024: Work log entries cannot be changed". The real tables get no such trigger: an entry's free text (a reason) may
+one day have to be removed.
 
 What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
 1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules in the decision.
