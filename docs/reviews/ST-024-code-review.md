@@ -95,3 +95,8 @@ Most important finding: a version conflict is the expected rejection of this for
 - **#9 skipped:** duplicated e2e helpers and the name of the test-support file – a line for the next architecture scan.
 
 Security review: done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` not run: size S, no change to the command layer.
+
+### After the user's acceptance (2026-10-11)
+
+- **#1, #8 confirmed by the user:** the German texts – including the form's own text for a change made meanwhile – and the order of the buttons on the defect's page (claim, „Arbeitsschritt eintragen“, „Beheben“) stay as written.
+- **#2, #7 approved by the user:** at most 4 local workers for the browser tests, and the two changed lines of the engineering conventions.
