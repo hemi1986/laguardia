@@ -2,16 +2,14 @@
 
 import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
-import { Textarea } from "@/components/ui/textarea";
 import type { MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import { PhotoField } from "../../../../../../photo-field";
-import { DefectFields } from "../../../../triage/[problemReportId]/defekt-erfassen/defect-fields";
+import { DefectFields } from "../../../../defect-fields";
 import type { ReportAndRecordDefectState } from "./actions";
 import type { ReportAndRecordDefectField } from "./report-and-record-defect-input";
-import { rejectionText } from "./report-and-record-defect-rejection-text";
+import { rejectionText } from "../report-and-triage-rejection-text";
+import { ReportSection } from "../report-section";
 
 const { reportAndRecordDefect: texts, reportProblem } = teamMessages;
 
@@ -48,38 +46,16 @@ export function ReportAndRecordDefectForm({
   if (machine.retired && !state) return <p>{reportProblem.retired}</p>;
   const kept = state ? JSON.stringify(state) : "empty";
   const invalid = state ? fieldOf[state.error] : undefined;
-  const descriptionInvalid = invalid === "description";
 
   return (
     <form action={action} className="flex flex-col gap-8">
-      <section className="flex flex-col gap-5">
-        <h2 className="font-medium">{texts.report}</h2>
-        <Field data-invalid={descriptionInvalid}>
-          <FieldLabel htmlFor="description">{reportProblem.description}</FieldLabel>
-          <Textarea
-            id="description"
-            name="description"
-            rows={5}
-            defaultValue={state?.values.description}
-            key={`description-${kept}`}
-            aria-invalid={descriptionInvalid || undefined}
-            aria-describedby={["description-hint", descriptionInvalid ? rejectionId : undefined]
-              .filter(Boolean)
-              .join(" ")}
-          />
-          <FieldDescription id="description-hint">{texts.descriptionHint}</FieldDescription>
-        </Field>
-        <PhotoField
-          key={`photo-${kept}`}
-          name="photo"
-          texts={{
-            ...reportProblem.photo,
-            tooLarge: teamMessages.commandErrors["too-large"],
-            notAnImage: teamMessages.commandErrors["not-an-image"],
-          }}
-          onPreparing={setPreparingPhoto}
-        />
-      </section>
+      <ReportSection
+        description={state?.values.description}
+        kept={kept}
+        invalid={invalid === "description"}
+        rejectionId={rejectionId}
+        onPreparingPhoto={setPreparingPhoto}
+      />
       <section className="flex flex-col gap-5">
         <h2 className="font-medium">{texts.defect}</h2>
         <DefectFields

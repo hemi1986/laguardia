@@ -3,7 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Rejection } from "@/components/ui/message";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 
-const { reportAndRecordDefect: texts, triage } = teamMessages;
+const { reportAndTriage: texts, triage } = teamMessages;
 
 /**
  * What a technician sees instead of the plain report form (ST-023, G21a): the triage outcomes to choose from, one

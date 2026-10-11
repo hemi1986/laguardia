@@ -7,7 +7,7 @@ import { Rejection } from "@/components/ui/message";
 import type { MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 import type { RecordDefectState } from "./actions";
-import { DefectFields } from "./defect-fields";
+import { DefectFields } from "../../../defect-fields";
 import type { RecordDefectField } from "./record-defect-input";
 import { rejectionText } from "./record-defect-rejection-text";
 

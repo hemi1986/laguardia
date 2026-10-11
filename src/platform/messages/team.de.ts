@@ -210,20 +210,37 @@ export const teamMessages = {
     retiredMeanwhile: (museumNumber: string) =>
       `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
   },
-  /** Reporting a problem and recording a defect in the same step (ST-023) – a technician's own problem report. */
-  reportAndRecordDefect: {
-    title: (museumNumber: string) => `Problem melden und Defekt erfassen · ${museumNumber}`,
-    /** The form's two sections: the problem report and the defect recorded from it. */
-    report: "Meldung",
-    defect: "Defekt",
-    /** As on the team's report form, without its sentence about triage – this problem report is triaged right here. */
-    descriptionHint: "Was ist kaputt, wo am Gerät?",
-    submit: "Melden und Defekt erfassen",
+  /** Reporting a problem and triaging it in the same step (ST-023, ST-052) – what its pages share. */
+  reportAndTriage: {
     /** The choice page a technician sees instead of the plain report form (G21a). */
     triage: "Sichten",
     triagedWhenReporting: "Meldungen von Techniker:innen werden gleich beim Melden gesichtet.",
+    /** Above the description of the helpers' plain report form (H2): the way to resolving on the spot in the same step. */
+    alreadyResolved: "Schon selbst behoben?",
+    /** The first section of every such form: the problem report. */
+    report: "Meldung",
+    /** As on the team's report form, without its sentence about triage – this problem report is triaged right here. */
+    descriptionHint: "Was ist kaputt, wo am Gerät?",
     /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
     photoAgain: "Das Foto muss erneut ausgewählt werden.",
+  },
+  /** … with the outcome *defect recorded* (ST-023) – technicians only. */
+  reportAndRecordDefect: {
+    title: (museumNumber: string) => `Problem melden und Defekt erfassen · ${museumNumber}`,
+    defect: "Defekt",
+    submit: "Melden und Defekt erfassen",
+  },
+  /** … with the outcome *linked* (ST-052) – technicians only; the choice and the confirmation are ST-022's. */
+  reportAndLink: {
+    title: (museumNumber: string) => `Problem melden und mit Defekt verknüpfen · ${museumNumber}`,
+    defect: "Defekt",
+    submit: "Melden und mit Defekt verknüpfen",
+  },
+  /** … with the outcome *resolved on the spot* (ST-052) – every team member; the field and the confirmation are ST-019's. */
+  reportAndResolveOnTheSpot: {
+    title: (museumNumber: string) => `Problem melden und als direkt behoben eintragen · ${museumNumber}`,
+    resolved: "Direkt behoben",
+    submit: "Melden und als direkt behoben eintragen",
   },
   /** The open defects list and a defect's own page (ST-021). */
   defects: {

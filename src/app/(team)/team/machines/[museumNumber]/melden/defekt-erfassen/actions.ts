@@ -12,10 +12,9 @@ import { requireTeamMember } from "../../../../../../team-session";
 import {
   reportAndRecordDefectFields,
   reportAndRecordDefectInput,
-  reportAndRecordDefectPhoto,
-  withPhotoToChooseAgain,
   type ReportAndRecordDefectField,
 } from "./report-and-record-defect-input";
+import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
 
 /** After a rejection: the error, the typed values, and whether the photo must be chosen again (G8a). */
 export type ReportAndRecordDefectState =
@@ -43,7 +42,7 @@ export async function reportAndRecordDefectAction(
   const statusChanged = Boolean(formData.get("machineStatus"));
   const state = await photoFormAction(reportProblemAndTriageCommand, {
     fields: reportAndRecordDefectFields,
-    photo: reportAndRecordDefectPhoto,
+    photo: reportAndTriagePhoto,
     input: (fields, photo) => reportAndRecordDefectInput(fields, machine?.id, photo),
     onSuccess: async ({ defectId }) => {
       revalidatePath(record);
