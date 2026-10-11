@@ -4,15 +4,20 @@
 
 **Progress: 23 of 58 domain stories done** · scenarios 220 of 441
 
-**81 stories** · In Progress: 0 · Ready: 41 · In Review: 0 · Draft: 5 · Done: 35
+**81 stories** · In Progress: 1 · Ready: 40 · In Review: 0 · Draft: 5 · Done: 35
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-024](ST-024-log-work.md) | Log work on a defect | story | Repair | must | S | low | ST-021, ST-028 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-024](ST-024-log-work.md) | Log work on a defect | story | Repair | must | S | low | ST-021, ST-028 |
 | [ST-026](ST-026-assign-and-release-claims.md) | Assign a defect and release claims | story | Repair | must | S | low | ST-025 |
 | [ST-027](ST-027-prioritize-defect.md) | Prioritize a defect | story | Repair | must | XS | low | ST-021, ST-028 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | must | S | low | ST-024, ST-028 |
