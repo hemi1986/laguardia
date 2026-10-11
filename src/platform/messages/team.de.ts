@@ -270,6 +270,18 @@ export const teamMessages = {
     linkedProblemReports: (count: number) => (count === 1 ? "1 verknüpfte Meldung" : `${count} verknüpfte Meldungen`),
     unknown: "Diesen Defekt gibt es nicht.",
     back: "Zurück zu den Defekten",
+    /** Claiming a defect (ST-025; CONTEXT.md: Claim = „Übernehmen“) – the claimant in the list and on the defect's page. */
+    claimedBy: (name: string) => `Übernommen von ${name}`,
+    claimedByYou: "Von dir übernommen",
+    /** The buttons on the defect's page (G14): claiming an unclaimed defect, or taking it over from its claimant. */
+    claim: "Übernehmen",
+    takeOverFrom: (name: string) => `Von ${name} übernehmen`,
+    /** The confirmation (G3) – after taking it over followed by whom it was taken over from. */
+    claimed: (title: string) => `Du hast „${title}“ übernommen.`,
+    takenOverFrom: (name: string) => ` Vorher: ${name}.`,
+    /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
+    onlyClaimedByMe: "Nur von mir übernommene",
+    noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
@@ -361,6 +373,8 @@ export const teamMessages = {
     "defect-required": "Bitte einen Defekt auswählen.",
     "defect-of-another-machine": "Dieser Defekt gehört zu einem anderen Gerät.",
     "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
+    "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
+    "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",

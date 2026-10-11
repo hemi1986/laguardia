@@ -34,3 +34,5 @@ export {
 export type { DismissalReason } from "./report-problem";
 export { linkProblemReportToDefectCommand } from "./link-problem-report-to-defect-command";
 export type { LinkProblemReportToDefectError, LinkProblemReportToDefectInput } from "./link-problem-report-to-defect";
+export { claimDefectCommand, takenOverFrom } from "./claim-defect-command";
+export { claimRefusal, type ClaimDefectError, type ClaimDefectInput } from "./claim-defect";

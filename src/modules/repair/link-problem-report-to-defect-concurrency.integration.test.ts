@@ -5,6 +5,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
+import { whileHoldingRow } from "@/test-support/held-row";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { defectDetails, linkProblemReportToDefectCommand, recordDefectCommand, reportProblemCommand } from ".";
 import { resolveDefectForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
@@ -17,19 +18,6 @@ import { resolveDefectForTest, storedProblemReport } from "./problem-report-stan
 const db = testDatabase();
 const clock = fixedClock("2026-10-09T10:00:00Z");
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-
-/** Waits until `count` statements of this database wait for a lock. */
-async function untilWaitingForLocks(count: number) {
-  for (let attempt = 0; attempt < 200; attempt++) {
-    const { rows } = await db.execute<{ waiting: number }>(
-      sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
-          WHERE datname = current_database() AND wait_event_type = 'Lock'`,
-    );
-    if (rows[0].waiting >= count) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error(`never saw ${count} statements waiting for a lock`);
-}
 
 async function reported(machineId: string, description: string) {
   const outcome = await executeCommand(
@@ -62,25 +50,25 @@ describe("linking while the defect is resolved", () => {
     const defectId = recorded.result.defectId;
     const problemReportId = await reported(machineId, "Flipper on the left does nothing");
 
-    let letGo!: () => void;
-    const holding = db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT id FROM problem_report WHERE id = ${problemReportId} FOR UPDATE`);
-      await new Promise<void>((resolve) => (letGo = resolve));
-    });
-    const linking = executeCommand(
-      linkProblemReportToDefectCommand,
-      { problemReportId, version: 0, defectId },
-      { actor: eva, db, clock, newId: randomUUID },
+    const { linking, resolving } = await whileHoldingRow(
+      db,
+      sql`SELECT id FROM problem_report WHERE id = ${problemReportId} FOR UPDATE`,
+      async (untilWaiting) => {
+        const linking = executeCommand(
+          linkProblemReportToDefectCommand,
+          { problemReportId, version: 0, defectId },
+          { actor: eva, db, clock, newId: randomUUID },
+        );
+        await untilWaiting(1); // the link has checked the defect and waits to save the problem report
+        const resolving = executeCommand(
+          resolveDefectForTest,
+          { defectId, version: 0 },
+          { actor: eva, db, clock, newId: randomUUID },
+        );
+        await untilWaiting(2); // the resolution waits for the link's lock on the defect
+        return { linking, resolving };
+      },
     );
-    await untilWaitingForLocks(1); // the link has checked the defect and waits to save the problem report
-    const resolving = executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
-      { actor: eva, db, clock, newId: randomUUID },
-    );
-    await untilWaitingForLocks(2); // the resolution waits for the link's lock on the defect
-    letGo();
-    await holding;
 
     expect(await linking).toMatchObject({ ok: true });
     expect(await resolving).toMatchObject({ ok: true });

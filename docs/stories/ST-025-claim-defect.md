@@ -9,7 +9,7 @@ risk: low
 events: [EVT-DefectClaimed]
 depends_on: [ST-021]
 labels: [mvp, defect-work, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -23,6 +23,19 @@ Command `CMD-ClaimDefect` (any team member). Rules and invariants:
 - A claim is only a signal: others may still log work (HS-8).
 - Concurrent claims are guarded by the version check on the defect (ST-003): the second one is rejected, not silently turned into a takeover.
 The open defects list shows "claimed by" and gets the filter "claimed by me".
+
+**Decided in the test plan (user, 2026-10-11, during `/implement ST-025`, answers 1a 2a 3a):**
+- **Taking over (2a).** There is no question before taking over a claim from someone else – a claim is only a signal and locks nothing (HS-8). The confirmation names from whom it was taken over. G10 does not apply.
+- **Claiming one's own claim again (3a)** is not offered (no button). If it is sent anyway, `CMD-ClaimDefect` rejects it and nothing changes – in particular the time of the claim is not renewed, so the stale claim rule (ST-048) cannot be reset this way.
+
+**Screen (built as proposed in the test plan from `docs/product/ux-guidelines.md`, approved by the user on 2026-10-11 during `/implement ST-025`, answer 1a; no separate ux-designer round):**
+- **Where.** The control lives on the defect's own page (`/team/defects/<defect id>`), not in the open defects list (G5).
+- **Button.** „Übernehmen“ for an unclaimed defect; „Von Tom übernehmen“ when it is claimed by someone else (G14; the glossary word *Claim* is „Übernehmen“).
+- **Claimant.** Shown as „Übernommen von Tom“ on the defect's page and in the open defects list; for the person looking at their own claim „Von dir übernommen“.
+- **Confirmation** on the defect's page after claiming (G3): „Du hast „Left flipper weak“ übernommen.“, after taking it over from someone followed by „ Vorher: Tom.“
+- **Filter "claimed by me".** A checkbox „Nur von mir übernommene“ in the existing filter form of the open defects list; it combines with the other filters.
+- **Who does not see the button (G11).** A helper on a defect not suitable for helpers; nobody on a resolved defect or one closed on retirement; and the claimant on their own claim (3a).
+- **Concurrent claim.** Answered with the existing text „Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.“
 
 ## Acceptance Criteria
 

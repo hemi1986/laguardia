@@ -5,6 +5,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { priorities } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import { claimantText } from "../claimant";
 import type { OpenDefectsData, OpenDefectsFilter } from "./open-defects-data";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
@@ -50,6 +51,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
                 <p className="text-muted-foreground">
                   {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
                 </p>
+                {entry.claimant && <p className="text-muted-foreground">{claimantText(entry.claimant)}</p>}
                 {entry.linkedProblemReports > 0 && (
                   <p className="text-muted-foreground">{texts.linkedProblemReports(entry.linkedProblemReports)}</p>
                 )}
@@ -62,7 +64,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
   );
 }
 
-/** Machine, priority and suitable for helpers (ST-021) – they combine; the form keeps what is chosen. */
+/** Machine, priority, suitable for helpers (ST-021) and claimed by me (ST-025) – they combine; the form keeps what is chosen. */
 function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "filter">) {
   // A machine the address names but the list does not offer (no open defects, or a link from elsewhere) stays chosen,
   // so the form never claims "Alle Geräte" while the list is narrowed to one.
@@ -99,6 +101,10 @@ function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "fi
         <input type="checkbox" name="helpers" value="1" defaultChecked={filter.suitableForHelpers} className="size-4" />
         {texts.onlySuitableForHelpers}
       </label>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="mine" value="1" defaultChecked={filter.claimedByMe} className="size-4" />
+        {texts.onlyClaimedByMe}
+      </label>
       <button type="submit" className={`${buttonVariants({ variant: "outline" })} self-start`}>
         {texts.applyFilter}
       </button>
@@ -111,8 +117,8 @@ function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "fi
  * says it in its own words; several together say that nothing matches them.
  */
 function NothingMatches({ filter }: { filter: OpenDefectsFilter }) {
-  const { museumNumber, priority, suitableForHelpers } = filter;
-  const chosen = [museumNumber, priority, suitableForHelpers].filter(Boolean).length;
+  const { museumNumber, priority, suitableForHelpers, claimedByMe } = filter;
+  const chosen = [museumNumber, priority, suitableForHelpers, claimedByMe].filter(Boolean).length;
   const text =
     chosen > 1
       ? texts.noneMatch
@@ -120,7 +126,9 @@ function NothingMatches({ filter }: { filter: OpenDefectsFilter }) {
         ? texts.noneOfMachine(museumNumber)
         : priority
           ? texts.noneWithPriority(recordDefect.priorities[priority])
-          : texts.noneSuitableForHelpers;
+          : claimedByMe
+            ? texts.noneClaimedByYou
+            : texts.noneSuitableForHelpers;
   return (
     <div className="flex flex-col gap-2">
       <p>{text}</p>

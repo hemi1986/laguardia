@@ -176,6 +176,8 @@ stateDiagram-v2
 | | | Reopened by | `TeamMemberId` | when reopened | EVT-DefectReopened |
 | | | Reopened at | `Timestamp` | when reopened | EVT-DefectReopened (occurrence) |
 
+Whom a claim was taken over from is data of `EVT-DefectClaimed` only, kept in the event journal as a `TeamMemberId` reference – not an attribute of the *Claim* value object; the confirmation after taking over reads it there (ST-025).
+
 A defect keeps one *Resolution* per resolve (with its reopening, if any), so closing notes and reopen reasons survive for the repair history (`RM-MachineRecord`). Derived: *Last work log entry* (`RM-OpenDefects`), time to first work log entry and to resolved (`RM-RepairTimes` – which resolution counts after a reopen is a detail for the story, recommendation: the latest).
 
 ---

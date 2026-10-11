@@ -191,6 +191,19 @@ A creating command may return `created` aggregates and `runs` like a changing on
 and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY DEFERRED` (hand-written migration,
 `drizzle/0014_…`: the defect's reference to its problem report).
 
+**A command behind a single button** (first: CMD-ClaimDefect, ST-025): the button is a small client form that posts
+the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule, asked
+by the page: the decision's reasons for refusing are one exported function (`claimRefusal(defect, actor)`), which the
+decision applies and the page's data function calls with the team member looking at the page (`viewer`) – no second
+copy of the rule in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
+over from) is a reference in the event's journal data, listed in `events.yaml`, and read back by a function that sits
+next to the journal mapping (`takenOverFrom` in `claim-defect-command.ts`) – only for the confirmation, never taken
+from the address.
+
+**Two transactions racing for one row** in a test: `whileHoldingRow(db, sql\`SELECT … FOR UPDATE\`, race)` from
+`src/test-support/held-row.ts` – it counts only the sessions blocked by its own holding transaction, so tests running
+beside it in the shared database cannot disturb it, and it lets go also when the test throws.
+
 **A rule that needs another module's data** (first: ST-013, context map "Repair reads from Collection when checking
 command rules"): the command's `facts` call the other module's **public** query in the command's transaction – e.g.
 `reportingFacts` in `src/modules/repair/problem-reports.ts` calls Collection's `machineForReporting(tx, machineId)`

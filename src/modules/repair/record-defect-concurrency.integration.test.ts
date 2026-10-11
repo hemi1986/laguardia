@@ -5,6 +5,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
+import { whileHoldingRow } from "@/test-support/held-row";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { recordDefectCommand, reportProblemCommand } from ".";
 import { storedProblemReport } from "./problem-report-stand-ins.test-support";
@@ -20,19 +21,6 @@ const clock = fixedClock("2026-10-03T20:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 
-/** Waits until `count` statements of this database wait for a lock – both technicians are then past their decision. */
-async function untilWaitingForLocks(count: number) {
-  for (let attempt = 0; attempt < 200; attempt++) {
-    const { rows } = await db.execute<{ waiting: number }>(
-      sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
-          WHERE datname = current_database() AND wait_event_type = 'Lock'`,
-    );
-    if (rows[0].waiting >= count) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error(`never saw ${count} statements waiting for a lock`);
-}
-
 describe("two technicians and one problem report", () => {
   it("ST-018: Two technicians triage the same problem report", async () => {
     await anExistingTeamMember(db, tom, "Tom");
@@ -46,11 +34,6 @@ describe("two technicians and one problem report", () => {
     if (!reported.ok) throw new Error(reported.error);
     const problemReportId = reported.result.problemReportId;
 
-    let letGo!: () => void;
-    const holding = db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT id FROM problem_report WHERE id = ${problemReportId} FOR UPDATE`);
-      await new Promise<void>((resolve) => (letGo = resolve));
-    });
     const record = (actor: typeof tom, title: string) =>
       executeCommand(
         recordDefectCommand,
@@ -65,10 +48,15 @@ describe("two technicians and one problem report", () => {
         },
         { actor, db, clock, newId: randomUUID },
       );
-    const both = Promise.all([record(tom, "Left flipper weak"), record(eva, "Flipper coil weak")]);
-    await untilWaitingForLocks(2);
-    letGo();
-    await holding;
+    const { both } = await whileHoldingRow(
+      db,
+      sql`SELECT id FROM problem_report WHERE id = ${problemReportId} FOR UPDATE`,
+      async (untilWaiting) => {
+        const both = Promise.all([record(tom, "Left flipper weak"), record(eva, "Flipper coil weak")]);
+        await untilWaiting(2);
+        return { both };
+      },
+    );
     const outcomes = await both;
 
     const winner = outcomes[0].ok ? tom : eva;
