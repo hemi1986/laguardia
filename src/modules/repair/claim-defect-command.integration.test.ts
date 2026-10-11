@@ -78,4 +78,64 @@ describe("CMD-ClaimDefect", () => {
       ["EVT-DefectClaimed", anna, { claimedBy: anna.teamMemberId }],
     ]);
   });
+
+  it("ST-025: Helpers can only claim defects suitable for helpers", async () => {
+    const unclaimed = await anOpenDefect("Display flickers");
+    const claimedByTom = await anOpenDefect("Display flickers");
+    await claim(claimedByTom.defectId, 0, tom, "2026-10-12T09:00:00Z");
+    const journalBefore = (await journalOf(db, { aggregateId: claimedByTom.defectId })).length;
+
+    expect(await claim(unclaimed.defectId, 0, anna, "2026-10-12T10:00:00Z")).toEqual({
+      ok: false,
+      error: "not-suitable-for-helpers",
+    });
+    expect(await claim(claimedByTom.defectId, 1, anna, "2026-10-12T10:00:00Z")).toEqual({
+      ok: false,
+      error: "not-suitable-for-helpers",
+    });
+
+    // Each keeps its claimant, if any.
+    expect(await claimantOf(unclaimed.machineId)).toBeUndefined();
+    expect(await claimantOf(claimedByTom.machineId)).toBe(tom.teamMemberId);
+    expect(await journalOf(db, { aggregateId: unclaimed.defectId })).toEqual([]);
+    expect(await journalOf(db, { aggregateId: claimedByTom.defectId })).toHaveLength(journalBefore);
+  });
+
+  it("ST-025: Resolved defects cannot be claimed", async () => {
+    const { defectId } = await anOpenDefect("Coin door jammed", true);
+    const resolved = await executeCommand(
+      resolveDefectForTest,
+      { defectId, version: 0 },
+      { actor: tom, db, clock: recorded, newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error("not resolved");
+
+    for (const teamMember of [tom, anna]) {
+      expect(await claim(defectId, 1, teamMember, "2026-10-12T10:00:00Z")).toEqual({
+        ok: false,
+        error: "defect-not-open",
+      });
+    }
+    expect((await storedDefect(db, defectId))?.claim).toBeUndefined();
+  });
+
+  it("rejects claiming one's own claim again and keeps since when it is claimed", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak");
+    await claim(defectId, 0, tom, "2026-10-12T09:00:00Z");
+
+    expect(await claim(defectId, 1, tom, "2026-10-20T09:00:00Z")).toEqual({
+      ok: false,
+      error: "already-claimed-by-you",
+    });
+    expect((await storedDefect(db, defectId))?.claim?.claimedAt).toEqual(new Date("2026-10-12T09:00:00Z"));
+  });
+
+  it("is not for visitors", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+
+    expect(await claim(defectId, 0, { kind: "visitor" }, "2026-10-12T09:00:00Z")).toEqual({
+      ok: false,
+      error: "not-authorized",
+    });
+  });
 });
