@@ -29,9 +29,15 @@ async function logIn(page: Page, as: Account) {
   await expect(page).toHaveURL(/\/team$/);
 }
 
+/**
+ * Logs out through "Mehr" – with the keyboard, not a click: with JavaScript disabled and several workers running,
+ * Playwright's wait for a "stable" element never ends on this button, although it does not move (measured on
+ * 2026-10-11: same bounding box, no animation, 3 of 16 runs on four workers; never with one worker).
+ */
 async function logOut(page: Page) {
   await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  await page.getByRole("button", { name: "Abmelden" }).press("Enter");
+  await expect(page).toHaveURL(/\/login/);
 }
 
 /**
