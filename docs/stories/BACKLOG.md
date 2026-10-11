@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 19 of 58 domain stories done** · scenarios 177 of 441
+**Progress: 20 of 58 domain stories done** · scenarios 195 of 441
 
-**81 stories** · In Progress: 1 · Ready: 44 · In Review: 0 · Draft: 5 · Done: 31
+**81 stories** · In Progress: 0 · Ready: 44 · In Review: 0 · Draft: 5 · Done: 32
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-023](ST-023-technician-reports-and-triages.md) | Technician reports a problem and records a defect in the same step | story | Repair | must | L | medium | ST-015, ST-016, ST-018 |
 
 ## Ready
 
@@ -104,6 +98,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-019](ST-019-resolve-problem-on-the-spot.md) | Triage – resolve a problem on the spot | story | Repair | must | S | low | ST-017 |
 | [ST-020](ST-020-dismiss-problem-report.md) | Triage – dismiss a problem report, removing spam content | story | Repair | must | M | medium | ST-017, ST-016 |
 | [ST-022](ST-022-link-problem-report-to-defect.md) | Triage – link a problem report to an open defect | story | Repair | must | S | low | ST-018, ST-021 |
+| [ST-023](ST-023-technician-reports-and-triages.md) | Technician reports a problem and records a defect in the same step | story | Repair | must | L | medium | ST-015, ST-016, ST-018 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-078](ST-078-remove-spike-scaffolding-code.md) | Remove the spike scaffolding code | tech-task | Repair | must | S | medium | ST-004, ST-073 |

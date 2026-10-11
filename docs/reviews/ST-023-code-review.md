@@ -73,3 +73,9 @@ From `/code-review` only:
 - **Unused export removed:** `TriageInTheSameStep` is no longer exported from the module's `index.ts`.
 
 Security review (`/security-review`): done inline by the implementing session on its own diff, no finding – not an independent review.
+
+### After the user's acceptance (2026-10-11)
+
+- **#3 fixed on the user's request:** the failure needs several workers (6 of 6 green with one worker; 3 of 16 red on four) and JavaScript disabled. The button does not move – same bounding box over 800 ms, no animation, page visible and complete – yet Playwright's wait for a "stable" element never ends. `logOut` in `e2e/resolve-on-the-spot.spec.ts` now presses Enter on the button and waits for the login page: 32 of 32 green on four workers, the full browser run 103 passed, 1 skipped. Why Playwright never sees the element as stable is not explained; the application is not changed.
+- **#10 confirmed by the user:** the two visitor texts for `triage-required` stay as written.
+- The two new paragraphs of the engineering conventions are approved by the user.
