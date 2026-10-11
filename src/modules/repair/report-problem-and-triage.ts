@@ -47,16 +47,19 @@ export function reportProblemAndTriage(
   context: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported | TriageEvent, ReportProblemAndTriageError> {
   const { actor } = context;
-  const technician =
-    actor.kind === "team-member" && actor.role === "technician" ? { ...actor, role: actor.role } : undefined;
-  // Recording a defect is for technicians only (CMD-RecordDefect) – a helper's or visitor's problem report with that
-  // triage outcome is rejected as a whole, never stored without it (CMD-ReportProblem rules; user, 2026-10-11).
-  if (input.triage && !technician) return { ok: false, error: "not-authorized" };
+  const teamMember = actor.kind === "team-member" ? actor : undefined;
+  const technician = teamMember?.role === "technician";
+  // Who may choose which triage outcome is the rule of that outcome's own command: resolving on the spot is for every
+  // team member, everything else for technicians only. A problem report with an outcome its reporter may not choose is
+  // rejected as a whole, never stored without it (CMD-ReportProblem rules; user, 2026-10-11).
+  if (input.triage && !(technician || (teamMember && input.triage.outcome === "resolved-on-the-spot"))) {
+    return { ok: false, error: "not-authorized" };
+  }
   const reported = reportProblem(facts, input, context);
-  if (!reported.ok || !technician) return reported;
-  // A technician's problem report is never stored untriaged, whatever form sent it (CMD-ReportProblem rules).
-  if (!input.triage) return { ok: false, error: "triage-required" };
-  const triaged = triage(reported.state, input.triage, { ...context, actor: technician }, facts);
+  if (!reported.ok || !teamMember) return reported;
+  // A technician's problem report is never stored untriaged, whatever form sent it; a helper's may be.
+  if (!input.triage) return technician ? { ok: false, error: "triage-required" } : reported;
+  const triaged = triage(reported.state, input.triage, { ...context, actor: teamMember }, facts);
   if (!triaged.ok) {
     if (triaged.error === "already-triaged") throw new Error("CMD-ReportProblem: a new problem report is untriaged");
     return { ok: false, error: triaged.error };
@@ -68,18 +71,21 @@ export function reportProblemAndTriage(
 function triage(
   report: ProblemReport,
   chosen: TriageInTheSameStep,
-  context: DecisionContext<ActorOf<"technician">>,
+  context: DecisionContext<ActorOf<"helper" | "technician">>,
   facts: ReportingFacts,
-): Decision<ProblemReport, TriageEvent, RecordDefectError | ResolveProblemOnTheSpotError> {
+): Decision<ProblemReport, TriageEvent, RecordDefectError | ResolveProblemOnTheSpotError | "not-authorized"> {
   const target = { problemReportId: report.id, version: 0 };
   if (chosen.outcome === "resolved-on-the-spot") {
     return resolveProblemOnTheSpot(report, { ...target, note: chosen.note }, context);
   }
+  const { actor } = context;
+  if (actor.role !== "technician") return { ok: false, error: "not-authorized" };
+  const asTechnician = { ...context, actor: { ...actor, role: actor.role } };
   const { title, priority, suitableForHelpers, machineStatus, machineVersion } = chosen;
   return recordDefect(
     report,
     { ...target, title, priority, suitableForHelpers, machineStatus, machineVersion },
-    context,
+    asTechnician,
     facts,
   );
 }

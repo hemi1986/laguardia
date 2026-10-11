@@ -16,6 +16,7 @@ import { storedProblemReport } from "./problem-report-stand-ins.test-support";
 const db = testDatabase();
 const clock = fixedClock("2026-10-12T09:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
 function reportAndResolveOnTheSpot(machineId: string, description: string, note: string, actor: Actor = tom) {
   return executeCommand(
@@ -54,5 +55,61 @@ describe("CMD-ReportProblem with resolving on the spot or linking in the same st
       ["EVT-ProblemReported", tom, {}],
       ["EVT-ProblemResolvedOnTheSpot", tom, {}],
     ]);
+  });
+
+  it("ST-052: Helper reports and resolves on the spot in one step", async () => {
+    await anExistingTeamMember(db, anna, "Anna");
+    const machineId = await aRegisteredMachine(db);
+
+    const reported = await reportAndResolveOnTheSpot(machineId, "Ball stuck behind the left ramp", "Ball freed", anna);
+
+    if (!reported.ok) throw new Error(reported.error);
+    const { problemReportId } = reported.result;
+    expect(await storedProblemReport(db, problemReportId)).toMatchObject({
+      description: "Ball stuck behind the left ramp",
+      reporter: { kind: "team-member", teamMemberId: anna.teamMemberId },
+      triage: { outcome: "resolved-on-the-spot", triagedBy: anna.teamMemberId, note: "Ball freed" },
+    });
+    expect((await triageList(db, clock)).map((entry) => entry.id)).not.toContain(problemReportId);
+    expect((await journalOf(db, { machineId })).slice(-2).map((entry) => [entry.type, entry.actor])).toEqual([
+      ["EVT-ProblemReported", anna],
+      ["EVT-ProblemResolvedOnTheSpot", anna],
+    ]);
+  });
+
+  it("ST-052: Helpers' other problem reports still go to the triage list", async () => {
+    await anExistingTeamMember(db, anna, "Anna");
+    const machineId = await aRegisteredMachine(db);
+
+    const reported = await executeCommand(
+      reportProblemAndTriageCommand,
+      { machineId, description: "Rubber on the left slingshot cracked" },
+      { actor: anna, db, clock, newId: randomUUID },
+    );
+
+    if (!reported.ok) throw new Error(reported.error);
+    expect((await storedProblemReport(db, reported.result.problemReportId))?.triage).toBeUndefined();
+    expect((await triageList(db, clock)).map((entry) => entry.id)).toContain(reported.result.problemReportId);
+    // A helper may add no other triage outcome: with a defect, neither the problem report nor the defect is stored.
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    expect(
+      await executeCommand(
+        reportProblemAndTriageCommand,
+        {
+          machineId,
+          description: "Left flipper coil stop broken",
+          triage: {
+            outcome: "defect-recorded",
+            title: "Left flipper sticks",
+            priority: undefined,
+            suitableForHelpers: false,
+            machineStatus: undefined,
+            machineVersion: undefined,
+          },
+        },
+        { actor: anna, db, clock, newId: randomUUID },
+      ),
+    ).toEqual({ ok: false, error: "not-authorized" });
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
   });
 });
