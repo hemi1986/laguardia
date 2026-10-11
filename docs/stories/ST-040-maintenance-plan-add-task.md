@@ -4,8 +4,8 @@ title: Maintenance plan – view and add maintenance tasks
 type: story
 context: BC-Maintenance
 priority: must
-size: S
-risk: low
+size: M
+risk: medium
 events: [EVT-MaintenancePlanChanged]
 depends_on: [ST-003, ST-006]
 labels: [mvp, maintenance, ui]

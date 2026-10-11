@@ -1,6 +1,6 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G21, including G2a, G4a, G6a, G8a, G10a and G21a)
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G22, including G2a, G4a, G6a, G8a, G10a and G21a)
 > is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
 > now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
@@ -81,6 +81,25 @@ keeps ST-015's form, with „Schon selbst behoben?“ and the button „Direkt b
 *Why:* without JavaScript, a single page shows every outcome's fields at once. With ST-052 the technician's report
 form would carry three outcomes' fields under one submit, which is the shape G21 rules out. The button sits above
 the first field because a link does not carry what was already typed.
+
+**G22 – The defect's page offers the work as buttons and the managing behind one fold** (user, 2026-10-12).
+The page of an open defect has two groups of actions, and no story puts an action anywhere else:
+- **Work**, directly under the header, for everyone who may (G11), in this order: „Übernehmen“ – or „Von Tom
+  übernehmen“ when someone else holds the claim, or „Abgeben“ in the same place when the claim is one's own ·
+  „Arbeitsschritt eintragen“ · „Beheben“ · „Pausieren“ – or „Fortsetzen“ in the same place when the defect is on
+  hold.
+- **„Verwalten“**, technicians only, a closed fold that opens without JavaScript (a native `<details>`, like „Mehr“
+  in G19): „Zuweisen“, „Übernahme von Tom aufheben“, „Priorität ändern“, „Titel und Eignung ändern“.
+
+A resolved defect offers only „Wieder öffnen“, under its „Abschlussnotiz“.
+Claiming and releasing are one tap; every other action has its form page (G21). Nothing here asks first – these
+are signals and recorded facts, not destructive actions (G10). The header says a hold in words („Pausiert – Wartet
+auf Ersatzteil“, G6).
+The order of the actions is the order of `defectActions` in `src/modules/repair/defect-actions.ts`; a story adds
+its action at its place in this guideline, never somewhere it picks.
+*Already built:* the first three – „Übernehmen“, „Arbeitsschritt eintragen“, „Beheben“ (ST-025, ST-024, ST-028).
+*Why:* five more actions arrive on this page with ST-026, ST-027, ST-029, ST-030 and ST-031 – eight or nine on a
+360 px page, in an order no story decides. A helper should see at most four buttons and no fold.
 
 ## 2. Understanding what you are looking at
 
@@ -235,6 +254,14 @@ the later stories, so a reader knows which story to look at.
 *Why:* eleven stories add to the machine record (ST-009, 011, 012, 015, 021, 033, 034, 035, 037, 039, 047) and four
 to the dashboards (ST-048, 049, 050, 058). Fourteen things on one phone page, in an order no story decides, is
 decided by whoever implements last – and two of those stories render the same list twice.
+*The dashboards* (user, 2026-10-12):
+- **ST-048 owns the technician dashboard.** Sections in this order: problem reports to triage · machines not
+  playable without open defects · stale claims (ST-058) · overdue maintenance (ST-058) · recent changes (ST-058).
+- **ST-049 owns the helper dashboard.** Sections in this order: my claimed defects · open defects suitable for
+  helpers · due maintenance for helpers.
+- **ST-050 adds no section**: it marks entries in the existing ones as „neu seit deinem letzten Besuch“ (G6a).
+- **Neither dashboard repeats the due maintenance list.** It names each maintenance task with a count and links to
+  „Wartung“ (G4a, G19 row 5), where the list lives.
 
 **G19 – The navigation is decided once, with every destination the product will have** (user, 2026-10-01).
 One story names the full set of destinations, their German labels, their order and who sees which; every later
@@ -294,3 +321,5 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-03 | **G19 row 3 (Triage list, "Sichtung")** is shown to everyone instead of technicians. | Helpers resolve problems on the spot from the triage list (ST-019, ST-017's helper scenario); the technician-only triage outcomes are hidden on the problem report's page (G11). The user decided during `/implement ST-017` |
 | 2026-10-03 | **G21 added** (several outcomes: one button each on the thing's page, one form page each, one common landing with a confirmation, only the permitted outcomes, in a fixed order, none once decided; first use the problem report's page). **G10 extended**: a triage outcome asks nothing; dismissing as spam asks once and names the description and photo it deletes. | Story review of ST-018/019/020/022 (`docs/reviews/2026-10-03-story-review.md`, Decisions 1 and 2): four triage outcomes on one 360 px page, more to come on the defect page, ST-039 and ST-044 |
 | 2026-10-10 | **G21a added** (creating a thing and deciding its outcome in one step: a choice page with one button per outcome, one form page each with the thing's fields, sent once and stored together; a person who may decide only one outcome and may leave it undecided keeps the plain form with that outcome as one button above the first field). **G8a narrowed**: no photo sentence after a rejection of the photo itself (ST-016's texts). | Story review of ST-023/ST-052 (`docs/reviews/2026-10-10-story-review.md`, Decision 3a; proposal `docs/reviews/ST-023-ux-form.md`, option B, and the helper path H2) |
+| 2026-10-12 | **G22 added**: the defect's page offers the work as buttons under the header (claim or release · work log entry · resolve · put on hold or resume) and the managing behind the fold „Verwalten“ for technicians (assign, release someone else's claim, priority, title and suitability); a resolved defect offers only „Wieder öffnen“. The order is the order of `defectActions`. | Backlog grooming of 2026-10-11 (`docs/reviews/2026-10-11-backlog-grooming.md`, section 6, decision 5): ST-026, ST-027, ST-029, ST-030 and ST-031 bring five more actions to a page that has three – eight or nine at 360 px, in an order no story decides |
+| 2026-10-12 | **G18 extended with the dashboards**: ST-048 owns the technician dashboard, ST-049 the helper dashboard, each with its sections in a fixed order; ST-050 marks entries and adds no section; neither dashboard repeats the due maintenance list – a maintenance task with a count and a link to „Wartung“. | Same grooming, section 6: four stories add to the dashboards (ST-048, 049, 050, 058), and G18 named the problem without naming the owners or the order |

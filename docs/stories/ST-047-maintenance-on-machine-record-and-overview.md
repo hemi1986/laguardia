@@ -3,7 +3,7 @@ id: ST-047
 title: Maintenance on the machine record
 type: story
 context: BC-Maintenance
-priority: must
+priority: should
 size: S
 risk: low
 events: [EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]

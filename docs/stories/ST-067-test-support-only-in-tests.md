@@ -3,7 +3,7 @@ id: ST-067
 title: Test support is only imported by tests
 type: tech-task
 context: BC-Repair
-priority: should
+priority: wont
 size: XS
 risk: low
 events: []
@@ -13,6 +13,8 @@ status: ready
 ---
 
 ## Task
+**Not built as a story: the lint policy is added directly (grooming 2026-10-11).** The text below is kept for the record.
+
 Follow-up of ST-059 (CI and test harness): `docs/reviews/ST-059-code-review.md` finding #14 (follow-up section). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 `src/test-support/` holds the test-data builders, the test database connection and `resetTestDatabase`, which drops and re-migrates schemas. Application code must never import it. Today no lint rule stops that, because `eslint.config.mjs` has no module boundary rules yet; ST-003 introduces them (ADR 0002: "boundaries … enforced by import rules").

@@ -3,11 +3,11 @@ id: ST-029
 title: Put a defect on hold and resume it
 type: story
 context: BC-Repair
-priority: must
+priority: should
 size: S
 risk: low
 events: [EVT-DefectPutOnHold, EVT-DefectResumed]
-depends_on: [ST-024, ST-028]
+depends_on: [ST-024, ST-028, ST-033]
 labels: [mvp, defect-work, ui]
 status: ready
 ---
@@ -22,6 +22,7 @@ Commands `CMD-PutDefectOnHold` and `CMD-ResumeDefect`. Rules and invariants:
 - A reason is required: *waiting for part*, *waiting for technician* or *other*; a note is optional.
 - Resolving ends any hold (`AGG-Defect`). Logging work does not resume a defect on hold.
 The open defects list shows "on hold with reason" and gets the filter "on hold". UI wording (de): Pausiert.
+The machine record lists a machine's open defects in its section 4 with the same facts and words as the open defects list (ST-033; owner of the page is ST-009, G18). This story adds the on-hold reason there – moved here from ST-033 by the backlog grooming of 2026-10-11 (user, 2026-10-12), so that ST-033 does not wait for this story.
 
 ## Acceptance Criteria
 
@@ -75,6 +76,11 @@ Scenario: Filter "on hold"
   Given "Display flickers" is on hold and "Left flipper weak" is not
   When a team member filters the open defects list by on hold
   Then only "Display flickers" is listed
+
+Scenario: Machine record shows the on-hold reason of an open defect
+  Given "LG-042" has the open defect "Rubber cracked", on hold with the reason waiting for part
+  When a team member opens the machine record of "LG-042"
+  Then "Rubber cracked" is shown among the open defects as on hold – waiting for part
 
 ## Out of Scope
 - Reminders for defects on hold for a long time

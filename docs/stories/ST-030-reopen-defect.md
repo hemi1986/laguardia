@@ -3,11 +3,11 @@ id: ST-030
 title: Reopen a resolved defect, optionally changing the machine status
 type: story
 context: BC-Repair
-priority: must
+priority: should
 size: M
-risk: medium
+risk: low
 events: [EVT-DefectReopened, EVT-MachineStatusChanged]
-depends_on: [ST-012, ST-018, ST-028]
+depends_on: [ST-012, ST-018, ST-028, ST-033]
 labels: [mvp, defect-work, ui]
 status: ready
 ---
@@ -23,6 +23,7 @@ Command `CMD-ReopenDefect` (any team member, HS-7). Rules and invariants:
 - No time limit; guideline: the same fault months later becomes a new defect (HS-7).
 Manual policy `POL-DefectMayChangeMachineStatus`: when a technician reopens a defect, the technician may set the machine to *Limited* or *Out of order* in the same step; the status history reason refers to the reopened defect, as in ST-018. Helpers cannot change the machine status while reopening (they may still set *Out of order* separately, ST-012).
 Reopening by linking a problem report follows in ST-053.
+Repair history (ST-033): a defect keeps one resolution per resolve and one *Reopening* per reopen; a *Reopening* is an entry of its own with the reopen reason, shown after the resolution it followed (`docs/architecture/data-model.md`). So the repair history of the machine shows every closing note of a reopened defect, each followed by the reopen reason that came after it – moved here from ST-033 by the backlog grooming of 2026-10-11 (user, 2026-10-12), so that ST-033 does not wait for this story.
 
 ## Acceptance Criteria
 
@@ -58,6 +59,16 @@ Scenario: No reopening on retired machines
   Given the machine "LG-013" is retired and its defect "Coin mech jammed" was resolved before
   When a team member tries to reopen "Coin mech jammed"
   Then the action is rejected
+
+Scenario: Repair history shows every resolution of a reopened defect and the reopen reason
+  Given "Left flipper weak" of "LG-042" was resolved with the closing note "Coil replaced", reopened with the reason "Weak again" and is open again
+  When a team member opens the repair history of "LG-042"
+  Then the closing note "Coil replaced" is shown, followed by the reopen reason "Weak again"
+
+Scenario: Repair history keeps the order of several resolutions and reopenings
+  Given "Left flipper weak" of "LG-042" was resolved with "Coil replaced", reopened with "Weak again", resolved with "Flipper rebuilt" and reopened with "Sticks when warm"
+  When a team member opens the repair history of "LG-042"
+  Then both closing notes and both reopen reasons are shown in the order they happened, each reopen reason after the resolution it followed
 
 ## Out of Scope
 - Reopening by linking a problem report (ST-053)

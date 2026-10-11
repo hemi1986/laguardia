@@ -3,11 +3,11 @@ id: ST-039
 title: Retire a machine, closing its open defects and problem reports
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: M
 risk: medium
 events: [EVT-MachineRetired, EVT-DefectClosedOnRetirement, EVT-ProblemReportDismissed]
-depends_on: [ST-012, ST-020, ST-024, ST-027, ST-030]
+depends_on: [ST-012, ST-020, ST-024, ST-027, ST-030, ST-033]
 labels: [mvp, collection, ui]
 status: ready
 ---
@@ -25,6 +25,7 @@ Automatic policies, in the same transaction, acting as the *system* actor (`docs
 - `POL-RetirementDismissesProblemReports` → `CMD-DismissProblemReport` for every untriaged problem report of the machine, reason "machine retired".
 Concurrency: a problem report, defect or maintenance record created at the same moment as the retirement is either rejected (because the machine is already retired) or closed/dismissed by the retirement – nothing stays open on a retired machine.
 How retired machines appear in the views follows in ST-055.
+Repair history (ST-033): a defect closed on retirement is shown there as *closed on retirement*, not as resolved – moved here from ST-033 by the backlog grooming of 2026-10-11 (user, 2026-10-12), so that ST-033 does not wait for this story.
 UI wording (de): Ausgemustert; Geschlossen (ausgemustert).
 
 ## Acceptance Criteria
@@ -52,6 +53,11 @@ Scenario: Defects closed on retirement are final
   Given the defect "Display dead" was closed on retirement
   When a team member tries to reopen, claim, prioritize or log work on it
   Then the action is rejected
+
+Scenario: Defects closed on retirement are shown as such in the repair history
+  Given the retired machine "LG-013" had the defect "Display dead" closed on retirement
+  When a team member opens the repair history of "LG-013"
+  Then "Display dead" is shown as closed on retirement, not as resolved
 
 Scenario: Actions on a retired machine are rejected
   Given "LG-013" is retired

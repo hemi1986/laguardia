@@ -153,6 +153,16 @@ A team member taking on a defect so others see who works on it; technicians may 
 _Avoid_: Assignment (for self-claiming), ownership, lock
 _UI (de)_: Übernehmen
 
+**Assign**:
+A technician claiming a defect on behalf of another team member, who becomes its claimant.
+_Avoid_: Delegate, dispatch, hand over
+_UI (de)_: Zuweisen
+
+**Release**:
+Ending a claim without resolving the defect – by the claimant, or by a technician for someone else's claim; the defect is unclaimed afterwards.
+_Avoid_: Unclaim, unassign, drop
+_UI (de)_: Abgeben (eigene Übernahme) / Übernahme aufheben (durch Techniker:in)
+
 **Stale claim**:
 A claim older than 14 days without a work log entry since it was made.
 _Avoid_: Old claim, abandoned claim, dead claim
@@ -162,6 +172,16 @@ _UI (de)_: Liegengeblieben
 A defect that is open but temporarily cannot progress – waiting for a part, waiting for a technician, or another reason.
 _Avoid_: Paused, blocked, parked
 _UI (de)_: Pausiert (Wartet auf Ersatzteil / Wartet auf Techniker:in / Anderer Grund)
+
+**Put on hold**:
+Marking an open defect as on hold, with a reason.
+_Avoid_: Pause (in English text), block, park
+_UI (de)_: Pausieren
+
+**Resume**:
+Ending a hold, so the defect is open and can progress again.
+_Avoid_: Unpause, continue, unblock
+_UI (de)_: Fortsetzen
 
 **Reopen**:
 Returning a resolved defect to open because the fault came back, with a reason; the earlier resolution and its closing note stay in the repair history.

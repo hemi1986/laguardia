@@ -3,7 +3,7 @@ id: ST-034
 title: Move a machine to a new location
 type: story
 context: BC-Collection
-priority: should
+priority: could
 size: XS
 risk: low
 events: [EVT-MachineMoved]

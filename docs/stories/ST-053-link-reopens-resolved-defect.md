@@ -3,7 +3,7 @@ id: ST-053
 title: Linking a problem report to a recently resolved defect reopens it
 type: story
 context: BC-Repair
-priority: must
+priority: should
 size: S
 risk: medium
 events: [EVT-ProblemReportLinkedToDefect, EVT-DefectReopened, EVT-MachineStatusChanged]

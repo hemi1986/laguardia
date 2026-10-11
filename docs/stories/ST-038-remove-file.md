@@ -3,7 +3,7 @@ id: ST-038
 title: Remove a file
 type: story
 context: BC-Collection
-priority: should
+priority: could
 size: S
 risk: low
 events: [EVT-FileRemoved]

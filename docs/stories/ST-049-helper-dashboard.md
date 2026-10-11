@@ -3,9 +3,9 @@ id: ST-049
 title: Helper dashboard
 type: story
 context: BC-Repair
-priority: must
+priority: should
 size: M
-risk: low
+risk: medium
 events: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectPrioritized, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectDetailsChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]
 depends_on: [ST-026, ST-027, ST-029, ST-030, ST-031, ST-043]
 labels: [dashboard, ui]
@@ -20,6 +20,7 @@ Read model `RM-HelperDashboard`. Fields: open defects suitable for helpers, due 
 - Changes that count on "my claimed defects": work logged by someone else, title or suitable-for-helpers mark changed, priority changed, put on hold or resumed, resolved, and the claim taken over by someone else or released by a technician (also by removing the suitable-for-helpers mark, ST-031).
 - A defect that is no longer claimed by the helper (taken over or released) stays listed with that change for 7 days, the same window as on the technician dashboard (ST-058).
 - **Logging in lands on the dashboard of the person's role** – that page, not a separate start page, is the page after login (user, 2026-10-01); a helper lands here, a technician on the technician dashboard (ST-048). The helper dashboard is the answer to "what can I do right now", the key need of the largest user group (`docs/product/vision.md`).
+- **This story starts with a refactoring**: it is the first story that needs typed journal reads, so it opens by converting the per-command journal mappings to the event catalogue per module. That was ST-079, which is not built as a story and is not a dependency (backlog grooming 2026-10-11, user decision of 2026-10-12); ST-079's text describes what the conversion covers.
 - "Nothing open" is the good state here, and it still says so in words (G7). The team navigation is already decided (ST-008); this story takes its place in it (G19).
 
 ## Acceptance Criteria

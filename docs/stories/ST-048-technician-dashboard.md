@@ -17,6 +17,7 @@ As a technician, I want one dashboard that shows the untriaged problem reports a
 
 ## Context
 Read model `RM-TechnicianDashboard` (technicians only). No active notifications (`docs/product/vision.md`). First part of the split of ST-048 (story review 2026-09-26); status changes, resolved or reopened defects, stale claims and overdue maintenance follow in ST-058, "new since the last visit" in ST-050.
+- **This story is the owner of the technician dashboard page (G18)** and fixes its sections in this order: 1 problem reports to triage, 2 machines not playable without open defects, 3 stale claims (ST-058), 4 overdue maintenance (ST-058), 5 recent changes (ST-058). This story builds sections 1 and 2; ST-058 adds 3 to 5 at their places. The dashboard never repeats the due maintenance list (backlog grooming 2026-10-11, user decision of 2026-10-12).
 - Untriaged problem reports; those waiting longer than 3 days (more than 72 hours, ST-003) highlighted (HS-2).
 - Machines that are *Limited* or *Out of order* without open defects – manual policy `POL-ResolvedDefectsReturnMachineToPlay` (HS-6): the technician decides on *Playable*, no mandatory test play.
 All values are computed when the dashboard is opened (`docs/adr/0002-modular-monolith-state-based-persistence.md`).

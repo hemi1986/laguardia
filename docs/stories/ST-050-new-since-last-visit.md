@@ -23,7 +23,7 @@ No e-mail or push notifications (`docs/product/vision.md`, Non-Goals).
 - On the very first dashboard visit nothing is highlighted as new.
 - From this story on, the technician dashboard (ST-058) also shows status changes and resolved or reopened defects since the previous visit, if that is longer ago than 7 days.
 
-This is the first page that reads the event journal. It reads it **through the event catalogue per module** (architecture review 2026-09-27, Q4 and Q15), which is no longer built here: the catalogue is its own tech task **ST-079**, placed right after ST-018, because it is a retrofit whose price grows with every command built before it (backlog grooming 2026-10-01, finding 2).
+This is the first page that reads the event journal. It reads it **through the event catalogue per module** (architecture review 2026-09-27, Q4 and Q15), which is not built here: the journal mappings are converted to the catalogue as the opening refactoring of **ST-049**, the first story that needs typed journal reads, and this story depends on ST-049. ST-079, the tech task once planned for it, is not built as a story and is not a dependency (backlog grooming 2026-10-11, user decision of 2026-10-12).
 
 ## Acceptance Criteria
 
@@ -76,7 +76,7 @@ Scenario: No notifications are sent
 
 ## Out of Scope
 - E-mail and push notifications (non-goal)
-- The event catalogue per module, the typed `journalOf` and its `verify.ts` check (ST-079)
+- The event catalogue per module, the typed `journalOf` and its `verify.ts` check (the opening refactoring of ST-049)
 
 ## Open Questions
 - none

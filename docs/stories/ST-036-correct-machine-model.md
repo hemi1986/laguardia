@@ -3,7 +3,7 @@ id: ST-036
 title: Correct a machine model
 type: story
 context: BC-Collection
-priority: must
+priority: should
 size: S
 risk: low
 events: [EVT-MachineModelCorrected]
