@@ -172,6 +172,16 @@ Rules:
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 - **Set-based rules** (ST-007, HS-17): a creating command whose decision must know about the module's other aggregates declares `facts: (tx, input) => Promise<Facts>`; the layer reads them in the command's transaction and passes them to `decide(facts, input, context)` in place of the missing state. Facts that must stay true until the commit take a lock there – CMD-RegisterMachine takes `pg_advisory_xact_lock(hashtext('museum-number'))`, so concurrent registrations run one after the other – and a unique constraint stays the final guarantee (`museum_number`'s primary key).
 
+**A command that some forms send with more than others** (ST-023): CMD-ReportProblem takes an optional triage part.
+It is one command object with two typed names – `reportProblemAndTriageCommand` (the full input and every error) and
+`reportProblemCommand` (no triage part, so none of the triage outcome's errors; what visitor and helper forms use) –
+so a form needs texts only for the rejections it can cause. The decision is layered the same way:
+`reportProblemAndTriage` runs `reportProblem` first, then the triage outcome's own decision (`recordDefect`) on the new
+problem report, so the rules of both commands apply unchanged and the order of rejections is fixed (reporting first).
+A creating command may return `created` aggregates and `runs` like a changing one. Two rows that refer to each other
+and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY DEFERRED` (hand-written migration,
+`drizzle/0014_…`: the defect's reference to its problem report).
+
 **A rule that needs another module's data** (first: ST-013, context map "Repair reads from Collection when checking
 command rules"): the command's `facts` call the other module's **public** query in the command's transaction – e.g.
 `reportingFacts` in `src/modules/repair/problem-reports.ts` calls Collection's `machineForReporting(tx, machineId)`
@@ -250,6 +260,10 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
 - **A form with a photo** (ST-016) uses `photoFormAction(command, { fields, photo: { field, owner }, input: (fields, photo) => …, onSuccess })`: the same runner, but the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `FormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
+- **After a rejection the photo must be chosen again** (UX guideline G8a, first: ST-023): the browser cannot put a
+  file back into the form. The action marks the state with `withPhotoToChooseAgain(state, formData)` – a photo was
+  attached and the rejection is not one of the photo errors, whose texts already say what to do – and the form's
+  rejection text adds the catalogue sentence. The two older report forms follow in ST-084.
 
 ## Photos and stored content (ST-016, ADR 0007)
 

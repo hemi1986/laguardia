@@ -75,6 +75,8 @@ erDiagram
 
 **Concurrency (HS-16):** the problem report is the consistency boundary of triage. *Record defect* is handled by the problem report, which marks itself triaged and creates the defect in one step; a concurrent second triage fails the version check on the problem report and is rejected.
 
+**Reported and triaged in one step (CMD-ReportProblem, user 2026-10-10):** a technician's problem report – and a helper's that is resolved on the spot – is stored already triaged: EVT-ProblemReported and the triage event (plus, for *defect recorded*, the new defect and an optional machine status change) are stored together or not at all. *Untriaged* is then never a stored state of that problem report; no new attribute is needed.
+
 **Lifecycle**
 
 ```mermaid

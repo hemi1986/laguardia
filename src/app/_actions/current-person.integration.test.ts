@@ -47,12 +47,22 @@ function reportProblem(headers: Headers, machineId: string, reported: string[] =
 }
 
 /** CMD-CreateMachineModel – technicians only. */
-function createMachineModel(headers: Headers) {
+function createMachineModel(headers: Headers, created: string[] = []) {
   return runnerWith(headers)(createMachineModelCommand, {
     fields: ["title"],
     input: ({ title }) => ({ title: title ?? "", manufacturer: "Bally", machineCategory: "pinball" as const }),
-    onSuccess: async () => {},
+    onSuccess: async ({ machineModelId }) => void created.push(machineModelId),
   });
+}
+
+/**
+ * The acting person of a technician's command – seen on a machine model: a technician's own problem report needs its
+ * triage outcome in the same step (ST-023), so the plain report is no longer a command a technician can run.
+ */
+async function actorOfMachineModel(headers: Headers) {
+  const created: string[] = [];
+  await createMachineModel(headers, created)(null, post({ title: `Actor model ${randomUUID()}` }));
+  return (await journalOf(db, { aggregateId: created[0] })).map((e) => e.actor);
 }
 
 async function actorOfReport(headers: Headers, fields: Record<string, string> = {}) {
@@ -89,7 +99,7 @@ describe("the acting person of a Server Action", () => {
   it("journals a command of a signed-in technician with the role technician", async () => {
     const technician = await signedIn("technician");
 
-    expect(await actorOfReport(technician.headers)).toEqual([
+    expect(await actorOfMachineModel(technician.headers)).toEqual([
       { kind: "team-member", teamMemberId: technician.id, role: "technician" },
     ]);
   });
@@ -135,7 +145,7 @@ describe("the acting person of a Server Action", () => {
       teamMemberId: helper.id,
     });
 
-    expect(await actorOfReport(helper.headers)).toEqual([
+    expect(await actorOfMachineModel(helper.headers)).toEqual([
       { kind: "team-member", teamMemberId: helper.id, role: "technician" },
     ]);
   });

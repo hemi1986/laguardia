@@ -33,7 +33,8 @@ aggregates:
     context: BC-Repair
     description: >-
       The consistency boundary of triage – every triage outcome is decided here, including Record defect,
-      where the problem report creates the new defect (HS-16). Refers to its machine and, once triaged, to its defect by ID only.
+      where the problem report creates the new defect (HS-16) – also when the outcome is chosen in the same step as
+      reporting (CMD-ReportProblem). Refers to its machine and, once triaged, to its defect by ID only.
     invariants:
       - A problem report refers to exactly one machine, which never changes
       - A problem report is triaged at most once – exactly one outcome (defect recorded, linked, resolved on the spot, dismissed)
@@ -44,7 +45,8 @@ aggregates:
     name: Defect
     context: BC-Repair
     description: >-
-      Contains its work log entries. Created only through triage of a problem report (Record defect, HS-16).
+      Contains its work log entries. Created only through triage of a problem report (Record defect, HS-16 – in the
+      triage list or in the same step as reporting, CMD-ReportProblem).
       Refers to its machine, its originating problem report and team members by ID only.
     invariants:
       - A defect refers to exactly one machine and to the problem report it was recorded from; neither ever changes
@@ -258,12 +260,24 @@ commands:
     aggregate: AGG-ProblemReport
     name: Report problem
     actor: ACT-Visitor
-    produces: [EVT-ProblemReported]
-    description: Also used by team members. A technician's own problem report is triaged in the same step.
+    produces: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot]
+    description: >-
+      Also used by team members. A technician's own problem report is triaged in the same step: besides
+      Problem reported it produces exactly one triage outcome – Defect recorded (ST-023), Problem report linked to defect
+      or Problem resolved on the spot (ST-052). A helper may resolve on the spot in the same step. Handled by the new
+      problem report, which marks itself triaged right away (HS-16); when a defect is recorded the technician may change
+      the machine status in the same step (see POL-DefectMayChangeMachineStatus, HS-3). The problem report and its
+      triage outcome are stored together or not at all (user, 2026-10-10).
     rules:
       - Visitors can report only for machines that are not Not on display and not retired
       - Team members can report for any machine that is not retired
       - Description is required, photo is optional
+      - "A technician's problem report must carry a triage outcome in the same step – record a defect, link to a defect or resolve on the spot; without one the command is rejected and nothing is stored (user, 2026-10-10)"
+      - A helper may add only the triage outcome resolve on the spot, or none; a helper's problem report with any other triage outcome is rejected and nothing is stored
+      - A visitor's problem report carries no triage outcome
+      - "The triage outcome in the same step follows all rules of its own command: CMD-RecordDefect (incl. only a stricter machine status), CMD-LinkProblemReportToDefect, CMD-ResolveProblemOnTheSpot; the reporter is the one who triages"
+      - In the same step a problem report can only be linked to an open defect of the same machine
+      - If the triage outcome is rejected, the problem report is not stored either
   - id: CMD-RecordDefect
     aggregate: AGG-ProblemReport
     name: Record defect
@@ -474,15 +488,18 @@ policies:
     name: New problem reports are triaged
     when: [EVT-ProblemReported]
     then: [CMD-RecordDefect, CMD-LinkProblemReportToDefect, CMD-ResolveProblemOnTheSpot, CMD-DismissProblemReport]
-    description: Manual routine of the technicians via the triage list; a technician's own report is triaged in the same step. Highlighted after 3 days.
+    description: >-
+      Manual routine of the technicians via the triage list, only for untriaged problem reports – a technician's own
+      report, and a helper's report resolved on the spot, are triaged in the same step (CMD-ReportProblem) and never
+      reach it. Highlighted after 3 days.
   - id: POL-DefectMayChangeMachineStatus
     name: A new or reopened defect may change the machine status
     when: [EVT-DefectRecorded, EVT-DefectReopened]
     then: [CMD-ChangeMachineStatus]
     description: >-
       Manual – the technician decides in the same step whether the machine becomes Limited or Out of order.
-      When recording a defect the status can only become stricter (rule on CMD-RecordDefect); a machine that is
-      Out of order or Not on display keeps its status.
+      When recording a defect – in triage or in the same step as reporting (CMD-ReportProblem) – the status can only
+      become stricter (rule on CMD-RecordDefect); a machine that is Out of order or Not on display keeps its status.
   - id: POL-ResolvedDefectsReturnMachineToPlay
     name: Machines without open defects return to play
     when: [EVT-DefectResolved]

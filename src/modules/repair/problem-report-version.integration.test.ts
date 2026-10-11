@@ -20,7 +20,12 @@ const deps = { actor: technician, db, clock: fixedClock("2026-09-27T10:00:00Z"),
 
 async function reportedProblem(machineId?: string) {
   machineId ??= await aRegisteredMachine(db);
-  const created = await executeCommand(reportProblemCommand, { machineId, description: "Display flickers" }, deps);
+  // Reported by a visitor: a technician's own problem report is never stored untriaged (ST-023).
+  const created = await executeCommand(
+    reportProblemCommand,
+    { machineId, description: "Display flickers" },
+    { ...deps, actor: { kind: "visitor" } },
+  );
   if (!created.ok) throw new Error(created.error);
   return { machineId, problemReportId: created.result.problemReportId };
 }

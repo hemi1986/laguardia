@@ -210,6 +210,21 @@ export const teamMessages = {
     retiredMeanwhile: (museumNumber: string) =>
       `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
   },
+  /** Reporting a problem and recording a defect in the same step (ST-023) – a technician's own problem report. */
+  reportAndRecordDefect: {
+    title: (museumNumber: string) => `Problem melden und Defekt erfassen · ${museumNumber}`,
+    /** The form's two sections: the problem report and the defect recorded from it. */
+    report: "Meldung",
+    defect: "Defekt",
+    /** As on the team's report form, without its sentence about triage – this problem report is triaged right here. */
+    descriptionHint: "Was ist kaputt, wo am Gerät?",
+    submit: "Melden und Defekt erfassen",
+    /** The choice page a technician sees instead of the plain report form (G21a). */
+    triage: "Sichten",
+    triagedWhenReporting: "Meldungen von Techniker:innen werden gleich beim Melden gesichtet.",
+    /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
+    photoAgain: "Das Foto muss erneut ausgewählt werden.",
+  },
   /** The open defects list and a defect's own page (ST-021). */
   defects: {
     title: "Defekte",
@@ -323,6 +338,8 @@ export const teamMessages = {
     "machine-not-found": "Dieses Gerät gibt es nicht.",
     "machine-not-on-display": "Dieses Gerät ist nicht ausgestellt.",
     "description-required": "Bitte beschreibe das Problem.",
+    /** A technician's problem report needs its triage outcome in the same step (ST-023). */
+    "triage-required": "Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.",
     "already-triaged": "Diese Meldung ist schon gesichtet.",
     "note-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "dismissal-reason-required": "Bitte einen Grund auswählen.",

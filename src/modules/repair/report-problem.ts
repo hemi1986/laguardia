@@ -13,7 +13,7 @@ export type Reporter = { kind: "visitor" } | { kind: "team-member"; teamMemberId
 /** Who may report a problem – the allowed actors of CMD-ReportProblem. */
 export const reportingActors = ["visitor", "helper", "technician"] as const;
 
-type ReportingPerson = ActorOf<(typeof reportingActors)[number]>;
+export type ReportingPerson = ActorOf<(typeof reportingActors)[number]>;
 
 /** The outcomes of triage (CONTEXT.md: Triage) – exactly one per triaged problem report. */
 export const triageOutcomes = ["defect-recorded", "linked", "resolved-on-the-spot", "dismissed"] as const;

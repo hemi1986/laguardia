@@ -52,10 +52,11 @@ describe("the Server Action runner", () => {
   });
 
   it("runs the command as the person currentPerson() gives – a visitor, or a team member", async () => {
-    const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-    await anExistingTeamMember(db, technician);
+    // A helper: a technician's own problem report needs its triage outcome in the same step (ST-023).
+    const helper = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, helper);
     const byVisitor: string[] = [];
-    const byTechnician: string[] = [];
+    const byHelper: string[] = [];
 
     expect(
       await reportProblemFor(await aRegisteredMachine(db), { kind: "visitor" }, (id) => byVisitor.push(id))(
@@ -63,13 +64,13 @@ describe("the Server Action runner", () => {
         post({ description: "Left flipper is weak" }),
       ),
     ).toBeNull();
-    await reportProblemFor(await aRegisteredMachine(db), technician, (id) => byTechnician.push(id))(
+    await reportProblemFor(await aRegisteredMachine(db), helper, (id) => byHelper.push(id))(
       null,
       post({ description: "Coil burnt" }),
     );
 
     expect((await journalOf(db, { aggregateId: byVisitor[0] })).map((e) => e.actor)).toEqual([{ kind: "visitor" }]);
-    expect((await journalOf(db, { aggregateId: byTechnician[0] })).map((e) => e.actor)).toEqual([technician]);
+    expect((await journalOf(db, { aggregateId: byHelper[0] })).map((e) => e.actor)).toEqual([helper]);
   });
 
   it("ignores forged actor, role and team member fields – the person still comes from currentPerson()", async () => {

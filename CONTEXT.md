@@ -124,7 +124,7 @@ _Avoid_: Ticket, issue, complaint, bug report
 _UI (de)_: Meldung
 
 **Triage**:
-The assessment of a problem report by a technician: it becomes a new defect, is linked to an existing defect, is resolved on the spot (helpers may do this too), or is dismissed.
+The assessment of a problem report by a technician: it becomes a new defect, is linked to an existing defect, is resolved on the spot (helpers may do this too), or is dismissed. A technician triages their own problem report in the same step as reporting it.
 _Avoid_: Review, screening
 _UI (de)_: Sichtung
 
