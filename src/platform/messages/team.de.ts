@@ -210,6 +210,11 @@ export const teamMessages = {
     retiredMeanwhile: (museumNumber: string) =>
       `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
   },
+  /** Reporting a problem and recording a defect in the same step (ST-023) – a technician's own problem report. */
+  reportAndRecordDefect: {
+    /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
+    photoAgain: "Das Foto muss erneut ausgewählt werden.",
+  },
   /** The open defects list and a defect's own page (ST-021). */
   defects: {
     title: "Defekte",

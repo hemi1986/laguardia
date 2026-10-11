@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { openDefectTitles, problemReportsOfMachine, reportProblemAndTriageCommand } from "@/modules/repair";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
-import { journalOf, type Actor } from "@/platform/command";
+import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { teamMessages } from "@/platform/messages";
 import { memoryStorage } from "@/platform/storage";
 import { photoFormRunner } from "@/app/_actions/form-runner";
 import { testDatabase } from "@/test-support/database";
@@ -13,7 +15,9 @@ import {
   reportAndRecordDefectFields,
   reportAndRecordDefectInput,
   reportAndRecordDefectPhoto,
+  withPhotoToChooseAgain,
 } from "./report-and-record-defect-input";
+import { rejectionText } from "./report-and-record-defect-rejection-text";
 
 /**
  * The form „Problem melden und Defekt erfassen“ (ST-023): its fields and input function run through the Server Action
@@ -56,7 +60,11 @@ function formFor(machineId: string, actor: Actor = tom) {
 }
 
 /** Nothing of a rejected form is stored: no problem report, no defect, no journal entry, no photo. */
-async function expectNothingStored(machineId: string, journalBefore: number, storage: ReturnType<typeof memoryStorage>) {
+async function expectNothingStored(
+  machineId: string,
+  journalBefore: number,
+  storage: ReturnType<typeof memoryStorage>,
+) {
   expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
   expect(await openDefectTitles(db, machineId)).toEqual([]);
   expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
@@ -72,11 +80,75 @@ describe("the form for reporting a problem and recording a defect", () => {
 
     const state = await action(
       null,
-      post({ description: "Left flipper coil stop broken", title: "", priority: "normal", machineStatus: "" }, await aPhoto()),
+      post(
+        { description: "Left flipper coil stop broken", title: "", priority: "normal", machineStatus: "" },
+        await aPhoto(),
+      ),
     );
 
     expect(state?.error).toBe("title-required");
     expect(reported).toEqual([]);
     await expectNothingStored(machineId, journalBefore, storage);
+  });
+
+  it("ST-023: A rejected report says the photo must be chosen again", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    const { action, storage } = formFor(machineId);
+    const withPhoto = post({ description: "Left flipper coil stop broken", title: "" }, await aPhoto());
+    const withoutPhoto = post({ description: "Left flipper coil stop broken", title: "" });
+
+    const rejected = withPhotoToChooseAgain(await action(null, withPhoto), withPhoto);
+    const rejectedWithoutPhoto = withPhotoToChooseAgain(await action(null, withoutPhoto), withoutPhoto);
+
+    await expectNothingStored(machineId, journalBefore, storage);
+    expect(rejectionText(rejected!, "LG-042")).toBe(
+      "Bitte einen Titel angeben. Das Foto muss erneut ausgewählt werden.",
+    );
+    // Only a form that had a photo attached says so.
+    expect(rejectionText(rejectedWithoutPhoto!, "LG-042")).toBe("Bitte einen Titel angeben.");
+  });
+
+  it("ST-023: A rejected photo gets no extra sentence about choosing it again", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    const { action, storage } = formFor(machineId);
+    const notAnImage = new File(["%PDF-1.7 not a photo"], "manual.pdf", { type: "application/pdf" });
+    const form = post({ description: "Left flipper coil stop broken", title: "Left flipper sticks" }, notAnImage);
+
+    const rejected = withPhotoToChooseAgain(await action(null, form), form);
+
+    await expectNothingStored(machineId, journalBefore, storage);
+    expect(rejected?.error).toBe("not-an-image");
+    // The text of ST-016, as on the team's report form without a defect – it already says what to do.
+    expect(rejectionText(rejected!, "LG-042")).toBe(teamMessages.commandErrors["not-an-image"]);
+    expect(rejectionText(rejected!, "LG-042")).not.toContain("erneut ausgewählt");
+    expect(rejected?.values.title).toBe("Left flipper sticks");
+  });
+
+  it("ST-023: Machine retired in the meantime stores nothing", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    // The form is open – its action is bound to the machine – when the machine is retired.
+    const { action, storage } = formFor(machineId);
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error("not retired");
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    const form = post({ description: "Left flipper coil stop broken", title: "Left flipper sticks" });
+
+    const rejected = withPhotoToChooseAgain(await action(null, form), form);
+
+    await expectNothingStored(machineId, journalBefore, storage);
+    expect(rejected).toMatchObject({
+      error: "machine-retired",
+      values: { description: "Left flipper coil stop broken", title: "Left flipper sticks" },
+    });
+    expect(rejectionText(rejected!, "LG-042")).toBe("LG-042 ist inzwischen ausgemustert. Es wurde nichts gespeichert.");
   });
 });

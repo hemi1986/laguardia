@@ -1,5 +1,6 @@
 import type { ReportProblemAndTriageInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
+import { photoErrors } from "@/photo";
 import { recordDefectInput } from "../../../../triage/[problemReportId]/defekt-erfassen/record-defect-input";
 import { teamReportProblemPhoto } from "../report-problem-input";
 
@@ -41,4 +42,19 @@ export function reportAndRecordDefectInput(
     photo,
     triage: { outcome: "defect-recorded", title, priority, suitableForHelpers, machineStatus, machineVersion },
   };
+}
+
+/**
+ * Marks a rejection after which the photo must be chosen again (G8a): the form had a photo attached, and the browser
+ * cannot put it back. Not after a rejection of the photo itself – ST-016's texts already say what to do with it
+ * (user, 2026-10-10). `formData` is the post the rejection answers.
+ */
+export function withPhotoToChooseAgain<State extends { error: string }>(
+  state: State | null,
+  formData: FormData,
+): (State & { photoAgain: boolean }) | null {
+  if (!state) return null;
+  const photo = formData.get(reportAndRecordDefectPhoto.field);
+  const attached = photo instanceof Blob && photo.size > 0;
+  return { ...state, photoAgain: attached && !(photoErrors as readonly string[]).includes(state.error) };
 }
