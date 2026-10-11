@@ -77,6 +77,18 @@ const eslintConfig = defineConfig([
               message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
             },
             {
+              // Test support (src/test-support: builders, the test database, things that exist) is for tests and
+              // their test support only – production code never imports it (ST-067, backlog grooming 2026-10-11).
+              from: {
+                element: {
+                  type: ["app", "module", "platform", "ui", "photo"],
+                  fileInternalPath: "!**/*.{test,test-support}.ts",
+                },
+              },
+              disallow: { to: { element: { type: "shared" } } },
+              message: "Test support (src/test-support) is only imported by tests – ST-067",
+            },
+            {
               // Shared UI components (ST-076) carry no domain logic: a page may use them, they know nothing of
               // the domain. Their texts come in as props, so they never read a message catalog either.
               from: { element: { type: "ui" } },
