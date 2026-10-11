@@ -3,7 +3,7 @@ id: ST-032
 title: Add photos to a work log entry
 type: story
 context: BC-Repair
-priority: should
+priority: could
 size: S
 risk: low
 events: [EVT-WorkLogged]

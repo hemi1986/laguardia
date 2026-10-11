@@ -23,7 +23,9 @@ Rules (`CONTEXT.md` *Due* / *Overdue*, `docs/architecture/data-model.md`, HS-20 
 - *Due since* = last done + interval (month arithmetic per the time convention, ST-003).
 - *Overdue* once the due date plus 25 % of the interval's actual number of days, rounded up to whole days, has passed (ST-003) – e.g. 12 months = 365 days → overdue 92 days after the due date.
 - Removed maintenance tasks are never due.
-- Within each maintenance task, machines are sorted by location. A filter shows only maintenance tasks suitable for helpers.
+- The list first shows each due maintenance task with its counts – on how many machines it is due and how many of those are overdue, in words („Glas reinigen · 12 Geräte, 3 überfällig“). The machines follow after choosing one maintenance task (G4a); the list never puts the machines of every task on the screen at once (backlog grooming 2026-10-11, user decision of 2026-10-12).
+- Within the chosen maintenance task, machines are sorted by location. A filter shows only maintenance tasks suitable for helpers.
+- When no maintenance task is due, the page says so in words (G7).
 - Machines *Not on display* and machines returning to display: ST-056.
 
 ## Acceptance Criteria
@@ -31,21 +33,35 @@ Rules (`CONTEXT.md` *Due* / *Overdue*, `docs/architecture/data-model.md`, HS-20 
 Scenario: Maintenance task becomes due
   Given the maintenance task "Clean playfield" (3 months, Pinball) has the start date 1 January 2026
   And the pinball machine "LG-042" was registered in 2025 and has no maintenance record for it
-  When a team member opens the due maintenance list on 2 April 2026
+  When a team member opens the due maintenance list on 2 April 2026 and chooses "Clean playfield"
   Then "Clean playfield" lists "LG-042" with machine model title, location, last done 1 January 2026 and due since 1 April 2026
 
 Scenario: Machine registered after the start date
   Given the maintenance task "Clean playfield" (3 months, Pinball) has the start date 1 January 2026
   And the pinball machine "LG-061" was registered on 15 May 2026
   When a team member opens the due maintenance list on 1 June 2026
-  Then "LG-061" is not listed for "Clean playfield"
+  Then "LG-061" is not counted or listed for "Clean playfield"
   And its last done for "Clean playfield" counts as 15 May 2026, so it is due from 15 August 2026
+
+Scenario: The list first shows each due maintenance task with its counts
+  Given "Clean glass (inside & out)" is due on 12 machines and overdue on 3 of them
+  And "Wax playfield" is due on 2 machines, none of them overdue
+  When a team member opens the due maintenance list
+  Then "Clean glass (inside & out)" is shown once, with 12 machines of which 3 are overdue, in words
+  And "Wax playfield" is shown once, with 2 machines
+  And no machine is listed before a maintenance task is chosen
 
 Scenario: Due maintenance tasks are grouped by maintenance task and sorted by location
   Given "Clean glass (inside & out)" is due on "LG-044" at "Hall 2, row 1", "LG-042" at "Hall 1, row 3" and "LG-043" at "Hall 1, row 1"
-  When a team member opens the due maintenance list
-  Then "Clean glass (inside & out)" is shown once with its instruction and suitable-for-helpers mark
+  When a team member opens the due maintenance list and chooses "Clean glass (inside & out)"
+  Then "Clean glass (inside & out)" is shown with its instruction and suitable-for-helpers mark
   And its machines are listed in the order "LG-043", "LG-042", "LG-044"
+
+Scenario: Nothing is due
+  Given no maintenance task is due on any machine
+  When a team member opens the due maintenance list
+  Then no maintenance task and no machine is listed
+  And it says in words that no maintenance is due right now
 
 Scenario: Filter suitable for helpers
   Given "Clean glass (inside & out)" (suitable for helpers) and "Check fuses, connectors, boards for burn marks" (not suitable) are both due

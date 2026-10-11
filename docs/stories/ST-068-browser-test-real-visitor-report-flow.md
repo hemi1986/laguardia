@@ -3,7 +3,7 @@ id: ST-068
 title: Browser test of the real visitor problem report flow
 type: tech-task
 context: BC-Repair
-priority: must
+priority: should
 size: M
 risk: medium
 events: []
@@ -57,4 +57,5 @@ The test needs a machine that is on display in the preview's database. Decided i
 - none – how the preview gets a machine on display was answered in the story review of 2026-09-27: seeded through `CMD-RegisterMachine` with a fixed test museum number, preview branches only, never production (see Task).
 
 ## Notes
+- `must` → `should` in the backlog grooming of 2026-10-11 (user decision of 2026-10-12, conflict B): built after go-live; until then the flow is covered locally by `e2e/report-problem.spec.ts`.
 - The acting person of the seed step (`CMD-RegisterMachine` is for technicians only) is decided in this story's test plan, when login (ST-004) and account management (ST-005) exist – user decision in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 6).

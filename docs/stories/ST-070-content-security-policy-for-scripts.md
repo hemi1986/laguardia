@@ -3,7 +3,7 @@ id: ST-070
 title: Full Content Security Policy for scripts
 type: tech-task
 context: BC-Repair
-priority: must
+priority: should
 size: M
 risk: medium
 events: []

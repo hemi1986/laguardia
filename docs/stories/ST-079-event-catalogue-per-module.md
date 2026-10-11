@@ -3,7 +3,7 @@ id: ST-079
 title: The event catalogue per module
 type: tech-task
 context: BC-Repair
-priority: must
+priority: wont
 size: null
 risk: null
 events: []
@@ -13,6 +13,8 @@ status: draft
 ---
 
 ## Task
+**Not built as a story: the journal mappings are converted as the opening refactoring of ST-049, the first story that needs typed journal reads (grooming 2026-10-11).** The text below is kept for the record.
+
 Build the **event catalogue per module** (architecture review 2026-09-27, decisions **Q4** and **Q15**) and convert every command built so far to it. Until now each command maps its own domain events to journal entries (ST-071).
 
 - **Q4 – event catalogue per module** (e.g. `src/modules/repair/events.ts`): for each event type its aggregate, how its machine is found, and an explicit journal projection – only the listed fields reach the journal, and none of them is free text a person typed (rule of 2026-09-27, `OPEN_QUESTIONS.md`, ST-003). Commands return domain events; the command layer maps them to journal entries through the catalogue, replacing the per-command mapping of ST-071. `journalOf` returns entries typed per event type.

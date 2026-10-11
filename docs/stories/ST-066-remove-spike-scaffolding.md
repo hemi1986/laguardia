@@ -3,7 +3,7 @@ id: ST-066
 title: Remove the spike configuration and data
 type: tech-task
 context: BC-Repair
-priority: must
+priority: wont
 size: S
 risk: low
 events: []
@@ -13,6 +13,8 @@ status: ready
 ---
 
 ## Task
+**Folded into ST-065 by the backlog grooming of 2026-10-11 (user decision of 2026-10-12) – not built as a story of its own.** Its code part was done with ST-078; what was left – deleting the spike environment variable, the `spike/` blobs and the spike rows on the old account – belongs to moving the hosting and is now section 5 and six checklist items of ST-065. The text below is kept for the record.
+
 Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review.md` finding #2) and of the photo spike ST-002 (`docs/reviews/ST-002-code-review.md` finding #3). Split from ST-065 in the story review `docs/reviews/2026-09-27-story-review.md` (decisions 1 and 3); moving hosting to the museum's Pro team stays with ST-065. Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 **Split on 2026-09-29 (user decision).** The **code** removal moved out of this story into **ST-078**, which runs right away – the spike pages, the passphrase gate, the upload route, the test page on `/`, the `spike` message block, the spike browser test and the spike's traces in the repository's configuration. What is left here is what a code change cannot do and what only makes sense once the code is gone: the spike's **configuration** and **data**, plus the defensive checks that nothing spike-shaped survived.

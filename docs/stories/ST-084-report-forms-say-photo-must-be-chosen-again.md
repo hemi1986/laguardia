@@ -3,7 +3,7 @@ id: ST-084
 title: Report forms say that the photo must be chosen again after a rejection
 type: story
 context: BC-Repair
-priority: should
+priority: could
 size: null
 risk: null
 events: [EVT-ProblemReported]

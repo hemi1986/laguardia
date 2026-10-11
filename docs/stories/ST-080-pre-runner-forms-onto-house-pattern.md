@@ -3,7 +3,7 @@ id: ST-080
 title: Move the four pre-runner forms onto the house pattern
 type: tech-task
 context: BC-Team
-priority: must
+priority: wont
 size: S
 risk: low
 events: []
@@ -13,6 +13,8 @@ status: draft
 ---
 
 ## Task
+**Not built as a story: the login and the own-password form are moved onto the house pattern directly (grooming 2026-10-11); the team members page is rebuilt by ST-081, the machine models page by ST-036.** The text below is kept for the record.
+
 Four forms were built before the house pattern existed: the **login**, the **team members** page, the **own password** page and the **machine models** page. ST-007 builds the first form on the new pattern – shadcn's `Field` with `data-invalid`/`aria-invalid`, an icon from `lucide-react` on `Confirmation` and `Rejection`, and the Server Action runner's `{ error, values }` contract. This task moves the four older forms onto it, so only one form pattern is left in the application (G15; two patterns side by side is the one thing that must not spread, `docs/reviews/_change-list-2026-10-01.md`).
 
 Scope (backlog grooming 2026-10-01, section 7):
@@ -37,5 +39,4 @@ This absorbs proposal **New A** of `docs/reviews/2026-10-01-ux-review-existing-s
 - The machine model's own page (ST-036)
 
 ## Open Questions
-- [OPEN] Login and account creation are **not** `aggregateCommand`s – they call Better Auth-backed Team module functions – so they cannot use `formAction`. Either `formRunner` is generalised to wrap a non-command async function with the same `{ error, values }` shape, or a hand-rolled `useActionState` wrapper mirrors its contract. This is an engineering decision and belongs in the implementation's test plan (`.claude/skills/engineering-conventions/SKILL.md`); it is not decided here.
-</content>
+- none. The former open point – login and account creation are **not** `aggregateCommand`s (they call Better Auth-backed Team module functions), so they cannot use `formAction`; generalise `formRunner` or mirror its `{ error, values }` contract in a hand-rolled wrapper – is no longer a question of this story: the decision goes into the direct change that moves the login and the own-password form onto the house pattern (backlog grooming 2026-10-11, user decision of 2026-10-12).

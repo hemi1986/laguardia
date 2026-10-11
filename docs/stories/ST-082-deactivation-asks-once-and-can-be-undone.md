@@ -3,7 +3,7 @@ id: ST-082
 title: Deactivating a team member asks once, and can be undone
 type: story
 context: BC-Team
-priority: must
+priority: wont
 size: null
 risk: null
 events: []
@@ -16,6 +16,8 @@ status: draft
 As a technician, I want to be asked once before I end a team member's access, and to be able to give it back, so that a mis-tap on a phone does not cost a volunteer their access for good.
 
 ## Context
+**Merged into ST-081 by the backlog grooming of 2026-10-11 (user decision of 2026-10-12) – not built as a story of its own.** Its context and its four scenarios are part of ST-081 now; the text below is kept for the record.
+
 Deactivating is one tap, it ends every session of that account, and nothing in La Guardia undoes it today. This story is what makes guideline **G10a** true – "what a person *sets* to manage access or visibility, they can unset" – together with **G10**, the question that names the person and the consequences nobody sees on this screen.
 
 - The question names the team member by name and says that they are logged out immediately ("Zugang für Anna Berger beenden? Anna wird sofort abgemeldet.", G10, G13).
@@ -59,4 +61,3 @@ Scenario: The last active technician still cannot be deactivated
 
 ## Open Questions
 - none
-</content>

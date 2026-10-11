@@ -8,7 +8,7 @@ size: S
 risk: medium
 events: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-043]
-labels: [mvp, maintenance]
+labels: [mvp, maintenance, ui]
 status: ready
 ---
 

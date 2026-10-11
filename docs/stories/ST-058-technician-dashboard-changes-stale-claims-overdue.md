@@ -3,7 +3,7 @@ id: ST-058
 title: Technician dashboard – recent changes, stale claims and overdue maintenance
 type: story
 context: BC-Repair
-priority: must
+priority: should
 size: M
 risk: medium
 events: [EVT-MachineStatusChanged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClaimed, EVT-WorkLogged, EVT-MaintenanceTaskOverdue]

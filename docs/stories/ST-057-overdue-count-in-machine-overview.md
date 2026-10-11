@@ -3,7 +3,7 @@ id: ST-057
 title: Number of overdue maintenance tasks in the machine overview
 type: story
 context: BC-Maintenance
-priority: should
+priority: could
 size: XS
 risk: low
 events: [EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
