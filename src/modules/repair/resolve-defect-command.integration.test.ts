@@ -123,4 +123,16 @@ describe("CMD-ResolveDefect", () => {
     expect(await openDefectTitles(db, machineId)).toEqual(["Display flickers"]);
     expect(await journalOf(db, { aggregateId: defectId })).toEqual([]);
   });
+
+  it("ST-028: A closing note is required", async () => {
+    const { machineId, defectId } = await anOpenDefect("Left flipper weak");
+
+    for (const closingNote of ["", "   \n "]) {
+      expect(await resolve(defectId, 0, closingNote, tom)).toEqual({ ok: false, error: "closing-note-required" });
+    }
+
+    expect(await defectDetails(db, defectId)).toMatchObject({ state: "open", resolution: undefined });
+    expect(await openDefectTitles(db, machineId)).toEqual(["Left flipper weak"]);
+    expect(await journalOf(db, { aggregateId: defectId })).toEqual([]);
+  });
 });
