@@ -157,4 +157,21 @@ describe("CMD-ResolveDefect", () => {
     });
     expect(await journalOf(db, { aggregateId: defectId })).toEqual(journalBefore);
   });
+
+  it("ST-028: Machine status stays unchanged", async () => {
+    // "Left flipper weak" is the only open defect of a machine that is Out of order.
+    const { machineId, defectId } = await anOpenDefect("Left flipper weak", false, "out-of-order");
+    expect(await openDefectTitles(db, machineId)).toEqual(["Left flipper weak"]);
+    const machineEventsBefore = (await journalSinceRegistration(db, machineId)).length;
+
+    const resolved = await resolve(defectId, 0, "Coil stop replaced", tom);
+
+    expect(resolved.ok).toBe(true);
+    expect(await openDefectTitles(db, machineId)).toEqual([]);
+    expect((await machineForReporting(db, machineId))?.machineStatus).toBe("out-of-order");
+    // Resolving is all that happened to the machine: no status change follows – a technician decides on it (HS-6).
+    expect(
+      (await journalSinceRegistration(db, machineId)).slice(machineEventsBefore).map((entry) => entry.type),
+    ).toEqual(["EVT-DefectResolved"]);
+  });
 });
