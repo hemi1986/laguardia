@@ -63,7 +63,12 @@ test("'Mehr' closes when a destination in it is chosen, and on Escape", async ({
 });
 
 test("login and the team start page stay within 360 px, with the rejection inside main", async ({ page }) => {
-  await page.goto("/login?error=login-failed");
+  // A rejected login – for a username nobody has, so no failed attempt counts against the e2e technician. (Until the
+  // backlog grooming of 2026-10-11 the rejection came from the address; now only a real rejected login shows it.)
+  await page.goto("/login");
+  await page.getByLabel("Benutzername").fill(`nobody_${Date.now().toString(36)}`);
+  await page.getByLabel("Passwort").fill("not-the-password");
+  await page.getByRole("button", { name: "Anmelden" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(/Anmeldung fehlgeschlagen/);
   await expect(page.getByLabel("Benutzername")).toBeVisible();

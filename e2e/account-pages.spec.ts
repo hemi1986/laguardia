@@ -86,3 +86,23 @@ test("a 60-character name without spaces keeps the account list within 360 px", 
   await expect(page.getByRole("article").filter({ hasText: accountUsername })).toHaveCount(1);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
+
+// „Passwort ändern“ on the house pattern (G8, backlog grooming 2026-10-11). The current password is the right one, so
+// the rejection is about the new one and no failed attempt is counted against the e2e technician.
+test("a new password that is too short is said above the submit button and marks its field", async ({ page }) => {
+  await page.goto("/team/password");
+  await page.getByLabel("Aktuelles Passwort").fill(password!);
+  await page.getByLabel("Neues Passwort").fill("short");
+  await page.getByRole("button", { name: "Speichern" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Das Passwort braucht mindestens 10 Zeichen.");
+  await expect(page.getByLabel("Neues Passwort")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Aktuelles Passwort")).not.toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Neues Passwort")).toHaveValue("");
+  const alert = await page.getByRole("main").getByRole("alert").boundingBox();
+  const submit = await page.getByRole("button", { name: "Speichern" }).boundingBox();
+  const field = await page.getByLabel("Neues Passwort").boundingBox();
+  expect(alert!.y).toBeGreaterThan(field!.y);
+  expect(alert!.y).toBeLessThan(submit!.y);
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+});
