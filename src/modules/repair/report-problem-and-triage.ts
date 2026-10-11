@@ -26,7 +26,11 @@ export type TriageInTheSameStep = { outcome: "defect-recorded" } & Omit<
 export type ReportProblemAndTriageInput = ReportProblemInput & { triage?: TriageInTheSameStep };
 
 /** A new problem report cannot have been triaged by someone else – every other rule of CMD-RecordDefect applies. */
-export type ReportProblemAndTriageError = ReportProblemError | Exclude<RecordDefectError, "already-triaged">;
+export type ReportProblemAndTriageError =
+  ReportProblemError | TriageRequired | Exclude<RecordDefectError, "already-triaged">;
+
+/** A technician's problem report without a triage outcome – rejected by the command itself (user, 2026-10-10). */
+export type TriageRequired = "triage-required";
 
 export function reportProblemAndTriage(
   facts: ReportingFacts,
@@ -35,7 +39,9 @@ export function reportProblemAndTriage(
 ): Decision<ProblemReport, ProblemReported | DefectRecorded, ReportProblemAndTriageError> {
   const reported = reportProblem(facts, input, context);
   const { actor } = context;
-  if (!reported.ok || !input.triage || actor.kind !== "team-member" || actor.role !== "technician") return reported;
+  if (!reported.ok || actor.kind !== "team-member" || actor.role !== "technician") return reported;
+  // A technician's problem report is never stored untriaged, whatever form sent it (CMD-ReportProblem rules).
+  if (!input.triage) return { ok: false, error: "triage-required" };
   const { title, priority, suitableForHelpers, machineStatus, machineVersion } = input.triage;
   const triaged = recordDefect(
     reported.state,

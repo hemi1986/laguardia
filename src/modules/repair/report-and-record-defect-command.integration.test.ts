@@ -6,7 +6,8 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { reportProblemAndTriageCommand, triageList } from ".";
+import { commandErrorText, teamMessages } from "@/platform/messages";
+import { problemReportsOfMachine, reportProblemAndTriageCommand, reportProblemCommand, triageList } from ".";
 import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.test-support";
 
 /**
@@ -72,6 +73,25 @@ describe("CMD-ReportProblem by a technician", () => {
       ["EVT-DefectRecorded", tom],
       ["EVT-MachineStatusChanged", tom],
     ]);
+  });
+
+  it("ST-023: A technician's problem report without a triage part is rejected", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+
+    const reported = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Left flipper coil stop broken" },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+
+    expect(reported).toEqual({ ok: false, error: "triage-required" });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
+    expect(commandErrorText(teamMessages, "triage-required")).toBe(
+      "Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.",
+    );
   });
 });
 

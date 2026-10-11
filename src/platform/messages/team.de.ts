@@ -323,6 +323,8 @@ export const teamMessages = {
     "machine-not-found": "Dieses Gerät gibt es nicht.",
     "machine-not-on-display": "Dieses Gerät ist nicht ausgestellt.",
     "description-required": "Bitte beschreibe das Problem.",
+    /** A technician's problem report needs its triage outcome in the same step (ST-023). */
+    "triage-required": "Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.",
     "already-triaged": "Diese Meldung ist schon gesichtet.",
     "note-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "dismissal-reason-required": "Bitte einen Grund auswählen.",

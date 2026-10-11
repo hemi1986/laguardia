@@ -22,11 +22,14 @@ function deps(actor: Actor, newId: () => string = randomUUID) {
 describe("command layer", () => {
   it("stores exactly the command's domain events in the journal with type, time, actor, aggregate and machine", async () => {
     const machineId = await aRegisteredMachine(db);
+    // A helper: a technician's own problem report needs its triage outcome in the same step (ST-023).
+    const helper = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, helper);
 
     const outcome = await executeCommand(
       reportProblemCommand,
       { machineId, description: "Left flipper is weak" },
-      deps(technician),
+      deps(helper),
     );
 
     if (!outcome.ok) throw new Error(outcome.error);
@@ -34,7 +37,7 @@ describe("command layer", () => {
       {
         type: "EVT-ProblemReported",
         occurredAt: new Date("2026-09-27T10:00:00Z"),
-        actor: technician,
+        actor: helper,
         aggregate: { type: "AGG-ProblemReport", id: outcome.result.problemReportId },
         machineId,
         // No free text in the journal: the description lives only in the problem report, where it can be removed.

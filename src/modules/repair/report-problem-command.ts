@@ -2,7 +2,7 @@ import { changeMachineStatusCommand } from "@/modules/collection";
 import { aggregateCommand, run, type Command } from "@/platform/command";
 import { problemReports, reportingFacts } from "./problem-reports";
 import { reportingActors, type ReportProblemError, type ReportProblemInput } from "./report-problem";
-import { reportProblemAndTriage } from "./report-problem-and-triage";
+import { reportProblemAndTriage, type TriageRequired } from "./report-problem-and-triage";
 
 const NO_VERSION_SEEN = -1;
 
@@ -54,10 +54,10 @@ export const reportProblemAndTriageCommand = aggregateCommand({
 /**
  * CMD-ReportProblem as a form without a triage part sends it (visitors, helpers) – the same command, typed by what
  * such a form can give and get back: without a triage part none of the triage outcome's rejections can occur, so a
- * visitor page needs no texts for them.
+ * visitor page needs no texts for them – only for the technician who sends such a form anyway.
  */
 export const reportProblemCommand = reportProblemAndTriageCommand as Command<
   ReportProblemInput,
   { problemReportId: string },
-  ReportProblemError
+  ReportProblemError | TriageRequired
 >;
