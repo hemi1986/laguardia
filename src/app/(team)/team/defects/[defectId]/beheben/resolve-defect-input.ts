@@ -1,6 +1,6 @@
 import type { ResolveDefectInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
-import { NO_VERSION_SEEN, wholeNumber } from "../../../defect-input";
+import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const resolveDefectFields = ["version", "closingNote"] as const;
@@ -14,7 +14,7 @@ export type ResolveDefectField = (typeof resolveDefectFields)[number];
 export function resolveDefectInput(fields: FormFields<ResolveDefectField>, defectId: string): ResolveDefectInput {
   return {
     defectId,
-    version: wholeNumber(fields.version) ?? NO_VERSION_SEEN,
+    version: versionSeen(fields.version),
     closingNote: fields.closingNote ?? "",
   };
 }

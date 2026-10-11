@@ -1,5 +1,6 @@
 import type { ResolveProblemOnTheSpotInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
+import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const resolveOnTheSpotFields = ["version", "note"] as const;
@@ -14,12 +15,9 @@ export function resolveOnTheSpotInput(
   fields: FormFields<ResolveOnTheSpotField>,
   problemReportId: string,
 ): ResolveProblemOnTheSpotInput {
-  const version = Number(fields.version);
   return {
     problemReportId,
-    version: fields.version && Number.isInteger(version) ? version : NO_VERSION_SEEN,
+    version: versionSeen(fields.version),
     note: fields.note ?? "",
   };
 }
-
-const NO_VERSION_SEEN = -1;

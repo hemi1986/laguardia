@@ -1,5 +1,6 @@
 import { reasonsByHand, type DismissProblemReportInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
+import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const dismissFields = ["version", "reason", "reasonText"] as const;
@@ -12,16 +13,13 @@ export type DismissField = (typeof dismissFields)[number];
  * the command layer answers with a conflict.
  */
 export function dismissInput(fields: FormFields<DismissField>, problemReportId: string): DismissProblemReportInput {
-  const version = Number(fields.version);
   return {
     problemReportId,
-    version: fields.version && Number.isInteger(version) ? version : NO_VERSION_SEEN,
+    version: versionSeen(fields.version),
     reason: reasonsByHand.find((reason) => reason === fields.reason),
     reasonText: fields.reasonText ?? "",
   };
 }
-
-const NO_VERSION_SEEN = -1;
 
 /**
  * Where a post of the form stands (ST-020, G10): a spam dismissal asks once before it runs – „Endgültig verwerfen“

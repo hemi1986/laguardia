@@ -10,6 +10,7 @@ import type { ReportAndRecordDefectState } from "./actions";
 import type { ReportAndRecordDefectField } from "./report-and-record-defect-input";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { isAboutDescription, ReportSection } from "../report-section";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { reportAndRecordDefect: texts, reportProblem } = teamMessages;
 
@@ -42,7 +43,7 @@ export function ReportAndRecordDefectForm({
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   if (machine.retired && !state) return <p>{reportProblem.retired}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state ? (isAboutDescription(state.error) ? "description" : fieldOf[state.error]) : undefined;
 
   return (

@@ -9,6 +9,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineCategory, Technology } from "@/modules/collection";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { createMachineModelAction } from "./actions";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { machineModels: texts, terms } = teamMessages;
 
@@ -35,7 +36,7 @@ export type Choices = {
  */
 export function CreateMachineModelForm({ categories, technologies }: Choices) {
   const [state, action, pending] = useActionState(createMachineModelAction, null);
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
 
   return (
     <form action={action} className="flex flex-col gap-4">

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, type VisitorMessages } from "@/platform/messages";
 import { PhotoField } from "../../../photo-field";
 import type { ReportProblemState } from "./actions";
+import { keptKey } from "@/app/_actions/form-parts";
 
 /**
  * The report form (ST-013): the description and an optional photo (ST-016) – no name, no e-mail address, no account. A
@@ -27,7 +28,7 @@ export function ReportProblemForm({
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   const texts = messages.reportForm;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   // Every rejection of this form is about the description, except the machine's own (not on display, unknown).
   const invalid = state?.error === "description-required" || state?.error === "description-too-long";
 

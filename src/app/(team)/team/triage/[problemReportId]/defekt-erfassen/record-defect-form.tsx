@@ -10,6 +10,7 @@ import type { RecordDefectState } from "./actions";
 import { DefectFields } from "../../../defect-fields";
 import type { RecordDefectField } from "./record-defect-input";
 import { rejectionText } from "./record-defect-rejection-text";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { recordDefect: texts, triage } = teamMessages;
 
@@ -44,11 +45,11 @@ export function RecordDefectForm({
   const [state, action, pending] = useActionState(record, null);
   const rejectionId = useId();
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <DefectFields
         values={state?.values}
         kept={kept}

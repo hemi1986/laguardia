@@ -1,6 +1,6 @@
 import type { LogWorkInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
-import { NO_VERSION_SEEN, wholeNumber } from "../../../defect-input";
+import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const logWorkFields = ["version", "whatWasDone", "partsUsed"] as const;
@@ -15,7 +15,7 @@ export type LogWorkField = (typeof logWorkFields)[number];
 export function logWorkInput(fields: FormFields<LogWorkField>, defectId: string): LogWorkInput {
   return {
     defectId,
-    version: wholeNumber(fields.version) ?? NO_VERSION_SEEN,
+    version: versionSeen(fields.version),
     whatWasDone: fields.whatWasDone ?? "",
     partsUsed: fields.partsUsed ?? "",
   };

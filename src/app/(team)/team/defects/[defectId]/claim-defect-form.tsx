@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Rejection } from "@/components/ui/message";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import type { ClaimDefectState } from "./actions";
+import { VersionField } from "@/app/_actions/form-parts";
 
 /**
  * The claim button of a defect's page (ST-025): one button that says what will happen (G14) – „Übernehmen“, or „Von Tom
@@ -29,7 +30,7 @@ export function ClaimDefectForm({
 
   return (
     <form action={action} className="flex flex-col gap-2">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       {state && <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>}
       {offered && (
         <Button type="submit" disabled={pending} className="self-start">

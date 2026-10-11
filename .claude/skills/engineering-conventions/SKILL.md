@@ -291,8 +291,11 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **One small typed input function per action** (Q19), no schema library: it reads and converts the fields, domain validation stays in the decision. **The empty-field rule:** a missing or empty field becomes "no value given" and the decision decides – a text field an empty string; a field that is not free text `undefined`. Example ST-007: a missing machine model becomes "no machine model given", which CMD-RegisterMachine rejects ("Machine model and location are required"); a missing museum number – optional there – becomes "no museum number given" and the command assigns one. The input function **never fills in a default** and never throws; an unknown enumeration value is "no value given" too. This holds for every form on the runner; the ST-005 account actions predate it (their `role()` helper falls back to helper) and follow it when they move onto a command.
 - **A form on an existing aggregate** (first: ST-012, `…/[museumNumber]/status/`) posts the aggregate's ID and the
   version its page loaded as hidden fields; the page reads them with a query that returns the version (e.g.
-  `machineForTeamForm`). The input function converts a version that is not a whole number to `-1` – a version
-  nobody saw, which the command layer answers with `version-conflict`. **Every Server Action re-renders the page it
+  `machineForTeamForm`). The form renders the version with `<VersionField version={…} />` and keys every field that
+  keeps its value on `keptKey(state)` (`src/app/_actions/form-parts.tsx`); the input function reads it with
+  `versionSeen(fields.version)` (`src/app/_actions/version.ts`) – a version that is not a whole number is `-1`, a
+  version nobody saw, which the command layer answers with `version-conflict`. No form writes these three by hand
+  (architecture review 2026-10-11). **Every Server Action re-renders the page it
   was posted from** (`currentPerson()` renews the session cookie, and a cookie change makes Next.js re-render the
   current route in the action's response – ST-019 review, 2026-10-05). So after a rejection the form posts the version
   stored *now*, not the one the page first loaded. That is safe because the decision runs first: a domain rejection

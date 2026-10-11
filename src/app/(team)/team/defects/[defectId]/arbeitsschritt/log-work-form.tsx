@@ -7,6 +7,7 @@ import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
 import type { LogWorkState } from "./actions";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { defects: texts } = teamMessages;
 
@@ -29,12 +30,12 @@ export function LogWorkForm({
   const [state, action, pending] = useActionState(logWork, null);
   const rejectionId = useId();
   if (whyNot && !state) return <p>{commandErrorText(teamMessages, whyNot)}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state?.error === "what-was-done-required";
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <Field data-invalid={invalid}>
         <FieldLabel htmlFor="whatWasDone">{texts.whatWasDone}</FieldLabel>
         <Textarea

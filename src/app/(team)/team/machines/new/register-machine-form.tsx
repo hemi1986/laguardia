@@ -10,6 +10,7 @@ import type { MachineStatus } from "@/modules/collection";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { registerMachineAction, type RegisterMachineState } from "./actions";
 import type { RegisterMachineField } from "./register-machine-input";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { machines: texts, terms } = teamMessages;
 
@@ -38,7 +39,7 @@ const fieldOf: Partial<Record<ErrorCode, RegisterMachineField>> = {
 export function RegisterMachineForm({ machineModels, machineStatuses }: Choices) {
   const [state, action, pending] = useActionState(registerMachineAction, null);
   const rejectionId = useId();
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
   /** Marks a field as the cause of the rejection and links it to the reason, next to its own hint if it has one. */
   const marked = (field: RegisterMachineField, hint?: string) => {

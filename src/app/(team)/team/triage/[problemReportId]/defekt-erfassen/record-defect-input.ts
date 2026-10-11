@@ -1,6 +1,7 @@
 import type { RecordDefectInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
-import { defectInput, NO_VERSION_SEEN, wholeNumber } from "../../../defect-input";
+import { versionSeen } from "@/app/_actions/version";
+import { defectInput } from "../../../defect-input";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const recordDefectFields = [
@@ -16,5 +17,5 @@ export type RecordDefectField = (typeof recordDefectFields)[number];
 
 /** Reads the form „Defekt erfassen“: the problem report, the version of it the technician saw, and the defect. */
 export function recordDefectInput(fields: FormFields<RecordDefectField>, problemReportId: string): RecordDefectInput {
-  return { problemReportId, version: wholeNumber(fields.version) ?? NO_VERSION_SEEN, ...defectInput(fields) };
+  return { problemReportId, version: versionSeen(fields.version), ...defectInput(fields) };
 }

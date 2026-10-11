@@ -9,6 +9,7 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { LinkToDefectState } from "./actions";
 import { triageRejectionText } from "../triage-rejection-text";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { link: texts, triage } = teamMessages;
 
@@ -35,12 +36,12 @@ export function LinkToDefectForm({
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
   // Nothing to choose: the page says so (G7) – no form that could only be rejected. After a rejection it stays.
   if (openDefects.length === 0 && !state) return null;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state?.error === "defect-required" || state?.error === "defect-not-open";
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <FieldSet data-invalid={invalid || undefined} aria-describedby={invalid ? rejectionId : undefined}>
         <FieldLegend variant="label">{texts.defect}</FieldLegend>
         {openDefects.map((defect) => (

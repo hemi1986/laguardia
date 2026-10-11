@@ -10,6 +10,7 @@ import type { MachineStatus } from "@/modules/collection";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { changeMachineStatusAction, type ChangeMachineStatusState } from "./actions";
 import type { ChangeMachineStatusField } from "./change-machine-status-input";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { machines, machineStatusChange: texts } = teamMessages;
 
@@ -39,7 +40,7 @@ export function ChangeMachineStatusForm({
 }) {
   const [state, action, pending] = useActionState(changeMachineStatusAction, null);
   const rejectionId = useId();
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
   const marked = (field: ChangeMachineStatusField, hint?: string) => {
     const describedBy = [hint, invalid === field ? rejectionId : undefined].filter(Boolean).join(" ");
@@ -50,7 +51,7 @@ export function ChangeMachineStatusForm({
   return (
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="machineId" value={machineId} />
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <Field data-invalid={invalid === "machineStatus"}>
         <FieldLabel htmlFor="machineStatus">{machines.status}</FieldLabel>
         <NativeSelect
