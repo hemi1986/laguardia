@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { dismissProblemReportCommand, reportProblemCommand, resolveProblemOnTheSpotCommand } from "@/modules/repair";
-import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";

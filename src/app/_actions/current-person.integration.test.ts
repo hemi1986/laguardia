@@ -10,6 +10,7 @@ import { testDatabase } from "@/test-support/database";
 import { currentPersonOf } from "./current-person";
 import { formRunner } from "./form-runner";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
+import { post } from "@/test-support/forms";
 
 /**
  * The acting person comes from the session in one place (ST-069): the runner (ST-073) bound to the real session
@@ -67,18 +68,16 @@ async function actorOfMachineModel(headers: Headers) {
 
 async function actorOfReport(headers: Headers, fields: Record<string, string> = {}) {
   const reported: string[] = [];
-  await reportProblem(headers, await aRegisteredMachine(db), reported)(null, post({ description: "Ball stuck", ...fields }));
+  await reportProblem(
+    headers,
+    await aRegisteredMachine(db),
+    reported,
+  )(null, post({ description: "Ball stuck", ...fields }));
   return (await journalOf(db, { aggregateId: reported[0] })).map((e) => e.actor);
 }
 
 async function machineModelTitled(title: string) {
   return (await machineModelsToChooseFrom(db)).filter((model) => model.title === title);
-}
-
-function post(fields: Record<string, string>): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  return form;
 }
 
 afterEach(() => {

@@ -9,7 +9,7 @@ import {
   changeDescriptionForTest,
   changeWithoutVersionForTest,
   splitForTest,
-} from "./problem-report-stand-ins.test-support";
+} from "./command-probes.test-support";
 import { problemReports } from "./problem-reports";
 import { aRegisteredMachine } from "@/test-support/machines";
 

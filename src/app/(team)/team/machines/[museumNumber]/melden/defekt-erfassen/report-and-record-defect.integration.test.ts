@@ -23,6 +23,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndRecordDefectFields, reportAndRecordDefectInput } from "./report-and-record-defect-input";
 import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
 import { rejectionText } from "../report-and-triage-rejection-text";
+import { post } from "@/test-support/forms";
 
 /**
  * The form „Problem melden und Defekt erfassen“ (ST-023): its fields and input function run through the Server Action
@@ -32,13 +33,6 @@ import { rejectionText } from "../report-and-triage-rejection-text";
 const db = testDatabase();
 const clock = fixedClock("2026-10-11T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-
-function post(fields: Record<string, string>, photo?: File): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  if (photo) form.append("photo", photo);
-  return form;
-}
 
 /** A photo as the browser prepared it. */
 async function aPhoto(): Promise<File> {

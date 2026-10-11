@@ -11,7 +11,7 @@ import {
   reportWithIdlePolicyForTest,
   reportWithPolicyForTest,
   reportWithRejectedPolicyForTest,
-} from "./problem-report-stand-ins.test-support";
+} from "./command-probes.test-support";
 import { problemReports } from "./problem-reports";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 

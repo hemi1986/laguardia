@@ -8,7 +8,7 @@ import {
   resolveDefectCommand,
 } from "@/modules/repair";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
-import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -20,6 +20,7 @@ import { reportAndResolveFields, reportAndResolveInput } from "../direkt-behoben
 import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { reportAndLinkFields, reportAndLinkInput } from "./report-and-link-input";
+import { post } from "@/test-support/forms";
 
 /**
  * The forms „Problem melden und mit Defekt verknüpfen“ and „… und als direkt behoben eintragen“ (ST-052): their fields
@@ -30,13 +31,6 @@ const db = testDatabase();
 const clock = fixedClock("2026-10-12T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
-
-function post(fields: Record<string, string>, photo?: File): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  if (photo) form.append("photo", photo);
-  return form;
-}
 
 /** A photo as the browser prepared it. */
 async function aPhoto(): Promise<File> {

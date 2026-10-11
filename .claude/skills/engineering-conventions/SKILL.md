@@ -410,6 +410,17 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 | Everything | `npm run verify` (`--e2e` for browser tests) | lint, types, tests, traceability |
 
 - **Titles:** every Gherkin scenario of a story has exactly one test titled `ST-NNN: <scenario title>` (checked by `verify.ts`). Tech-task tests describe behaviour without the prefix.
+- **Things that exist** (architecture review 2026-10-11): what a scenario's "Given" names comes from `src/test-support/`,
+  set up through the commands – `aRegisteredMachine(db, status)` (`machines.ts`), `anOpenDefectIn(db, { recordedBy, at,
+  title, suitableForHelpers, machineStatus })` (`defects.ts`, returns machine, defect and problem report IDs),
+  `post(fields, photo?)` for a posted form (`forms.ts`). A test binds its database, acting people and clock once in a
+  one-line helper of its own (`const anOpenDefect = (title) => anOpenDefectIn(db, { title, recordedBy: tom, at })`) – it
+  does not copy the command call. A page test in an isolated database that needs "LG-042" of a given machine model
+  still registers its machines itself.
+- **Probes of the command layer** live in `src/modules/repair/command-probes.test-support.ts`: commands that do what
+  no real command does (for the version check, the policies, the histories), and `storedProblemReport` /
+  `storedDefect` for the few command tests that check a state no read model shows. Prefer the read model
+  (`defectDetails`, `problemReportsOfMachine`) wherever it shows the fact; a real command is never stood in for.
 - **Test data:** builders in `src/test-support/builders.ts` (`aMachine`, `aDefect`, `aHelper`, `aTechnician`, …) – override only what the test is about. Switch a builder to the real domain type when the aggregate gets one.
 - **Time:** `fixedClock(…)` for every command and rule; `BUILDER_TIME` is the builders' default.
 - **Acting team members exist:** a test actor `{ kind: "team-member", teamMemberId }` must exist as an account (foreign keys, ST-004): `anExistingTeamMember(db, actor)` from `src/test-support/team-members.ts`; accounts with a password come from the Team module's own test support.
@@ -420,6 +431,10 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **The QR address `/m/<museum number>`** (ST-010, scheme and domain: `docs/architecture/qr-address.md`, ST-060) is public and never stored by a shared cache: its page reads the request (`headers()`, `cookies()` – the language, with ST-011 the session), so Next.js renders it per request and sends `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` itself. A `Cache-Control` from `next.config.ts` would be overridden – don't add one. `next dev` sends its own header, so the check runs against the preview only. `notFound()` gives 404 only for non-streamed responses, and `not-found.tsx` gets no props. A malformed percent-encoding in the address never reaches a page – Next.js answers 400 itself.
 - **The QR sticker's domain** is the constant `QR_DOMAIN` in `src/app/qr-address.ts` (`qrAddress(museumNumber)`) – never the request's host or `VERCEL_PROJECT_PRODUCTION_URL` (ST-011, `docs/architecture/qr-address.md`). A logged-in team member opening `/m/<number>` is redirected to the machine record. Pages made for printing live in the route group `src/app/(print)/` – no team navigation, they check access themselves; the label sheet's millimetres are one `LabelSheet` entry (`L7160`).
 - **A second browser context** (a visitor's phone beside the test's own page) needs the preview's protection bypass too: `allowPreview(page, baseURL)` from `e2e/fixtures.ts`, then one navigation before the response under test.
+- **Browser tests share their helpers in `e2e/fixtures.ts`** (architecture review 2026-10-11): `logIn(page, account?)`
+  (the e2e technician by default), `aHelper(page)`, `aMachine(page, machineStatus?, location?)`, `anOpenDefect(page,
+  { suitableForHelpers })`, `openDefect`, `openDefectsEntry`, `unique` / `uniqueId`, `pageWidth`, `TECHNICIAN`. A spec
+  defines a helper of its own only for what is particular to it – never a second copy of one of these.
 - **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
 - Never weaken or delete a test to get green.
 

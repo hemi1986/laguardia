@@ -11,8 +11,8 @@ import {
   recordDefectCommand,
   reportProblemCommand,
   resolveProblemOnTheSpotCommand,
+  dismissProblemReportCommand,
 } from "@/modules/repair";
-import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
@@ -170,8 +170,8 @@ describe("the visitor machine page", () => {
     const [triaged] = await problemReportsOfMachine(db, machineId);
     await reported(machineId, "Left flipper weak", "2026-10-03T09:00:00Z");
     const outcome = await executeCommand(
-      triageForTest,
-      { problemReportId: triaged.id, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: triaged.id, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: tom, db, newId: randomUUID },
     );
     if (!outcome.ok) throw new Error("not triaged");

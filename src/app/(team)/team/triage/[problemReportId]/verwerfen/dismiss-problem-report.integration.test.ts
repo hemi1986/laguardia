@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
 import { dismissProblemReportCommand, reportProblemCommand, triageList } from "@/modules/repair";
-import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type ContentStorage } from "@/platform/storage";
@@ -14,6 +14,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadProblemReport } from "../problem-report-data";
 import { ProblemReportView } from "../problem-report";
 import { dismissFields, dismissInput } from "./dismiss-input";
+import { post } from "@/test-support/forms";
 
 /**
  * The form „Meldung verwerfen“ (ST-020) through the Server Action runner, as a technician, with the in-memory storage
@@ -51,12 +52,6 @@ function dismissForm(problemReportId: string, storage: ContentStorage) {
       onSuccess: async () => {},
     },
   );
-}
-
-function post(fields: Record<string, string>): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  return form;
 }
 
 describe("the form „Meldung verwerfen“", () => {

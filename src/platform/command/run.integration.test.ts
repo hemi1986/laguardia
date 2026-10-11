@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { machineRecord } from "@/modules/collection";
 import { problemReportsOfMachine } from "@/modules/repair";
-import { reportAndChangeStatusForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { reportAndChangeStatusForTest } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";

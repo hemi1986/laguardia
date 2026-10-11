@@ -1,20 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import {
-  claimDefectCommand,
-  defectDetails,
-  logWorkCommand,
-  openDefects,
-  reportProblemAndTriageCommand,
-  resolveDefectCommand,
-} from ".";
-import { tamperWithWorkLogForTest } from "./problem-report-stand-ins.test-support";
+import { claimDefectCommand, defectDetails, logWorkCommand, openDefects, resolveDefectCommand } from ".";
+import { tamperWithWorkLogForTest } from "./command-probes.test-support";
+import { anOpenDefectIn } from "@/test-support/defects";
 
 /** CMD-LogWork (ST-024) through the command layer: a team member logs what they did on a defect. */
 const db = testDatabase();
@@ -23,29 +16,8 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
 /** An open defect on a machine of its own, reported and recorded by Tom (ST-023). */
-async function anOpenDefect(title: string, suitableForHelpers = false) {
-  await anExistingTeamMember(db, tom, "Tom");
-  await anExistingTeamMember(db, anna, "Anna");
-  const machineId = await aRegisteredMachine(db);
-  const reported = await executeCommand(
-    reportProblemAndTriageCommand,
-    {
-      machineId,
-      description: `${title} – first seen`,
-      triage: {
-        outcome: "defect-recorded",
-        title,
-        priority: undefined,
-        suitableForHelpers,
-        machineStatus: undefined,
-        machineVersion: undefined,
-      },
-    },
-    { actor: tom, db, clock: recorded, newId: randomUUID },
-  );
-  if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
-  return { machineId, defectId: reported.result.defectId };
-}
+const anOpenDefect = (title: string, suitableForHelpers = false) =>
+  anOpenDefectIn(db, { title, suitableForHelpers, recordedBy: tom, at: recorded });
 
 function logWork(
   defectId: string,
@@ -60,6 +32,11 @@ function logWork(
     { actor, db, clock: fixedClock(at), newId: randomUUID },
   );
 }
+
+beforeAll(async () => {
+  await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, anna, "Anna");
+});
 
 describe("CMD-LogWork", () => {
   it("ST-024: Team member logs work", async () => {

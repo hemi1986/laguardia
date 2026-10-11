@@ -9,7 +9,7 @@ import { machineRecord } from "@/modules/collection";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { recordDefectCommand, reportProblemCommand, triageList } from ".";
-import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedDefect, storedProblemReport } from "./command-probes.test-support";
 
 /** CMD-RecordDefect (ST-018) through the command layer – handled by the problem report (HS-16). */
 const db = testDatabase();

@@ -8,7 +8,7 @@ import { aRegisteredMachine } from "@/test-support/machines";
 import { whileHoldingRow } from "@/test-support/held-row";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { recordDefectCommand, reportProblemCommand } from ".";
-import { storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedProblemReport } from "./command-probes.test-support";
 
 /**
  * Two technicians triage the same problem report at the same time (ST-018, HS-16) – two real transactions on the same

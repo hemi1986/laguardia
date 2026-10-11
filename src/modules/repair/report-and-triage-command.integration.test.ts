@@ -6,7 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { openDefectTitles, reportProblemAndTriageCommand, triageList } from ".";
-import { storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedProblemReport } from "./command-probes.test-support";
 
 /**
  * CMD-ReportProblem with the triage outcomes *resolved on the spot* and *linked* in the same step (ST-052): a

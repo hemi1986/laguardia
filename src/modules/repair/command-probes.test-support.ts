@@ -5,7 +5,10 @@ import { problemReports, reportingFacts } from "./problem-reports";
 import { reportProblem, reportingActors, type ReportProblemInput } from "./report-problem";
 
 /**
- * Test stand-ins for the triage commands to come (ST-018 ff.) – commands on an existing problem report.
+ * Probes of the command layer on Repair's aggregates – commands that do what no command of the module does (change a
+ * description at a version, run without a version, trigger a policy, tamper with a history), so the tests of the
+ * version check, the policies and the histories have something to run – and the stored aggregates for the command
+ * tests that check a state no read model shows yet. Every triage command is real by now; none is stood in for here.
  * Only imported by tests.
  */
 
@@ -164,40 +167,6 @@ export const changeWithoutVersionForTest = aggregateCommand({
 export async function storedProblemReport(db: Database, problemReportId: string) {
   return (await problemReports.load(db, problemReportId))?.state;
 }
-
-/**
- * Test stand-in for the triage commands (ST-018 ff.): the problem report is triaged with the given outcome at the
- * version the technician saw – it leaves the untriaged lists.
- */
-export const triageForTest = aggregateCommand({
-  id: "CMD-TestTriage",
-  allowedActors: ["technician"],
-  store: problemReports,
-  target: (input: { problemReportId: string; version: number }) => ({
-    id: input.problemReportId,
-    version: input.version,
-  }),
-  decide: (report, _input, { actor, clock }) => ({
-    ok: true as const,
-    state: {
-      ...report,
-      triage: {
-        outcome: "dismissed" as const,
-        triagedBy: actor.teamMemberId,
-        triagedAt: clock.now(),
-        dismissal: { reason: "not-a-fault" as const },
-      },
-    },
-    events: [{ type: "EVT-TestTriaged" as const }],
-  }),
-  journal: (event, report) => ({
-    type: event.type,
-    aggregate: { type: "AGG-ProblemReport", id: report.id },
-    machineId: report.machineId,
-    data: {},
-  }),
-  result: () => ({}),
-});
 
 /**
  * Test stand-in for `context.run` (ST-018): reports a problem like CMD-ReportProblem and then runs Collection's
