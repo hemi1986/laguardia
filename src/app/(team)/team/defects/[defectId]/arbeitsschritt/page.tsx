@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
-import { logWorkRefusal } from "@/modules/repair";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -15,9 +14,9 @@ const { defects: texts } = teamMessages;
  * machine, and lands on the defect's page. Every team member, on every open defect (HS-8).
  */
 export default async function LogWorkPage({ params }: PageProps<"/team/defects/[defectId]/arbeitsschritt">) {
-  await requireTeamMember();
+  const member = await requireTeamMember();
   const { defectId } = await params;
-  const details = await loadDefectForForm(database(), defectId, logWorkRefusal);
+  const details = await loadDefectForForm(database(), defectId, member, "log-work");
 
   return (
     <Page title={details ? texts.logWorkTitle(details.museumNumber) : teamMessages.terms.Defect}>

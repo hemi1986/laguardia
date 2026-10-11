@@ -192,20 +192,31 @@ and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY
 `drizzle/0014_…`: the defect's reference to its problem report).
 
 **A command behind a single button** (first: CMD-ClaimDefect, ST-025): the button is a small client form that posts
-the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule, asked
-by the page: the decision's reasons for refusing are one exported function (`claimRefusal(defect, actor)`), which the
-decision applies and the page's data function calls with the team member looking at the page (`viewer`) – no second
-copy of the rule in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
+the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule: the
+decision's reasons for refusing are one function next to it (`claimRefusal(defect, actor)`), which the decision applies
+and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
+in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
 over from) is a reference in the event's journal data, listed in `events.yaml`, and read back by a function that sits
 next to the journal mapping (`takenOverFrom` in `claim-defect-command.ts`) – only for the confirmation, never taken
 from the address.
 
+**What a team member can do to a defect** (architecture review 2026-10-11): `src/modules/repair/defect-actions.ts` is
+the one place that knows the actions on a defect (`defectActions`, in the order the page offers them), each command's
+reason for refusing a team member (`defectActionRefusals`, built from the refusal function next to each decision) and
+which event belongs to which action. `defectDetails(db, id, teamMember)` returns that answer as `actions`; the defect's
+page shows what is `offered`, and a form page shows the reason in place of its form (`defect-form-data.ts`) – no page
+carries a rule or a `can…` flag of its own (G11). **A new command on a defect** adds: its action and refusal there, its
+event in `actionOfEvent`, a confirmation text and – if it needs input – its form page in the two small maps of
+`defect-details.tsx`. After an action the Server Action lands on `/team/defects/<id>?done=<action>`; the page confirms it
+only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
+never from the address alone, and without a state field per action.
+
 **An action on a defect that needs input** (first: CMD-ResolveDefect, ST-028 – G21): a button-styled link on the
-defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`), which repeats the defect, loads only
-what it shows (`defect-form-data.ts`, shared with „Arbeitsschritt eintragen“, ST-024) and lands on the defect's page with a confirmation (`?resolved=1`, shown
-only to who did it). The offer is the command's own rule again (`resolveRefusal`); the form page shows that reason in
-place of the form to someone who may not, unless there is an action state to keep. A history on the defect (its
-resolutions) is stored like the machine status history – the store wraps the row store with `saveHistory`.
+defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`, `…/arbeitsschritt/`), which repeats the
+defect, loads only what it shows (`loadDefectForForm(db, defectId, viewer, action)`) and lands on the defect's page. The
+form page shows the command's reason in place of the form to someone it would refuse, unless there is an action state to
+keep. A history on the defect (work log, resolutions) is stored like the machine status history – the store wraps the
+row store with `saveHistory`.
 
 **Two transactions racing for one row** in a test: `whileHoldingRow(db, sql\`SELECT … FOR UPDATE\`, race)` from
 `src/test-support/held-row.ts` – it counts only the sessions blocked by its own holding transaction, so tests running

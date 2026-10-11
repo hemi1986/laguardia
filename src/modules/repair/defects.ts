@@ -9,6 +9,7 @@ import {
   type Resolution,
   type WorkLogEntry,
 } from "./defect";
+import { defectActionRefusals, type DefectActionRefusals, type DefectTeamMember } from "./defect-actions";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
@@ -248,6 +249,11 @@ export type DefectDetails = {
   version: number;
   /** Its claim, if any (ST-025). */
   claim: Claim | undefined;
+  /**
+   * What the asking team member can do to it – per action the command's reason for refusing, or none (G11). Undefined
+   * when nobody in particular asked.
+   */
+  actions: DefectActionRefusals | undefined;
   /** Its work log (ST-024), the oldest entry first – the page decides the order it shows. */
   workLog: WorkLogEntry[];
   /** How it ended – the resolution that made it resolved (ST-028); none while it is open. */
@@ -255,11 +261,19 @@ export type DefectDetails = {
   problemReports: DefectProblemReport[];
 };
 
-/** A defect with its problem reports; undefined for an unknown ID, or an address that is no ID at all. */
-export async function defectDetails(db: Database, defectId: string): Promise<DefectDetails | undefined> {
+/**
+ * A defect with its problem reports – and, for the team member who asks, what they can do to it; undefined for an
+ * unknown ID, or an address that is no ID at all.
+ */
+export async function defectDetails(
+  db: Database,
+  defectId: string,
+  teamMember?: DefectTeamMember,
+): Promise<DefectDetails | undefined> {
   if (!isId(defectId)) return undefined;
   const [row] = await db.select().from(defect).where(eq(defect.id, defectId));
   if (!row) return undefined;
+  const claim = row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined;
   return {
     id: row.id,
     machineId: row.machineId,
@@ -269,7 +283,8 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
     recordedAt: row.recordedAt,
     state: row.state,
     version: row.version,
-    claim: row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined,
+    claim,
+    actions: teamMember && defectActionRefusals({ ...row, claim }, teamMember),
     workLog: await workLogOf(db, row.id),
     resolution: row.state === "resolved" ? await latestResolution(db, row.id) : undefined,
     problemReports: await problemReportsOfDefect(db, row),
