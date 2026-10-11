@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
+  claimDefectCommand,
   linkProblemReportToDefectCommand,
   recordDefectCommand,
   reportProblemCommand,
@@ -16,7 +17,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { loadOpenDefects, type OpenDefectsFilter } from "./open-defects-data";
+import { loadOpenDefects, openDefectsFilterOf, type OpenDefectsFilter } from "./open-defects-data";
 import { OpenDefectsView } from "./open-defects";
 
 /**
@@ -314,5 +315,49 @@ describe("the open defects list", () => {
     const entryOf = (title: string) => html.slice(html.indexOf(title)).split("</article>")[0];
     expect(entryOf("Left flipper weak")).toContain("1 verknüpfte Meldung");
     expect(entryOf("Display flickers")).not.toContain("verknüpfte");
+  });
+
+  it('ST-025: Filter "claimed by me"', async () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, anna, "Anna");
+    const lg042 = await registered("LG-042");
+    const rubberCracked = await anOpenDefect(lg042, "Rubber cracked", { suitableForHelpers: true });
+    const leftFlipperWeak = await anOpenDefect(lg042, "Left flipper weak");
+    await anOpenDefect(lg042, "Display flickers");
+    for (const [defectId, actor] of [
+      [rubberCracked, anna],
+      [leftFlipperWeak, tom],
+    ] as const) {
+      const claimed = await executeCommand(
+        claimDefectCommand,
+        { defectId, version: 0 },
+        { actor, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!claimed.ok) throw new Error(claimed.error);
+    }
+    const asAnna = async (filter: OpenDefectsFilter) => {
+      const data = await loadOpenDefects(db, fixedClock(NOW), filter, anna.teamMemberId);
+      return { data, html: renderToStaticMarkup(createElement(OpenDefectsView, { data })) };
+    };
+
+    const mine = await asAnna(openDefectsFilterOf({ mine: "1" }));
+
+    expect(mine.data.entries.map((entry) => entry.title)).toEqual(["Rubber cracked"]);
+    expect(mine.html).toContain("Rubber cracked");
+    expect(mine.html).not.toContain("Left flipper weak");
+    expect(mine.html).not.toContain("Display flickers");
+    // Still three defects are open, and the filter stays chosen.
+    expect(mine.html).toContain("3 Defekte sind offen.");
+    expect(mine.html).toMatch(/<input[^>]*name="mine"[^>]*checked=""/);
+    // Without the filter the list names each claimant – Anna's own claim as hers.
+    const all = await asAnna({});
+    const entryOf = (title: string) => all.html.slice(all.html.indexOf(title)).split("</article>")[0];
+    expect(entryOf("Rubber cracked")).toContain("Von dir übernommen");
+    expect(entryOf("Left flipper weak")).toContain("Übernommen von Tom");
+    expect(entryOf("Display flickers")).not.toContain("bernommen");
+    // It combines with the other filters, and matching nothing says so (G7).
+    const mineForHelpers = await asAnna({ claimedByMe: true, priority: "high" });
+    expect(mineForHelpers.data.entries).toEqual([]);
+    expect(mineForHelpers.html).toContain("Kein offener Defekt passt zu diesem Filter.");
   });
 });

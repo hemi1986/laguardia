@@ -1,5 +1,6 @@
 import { machineIdOf, machineLabels } from "@/modules/collection";
 import { openDefects, priorities, type Priority } from "@/modules/repair";
+import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
@@ -9,7 +10,12 @@ export type OpenDefectsFilter = {
   museumNumber?: string;
   priority?: Priority;
   suitableForHelpers?: boolean;
+  /** Only the defects the team member looking at the list has claimed (ST-025). */
+  claimedByMe?: boolean;
 };
+
+/** A defect's claimant as a page shows them (ST-025): named – and whether it is the team member looking at it. */
+export type ShownClaimant = { name: string; you: boolean };
 
 /** One entry of the open defects list as the page shows it (RM-OpenDefects, ST-021). */
 export type OpenDefectsItem = {
@@ -24,6 +30,8 @@ export type OpenDefectsItem = {
   openDays: number;
   /** How many problem reports were linked to it (ST-022). */
   linkedProblemReports: number;
+  /** Its claimant, if any (ST-025). */
+  claimant: ShownClaimant | undefined;
 };
 
 /** A machine the filter offers – one with open defects. */
@@ -47,6 +55,7 @@ export function openDefectsFilterOf(params: Record<string, string | string[] | u
     ...(museumNumber ? { museumNumber } : {}),
     ...(priority ? { priority } : {}),
     ...(single(params.helpers) === "1" ? { suitableForHelpers: true } : {}),
+    ...(single(params.mine) === "1" ? { claimedByMe: true } : {}),
   };
 }
 
@@ -55,22 +64,40 @@ function single(value: string | string[] | undefined): string | undefined {
 }
 
 /**
- * The open defects list's data: Repair's open defects with Collection's museum numbers and titles – the page composes
- * the modules' public queries (ST-009). How long a defect has been open is computed when the page loads.
+ * The open defects list's data: Repair's open defects with Collection's museum numbers and titles and Team's names of
+ * the claimants – the page composes the modules' public queries (ST-009). How long a defect has been open is computed
+ * when the page loads. `viewer` is the team member looking at the list: "claimed by me" means claimed by them.
  */
-export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDefectsFilter): Promise<OpenDefectsData> {
+export async function loadOpenDefects(
+  db: Database,
+  clock: Clock,
+  filter: OpenDefectsFilter,
+  viewer?: string,
+): Promise<OpenDefectsData> {
   const machineId = filter.museumNumber ? await machineIdOf(db, filter.museumNumber) : undefined;
   const [all, matching] = await Promise.all([
     openDefects(db),
-    // An unknown museum number in the address matches no machine – nothing is listed, not everything.
-    filter.museumNumber && !machineId
+    // An unknown museum number in the address matches no machine – nothing is listed, not everything. The same for
+    // "claimed by me" without a team member to mean.
+    (filter.museumNumber && !machineId) || (filter.claimedByMe && !viewer)
       ? []
-      : openDefects(db, { machineId, priority: filter.priority, suitableForHelpers: filter.suitableForHelpers }),
+      : openDefects(db, {
+          machineId,
+          priority: filter.priority,
+          suitableForHelpers: filter.suitableForHelpers,
+          claimedBy: filter.claimedByMe ? viewer : undefined,
+        }),
   ]);
-  const labels = await machineLabels(
-    db,
-    all.map((defect) => defect.machineId),
-  );
+  const [labels, names] = await Promise.all([
+    machineLabels(
+      db,
+      all.map((defect) => defect.machineId),
+    ),
+    teamMemberNames(
+      db,
+      matching.flatMap((defect) => (defect.claimedBy ? [defect.claimedBy] : [])),
+    ),
+  ]);
   const now = today(clock);
   return {
     entries: matching.map((defect) => ({
@@ -83,9 +110,19 @@ export async function loadOpenDefects(db: Database, clock: Clock, filter: OpenDe
       openSince: defect.openSince,
       openDays: daysBetween(calendarDate(defect.openSince), now),
       linkedProblemReports: defect.linkedProblemReports,
+      claimant: shownClaimant(defect.claimedBy, names, viewer),
     })),
     total: all.length,
     machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
     filter,
   };
+}
+
+/** The claimant by name – the name is empty only for an account that no longer exists, which the Team module prevents. */
+export function shownClaimant(
+  claimedBy: string | undefined,
+  names: Map<string, string>,
+  viewer: string | undefined,
+): ShownClaimant | undefined {
+  return claimedBy ? { name: names.get(claimedBy) ?? "", you: claimedBy === viewer } : undefined;
 }
