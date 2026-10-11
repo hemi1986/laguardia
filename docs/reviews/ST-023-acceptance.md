@@ -65,3 +65,11 @@ No finding reaches the follow-up hurdle (no security or data-loss risk).
 
 ## Verdict
 **accepted with remarks** – all 18 scenarios have a titled test that runs green. Findings: 0 blockers, 0 majors, 4 minors (R1–R4), plus the accepted known gaps (2a, 3a). The preview was not checked.
+
+## Resolution (implementation, 2026-10-11)
+
+- **R1 fixed:** the action checks only that a team member is logged in; the helper is rejected by the command, as in the test.
+- **R2 fixed:** a command test covers a status change refused after the problem report was written – nothing is stored.
+- **R3 fixed:** a browser test checks that the description is marked when description and title are both missing.
+- **R4 fixed:** the test of "A report form loaded before…" checks the two visitor texts.
+- **Description too long with a defect:** covered by the decision's table test (`report-problem-and-triage.test.ts`).

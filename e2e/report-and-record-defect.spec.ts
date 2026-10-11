@@ -84,9 +84,9 @@ async function pageWidth(page: Page) {
 }
 
 /** Nothing was stored for the machine: no defect with that title is open, and nothing of the machine waits for triage. */
-async function expectNothingStored(page: Page, museumNumber: string, defectTitle: string) {
+async function expectNothingStored(page: Page, museumNumber: string, defectTitle?: string) {
   await page.goto("/team/defects");
-  await expect(page.getByRole("main")).not.toContainText(defectTitle);
+  if (defectTitle) await expect(page.getByRole("main")).not.toContainText(defectTitle);
   await expect(page.getByRole("main")).not.toContainText(museumNumber);
   await page.goto("/team/triage");
   await expect(page.getByRole("main")).not.toContainText(museumNumber);
@@ -220,7 +220,7 @@ test("ST-023: A rejected report keeps what was typed", async ({ page }) => {
   await expect(page.getByLabel("Für Helfer:innen geeignet")).toBeChecked();
   await expect(status(page)).toHaveValue("out-of-order");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
-  await expectNothingStored(page, museumNumber, "Left flipper coil stop broken");
+  await expectNothingStored(page, museumNumber);
 });
 
 test("ST-023: Machine status changed in the meantime stores nothing", async ({ page, context }) => {
@@ -251,6 +251,9 @@ test("ST-023: Machine status changed in the meantime stores nothing", async ({ p
   );
   await expect(page.getByLabel("Beschreibung")).toHaveValue("Left flipper coil stop broken");
   await expect(page.getByLabel("Titel")).toHaveValue(defectTitle);
+  // The page was rendered again with the machine as it is now: a second try does not send the stale status choice.
+  await expect(page.getByRole("main")).toContainText(`${museumNumber} ist schon Außer Betrieb – der Status bleibt.`);
+  await expect(status(page)).toHaveCount(0);
   await expectNothingStored(page, museumNumber, defectTitle);
 });
 

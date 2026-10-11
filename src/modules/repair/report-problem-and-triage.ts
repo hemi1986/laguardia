@@ -38,12 +38,13 @@ export function reportProblemAndTriage(
   context: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported | DefectRecorded, ReportProblemAndTriageError> {
   const { actor } = context;
-  const technician = actor.kind === "team-member" && actor.role === "technician";
+  const technician =
+    actor.kind === "team-member" && actor.role === "technician" ? { ...actor, role: actor.role } : undefined;
   // Recording a defect is for technicians only (CMD-RecordDefect) – a helper's or visitor's problem report with that
   // triage outcome is rejected as a whole, never stored without it (CMD-ReportProblem rules; user, 2026-10-11).
   if (input.triage && !technician) return { ok: false, error: "not-authorized" };
   const reported = reportProblem(facts, input, context);
-  if (!reported.ok || actor.kind !== "team-member" || actor.role !== "technician") return reported;
+  if (!reported.ok || !technician) return reported;
   // A technician's problem report is never stored untriaged, whatever form sent it (CMD-ReportProblem rules).
   if (!input.triage) return { ok: false, error: "triage-required" };
   const { title, priority, suitableForHelpers, machineStatus, machineVersion } = input.triage;
@@ -58,7 +59,7 @@ export function reportProblemAndTriage(
       machineStatus,
       machineVersion,
     },
-    { ...context, actor: { ...actor, role: actor.role } },
+    { ...context, actor: technician },
     facts,
   );
   if (!triaged.ok) {

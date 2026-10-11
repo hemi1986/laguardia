@@ -12,7 +12,7 @@ import {
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
-import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
+import { commandErrorText, visitorMessages } from "@/platform/messages";
 import { memoryStorage } from "@/platform/storage";
 import { photoFormRunner } from "@/app/_actions/form-runner";
 import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "../report-problem-input";
@@ -117,6 +117,11 @@ describe("the form for reporting a problem and recording a defect", () => {
     );
     // Only a form that had a photo attached says so.
     expect(rejectionText(rejectedWithoutPhoto!, "LG-042")).toBe("Bitte einen Titel angeben.");
+    // A photo that could not be stored was not rejected itself – "try again" needs it chosen again.
+    const notStored = withPhotoToChooseAgain({ error: "not-stored" as const }, withPhoto);
+    expect(rejectionText(notStored!, "LG-042")).toBe(
+      "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden. Das Foto muss erneut ausgewählt werden.",
+    );
   });
 
   it("ST-023: A rejected photo gets no extra sentence about choosing it again", async () => {
@@ -132,7 +137,7 @@ describe("the form for reporting a problem and recording a defect", () => {
     await expectNothingStored(machineId, journalBefore, storage);
     expect(rejected?.error).toBe("not-an-image");
     // The text of ST-016, as on the team's report form without a defect – it already says what to do.
-    expect(rejectionText(rejected!, "LG-042")).toBe(teamMessages.commandErrors["not-an-image"]);
+    expect(rejectionText(rejected!, "LG-042")).toBe("Das ist kein Foto. Bitte ein Foto wählen oder es weglassen.");
     expect(rejectionText(rejected!, "LG-042")).not.toContain("erneut ausgewählt");
     expect(rejected?.values.title).toBe("Left flipper sticks");
   });

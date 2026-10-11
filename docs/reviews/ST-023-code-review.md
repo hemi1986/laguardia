@@ -46,3 +46,30 @@ this story does not touch), `e2e/report-and-record-defect.spec.ts` twice (all gr
 
 **Verdict: ready to merge** once the three majors are settled in this story – no blocker; no finding passes the follow-up hurdle.
 Most important finding: the rollback after a refused status change (the one path where rows are already written) is untested at `2a4ca3e` – the test exists uncommitted in the working tree and must be committed (finding 1).
+
+## Resolution (implementation, 2026-10-11)
+
+Includes the ten findings of `/code-review` (high) on the same diff, where they add something to the table above.
+
+- **#1 fixed:** `report-and-record-defect-command.integration.test.ts` has a test for a status change refused after the problem report and the defect were written (`version-conflict` from CMD-ChangeMachineStatus in `runs`) and for one refused by the decision – neither leaves a problem report, a defect, a journal entry or a changed machine status.
+- **#2 fixed:** `journalDefectRecorded` and `statusChangeWithDefect` in `record-defect-command.ts` are the one journal mapping of EVT-DefectRecorded and the one status-change run; CMD-RecordDefect and CMD-ReportProblem both use them. `NO_VERSION_SEEN` is gone from `report-problem-command.ts`.
+- **#3 not caused by this story, not fixed:** the test "without JavaScript › a problem is resolved on the spot, and a rejected note is asked for again" fails on `main` too – 5 of 12 runs at `eb9bbec` (`--repeat-each 12`), 5 of 8 on this branch, always at the „Abmelden“ click with "element is not stable". Bringing the page to the front after `reportAsVisitor` did not help (2 of 12 still failed) and was dropped. The cause is open. It does not pass the follow-up hurdle (no security or data-loss risk); the spec is skipped in CI (needs a local technician account). **Revisit** – it makes the local full browser run red about every second time.
+- **#4, #6 fixed:** `report-problem-and-triage.test.ts` is the decision's table (visitor / helper / technician × with / without a triage part × valid / invalid), with the order of rejections. It pins what the cast claims: without a triage part only reporting's rejections and `triage-required`. The cast stays.
+- **#5 fixed in the action:** a technician who sends the plain form is sent to the choice page with the request to choose whatever the command's reason was (`melden/actions.ts`) – nothing is stored in either case. The decision's order stays (reporting first), so a retired or unknown machine is still named first.
+- **#7 fixed:** the technician check is written once; no dummy spreads.
+- **#8 fixed:** `defectInput(fields)` in `record-defect-input.ts` reads the defect's fields for both forms; no dummy problem report ID.
+- **#9 partly fixed:** the machine record's confirmation is built from the record already loaded – one extra query (`defectTitle`) instead of three, and the status named is the stored one. **Skipped:** `statusChanged` in the address is still derived from the posted field, as on ST-018's form; changing one of the two would make them differ.
+- **#10 open for the user:** the two visitor texts for `triage-required` (a logged-in technician sending the visitors' form) are mine, not the story's. Covered by a test now; the wording is the user's to confirm.
+- **#11 fixed:** the expected text is a literal.
+- **#12 fixed:** `expectNothingStored` takes the defect title only where the test has one.
+- **#13 fixed:** a browser test checks that the description is the field marked when both are missing; the action no longer redirects a helper before the command, so the titled test exercises the real path (acceptance R1).
+- **#14 fixed:** `schema.ts` says at the defect table that the foreign key is deferred by hand and must stay so.
+- **#15 skipped:** the shared pieces (`DefectFields`, `defectInput`) stay in the triage route and are imported from there. **Revisit in ST-052**, which adds two more shared outcome forms and can move all of them at once.
+
+From `/code-review` only:
+- **"A rejected post does not re-render the page with JavaScript" – not confirmed:** "ST-023: Machine status changed in the meantime stores nothing" now asserts that after the rejection the page shows the machine's status as it is now and no status choice. It passes with JavaScript, as the conventions say (*Every Server Action re-renders the page it was posted from*).
+- **`not-stored` fixed:** a photo that could not be stored is not a rejection of the photo itself – the sentence „Das Foto muss erneut ausgewählt werden.“ follows it. Only `too-large`, `not-an-image` and `unsupported-format` are without it.
+- **G8a in the photo runner – skipped:** moving `photoAgain` into `photoFormRunner` is shared platform code that ST-084 needs for the two other report forms; it belongs there.
+- **Unused export removed:** `TriageInTheSameStep` is no longer exported from the module's `index.ts`.
+
+Security review (`/security-review`): done inline by the implementing session on its own diff, no finding – not an independent review.

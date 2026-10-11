@@ -1,10 +1,8 @@
-import { changeMachineStatusCommand } from "@/modules/collection";
-import { aggregateCommand, run, type Command } from "@/platform/command";
+import { aggregateCommand, type Command } from "@/platform/command";
 import { problemReports, reportingFacts } from "./problem-reports";
+import { journalDefectRecorded, statusChangeWithDefect } from "./record-defect-command";
 import { reportingActors, type ReportProblemError, type ReportProblemInput } from "./report-problem";
 import { reportProblemAndTriage, type TriageRequired } from "./report-problem-and-triage";
-
-const NO_VERSION_SEEN = -1;
 
 /**
  * CMD-ReportProblem through the command layer: a creating command on AGG-ProblemReport, emits EVT-ProblemReported –
@@ -27,27 +25,11 @@ export const reportProblemAndTriageCommand = aggregateCommand({
           machineId: event.machineId,
           data: {}, // the reporter is the journal's actor; the description stays in the problem report only
         }
-      : {
-          type: event.type,
-          aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
-          machineId: event.machineId,
-          // References and non-personal facts only: the title is typed text and lives in the defect (ST-003).
-          data: { defectId: event.defectId, priority: event.priority, suitableForHelpers: event.suitableForHelpers },
-        },
-  runs: (report, events, input) =>
-    input.triage?.machineStatus
-      ? events
-          .filter((event) => event.type === "EVT-DefectRecorded")
-          .map((event) =>
-            run(changeMachineStatusCommand, {
-              machineId: report.machineId,
-              // Without the version the technician saw, a chosen status ends as a conflict – it is never skipped.
-              version: input.triage?.machineVersion ?? NO_VERSION_SEEN,
-              machineStatus: input.triage?.machineStatus,
-              reason: event.title,
-            }),
-          )
-      : [],
+      : journalDefectRecorded(event),
+  runs: (_report, events, input) =>
+    events.flatMap((event) =>
+      event.type === "EVT-DefectRecorded" && input.triage ? statusChangeWithDefect(event, input.triage) : [],
+    ),
   result: (report) => ({ problemReportId: report.id, defectId: report.triage?.defectId }),
 });
 

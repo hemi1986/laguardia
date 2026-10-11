@@ -33,7 +33,7 @@ export async function teamReportProblemAction(
   previous: TeamReportProblemState,
   formData: FormData,
 ): Promise<TeamReportProblemState> {
-  await requireTeamMember(); // the page's access check; who may report for which machine is the command's
+  const member = await requireTeamMember(); // the page's access check; who may report for which machine is the command's
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   const machine = await machineForTeamForm(database(), museumNumber);
   const state = await photoFormAction(reportProblemCommand, {
@@ -45,8 +45,10 @@ export async function teamReportProblemAction(
       redirect(`${record}?problemReported=1`);
     },
   })(previous, formData);
-  // Only a page loaded before can send this form as a technician (ST-023): the choice page asks for the triage
-  // outcome. The description typed on that stale page is not kept (user, 2026-10-10).
-  if (state?.error === "triage-required") redirect(`${record}/melden?triageRequired=1`);
+  // Only a page loaded before can send this form as a technician (ST-023), and the command stores nothing of it –
+  // with a description for want of a triage outcome, without one for want of the description. Either way the page
+  // is the choice page now, which asks for the triage outcome; the description typed on the stale page is not kept
+  // (user, 2026-10-10).
+  if (state && member.role === "technician") redirect(`${record}/melden?triageRequired=1`);
   return state;
 }

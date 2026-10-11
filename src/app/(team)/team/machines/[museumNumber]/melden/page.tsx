@@ -24,7 +24,9 @@ export default async function TeamReportProblemPage({
   const museumNumber = decodeURIComponent((await params).museumNumber);
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
-  const label = machine && (await machineLabels(db, [machine.id])).get(machine.id);
+  const technician = member.role === "technician";
+  // Only the technician's choice page names the machine model.
+  const label = machine && technician ? (await machineLabels(db, [machine.id])).get(machine.id) : undefined;
   const triageRequired = (await searchParams).triageRequired !== undefined;
 
   return (
@@ -33,7 +35,7 @@ export default async function TeamReportProblemPage({
         <p>{machineRecord.unknown(museumNumber)}</p>
       ) : machine.retired ? (
         <p>{texts.retired}</p>
-      ) : member.role === "technician" ? (
+      ) : technician ? (
         <TriageChoice
           museumNumber={museumNumber}
           machineModelTitle={label?.machineModelTitle ?? ""}

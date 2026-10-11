@@ -1,7 +1,7 @@
 import type { ReportProblemAndTriageInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
-import { photoErrors } from "@/photo";
-import { recordDefectInput } from "../../../../triage/[problemReportId]/defekt-erfassen/record-defect-input";
+import type { PhotoError } from "@/photo";
+import { defectInput } from "../../../../triage/[problemReportId]/defekt-erfassen/record-defect-input";
 import { teamReportProblemPhoto } from "../report-problem-input";
 
 /**
@@ -32,22 +32,24 @@ export function reportAndRecordDefectInput(
   machineId: string | undefined,
   photo?: string,
 ): ReportProblemAndTriageInput {
-  const { title, priority, suitableForHelpers, machineStatus, machineVersion } = recordDefectInput(
-    { ...fields, version: undefined },
-    "",
-  );
   return {
     machineId: machineId ?? "",
     description: fields.description ?? "",
     photo,
-    triage: { outcome: "defect-recorded", title, priority, suitableForHelpers, machineStatus, machineVersion },
+    triage: { outcome: "defect-recorded", ...defectInput(fields) },
   };
 }
 
 /**
+ * The rejections of the photo itself (ST-016): their texts already say to choose another photo or leave it out. A photo
+ * that could not be stored (`not-stored`) is not one of them – the photo was fine, and "try again" needs it again.
+ */
+const photoRejections: readonly PhotoError[] = ["too-large", "not-an-image", "unsupported-format"];
+
+/**
  * Marks a rejection after which the photo must be chosen again (G8a): the form had a photo attached, and the browser
- * cannot put it back. Not after a rejection of the photo itself – ST-016's texts already say what to do with it
- * (user, 2026-10-10). `formData` is the post the rejection answers.
+ * cannot put it back. Not after a rejection of the photo itself (user, 2026-10-10). `formData` is the post the
+ * rejection answers.
  */
 export function withPhotoToChooseAgain<State extends { error: string }>(
   state: State | null,
@@ -56,5 +58,5 @@ export function withPhotoToChooseAgain<State extends { error: string }>(
   if (!state) return null;
   const photo = formData.get(reportAndRecordDefectPhoto.field);
   const attached = photo instanceof Blob && photo.size > 0;
-  return { ...state, photoAgain: attached && !(photoErrors as readonly string[]).includes(state.error) };
+  return { ...state, photoAgain: attached && !(photoRejections as readonly string[]).includes(state.error) };
 }
