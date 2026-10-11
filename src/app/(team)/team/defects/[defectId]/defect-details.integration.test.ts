@@ -231,7 +231,11 @@ describe("a defect's own page", () => {
 
     /** The page as that team member sees it: its claim data, and the rendered view just back from claiming. */
     async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna) {
-      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer });
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        justClaimed: true,
+      });
       const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, justClaimed: true }));
       return { claimant: details?.claimant, canClaim: details?.canClaim, version: details?.version, html };
     }

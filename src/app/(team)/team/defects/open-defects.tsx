@@ -5,7 +5,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { priorities } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import type { OpenDefectsData, OpenDefectsFilter, ShownClaimant } from "./open-defects-data";
+import { claimantText } from "../claimant";
+import type { OpenDefectsData, OpenDefectsFilter } from "./open-defects-data";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
 
@@ -136,9 +137,4 @@ function NothingMatches({ filter }: { filter: OpenDefectsFilter }) {
       </Link>
     </div>
   );
-}
-
-/** A defect's claimant in words (ST-025) – one's own claim is said as such. */
-export function claimantText(claimant: ShownClaimant): string {
-  return claimant.you ? texts.claimedByYou : texts.claimedBy(claimant.name);
 }

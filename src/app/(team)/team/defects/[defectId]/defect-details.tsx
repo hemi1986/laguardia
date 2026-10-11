@@ -3,7 +3,7 @@ import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
-import { claimantText } from "../open-defects";
+import { claimantName, claimantText } from "../../claimant";
 import type { ClaimDefectState } from "./actions";
 import { ClaimDefectForm } from "./claim-defect-form";
 import type { DefectDetailsData } from "./defect-details-data";
@@ -68,7 +68,7 @@ export function DefectDetailsView({
           <ClaimDefectForm
             action={claimAction}
             version={details.version}
-            label={details.claimant ? texts.takeOverFrom(details.claimant.name) : texts.claim}
+            label={details.claimant ? texts.takeOverFrom(claimantName(details.claimant)) : texts.claim}
             offered={details.canClaim}
           />
         )}

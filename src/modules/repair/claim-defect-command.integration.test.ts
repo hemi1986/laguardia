@@ -5,7 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { claimDefectCommand, openDefects, reportProblemAndTriageCommand } from ".";
+import { claimDefectCommand, openDefects, reportProblemAndTriageCommand, takenOverFrom } from ".";
 import { resolveDefectForTest, storedDefect } from "./problem-report-stand-ins.test-support";
 
 /** CMD-ClaimDefect (ST-025) through the command layer: a team member claims a defect or takes it over. */
@@ -58,13 +58,16 @@ describe("CMD-ClaimDefect", () => {
     const { machineId, defectId } = await anOpenDefect("Rubber cracked", true);
     expect(await claim(defectId, 0, tom, "2026-10-12T09:00:00Z")).toEqual({
       ok: true,
-      result: { defectId, takenOverFrom: undefined },
+      result: { defectId },
     });
     expect(await claimantOf(machineId)).toBe(tom.teamMemberId);
 
     const takenOver = await claim(defectId, 1, anna, "2026-10-12T10:00:00Z");
 
-    expect(takenOver).toEqual({ ok: true, result: { defectId, takenOverFrom: tom.teamMemberId } });
+    expect(takenOver).toEqual({ ok: true, result: { defectId } });
+    expect(await takenOverFrom(db, defectId, anna.teamMemberId)).toBe(tom.teamMemberId);
+    // … asked only of the claimant the event made: for anyone else it says nothing.
+    expect(await takenOverFrom(db, defectId, tom.teamMemberId)).toBeUndefined();
     // Anna is its claimant – Tom no longer is: a defect has at most one.
     expect(await claimantOf(machineId)).toBe(anna.teamMemberId);
     expect((await storedDefect(db, defectId))?.claim).toEqual({

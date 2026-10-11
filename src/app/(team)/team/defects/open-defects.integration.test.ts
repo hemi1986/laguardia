@@ -336,7 +336,7 @@ describe("the open defects list", () => {
       if (!claimed.ok) throw new Error(claimed.error);
     }
     const asAnna = async (filter: OpenDefectsFilter) => {
-      const data = await loadOpenDefects(db, fixedClock(NOW), filter, anna.teamMemberId);
+      const data = await loadOpenDefects(db, fixedClock(NOW), filter, { id: anna.teamMemberId, role: anna.role });
       return { data, html: renderToStaticMarkup(createElement(OpenDefectsView, { data })) };
     };
 
@@ -355,9 +355,13 @@ describe("the open defects list", () => {
     expect(entryOf("Rubber cracked")).toContain("Von dir übernommen");
     expect(entryOf("Left flipper weak")).toContain("Übernommen von Tom");
     expect(entryOf("Display flickers")).not.toContain("bernommen");
-    // It combines with the other filters, and matching nothing says so (G7).
-    const mineForHelpers = await asAnna({ claimedByMe: true, priority: "high" });
-    expect(mineForHelpers.data.entries).toEqual([]);
-    expect(mineForHelpers.html).toContain("Kein offener Defekt passt zu diesem Filter.");
+    // It combines with the other filters – matching one of hers, and matching nothing, which says so (G7).
+    const mineForHelpers = await asAnna({ claimedByMe: true, suitableForHelpers: true });
+    expect(mineForHelpers.data.entries.map((entry) => entry.title)).toEqual(["Rubber cracked"]);
+    const mineWithHighPriority = await asAnna({ claimedByMe: true, priority: "high" });
+    expect(mineWithHighPriority.data.entries).toEqual([]);
+    expect(mineWithHighPriority.html).toContain("Kein offener Defekt passt zu diesem Filter.");
+    // Alone and matching nothing, it says what it was filtered for.
+    expect((await page({ claimedByMe: true }))).toContain("Du hast keinen offenen Defekt übernommen.");
   });
 });

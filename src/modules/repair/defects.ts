@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { aggregateStore, journalOf, type Database } from "@/platform/command";
+import { aggregateStore, type Database } from "@/platform/command";
 import { priorities, type Claim, type Defect, type DefectState, type Priority } from "./defect";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
@@ -153,8 +153,8 @@ export type DefectDetails = {
   state: DefectState;
   /** The version the team member sees – a command on the defect names it (HS-16). */
   version: number;
-  /** Its claim, if any (ST-025) – and whom its claimant took it over from, read from the journal. */
-  claim: (Claim & { takenOverFrom: string | undefined }) | undefined;
+  /** Its claim, if any (ST-025). */
+  claim: Claim | undefined;
   problemReports: DefectProblemReport[];
 };
 
@@ -172,28 +172,9 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
     recordedAt: row.recordedAt,
     state: row.state,
     version: row.version,
-    claim:
-      row.claimedBy && row.claimedAt
-        ? {
-            claimedBy: row.claimedBy,
-            claimedAt: row.claimedAt,
-            takenOverFrom: await takenOverFrom(db, row.id, row.claimedBy),
-          }
-        : undefined,
+    claim: row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined,
     problemReports: await problemReportsOfDefect(db, row),
   };
-}
-
-/**
- * Whom the defect's claimant took it over from, if anyone – what the latest EVT-DefectClaimed says. The claim itself
- * holds only who claims it now; the journal is read for this one reference, never to rebuild state.
- */
-async function takenOverFrom(db: Database, defectId: string, claimedBy: string): Promise<string | undefined> {
-  const claimed = (await journalOf(db, { aggregateId: defectId })).filter(
-    (entry) => entry.type === "EVT-DefectClaimed",
-  );
-  const latest = claimed.at(-1)?.data;
-  return latest?.claimedBy === claimedBy && typeof latest.takenOverFrom === "string" ? latest.takenOverFrom : undefined;
 }
 
 /**

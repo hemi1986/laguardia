@@ -1,14 +1,15 @@
 import { machineLabels } from "@/modules/collection";
-import { defectDetails, type Priority } from "@/modules/repair";
+import { claimRefusal, defectDetails, takenOverFrom, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
-import type { Database, Role } from "@/platform/command";
+import type { Database } from "@/platform/command";
+import { teamMessages } from "@/platform/messages";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
 import { photoAt, type PhotoSource } from "../../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../../reporter";
-import { shownClaimant, type ShownClaimant } from "../open-defects-data";
+import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
 
 /** A problem report on the defect's page, its reporter named. */
 export type ShownDefectProblemReport = {
@@ -37,37 +38,46 @@ export type DefectDetailsData = {
   version: number;
   /** Its claimant, if any (ST-025). */
   claimant: ShownClaimant | undefined;
-  /** Whom the claimant took it over from, by name – for the confirmation after taking over (G3). */
+  /**
+   * Whom the claimant took it over from, by name – only for the claimant just back from claiming, for the confirmation
+   * (G3); undefined otherwise.
+   */
   takenOverFrom: string | undefined;
   /** Whether the team member looking at the page may claim it – or take it over (G11). */
   canClaim: boolean;
 };
 
-/** The team member looking at a page. */
-export type Viewer = { id: string; role: Role };
-
 /**
  * The defect page's data: Repair's defect with its problem reports, Collection's museum number and title, Team's names
  * – the page composes the modules' public queries (ST-009). Undefined when there is no such defect. `viewer` is the
- * team member looking at the page: whether they may claim the defect, and whether its claim is theirs (ST-025).
+ * team member looking at the page: whether they may claim the defect, and whether its claim is theirs (ST-025);
+ * `justClaimed` says they are just back from claiming it.
  */
 export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  { storage = blobStorage(), viewer }: PhotoSource & { viewer?: Viewer } = {},
+  {
+    storage = blobStorage(),
+    viewer,
+    justClaimed = false,
+  }: PhotoSource & { viewer?: Viewer; justClaimed?: boolean } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId);
   if (!defect) return undefined;
+  // Read only for the confirmation: the claimant, just back from claiming.
+  const previousClaimant =
+    justClaimed && defect.claim && defect.claim.claimedBy === viewer?.id
+      ? await takenOverFrom(db, defect.id, defect.claim.claimedBy)
+      : undefined;
   const [machines, names, photos] = await Promise.all([
     machineLabels(db, [defect.machineId]),
     teamMemberNames(db, [
       ...defect.problemReports.flatMap(({ reporter }) =>
         reporter.kind === "team-member" ? [reporter.teamMemberId] : [],
       ),
-      ...(defect.claim
-        ? [defect.claim.claimedBy, ...(defect.claim.takenOverFrom ? [defect.claim.takenOverFrom] : [])]
-        : []),
+      ...(defect.claim ? [defect.claim.claimedBy] : []),
+      ...(previousClaimant ? [previousClaimant] : []),
     ]),
     photoViewAddresses(
       storage,
@@ -94,13 +104,9 @@ export async function loadDefectDetails(
     })),
     id: defect.id,
     version: defect.version,
-    claimant: shownClaimant(defect.claim?.claimedBy, names, viewer?.id),
-    takenOverFrom: defect.claim?.takenOverFrom && names.get(defect.claim.takenOverFrom),
-    // The rules of CMD-ClaimDefect, so nobody is shown a button that can only be rejected (G11) – the command decides.
-    canClaim:
-      !!viewer &&
-      defect.state === "open" &&
-      (viewer.role === "technician" || defect.suitableForHelpers) &&
-      defect.claim?.claimedBy !== viewer.id,
+    claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
+    takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
+    // CMD-ClaimDefect's own rule, asked so nobody is shown a button that can only be rejected (G11).
+    canClaim: !!viewer && claimRefusal(defect, { teamMemberId: viewer.id, role: viewer.role }) === undefined,
   };
 }

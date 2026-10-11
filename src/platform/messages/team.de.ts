@@ -373,7 +373,7 @@ export const teamMessages = {
     "defect-required": "Bitte einen Defekt auswählen.",
     "defect-of-another-machine": "Dieser Defekt gehört zu einem anderen Gerät.",
     "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
-    "not-suitable-for-helpers": "Diesen Defekt können nur Techniker:innen übernehmen.",
+    "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
     "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",

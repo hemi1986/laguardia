@@ -4,6 +4,7 @@ import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
+import { shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
 
 /** What the open defects list is narrowed to (ST-021) – all optional, they combine. */
 export type OpenDefectsFilter = {
@@ -13,9 +14,6 @@ export type OpenDefectsFilter = {
   /** Only the defects the team member looking at the list has claimed (ST-025). */
   claimedByMe?: boolean;
 };
-
-/** A defect's claimant as a page shows them (ST-025): named – and whether it is the team member looking at it. */
-export type ShownClaimant = { name: string; you: boolean };
 
 /** One entry of the open defects list as the page shows it (RM-OpenDefects, ST-021). */
 export type OpenDefectsItem = {
@@ -72,7 +70,7 @@ export async function loadOpenDefects(
   db: Database,
   clock: Clock,
   filter: OpenDefectsFilter,
-  viewer?: string,
+  viewer?: Viewer,
 ): Promise<OpenDefectsData> {
   const machineId = filter.museumNumber ? await machineIdOf(db, filter.museumNumber) : undefined;
   const [all, matching] = await Promise.all([
@@ -85,7 +83,7 @@ export async function loadOpenDefects(
           machineId,
           priority: filter.priority,
           suitableForHelpers: filter.suitableForHelpers,
-          claimedBy: filter.claimedByMe ? viewer : undefined,
+          claimedBy: filter.claimedByMe ? viewer?.id : undefined,
         }),
   ]);
   const [labels, names] = await Promise.all([
@@ -116,13 +114,4 @@ export async function loadOpenDefects(
     machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
     filter,
   };
-}
-
-/** The claimant by name – the name is empty only for an account that no longer exists, which the Team module prevents. */
-export function shownClaimant(
-  claimedBy: string | undefined,
-  names: Map<string, string>,
-  viewer: string | undefined,
-): ShownClaimant | undefined {
-  return claimedBy ? { name: names.get(claimedBy) ?? "", you: claimedBy === viewer } : undefined;
 }

@@ -26,10 +26,8 @@ async function logIn(page: Page, as = { username: username!, password: password!
   await expect(page).toHaveURL(/\/team$/);
 }
 
-type MachineStatus = "playable" | "limited" | "out-of-order" | "not-on-display";
-
-/** A machine with the given status, registered by the e2e technician. Returns its museum number and model title. */
-async function aMachine(page: Page, machineStatus: MachineStatus = "playable") {
+/** A playable machine, registered by the e2e technician. Returns its museum number and model title. */
+async function aMachine(page: Page) {
   const title = unique("Medieval Madness");
   await page.goto("/team/machine-models");
   await page.getByLabel("Titel").fill(title);
@@ -40,7 +38,6 @@ async function aMachine(page: Page, machineStatus: MachineStatus = "playable") {
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
   await page.getByLabel("Standort").fill("Hall 2");
-  await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
   return { museumNumber, title };
@@ -59,8 +56,6 @@ async function aHelper(page: Page) {
   await page.getByRole("button", { name: "Abmelden" }).click();
   return helper;
 }
-
-/** From the machine record to the choice of the triage outcome, the way a team member starts reporting. */
 
 const TECHNICIAN = "E2E Technician";
 
@@ -163,6 +158,41 @@ test("a helper is not offered a defect that is not suitable for helpers, and one
   await expect(page.getByRole("main").getByRole("button", { name: /bernehmen/ })).toHaveCount(0);
   await page.goto("/team/defects?mine=1");
   await expect(page.getByRole("main")).toContainText("Du hast keinen offenen Defekt übernommen.");
+});
+
+test("a claim made meanwhile is answered with a conflict, not a silent takeover – then the page offers taking over", async ({
+  page,
+  browser,
+}) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page, { suitableForHelpers: true });
+  const helper = await aHelper(page);
+  await logIn(page);
+  await openDefect(page, museumNumber, title);
+  const main = page.getByRole("main");
+  await expect(main.getByRole("button", { name: "Übernehmen", exact: true })).toBeVisible();
+
+  // Meanwhile on a second phone: the helper claims the same defect.
+  const context = await browser.newContext({ viewport: { width: 360, height: 800 } });
+  const other = await context.newPage();
+  await logIn(other, helper);
+  await openDefect(other, museumNumber, title);
+  await other.getByRole("main").getByRole("button", { name: "Übernehmen", exact: true }).click();
+  await expect(other.getByRole("main").getByRole("status")).toHaveText(`Du hast „${title}“ übernommen.`);
+  await context.close();
+
+  await main.getByRole("button", { name: "Übernehmen", exact: true }).click();
+
+  await expect(main.getByRole("alert")).toHaveText(
+    "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
+  );
+  await expect(main.getByRole("status")).toHaveCount(0);
+  // The page shows the defect as it is now: claimed by the helper, who can be taken over from – knowingly.
+  await expect(main).toContainText(`Übernommen von E2E ${helper.username}`);
+  await main.getByRole("button", { name: `Von E2E ${helper.username} übernehmen` }).click();
+  await expect(main.getByRole("status")).toHaveText(`Du hast „${title}“ übernommen. Vorher: E2E ${helper.username}.`);
+  // The rejection of the first try is gone with it.
+  await expect(main.getByRole("alert")).toHaveCount(0);
 });
 
 test.describe("without JavaScript", () => {

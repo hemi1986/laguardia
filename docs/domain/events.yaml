@@ -152,8 +152,8 @@ events:
   - id: EVT-DefectClaimed
     aggregate: AGG-Defect
     name: Defect claimed
-    data: [Defect, Claimed by, Assigned by (optional)]
-    description: A team member claims a defect, or a technician assigns it to someone.
+    data: [Defect, Claimed by, Taken over from (optional), Assigned by (optional)]
+    description: A team member claims a defect, or a technician assigns it to someone. When a claim is taken over, the event names the previous claimant (ST-025).
   - id: EVT-DefectClaimReleased
     aggregate: AGG-Defect
     name: Defect claim released

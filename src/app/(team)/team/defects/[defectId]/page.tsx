@@ -11,14 +11,15 @@ import { DefectDetailsView } from "./defect-details";
 export default async function DefectPage({ params, searchParams }: PageProps<"/team/defects/[defectId]">) {
   const member = await requireTeamMember();
   const [{ defectId }, query] = await Promise.all([params, searchParams]);
-  const details = await loadDefectDetails(database(), systemClock, defectId, { viewer: member });
+  const justClaimed = query.claimed !== undefined;
+  const details = await loadDefectDetails(database(), systemClock, defectId, { viewer: member, justClaimed });
 
   return (
     <Page title={teamMessages.terms.Defect}>
       <DefectDetailsView
         details={details}
         claimAction={details && claimDefectAction.bind(null, details.id)}
-        justClaimed={query.claimed !== undefined}
+        justClaimed={justClaimed}
       />
     </Page>
   );

@@ -28,16 +28,29 @@ export type DefectClaimed = {
 
 export type ClaimDefectError = "defect-not-open" | "not-suitable-for-helpers" | "already-claimed-by-you";
 
+/**
+ * Why this team member may not claim the defect as it is – undefined when they may. The one rule of CMD-ClaimDefect:
+ * the decision applies it, and a page asks it to offer the control only to someone it will not reject (G11).
+ */
+export function claimRefusal(
+  defect: Pick<Defect, "state" | "suitableForHelpers" | "claim">,
+  actor: Pick<ClaimingPerson, "teamMemberId" | "role">,
+): ClaimDefectError | undefined {
+  // A resolved defect can only be reopened; one closed on retirement is final (AGG-Defect invariants).
+  if (defect.state !== "open") return "defect-not-open";
+  if (actor.role === "helper" && !defect.suitableForHelpers) return "not-suitable-for-helpers";
+  // Claiming one's own claim again changes nothing – in particular not since when it is claimed (user, 2026-10-11).
+  if (defect.claim?.claimedBy === actor.teamMemberId) return "already-claimed-by-you";
+  return undefined;
+}
+
 export function claimDefect(
   defect: Defect,
   _input: ClaimDefectInput,
   { actor, clock }: DecisionContext<ClaimingPerson>,
 ): Decision<Defect, DefectClaimed, ClaimDefectError> {
-  // A resolved defect can only be reopened; one closed on retirement is final (AGG-Defect invariants).
-  if (defect.state !== "open") return { ok: false, error: "defect-not-open" };
-  if (actor.role === "helper" && !defect.suitableForHelpers) return { ok: false, error: "not-suitable-for-helpers" };
-  // Claiming one's own claim again changes nothing – in particular not since when it is claimed (user, 2026-10-11).
-  if (defect.claim?.claimedBy === actor.teamMemberId) return { ok: false, error: "already-claimed-by-you" };
+  const refusal = claimRefusal(defect, actor);
+  if (refusal) return { ok: false, error: refusal };
   return {
     ok: true,
     state: { ...defect, claim: { claimedBy: actor.teamMemberId, claimedAt: clock.now() } },

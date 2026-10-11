@@ -9,7 +9,7 @@ import { OpenDefectsView } from "./open-defects";
 /** The open defects list (RM-OpenDefects, ST-021) – every team member. How long a defect is open is computed now. */
 export default async function OpenDefectsPage({ searchParams }: PageProps<"/team/defects">) {
   const member = await requireTeamMember();
-  const data = await loadOpenDefects(database(), systemClock, openDefectsFilterOf(await searchParams), member.id);
+  const data = await loadOpenDefects(database(), systemClock, openDefectsFilterOf(await searchParams), member);
 
   return (
     <Page title={teamMessages.defects.title} wide>
