@@ -1,11 +1,20 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { defectDetails, logWorkCommand, openDefects, reportProblemAndTriageCommand } from ".";
+import {
+  claimDefectCommand,
+  defectDetails,
+  logWorkCommand,
+  openDefects,
+  reportProblemAndTriageCommand,
+  resolveDefectCommand,
+} from ".";
+import { tamperWithWorkLogForTest } from "./problem-report-stand-ins.test-support";
 
 /** CMD-LogWork (ST-024) through the command layer: a team member logs what they did on a defect. */
 const db = testDatabase();
@@ -90,5 +99,116 @@ describe("CMD-LogWork", () => {
       machineId,
       { workLogEntryId: details?.workLog[0].id, loggedBy: tom.teamMemberId },
     ]);
+  });
+
+  it("ST-024: Helper logs work without claim on a defect not suitable for helpers", async () => {
+    const { machineId, defectId } = await anOpenDefect("Display flickers");
+    expect(await defectDetails(db, defectId)).toMatchObject({ suitableForHelpers: false, claim: undefined });
+
+    const logged = await logWork(
+      defectId,
+      0,
+      { whatWasDone: "Reseated the display connector, flicker still there" },
+      anna,
+    );
+
+    expect(logged).toEqual({ ok: true, result: { defectId } });
+    const details = await defectDetails(db, defectId);
+    expect(details?.workLog).toMatchObject([
+      {
+        whatWasDone: "Reseated the display connector, flicker still there",
+        // No parts were used.
+        partsUsed: undefined,
+        loggedBy: anna.teamMemberId,
+      },
+    ]);
+    // Logging work is not claiming: the defect stays unclaimed.
+    expect(details?.claim).toBeUndefined();
+    expect((await openDefects(db, { machineId }))[0].lastWorkLogEntry?.loggedBy).toBe(anna.teamMemberId);
+    expect((await journalOf(db, { aggregateId: defectId })).at(-1)).toMatchObject({
+      type: "EVT-WorkLogged",
+      actor: anna,
+    });
+  });
+
+  it("ST-024: What was done is required", async () => {
+    const { machineId, defectId } = await anOpenDefect("Left flipper weak");
+
+    for (const whatWasDone of ["", "  \n "]) {
+      expect(await logWork(defectId, 0, { whatWasDone, partsUsed: "1x coil stop" }, tom)).toEqual({
+        ok: false,
+        error: "what-was-done-required",
+      });
+    }
+
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([]);
+    expect((await openDefects(db, { machineId }))[0].lastWorkLogEntry).toBeUndefined();
+    expect(await journalOf(db, { aggregateId: defectId })).toEqual([]);
+  });
+
+  it("ST-024: No work on resolved defects", async () => {
+    const { defectId } = await anOpenDefect("Coin door jammed", true);
+    const resolved = await executeCommand(
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Lock replaced" },
+      { actor: tom, db, clock: fixedClock("2026-10-13T09:00:00Z"), newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+    const journalBefore = await journalOf(db, { aggregateId: defectId });
+
+    for (const teamMember of [tom, anna]) {
+      expect(await logWork(defectId, 1, { whatWasDone: "Oiled the lock as well" }, teamMember)).toEqual({
+        ok: false,
+        error: "defect-not-open",
+      });
+    }
+
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([]);
+    expect(await journalOf(db, { aggregateId: defectId })).toEqual(journalBefore);
+  });
+
+  it("ST-024: Work log entries cannot be changed", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+    await logWork(defectId, 0, { whatWasDone: "Replaced coil stop", partsUsed: "1x coil stop" }, tom);
+    const [byTom] = (await defectDetails(db, defectId))!.workLog;
+    expect(byTom).toMatchObject({ whatWasDone: "Replaced coil stop", loggedBy: tom.teamMemberId });
+    const run = { db, clock: fixedClock("2026-10-14T10:00:00Z"), newId: randomUUID };
+
+    // Anyone tries – through a command that does what no command of the module does: rewrite the entry, then drop it.
+    for (const [version, actor, attempt] of [
+      [1, anna, "change"],
+      [2, tom, "change"],
+      [3, anna, "remove"],
+      [4, tom, "remove"],
+    ] as const) {
+      const tried = await executeCommand(tamperWithWorkLogForTest, { defectId, version, attempt }, { actor, ...run });
+      expect(tried.ok).toBe(true);
+      expect((await defectDetails(db, defectId))?.workLog).toEqual([byTom]);
+    }
+
+    // And everything that does happen to the defect afterwards leaves it as it is – stored once, never written again.
+    await db.transaction(async (tx) => {
+      const unchanged = () =>
+        tx.execute(sql`SELECT xmin::text AS written FROM defect_work_log_entry WHERE id = ${byTom.id}`);
+      const before = (await unchanged()).rows;
+      const later = { db: tx, clock: fixedClock("2026-10-15T10:00:00Z"), newId: randomUUID };
+      const more = await executeCommand(
+        logWorkCommand,
+        { defectId, version: 5, whatWasDone: "Adjusted EOS switch", partsUsed: "" },
+        { actor: anna, ...later },
+      );
+      const claimed = await executeCommand(claimDefectCommand, { defectId, version: 6 }, { actor: anna, ...later });
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 7, closingNote: "Flipper tested" },
+        { actor: anna, ...later },
+      );
+      expect([more.ok, claimed.ok, resolved.ok]).toEqual([true, true, true]);
+      expect((await unchanged()).rows).toEqual(before);
+      expect((await defectDetails(tx, defectId))?.workLog).toEqual([
+        byTom,
+        expect.objectContaining({ whatWasDone: "Adjusted EOS switch", loggedBy: anna.teamMemberId }),
+      ]);
+    });
   });
 });

@@ -235,3 +235,35 @@ export const reportAndChangeStatusForTest = aggregateCommand({
 export async function storedDefect(db: Database, defectId: string) {
   return (await defects.load(db, defectId))?.state;
 }
+
+/**
+ * Test stand-in for a command that tries what no command of the module does (ST-024): it rewrites the defect's first
+ * work log entry, or drops the whole work log – the store must keep what is stored.
+ */
+export const tamperWithWorkLogForTest = aggregateCommand({
+  id: "CMD-TestTamperWithWorkLog",
+  allowedActors: ["helper", "technician"],
+  store: defects,
+  target: (input: { defectId: string; version: number; attempt: "change" | "remove" }) => ({
+    id: input.defectId,
+    version: input.version,
+  }),
+  decide: (defect, input) => ({
+    ok: true as const,
+    state: {
+      ...defect,
+      workLog:
+        input.attempt === "remove"
+          ? []
+          : defect.workLog.map((entry) => ({ ...entry, whatWasDone: "Nothing at all", partsUsed: undefined })),
+    },
+    events: [{ type: "EVT-TestWorkLogTamperedWith" as const }],
+  }),
+  journal: (event, defect) => ({
+    type: event.type,
+    aggregate: { type: "AGG-Defect", id: defect.id },
+    machineId: defect.machineId,
+    data: {},
+  }),
+  result: () => ({}),
+});
