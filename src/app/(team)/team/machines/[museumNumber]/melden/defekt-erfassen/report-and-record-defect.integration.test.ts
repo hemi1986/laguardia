@@ -151,4 +151,22 @@ describe("the form for reporting a problem and recording a defect", () => {
     });
     expect(rejectionText(rejected!, "LG-042")).toBe("LG-042 ist inzwischen ausgemustert. Es wurde nichts gespeichert.");
   });
+
+  it("ST-023: Helpers cannot record a defect when reporting", async () => {
+    // The page sends a helper to the plain report form (browser test); this is the helper who sends the form anyway.
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, anna, "Anna");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+    const { action, storage, reported } = formFor(machineId, anna);
+
+    const rejected = await action(
+      null,
+      post({ description: "Left flipper coil stop broken", title: "Left flipper sticks" }, await aPhoto()),
+    );
+
+    expect(rejected?.error).toBe("not-authorized");
+    expect(reported).toEqual([]);
+    await expectNothingStored(machineId, journalBefore, storage);
+  });
 });

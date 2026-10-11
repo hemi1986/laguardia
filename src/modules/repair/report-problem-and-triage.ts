@@ -27,7 +27,7 @@ export type ReportProblemAndTriageInput = ReportProblemInput & { triage?: Triage
 
 /** A new problem report cannot have been triaged by someone else – every other rule of CMD-RecordDefect applies. */
 export type ReportProblemAndTriageError =
-  ReportProblemError | TriageRequired | Exclude<RecordDefectError, "already-triaged">;
+  ReportProblemError | TriageRequired | "not-authorized" | Exclude<RecordDefectError, "already-triaged">;
 
 /** A technician's problem report without a triage outcome – rejected by the command itself (user, 2026-10-10). */
 export type TriageRequired = "triage-required";
@@ -37,8 +37,12 @@ export function reportProblemAndTriage(
   input: ReportProblemAndTriageInput,
   context: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported | DefectRecorded, ReportProblemAndTriageError> {
-  const reported = reportProblem(facts, input, context);
   const { actor } = context;
+  const technician = actor.kind === "team-member" && actor.role === "technician";
+  // Recording a defect is for technicians only (CMD-RecordDefect) – a helper's or visitor's problem report with that
+  // triage outcome is rejected as a whole, never stored without it (CMD-ReportProblem rules; user, 2026-10-11).
+  if (input.triage && !technician) return { ok: false, error: "not-authorized" };
+  const reported = reportProblem(facts, input, context);
   if (!reported.ok || actor.kind !== "team-member" || actor.role !== "technician") return reported;
   // A technician's problem report is never stored untriaged, whatever form sent it (CMD-ReportProblem rules).
   if (!input.triage) return { ok: false, error: "triage-required" };
