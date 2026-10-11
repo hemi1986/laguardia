@@ -11,6 +11,12 @@ export type DefectState = (typeof defectStates)[number];
 /** The Claim value object of AGG-Defect (data model, ST-025): who took the defect on, and since when. */
 export type Claim = { claimedBy: TeamMemberId; claimedAt: Date };
 
+/**
+ * The Resolution entity of AGG-Defect (data model, ST-028): how a defect ended – one per resolve, kept for the repair
+ * history. Its reopening follows with ST-030.
+ */
+export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
+
 /** AGG-Defect – current state (docs/architecture/data-model.md); its hold and work log follow with their stories. */
 export type Defect = {
   id: string;
@@ -24,4 +30,6 @@ export type Defect = {
   state: DefectState;
   /** None while nobody has claimed it – a defect has at most one claimant. */
   claim?: Claim;
+  /** One per resolve, the oldest first – only added to, never changed (Q13). */
+  resolutions: Resolution[];
 };

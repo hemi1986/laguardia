@@ -1,12 +1,11 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { aggregateStore, type Database } from "@/platform/command";
-import { priorities, type Claim, type Defect, type DefectState, type Priority } from "./defect";
+import { aggregateStore, saveHistory, type AggregateStore, type Database } from "@/platform/command";
+import { priorities, type Claim, type Defect, type DefectState, type Priority, type Resolution } from "./defect";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
-import { defect, problemReport } from "./schema";
+import { defect, defectResolution, problemReport } from "./schema";
 
-/** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16). */
-export const defects = aggregateStore({
+const defectRows = aggregateStore({
   type: "AGG-Defect",
   table: defect,
   toState: (row): Defect => ({
@@ -20,14 +19,63 @@ export const defects = aggregateStore({
     recordedAt: row.recordedAt,
     state: row.state,
     ...(row.claimedBy && row.claimedAt ? { claim: { claimedBy: row.claimedBy, claimedAt: row.claimedAt } } : {}),
+    resolutions: [], // loaded separately – see `defects.load`
   }),
   // null, not undefined: an update leaves out undefined columns, and a claim must be removable (ST-026).
-  toRow: ({ claim, ...state }: Defect) => ({
-    ...state,
-    claimedBy: claim?.claimedBy ?? null,
-    claimedAt: claim?.claimedAt ?? null,
+  toRow: (state: Defect) => ({
+    id: state.id,
+    machineId: state.machineId,
+    problemReportId: state.problemReportId,
+    title: state.title,
+    priority: state.priority,
+    suitableForHelpers: state.suitableForHelpers,
+    recordedBy: state.recordedBy,
+    recordedAt: state.recordedAt,
+    state: state.state,
+    claimedBy: state.claim?.claimedBy ?? null,
+    claimedAt: state.claim?.claimedAt ?? null,
   }),
 });
+
+/**
+ * How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), and its resolutions (ST-028) – an
+ * append-only history (Q13).
+ */
+export const defects: AggregateStore<Defect> = {
+  type: "AGG-Defect",
+  async load(tx, id, options) {
+    const loaded = await defectRows.load(tx, id, options);
+    if (!loaded) return undefined;
+    return { ...loaded, state: { ...loaded.state, resolutions: await resolutionsOf(tx, id) } };
+  },
+  async insert(tx, state) {
+    await defectRows.insert(tx, state);
+    await saveResolutions(tx, state);
+  },
+  async update(tx, state, expectedVersion) {
+    if (!(await defectRows.update(tx, state, expectedVersion))) return false;
+    await saveResolutions(tx, state);
+    return true;
+  },
+};
+
+function saveResolutions(tx: Database, state: Defect): Promise<void> {
+  return saveHistory(tx, { table: defectResolution, owner: "defectId" }, state.id, state.resolutions);
+}
+
+async function resolutionsOf(db: Database, defectId: string): Promise<Resolution[]> {
+  const rows = await db
+    .select()
+    .from(defectResolution)
+    .where(eq(defectResolution.defectId, defectId))
+    .orderBy(asc(defectResolution.position));
+  return rows.map((row) => ({
+    id: row.id,
+    closingNote: row.closingNote,
+    resolvedBy: row.resolvedBy,
+    resolvedAt: row.resolvedAt,
+  }));
+}
 
 /**
  * The titles of a machine's open defects, the oldest first – what the visitor machine page shows (RM-VisitorMachinePage,
@@ -155,6 +203,8 @@ export type DefectDetails = {
   version: number;
   /** Its claim, if any (ST-025). */
   claim: Claim | undefined;
+  /** How it ended – the resolution that made it resolved (ST-028); none while it is open. */
+  resolution: Omit<Resolution, "id"> | undefined;
   problemReports: DefectProblemReport[];
 };
 
@@ -173,6 +223,7 @@ export async function defectDetails(db: Database, defectId: string): Promise<Def
     state: row.state,
     version: row.version,
     claim: row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined,
+    resolution: row.state === "resolved" ? await latestResolution(db, row.id) : undefined,
     problemReports: await problemReportsOfDefect(db, row),
   };
 }
@@ -191,6 +242,11 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
     .where(eq(defect.id, input.defectId))
     .for("update");
   return { defect: row };
+}
+
+async function latestResolution(db: Database, defectId: string): Promise<Omit<Resolution, "id"> | undefined> {
+  const latest = (await resolutionsOf(db, defectId)).at(-1);
+  return latest && { closingNote: latest.closingNote, resolvedBy: latest.resolvedBy, resolvedAt: latest.resolvedAt };
 }
 
 function isId(value: string): boolean {

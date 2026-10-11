@@ -18,6 +18,7 @@ function aDefect(overrides: Partial<Defect> = {}): Defect {
     recordedBy: "eva",
     recordedAt: new Date("2026-10-01T08:00:00Z"),
     state: "open",
+    resolutions: [],
     ...overrides,
   };
 }
