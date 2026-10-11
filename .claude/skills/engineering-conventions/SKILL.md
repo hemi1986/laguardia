@@ -200,6 +200,13 @@ over from) is a reference in the event's journal data, listed in `events.yaml`, 
 next to the journal mapping (`takenOverFrom` in `claim-defect-command.ts`) – only for the confirmation, never taken
 from the address.
 
+**An action on a defect that needs input** (first: CMD-ResolveDefect, ST-028 – G21): a button-styled link on the
+defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`), which repeats the defect, loads only
+what it shows (`defect-to-resolve-data.ts`) and lands on the defect's page with a confirmation (`?resolved=1`, shown
+only to who did it). The offer is the command's own rule again (`resolveRefusal`); the form page shows that reason in
+place of the form to someone who may not, unless there is an action state to keep. A history on the defect (its
+resolutions) is stored like the machine status history – the store wraps the row store with `saveHistory`.
+
 **Two transactions racing for one row** in a test: `whileHoldingRow(db, sql\`SELECT … FOR UPDATE\`, race)` from
 `src/test-support/held-row.ts` – it counts only the sessions blocked by its own holding transaction, so tests running
 beside it in the shared database cannot disturb it, and it lets go also when the test throws.

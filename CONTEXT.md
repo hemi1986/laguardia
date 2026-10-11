@@ -163,6 +163,11 @@ A defect that is open but temporarily cannot progress – waiting for a part, wa
 _Avoid_: Paused, blocked, parked
 _UI (de)_: Pausiert (Wartet auf Ersatzteil / Wartet auf Techniker:in / Anderer Grund)
 
+**Closing note**:
+What a team member writes when resolving a defect – how it ended; required, and kept with the resolution for the repair history.
+_Avoid_: Resolution text, final comment, summary
+_UI (de)_: Abschlussnotiz
+
 **Closed on retirement**:
 The final end of a defect that was not resolved when its machine was retired; it does not count as resolved.
 _Avoid_: Cancelled, abandoned

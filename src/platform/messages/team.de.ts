@@ -23,6 +23,7 @@ export const teamMessages = {
     "Suitable for helpers": "Für Helfer:innen geeignet",
     "Maintenance task": "Wartungsaufgabe",
     "Resolved on the spot": "Direkt behoben",
+    "Closing note": "Abschlussnotiz",
   },
   login: {
     title: "Anmelden",
@@ -282,6 +283,14 @@ export const teamMessages = {
     /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
     onlyClaimedByMe: "Nur von mir übernommene",
     noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
+    /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */
+    resolve: "Beheben",
+    resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,
+    resolveSubmit: "Als behoben eintragen",
+    backToDefect: "Zurück zum Defekt",
+    /** How a resolved defect ended, on its page – and the confirmation for who resolved it (G3). */
+    resolvedBy: (name: string, dateTime: string) => `Behoben von ${name} am ${dateTime}`,
+    resolved: (title: string) => `Du hast „${title}“ behoben.`,
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
@@ -375,6 +384,7 @@ export const teamMessages = {
     "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
     "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
     "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
+    "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
     "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
     "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",

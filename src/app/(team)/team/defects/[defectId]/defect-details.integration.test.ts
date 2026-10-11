@@ -10,8 +10,8 @@ import {
   linkProblemReportToDefectCommand,
   recordDefectCommand,
   reportProblemCommand,
+  resolveDefectCommand,
 } from "@/modules/repair";
-import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -197,8 +197,8 @@ describe("a defect's own page", () => {
       "2026-09-29T10:00:00Z",
     );
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
     );
     if (!resolved.ok) throw new Error(resolved.error);
@@ -286,13 +286,85 @@ describe("a defect's own page", () => {
         NOW,
       );
       const resolved = await executeCommand(
-        resolveDefectForTest,
-        { defectId, version: 0 },
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Fixed" },
         { actor: tom, db, newId: randomUUID },
       );
       if (!resolved.ok) throw new Error("not resolved");
 
       expect((await seenBy(defectId, asTom)).canClaim).toBe(false);
+    });
+  });
+
+  describe("resolving it (ST-028)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    /** The page as that team member sees it, just back from resolving (`?resolved=1`). */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer });
+      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, justResolved: true }));
+      return { details, html };
+    }
+
+    async function aDefect(suitableForHelpers: boolean) {
+      await anExistingTeamMember(db, anna, "Anna");
+      const problemReportId = await reported(await registered("LG-042"), "Left flipper barely moves", NOW);
+      const outcome = await executeCommand(
+        recordDefectCommand,
+        {
+          problemReportId,
+          version: 0,
+          title: "Left flipper weak",
+          priority: undefined,
+          suitableForHelpers,
+          machineStatus: undefined,
+          machineVersion: undefined,
+        },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!outcome.ok) throw new Error(outcome.error);
+      return outcome.result.defectId;
+    }
+
+    it("offers resolving an open defect only to someone who may resolve it", async () => {
+      const defectId = await aDefect(false);
+
+      const toms = await seenBy(defectId, asTom);
+      expect(toms.details).toMatchObject({ canResolve: true, resolution: undefined });
+      expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
+      // The address alone (`?resolved=1`) makes the page say nothing.
+      expect(toms.html).not.toContain("behoben");
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas.details).toMatchObject({ canResolve: false });
+      expect(annas.html).not.toContain("/beheben");
+    });
+
+    it("shows how a resolved defect ended, tells who resolved it so, and offers resolving to nobody", async () => {
+      const defectId = await aDefect(true);
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil stop replaced, flipper tested for 20 minutes" },
+        { actor: anna, db, clock: fixedClock("2026-10-04T09:30:00Z"), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas.details).toMatchObject({
+        canResolve: false,
+        resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna", you: true },
+      });
+      expect(annas.html).toContain("Du hast „Left flipper weak“ behoben.");
+      expect(annas.html).toContain("Behoben von Anna am 04.10.2026, 11:30");
+      expect(annas.html).toContain("Abschlussnotiz");
+      expect(annas.html).toContain("Coil stop replaced, flipper tested for 20 minutes");
+      expect(annas.html).not.toContain("/beheben");
+      expect(annas.html).not.toContain("offen seit");
+      const toms = await seenBy(defectId, asTom);
+      expect(toms.details?.canResolve).toBe(false);
+      expect(toms.html).toContain("Behoben von Anna am 04.10.2026, 11:30");
+      expect(toms.html).not.toContain("Du hast");
     });
   });
 

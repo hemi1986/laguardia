@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigserial, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { defectStates, priorities } from "./defect";
 import { dismissalReasons, triageOutcomes } from "./report-problem";
 
@@ -38,7 +38,7 @@ export const problemReport = pgTable("problem_report", {
 /**
  * AGG-Defect – current state (docs/architecture/data-model.md, ST-018). Created only through triage of a problem
  * report (HS-16). machine_id and recorded_by are IDs of other modules – their foreign keys are added in the migration.
- * Holds, work log entries and resolutions follow with their stories.
+ * Holds and work log entries follow with their stories; its resolutions are `defectResolution`.
  * The foreign key of problem_report_id is DEFERRABLE INITIALLY DEFERRED (hand-written, drizzle/0014, ST-023): a
  * technician's problem report and its defect refer to each other and are inserted together. Drizzle cannot express
  * that – a generated migration that touches this constraint must keep the deferral by hand.
@@ -64,3 +64,26 @@ export const defect = pgTable("defect", {
   /** Optimistic version check (HS-16). */
   version: integer("version").notNull().default(0),
 });
+
+/**
+ * The resolutions of a defect (data model: Resolution entity, ST-028) – one per resolve, so closing notes survive a
+ * reopening for the repair history. Rows are inserted only, never updated (Q13): ST-030 decides where a reopening is
+ * kept. resolved_by is a TeamMemberId; its foreign key to team_member.id is added
+ * in the migration.
+ */
+export const defectResolution = pgTable(
+  "defect_resolution",
+  {
+    /** The entry's ID from the command's ID generator – the history is saved insert-only by it (Q13). */
+    id: uuid("id").primaryKey(),
+    /** The order the resolutions were stored in. */
+    position: bigserial("position", { mode: "number" }).notNull(),
+    defectId: uuid("defect_id")
+      .notNull()
+      .references(() => defect.id),
+    closingNote: text("closing_note").notNull(),
+    resolvedBy: uuid("resolved_by").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("defect_resolution_defect_idx").on(t.defectId)],
+);

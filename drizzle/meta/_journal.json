@@ -113,6 +113,13 @@
       "when": 1791744675234,
       "tag": "0015_defect_claim",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791748033306,
+      "tag": "0016_defect_resolution",
+      "breakpoints": true
     }
   ]
 }

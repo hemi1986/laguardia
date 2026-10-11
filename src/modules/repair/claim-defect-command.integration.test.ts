@@ -5,8 +5,8 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { claimDefectCommand, openDefects, reportProblemAndTriageCommand, takenOverFrom } from ".";
-import { resolveDefectForTest, storedDefect } from "./problem-report-stand-ins.test-support";
+import { claimDefectCommand, openDefects, reportProblemAndTriageCommand, takenOverFrom, resolveDefectCommand } from ".";
+import { storedDefect } from "./problem-report-stand-ins.test-support";
 
 /** CMD-ClaimDefect (ST-025) through the command layer: a team member claims a defect or takes it over. */
 const db = testDatabase();
@@ -107,8 +107,8 @@ describe("CMD-ClaimDefect", () => {
   it("ST-025: Resolved defects cannot be claimed", async () => {
     const { defectId } = await anOpenDefect("Coin door jammed", true);
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock: recorded, newId: randomUUID },
     );
     if (!resolved.ok) throw new Error("not resolved");

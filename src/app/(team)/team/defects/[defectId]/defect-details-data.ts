@@ -1,5 +1,5 @@
 import { machineLabels } from "@/modules/collection";
-import { claimRefusal, defectDetails, takenOverFrom, type Priority } from "@/modules/repair";
+import { claimRefusal, defectDetails, resolveRefusal, takenOverFrom, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -45,6 +45,10 @@ export type DefectDetailsData = {
   takenOverFrom: string | undefined;
   /** Whether the team member looking at the page may claim it – or take it over (G11). */
   canClaim: boolean;
+  /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
+  resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date; you: boolean } | undefined;
+  /** Whether the team member looking at the page may resolve it (G11). */
+  canResolve: boolean;
 };
 
 /**
@@ -78,6 +82,7 @@ export async function loadDefectDetails(
       ),
       ...(defect.claim ? [defect.claim.claimedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
+      ...(defect.resolution ? [defect.resolution.resolvedBy] : []),
     ]),
     photoViewAddresses(
       storage,
@@ -108,5 +113,13 @@ export async function loadDefectDetails(
     takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
     // CMD-ClaimDefect's own rule, asked so nobody is shown a button that can only be rejected (G11).
     canClaim: !!viewer && claimRefusal(defect, { teamMemberId: viewer.id, role: viewer.role }) === undefined,
+    resolution: defect.resolution && {
+      closingNote: defect.resolution.closingNote,
+      resolvedBy: names.get(defect.resolution.resolvedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+      resolvedAt: defect.resolution.resolvedAt,
+      you: defect.resolution.resolvedBy === viewer?.id,
+    },
+    // CMD-ResolveDefect's own rule, asked like the claim's (G11).
+    canResolve: !!viewer && resolveRefusal(defect, viewer) === undefined,
   };
 }
