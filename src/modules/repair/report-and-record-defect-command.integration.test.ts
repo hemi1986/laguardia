@@ -7,7 +7,13 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { commandErrorText, teamMessages } from "@/platform/messages";
-import { problemReportsOfMachine, reportProblemAndTriageCommand, reportProblemCommand, triageList } from ".";
+import {
+  openDefectTitles,
+  problemReportsOfMachine,
+  reportProblemAndTriageCommand,
+  reportProblemCommand,
+  triageList,
+} from ".";
 import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.test-support";
 
 /**
@@ -17,6 +23,26 @@ import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.te
 const db = testDatabase();
 const clock = fixedClock("2026-10-11T09:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+
+/** A technician reports and records a defect in the same step – no status change unless the test asks for one. */
+function reportAndRecordDefect(machineId: string, description: string, title: string) {
+  return executeCommand(
+    reportProblemAndTriageCommand,
+    {
+      machineId,
+      description,
+      triage: {
+        outcome: "defect-recorded",
+        title,
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+    },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+}
 
 describe("CMD-ReportProblem by a technician", () => {
   it("ST-023: Technician reports and records a defect in one step", async () => {
@@ -92,6 +118,42 @@ describe("CMD-ReportProblem by a technician", () => {
     expect(commandErrorText(teamMessages, "triage-required")).toBe(
       "Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.",
     );
+  });
+
+  it("ST-023: Two faults become two own problem reports", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+
+    const first = await reportAndRecordDefect(machineId, "Left flipper coil stop broken", "Left flipper sticks");
+    const second = await reportAndRecordDefect(machineId, "Rubber on the right slingshot torn", "Right slingshot dead");
+
+    if (!first.ok || !second.ok) throw new Error("not reported");
+    const reports = await Promise.all(
+      [first, second].map(({ result }) => storedProblemReport(db, result.problemReportId)),
+    );
+    expect(reports.map((report) => [report?.reporter, report?.triage?.outcome, report?.triage?.defectId])).toEqual([
+      [{ kind: "team-member", teamMemberId: tom.teamMemberId }, "defect-recorded", first.result.defectId],
+      [{ kind: "team-member", teamMemberId: tom.teamMemberId }, "defect-recorded", second.result.defectId],
+    ]);
+    expect(first.result.defectId).not.toBe(second.result.defectId);
+    expect(await problemReportsOfMachine(db, machineId)).toHaveLength(2);
+    expect((await openDefectTitles(db, machineId)).sort()).toEqual(["Left flipper sticks", "Right slingshot dead"]);
+  });
+
+  it("ST-023: A missing description is named before a missing title", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+
+    expect(await reportAndRecordDefect(machineId, "  ", "  ")).toEqual({ ok: false, error: "description-required" });
+    // With a description the missing title is the reason – and still nothing is stored.
+    expect(await reportAndRecordDefect(machineId, "Left flipper coil stop broken", "  ")).toEqual({
+      ok: false,
+      error: "title-required",
+    });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(await openDefectTitles(db, machineId)).toEqual([]);
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
   });
 });
 
