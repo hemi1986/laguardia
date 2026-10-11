@@ -5,7 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { linkProblemReportToDefectCommand, recordDefectCommand, reportProblemCommand } from "@/modules/repair";
+import {
+  claimDefectCommand,
+  linkProblemReportToDefectCommand,
+  recordDefectCommand,
+  reportProblemCommand,
+} from "@/modules/repair";
 import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
@@ -208,6 +213,83 @@ describe("a defect's own page", () => {
     expect(await loadDefectDetails(db, fixedClock(NOW), randomUUID())).toBeUndefined();
     expect(await loadDefectDetails(db, fixedClock(NOW), "not-an-id")).toBeUndefined();
     expect(await page("not-an-id")).toContain("Diesen Defekt gibt es nicht.");
+  });
+
+  describe("its claim (ST-025)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    async function claimed(defectId: string, version: number, actor: Actor) {
+      const outcome = await executeCommand(
+        claimDefectCommand,
+        { defectId, version },
+        { actor, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!outcome.ok) throw new Error(outcome.error);
+    }
+
+    /** The page as that team member sees it: its claim data, and the rendered view just back from claiming. */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer });
+      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, justClaimed: true }));
+      return { claimant: details?.claimant, canClaim: details?.canClaim, version: details?.version, html };
+    }
+
+    it("offers an unclaimed defect to everyone who may claim it, and confirms nothing nobody did", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
+
+      for (const viewer of [asTom, asAnna]) {
+        const page = await seenBy(defectId, viewer);
+        expect(page).toMatchObject({ claimant: undefined, canClaim: true, version: 0 });
+        // The address alone (`?claimed=1`) makes the page say nothing.
+        expect(page.html).not.toContain("bernommen");
+      }
+    });
+
+    it("names the claimant, tells the claimant so, and offers taking over to everyone else", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
+      await claimed(defectId, 0, tom);
+
+      const toms = await seenBy(defectId, asTom);
+      expect(toms).toMatchObject({ claimant: { name: "Tom", you: true }, canClaim: false, version: 1 });
+      expect(toms.html).toContain("Du hast „Left flipper weak“ übernommen.");
+      expect(toms.html).not.toContain("Vorher:");
+      expect(toms.html).toContain("Von dir übernommen");
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas).toMatchObject({ claimant: { name: "Tom", you: false }, canClaim: true });
+      expect(annas.html).toContain("Übernommen von Tom");
+      expect(annas.html).not.toContain("Du hast");
+
+      await claimed(defectId, 1, anna);
+
+      const afterTakeover = await seenBy(defectId, asAnna);
+      expect(afterTakeover.html).toContain("Du hast „Left flipper weak“ übernommen. Vorher: Tom.");
+      expect((await seenBy(defectId, asTom)).html).toContain("Übernommen von Anna");
+    });
+
+    it("offers no claim on a resolved defect", async () => {
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
+      const resolved = await executeCommand(
+        resolveDefectForTest,
+        { defectId, version: 0 },
+        { actor: tom, db, newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error("not resolved");
+
+      expect((await seenBy(defectId, asTom)).canClaim).toBe(false);
+    });
   });
 
   describe("with the photo of its originating problem report (ST-016)", () => {

@@ -17,7 +17,8 @@ export const claimDefectCommand = aggregateCommand({
     type: event.type,
     aggregate: { type: "AGG-Defect", id: event.defectId },
     machineId: event.machineId,
-    data: { claimedBy: event.claimedBy },
+    // References only – whom it was taken over from is kept nowhere else (the confirmation reads it, G3).
+    data: { claimedBy: event.claimedBy, ...(event.takenOverFrom ? { takenOverFrom: event.takenOverFrom } : {}) },
   }),
   result: (defect, [claimed]) => ({ defectId: defect.id, takenOverFrom: claimed?.takenOverFrom }),
 });

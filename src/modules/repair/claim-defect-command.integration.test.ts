@@ -75,7 +75,7 @@ describe("CMD-ClaimDefect", () => {
       (await journalOf(db, { aggregateId: defectId })).map((entry) => [entry.type, entry.actor, entry.data]),
     ).toEqual([
       ["EVT-DefectClaimed", tom, { claimedBy: tom.teamMemberId }],
-      ["EVT-DefectClaimed", anna, { claimedBy: anna.teamMemberId }],
+      ["EVT-DefectClaimed", anna, { claimedBy: anna.teamMemberId, takenOverFrom: tom.teamMemberId }],
     ]);
   });
 

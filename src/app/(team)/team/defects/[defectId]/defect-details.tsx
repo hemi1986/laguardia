@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
+import { claimantText } from "../open-defects";
+import type { ClaimDefectState } from "./actions";
+import { ClaimDefectForm } from "./claim-defect-form";
 import type { DefectDetailsData } from "./defect-details-data";
 import { ProblemReportPhoto } from "../../problem-report-photo";
 
@@ -9,10 +13,21 @@ const { defects: texts, recordDefect, terms } = teamMessages;
 
 /**
  * A defect's own page (ST-021): its machine – leading to the machine record –, title, priority, whether it is suitable
- * for helpers and how long it is open, then the problem reports it came from: the originating one first, then the
+ * for helpers, how long it is open and who has claimed it – with the button to claim it or take it over (ST-025) –, then
+ * the problem reports it came from: the originating one first, then the
  * linked ones (ST-022). Work log entries (ST-024) and photos (ST-016) are added by their stories. Texts are plain text.
  */
-export function DefectDetailsView({ details }: { details: DefectDetailsData | undefined }) {
+export function DefectDetailsView({
+  details,
+  claimAction,
+  justClaimed = false,
+}: {
+  details: DefectDetailsData | undefined;
+  /** CMD-ClaimDefect for this defect (ST-025) – none where the page is only looked at (e.g. a test of its data). */
+  claimAction?: (previous: ClaimDefectState, formData: FormData) => Promise<ClaimDefectState>;
+  /** Just back from claiming: the confirmation names the defect and whom it was taken over from (G3). */
+  justClaimed?: boolean;
+}) {
   if (!details) {
     return (
       <div className="flex flex-col gap-2">
@@ -25,6 +40,13 @@ export function DefectDetailsView({ details }: { details: DefectDetailsData | un
   }
   return (
     <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
+      {/* Only the claimant is told so – the address alone cannot make the page say it. */}
+      {justClaimed && details.claimant?.you && (
+        <Confirmation>
+          {texts.claimed(details.title)}
+          {details.takenOverFrom && texts.takenOverFrom(details.takenOverFrom)}
+        </Confirmation>
+      )}
       <section className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">{details.title}</h2>
         <Link
@@ -41,6 +63,15 @@ export function DefectDetailsView({ details }: { details: DefectDetailsData | un
           {texts.recordedAt(formatDateTime(details.recordedAt))}
           {details.openDays !== undefined && ` · ${texts.openFor(details.openDays)}`}
         </p>
+        {details.claimant && <p className="text-sm">{claimantText(details.claimant)}</p>}
+        {claimAction && (
+          <ClaimDefectForm
+            action={claimAction}
+            version={details.version}
+            label={details.claimant ? texts.takeOverFrom(details.claimant.name) : texts.claim}
+            offered={details.canClaim}
+          />
+        )}
       </section>
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">{texts.problemReports}</h2>

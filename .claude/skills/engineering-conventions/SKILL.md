@@ -191,6 +191,13 @@ A creating command may return `created` aggregates and `runs` like a changing on
 and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY DEFERRED` (hand-written migration,
 `drizzle/0014_…`: the defect's reference to its problem report).
 
+**A command behind a single button** (first: CMD-ClaimDefect, ST-025): the button is a small client form that posts
+the version its page showed (`claim-defect-form.tsx`). The page's data function takes the team member looking at it
+(`viewer`) and says whether the control is offered – the command's rules repeated only to hide a button that could only
+be rejected (G11); the command decides. What a confirmation names but the aggregate does not keep (whom a defect was
+taken over from) is a reference in the event's journal data, read back by the read model – never taken from the
+address.
+
 **A rule that needs another module's data** (first: ST-013, context map "Repair reads from Collection when checking
 command rules"): the command's `facts` call the other module's **public** query in the command's transaction – e.g.
 `reportingFacts` in `src/modules/repair/problem-reports.ts` calls Collection's `machineForReporting(tx, machineId)`
