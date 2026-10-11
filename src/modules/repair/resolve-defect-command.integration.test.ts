@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
+import { machineForReporting, type MachineStatus } from "@/modules/collection";
+import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   claimDefectCommand,
@@ -21,10 +22,10 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
 /** An open defect on a machine of its own, reported and recorded by Tom (ST-023). */
-async function anOpenDefect(title: string, suitableForHelpers = false) {
+async function anOpenDefect(title: string, suitableForHelpers = false, machineStatus: MachineStatus = "playable") {
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, anna, "Anna");
-  const machineId = await aRegisteredMachine(db);
+  const machineId = await aRegisteredMachine(db, machineStatus);
   const reported = await executeCommand(
     reportProblemAndTriageCommand,
     {
@@ -88,5 +89,23 @@ describe("CMD-ResolveDefect", () => {
       machineId,
       { resolvedBy: tom.teamMemberId },
     ]);
+  });
+
+  it("ST-028: Helper resolves a defect suitable for helpers", async () => {
+    const { machineId, defectId } = await anOpenDefect("Rubber cracked", true);
+
+    // Anna has not claimed it – a claim is a signal, not a lock (HS-8).
+    expect(await resolve(defectId, 0, "Rubber replaced", anna)).toEqual({ ok: true, result: { defectId } });
+
+    expect(await defectDetails(db, defectId)).toMatchObject({
+      state: "resolved",
+      resolution: { closingNote: "Rubber replaced", resolvedBy: anna.teamMemberId },
+    });
+    expect(await openDefects(db, { machineId })).toEqual([]);
+    expect((await journalOf(db, { aggregateId: defectId })).at(-1)).toMatchObject({
+      type: "EVT-DefectResolved",
+      actor: anna,
+      data: { resolvedBy: anna.teamMemberId },
+    });
   });
 });
