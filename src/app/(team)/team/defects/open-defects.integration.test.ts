@@ -11,8 +11,8 @@ import {
   recordDefectCommand,
   reportProblemCommand,
   type Priority,
+  resolveDefectCommand,
 } from "@/modules/repair";
-import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -232,8 +232,8 @@ describe("the open defects list", () => {
     await anOpenDefect(lg042, "Left flipper weak");
     const coinDoor = await anOpenDefect(lg042, "Coin door jammed");
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId: coinDoor, version: 0 },
+      resolveDefectCommand,
+      { defectId: coinDoor, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
     );
     if (!resolved.ok) throw new Error(resolved.error);

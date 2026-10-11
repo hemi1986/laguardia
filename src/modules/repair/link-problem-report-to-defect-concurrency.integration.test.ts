@@ -7,8 +7,14 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { whileHoldingRow } from "@/test-support/held-row";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { defectDetails, linkProblemReportToDefectCommand, recordDefectCommand, reportProblemCommand } from ".";
-import { resolveDefectForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
+import {
+  defectDetails,
+  linkProblemReportToDefectCommand,
+  recordDefectCommand,
+  reportProblemCommand,
+  resolveDefectCommand,
+} from ".";
+import { storedProblemReport } from "./problem-report-stand-ins.test-support";
 
 /**
  * A defect resolved while a technician links a problem report to it (ST-022) – two real transactions, not a sequence.
@@ -61,8 +67,8 @@ describe("linking while the defect is resolved", () => {
         );
         await untilWaiting(1); // the link has checked the defect and waits to save the problem report
         const resolving = executeCommand(
-          resolveDefectForTest,
-          { defectId, version: 0 },
+          resolveDefectCommand,
+          { defectId, version: 0, closingNote: "Fixed" },
           { actor: eva, db, clock, newId: randomUUID },
         );
         await untilWaiting(2); // the resolution waits for the link's lock on the defect

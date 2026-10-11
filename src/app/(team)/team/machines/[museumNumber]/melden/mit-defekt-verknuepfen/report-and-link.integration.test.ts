@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { openDefectTitles, problemReportsOfMachine, reportProblemAndTriageCommand } from "@/modules/repair";
+import {
+  openDefectTitles,
+  problemReportsOfMachine,
+  reportProblemAndTriageCommand,
+  resolveDefectCommand,
+} from "@/modules/repair";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
-import { resolveDefectForTest, storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -124,8 +129,8 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     // The form is open, offering „Left flipper weak“, when the defect is resolved.
     const { action, storage } = linkFormFor(machineId);
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock, newId: randomUUID },
     );
     if (!resolved.ok) throw new Error("not resolved");

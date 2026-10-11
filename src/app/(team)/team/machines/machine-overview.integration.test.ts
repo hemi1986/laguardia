@@ -5,8 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand } from "@/modules/repair";
-import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { recordDefectCommand, reportProblemCommand, resolveDefectCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -88,8 +87,8 @@ describe("the machine overview with open defects", () => {
     await anOpenDefect(lg042, "Display flickers");
     const coinDoor = await anOpenDefect(lg042, "Coin door jammed");
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId: coinDoor, version: 0 },
+      resolveDefectCommand,
+      { defectId: coinDoor, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock, newId: randomUUID },
     );
     if (!resolved.ok) throw new Error(resolved.error);

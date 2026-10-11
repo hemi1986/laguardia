@@ -12,8 +12,8 @@ import {
   problemReportForTriage,
   recordDefectCommand,
   reportProblemCommand,
+  resolveDefectCommand,
 } from ".";
-import { resolveDefectForTest } from "./problem-report-stand-ins.test-support";
 
 /** CMD-LinkProblemReportToDefect (ST-022) through the command layer – a triage outcome for technicians only. */
 const db = testDatabase();
@@ -104,8 +104,8 @@ describe("CMD-LinkProblemReportToDefect", () => {
     const problemReportId = await reported(lg042, "Flipper on the left does nothing");
     // The technician's page offered the open defect; a moment later it was resolved.
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
       { actor: eva, db, clock, newId: randomUUID },
     );
     if (!resolved.ok) throw new Error(resolved.error);

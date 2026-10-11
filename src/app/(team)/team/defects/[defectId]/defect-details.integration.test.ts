@@ -12,7 +12,6 @@ import {
   reportProblemCommand,
   resolveDefectCommand,
 } from "@/modules/repair";
-import { resolveDefectForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -198,8 +197,8 @@ describe("a defect's own page", () => {
       "2026-09-29T10:00:00Z",
     );
     const resolved = await executeCommand(
-      resolveDefectForTest,
-      { defectId, version: 0 },
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
       { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
     );
     if (!resolved.ok) throw new Error(resolved.error);
@@ -287,8 +286,8 @@ describe("a defect's own page", () => {
         NOW,
       );
       const resolved = await executeCommand(
-        resolveDefectForTest,
-        { defectId, version: 0 },
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Fixed" },
         { actor: tom, db, newId: randomUUID },
       );
       if (!resolved.ok) throw new Error("not resolved");
