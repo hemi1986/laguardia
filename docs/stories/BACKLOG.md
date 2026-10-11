@@ -4,15 +4,20 @@
 
 **Progress: 21 of 58 domain stories done** · scenarios 208 of 441
 
-**81 stories** · In Progress: 0 · Ready: 43 · In Review: 0 · Draft: 5 · Done: 33
+**81 stories** · In Progress: 1 · Ready: 42 · In Review: 0 · Draft: 5 · Done: 33
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-025](ST-025-claim-defect.md) | Claim or take over a defect | story | Repair | must | S | low | ST-021 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-025](ST-025-claim-defect.md) | Claim or take over a defect | story | Repair | must | S | low | ST-021 |
 | [ST-028](ST-028-resolve-defect.md) | Resolve a defect with a closing note | story | Repair | must | S | low | ST-025 |
 | [ST-024](ST-024-log-work.md) | Log work on a defect | story | Repair | must | S | low | ST-021, ST-028 |
 | [ST-026](ST-026-assign-and-release-claims.md) | Assign a defect and release claims | story | Repair | must | S | low | ST-025 |
