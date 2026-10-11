@@ -1,4 +1,4 @@
-import { expect, openMore, test } from "./fixtures";
+import { expect, logIn, openMore, test } from "./fixtures";
 
 /**
  * The team shell (ST-076): one navigation for every team page, the landmarks the other tests rely on, and the
@@ -7,14 +7,6 @@ import { expect, openMore, test } from "./fixtures";
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
-
-async function logIn(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 test.beforeEach(async () => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");

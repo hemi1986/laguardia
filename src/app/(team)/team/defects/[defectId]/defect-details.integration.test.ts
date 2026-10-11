@@ -235,10 +235,15 @@ describe("a defect's own page", () => {
       const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
         storage: memoryStorage(),
         viewer,
-        justClaimed: true,
+        done: "claim",
       });
-      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, justClaimed: true }));
-      return { claimant: details?.claimant, canClaim: details?.canClaim, version: details?.version, html };
+      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details }));
+      return {
+        claimant: details?.claimant,
+        canClaim: details?.offered.includes("claim"),
+        version: details?.version,
+        html,
+      };
     }
 
     it("offers an unclaimed defect to everyone who may claim it, and confirms nothing nobody did", async () => {
@@ -251,7 +256,7 @@ describe("a defect's own page", () => {
       for (const viewer of [asTom, asAnna]) {
         const page = await seenBy(defectId, viewer);
         expect(page).toMatchObject({ claimant: undefined, canClaim: true, version: 0 });
-        // The address alone (`?claimed=1`) makes the page say nothing.
+        // The address alone (`?done=claim`) makes the page say nothing.
         expect(page.html).not.toContain("bernommen");
       }
     });
@@ -321,8 +326,9 @@ describe("a defect's own page", () => {
       const details = await loadDefectDetails(db, fixedClock("2026-10-08T10:00:00Z"), defectId, {
         storage: memoryStorage(),
         viewer: asAnna,
+        done: justLoggedWork ? "log-work" : undefined,
       });
-      return { details, html: renderToStaticMarkup(createElement(DefectDetailsView, { details, justLoggedWork })) };
+      return { details, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
     }
 
     it("ST-024: Defect details show all work log entries newest first", async () => {
@@ -390,10 +396,10 @@ describe("a defect's own page", () => {
       );
 
       const open = await seenByAnna(defectId, true);
-      expect(open.details).toMatchObject({ canLogWork: true, workLog: [] });
+      expect(open.details).toMatchObject({ offered: ["claim", "log-work", "resolve"], workLog: [] });
       expect(open.html).toContain("Noch kein Arbeitsschritt eingetragen.");
       expect(open.html).toContain(`href="/team/defects/${defectId}/arbeitsschritt"`);
-      // The address alone (`?logged=1`) confirms nothing.
+      // The address alone (`?done=log-work`) confirms nothing.
       expect(open.html).not.toContain("Arbeitsschritt zu „");
 
       await logged(defectId, 0, anna, "2026-10-06T09:30:00Z", "Cleaned the flipper mechanism");
@@ -403,7 +409,7 @@ describe("a defect's own page", () => {
       // Only who logged last is told so: after Tom's entry the same address confirms nothing to Anna.
       await logged(defectId, 1, tom, "2026-10-07T09:30:00Z", "Replaced the coil stop");
       const afterToms = await seenByAnna(defectId, true);
-      expect(afterToms.details?.youLoggedLast).toBe(false);
+      expect(afterToms.details?.confirmed).toBeUndefined();
       expect(afterToms.html).not.toContain("Arbeitsschritt zu „");
 
       const resolved = await executeCommand(
@@ -413,7 +419,7 @@ describe("a defect's own page", () => {
       );
       if (!resolved.ok) throw new Error(resolved.error);
       const closed = await seenByAnna(defectId);
-      expect(closed.details?.canLogWork).toBe(false);
+      expect(closed.details?.offered).toEqual([]);
       expect(closed.html).not.toContain("/arbeitsschritt");
       // What was done stays on the page.
       expect(closed.html).toContain("Cleaned the flipper mechanism");
@@ -425,10 +431,14 @@ describe("a defect's own page", () => {
     const asTom = { id: tom.teamMemberId, role: tom.role };
     const asAnna = { id: anna.teamMemberId, role: anna.role };
 
-    /** The page as that team member sees it, just back from resolving (`?resolved=1`). */
+    /** The page as that team member sees it, just back from resolving (`?done=resolve`). */
     async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna) {
-      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer });
-      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, justResolved: true }));
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        done: "resolve",
+      });
+      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details }));
       return { details, html };
     }
 
@@ -456,12 +466,12 @@ describe("a defect's own page", () => {
       const defectId = await aDefect(false);
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.details).toMatchObject({ canResolve: true, resolution: undefined });
+      expect(toms.details).toMatchObject({ offered: ["claim", "log-work", "resolve"], resolution: undefined });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
-      // The address alone (`?resolved=1`) makes the page say nothing.
+      // The address alone (`?done=resolve`) makes the page say nothing.
       expect(toms.html).not.toContain("behoben");
       const annas = await seenBy(defectId, asAnna);
-      expect(annas.details).toMatchObject({ canResolve: false });
+      expect(annas.details?.offered).toEqual(["log-work"]);
       expect(annas.html).not.toContain("/beheben");
     });
 
@@ -476,8 +486,9 @@ describe("a defect's own page", () => {
 
       const annas = await seenBy(defectId, asAnna);
       expect(annas.details).toMatchObject({
-        canResolve: false,
-        resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna", you: true },
+        offered: [],
+        confirmed: { action: "resolve" },
+        resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna" },
       });
       expect(annas.html).toContain("Du hast „Left flipper weak“ behoben.");
       expect(annas.html).toContain("Behoben von Anna am 04.10.2026, 11:30");
@@ -486,7 +497,7 @@ describe("a defect's own page", () => {
       expect(annas.html).not.toContain("/beheben");
       expect(annas.html).not.toContain("offen seit");
       const toms = await seenBy(defectId, asTom);
-      expect(toms.details?.canResolve).toBe(false);
+      expect(toms.details).toMatchObject({ offered: [], confirmed: undefined });
       expect(toms.html).toContain("Behoben von Anna am 04.10.2026, 11:30");
       expect(toms.html).not.toContain("Du hast");
     });

@@ -4,7 +4,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { problemReportForTriage, problemReportsOfMachine, reportProblemCommand } from ".";
-import { changeDescriptionForTest, storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { changeDescriptionForTest, storedProblemReport } from "./command-probes.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
+import { defectActions, type DefectAction } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
@@ -11,6 +12,19 @@ import type { DefectDetailsData } from "./defect-details-data";
 import { ProblemReportPhoto } from "../../problem-report-photo";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
+
+/** The actions with a form page of their own (G21): where it is and what its button says (G14). */
+const formPages: Record<Exclude<DefectAction, "claim">, { path: string; label: string }> = {
+  "log-work": { path: "arbeitsschritt", label: texts.logWork },
+  resolve: { path: "beheben", label: texts.resolve },
+};
+
+/** What the page says to who just did it (G3). */
+const confirmations: Record<DefectAction, (title: string) => string> = {
+  claim: texts.claimed,
+  "log-work": texts.workLogged,
+  resolve: texts.resolved,
+};
 
 /**
  * A defect's own page (ST-021): its machine – leading to the machine record –, title, priority, whether it is suitable
@@ -23,19 +37,10 @@ const { defects: texts, recordDefect, terms } = teamMessages;
 export function DefectDetailsView({
   details,
   claimAction,
-  justClaimed = false,
-  justResolved = false,
-  justLoggedWork = false,
 }: {
   details: DefectDetailsData | undefined;
   /** CMD-ClaimDefect for this defect (ST-025) – none where the page is only looked at (e.g. a test of its data). */
   claimAction?: (previous: ClaimDefectState, formData: FormData) => Promise<ClaimDefectState>;
-  /** Just back from claiming: the confirmation names the defect and whom it was taken over from (G3). */
-  justClaimed?: boolean;
-  /** Just back from resolving: the confirmation names the defect (G3). */
-  justResolved?: boolean;
-  /** Just back from logging work: the confirmation names the defect (G3). */
-  justLoggedWork?: boolean;
 }) {
   if (!details) {
     return (
@@ -49,16 +54,13 @@ export function DefectDetailsView({
   }
   return (
     <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
-      {/* Only the claimant is told so – the address alone cannot make the page say it. */}
-      {justClaimed && details.claimant?.you && (
+      {/* Only who just did it is told so – the address alone cannot make the page say it (G3). */}
+      {details.confirmed && (
         <Confirmation>
-          {texts.claimed(details.title)}
-          {details.takenOverFrom && texts.takenOverFrom(details.takenOverFrom)}
+          {confirmations[details.confirmed.action](details.title)}
+          {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
         </Confirmation>
       )}
-      {/* Only who resolved it is told so – the address alone cannot make the page say it. */}
-      {justResolved && details.resolution?.you && <Confirmation>{texts.resolved(details.title)}</Confirmation>}
-      {justLoggedWork && details.youLoggedLast && <Confirmation>{texts.workLogged(details.title)}</Confirmation>}
       <section className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">{details.title}</h2>
         <Link
@@ -76,29 +78,27 @@ export function DefectDetailsView({
           {details.openDays !== undefined && ` · ${texts.openFor(details.openDays)}`}
         </p>
         {details.claimant && <p className="text-sm">{claimantText(details.claimant)}</p>}
-        {claimAction && (
-          <ClaimDefectForm
-            action={claimAction}
-            version={details.version}
-            label={details.claimant ? texts.takeOverFrom(claimantName(details.claimant)) : texts.claim}
-            offered={details.canClaim}
-          />
-        )}
-        {details.canLogWork && (
-          <Link
-            href={`/team/defects/${details.id}/arbeitsschritt`}
-            className={buttonVariants({ variant: "outline", className: "self-start" })}
-          >
-            {texts.logWork}
-          </Link>
-        )}
-        {details.canResolve && (
-          <Link
-            href={`/team/defects/${details.id}/beheben`}
-            className={buttonVariants({ variant: "outline", className: "self-start" })}
-          >
-            {texts.resolve}
-          </Link>
+        {/* Every action on the defect, in Repair's order – offered only to someone its command will not refuse (G11). */}
+        {defectActions.map((action) =>
+          action === "claim"
+            ? claimAction && (
+                <ClaimDefectForm
+                  key={action}
+                  action={claimAction}
+                  version={details.version}
+                  label={details.claimant ? texts.takeOverFrom(claimantName(details.claimant)) : texts.claim}
+                  offered={details.offered.includes(action)}
+                />
+              )
+            : details.offered.includes(action) && (
+                <Link
+                  key={action}
+                  href={`/team/defects/${details.id}/${formPages[action].path}`}
+                  className={buttonVariants({ variant: "outline", className: "self-start" })}
+                >
+                  {formPages[action].label}
+                </Link>
+              ),
         )}
       </section>
       {details.resolution && (

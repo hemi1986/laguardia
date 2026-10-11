@@ -26,7 +26,7 @@ export async function claimDefectAction(
     input: (fields) => claimDefectInput(fields, defectId),
     onSuccess: async (claimed) => {
       revalidatePath("/team/defects");
-      redirect(`/team/defects/${claimed.defectId}?claimed=1`);
+      redirect(`/team/defects/${claimed.defectId}?done=claim`);
     },
   })(previous, formData);
 }

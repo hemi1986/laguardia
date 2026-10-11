@@ -12,6 +12,7 @@ import { withPhotoForTest } from "@/photo/photo-stand-in.test-support";
 import { formRunner, photoFormRunner } from "./form-runner";
 import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
+import { post } from "@/test-support/forms";
 
 /**
  * The Server Action runner (ST-073, architecture review Q9/Q10/Q19): the one way from a form to a command. Tested
@@ -31,12 +32,6 @@ function reportProblemFor(machineId: string, actor: Actor, succeeded: (id: strin
     input: ({ description }) => ({ machineId, description: description ?? "" }),
     onSuccess: async ({ problemReportId }) => succeeded(problemReportId),
   });
-}
-
-function post(fields: Record<string, string>): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  return form;
 }
 
 describe("the Server Action runner", () => {
@@ -122,13 +117,20 @@ describe("the Server Action runner", () => {
       return new File([new Uint8Array(jpeg)], "photo.jpg", { type: "image/jpeg" });
     }
 
-    function photoFormActingAs(actor: Actor, storage = memoryStorage(), succeeded: (photo?: string) => void = () => {}) {
+    function photoFormActingAs(
+      actor: Actor,
+      storage = memoryStorage(),
+      succeeded: (photo?: string) => void = () => {},
+    ) {
       const action = photoFormRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
         withPhotoForTest,
         {
           fields: ["outcome"],
           photo: { field: "photo", owner: "problem-reports" },
-          input: ({ outcome }, photo) => ({ photo, outcome: outcome === "reject" ? ("reject" as const) : ("accept" as const) }),
+          input: ({ outcome }, photo) => ({
+            photo,
+            outcome: outcome === "reject" ? ("reject" as const) : ("accept" as const),
+          }),
           onSuccess: async ({ photo }) => succeeded(photo),
         },
       );
@@ -137,7 +139,9 @@ describe("the Server Action runner", () => {
 
     it("runs the command with the stored photo's reference", async () => {
       const received: (string | undefined)[] = [];
-      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) => received.push(photo));
+      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) =>
+        received.push(photo),
+      );
       const form = post({ outcome: "accept" });
       form.append("photo", await aPhoto());
 
@@ -157,7 +161,9 @@ describe("the Server Action runner", () => {
 
     it("treats an empty file field as no photo", async () => {
       const received: (string | undefined)[] = [];
-      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) => received.push(photo));
+      const { action, storage } = photoFormActingAs({ kind: "visitor" }, memoryStorage(), (photo) =>
+        received.push(photo),
+      );
       const form = post({ outcome: "accept" });
       form.append("photo", new File([], ""));
 

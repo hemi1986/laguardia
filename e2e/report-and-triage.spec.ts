@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { aHelper, aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
 
 /**
  * Reporting a problem and linking it or resolving it on the spot in the same step, on a phone (ST-052, G21a): a
@@ -13,52 +13,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as = { username: username!, password: password! }) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
-
-type MachineStatus = "playable" | "limited" | "out-of-order" | "not-on-display";
-
-/** A machine with the given status, registered by the e2e technician. Returns its museum number and model title. */
-async function aMachine(page: Page, machineStatus: MachineStatus = "playable") {
-  const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
-  await page.getByLabel("Titel").fill(title);
-  await page.getByLabel("Hersteller").fill("Williams");
-  await page.getByLabel("Kategorie").selectOption("pinball");
-  await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-  await page.goto("/team/machines/new");
-  await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
-  await page.getByLabel("Standort").fill("Hall 2");
-  await page.getByLabel("Status").selectOption(machineStatus);
-  await page.getByRole("button", { name: "Gerät erfassen" }).click();
-  const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  return { museumNumber, title };
-}
-
-/** A helper account created by the e2e technician, who then logs out. */
-async function aHelper(page: Page) {
-  const helper = { username: unique("helper").replace(" ", "_"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
-  return helper;
-}
 
 /** From the machine record to the choice of the triage outcome, the way a team member starts reporting. */
 async function startReporting(page: Page, museumNumber: string) {
@@ -88,10 +42,6 @@ async function anOpenDefect(page: Page, museumNumber: string, title: string) {
 
 const sendLink = (page: Page) => page.getByRole("button", { name: "Melden und mit Defekt verknüpfen" });
 const sendResolved = (page: Page) => page.getByRole("button", { name: "Melden und als direkt behoben eintragen" });
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 /** Nothing of the machine waits for triage – and its problem reports are nowhere else to be seen yet. */
 async function expectNothingWaits(page: Page, museumNumber: string) {

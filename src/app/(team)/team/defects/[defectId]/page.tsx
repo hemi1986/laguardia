@@ -14,20 +14,12 @@ import { DefectDetailsView } from "./defect-details";
 export default async function DefectPage({ params, searchParams }: PageProps<"/team/defects/[defectId]">) {
   const member = await requireTeamMember();
   const [{ defectId }, query] = await Promise.all([params, searchParams]);
-  const justClaimed = query.claimed !== undefined;
-  const justResolved = query.resolved !== undefined;
-  const justLoggedWork = query.logged !== undefined;
-  const details = await loadDefectDetails(database(), systemClock, defectId, { viewer: member, justClaimed });
+  const done = typeof query.done === "string" ? query.done : undefined;
+  const details = await loadDefectDetails(database(), systemClock, defectId, { viewer: member, done });
 
   return (
     <Page title={teamMessages.terms.Defect}>
-      <DefectDetailsView
-        details={details}
-        claimAction={details && claimDefectAction.bind(null, details.id)}
-        justClaimed={justClaimed}
-        justResolved={justResolved}
-        justLoggedWork={justLoggedWork}
-      />
+      <DefectDetailsView details={details} claimAction={details && claimDefectAction.bind(null, details.id)} />
     </Page>
   );
 }

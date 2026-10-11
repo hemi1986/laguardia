@@ -1,5 +1,15 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import {
+  aHelper,
+  allowPreview,
+  anOpenDefect,
+  expect,
+  logIn,
+  openDefect,
+  pageWidth,
+  TECHNICIAN,
+  test,
+} from "./fixtures";
 
 /**
  * Resolving a defect on a phone (ST-028): the defect's page → „Beheben“ → the form with the closing note → back on the
@@ -13,75 +23,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as = { username: username!, password: password! }) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
-
-/** A playable machine, registered by the e2e technician. Returns its museum number and model title. */
-async function aMachine(page: Page) {
-  const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
-  await page.getByLabel("Titel").fill(title);
-  await page.getByLabel("Hersteller").fill("Williams");
-  await page.getByLabel("Kategorie").selectOption("pinball");
-  await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-  await page.goto("/team/machines/new");
-  await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
-  await page.getByLabel("Standort").fill("Hall 2");
-  await page.getByRole("button", { name: "Gerät erfassen" }).click();
-  const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  return { museumNumber, title };
-}
-
-/** A helper account created by the e2e technician, who then logs out. */
-async function aHelper(page: Page) {
-  const helper = { username: unique("helper").replace(" ", "_"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
-  return helper;
-}
-
-const TECHNICIAN = "E2E Technician";
-
-/** A machine with an open defect, reported and recorded by the e2e technician in one step (ST-023). */
-async function anOpenDefect(page: Page, { suitableForHelpers = false } = {}) {
-  const { museumNumber } = await aMachine(page);
-  const title = unique("Left flipper weak");
-  await page.goto(`/team/machines/${museumNumber}/melden/defekt-erfassen`);
-  await page.getByLabel("Beschreibung").fill(`${title} – first seen`);
-  await page.getByLabel("Titel").fill(title);
-  if (suitableForHelpers) await page.getByLabel("Für Helfer:innen geeignet").check();
-  await page.getByRole("button", { name: "Melden und Defekt erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(title);
-  return { museumNumber, title };
-}
-
-/** The defect's page, opened the way a team member gets there: the open defects list, narrowed to the machine. */
-async function openDefect(page: Page, museumNumber: string, title: string) {
-  await page.goto(`/team/defects?machine=${museumNumber}`);
-  await page.getByRole("link", { name: title }).click();
-  await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
-}
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 const closingNote = (page: Page) => page.getByLabel("Abschlussnotiz");
 const NOTE = "Coil stop replaced, flipper tested for 20 minutes";

@@ -52,6 +52,7 @@ erDiagram
     DEFECT |o--o{ PROBLEM_REPORT : "refers to (linked)"
     DEFECT ||--o{ WORK_LOG_ENTRY : contains
     DEFECT ||--o{ RESOLUTION : contains
+    DEFECT ||--o{ REOPENING : contains
     MAINTENANCE_PLAN ||--o{ MAINTENANCE_TASK : contains
     MAINTENANCE_TASK ||--o{ MAINTENANCE_RECORD : "refers to"
     MACHINE ||--o{ MAINTENANCE_RECORD : "refers to"
@@ -169,16 +170,18 @@ stateDiagram-v2
 | | | Photos | list of `Photo` | no | EVT-WorkLogged |
 | | | Logged by | `TeamMemberId` | yes | EVT-WorkLogged |
 | | | Logged at | `Timestamp` | yes | EVT-WorkLogged |
-| Resolution | Entity | Closing note | `Text` | yes | EVT-DefectResolved |
+| Resolution | Entity | ID | `ResolutionId` | yes | – (identity) |
+| | | Closing note | `Text` | yes | EVT-DefectResolved |
 | | | Resolved by | `TeamMemberId` | yes | EVT-DefectResolved |
 | | | Resolved at | `Timestamp` | yes | EVT-DefectResolved (occurrence) |
-| | | Reopen reason | `Text` or `ProblemReportId` | when reopened | EVT-DefectReopened (reason = the linked problem report when reopened by POL-LinkReopensResolvedDefect) |
-| | | Reopened by | `TeamMemberId` | when reopened | EVT-DefectReopened |
-| | | Reopened at | `Timestamp` | when reopened | EVT-DefectReopened (occurrence) |
+| Reopening | Entity | ID | `ReopeningId` | yes | – (identity) |
+| | | Reopen reason | `Text` or `ProblemReportId` | yes | EVT-DefectReopened (reason = the linked problem report when reopened by POL-LinkReopensResolvedDefect) |
+| | | Reopened by | `TeamMemberId` | yes | EVT-DefectReopened |
+| | | Reopened at | `Timestamp` | yes | EVT-DefectReopened (occurrence) |
 
 Whom a claim was taken over from is data of `EVT-DefectClaimed` only, kept in the event journal as a `TeamMemberId` reference – not an attribute of the *Claim* value object; the confirmation after taking over reads it there (ST-025).
 
-A defect keeps one *Resolution* per resolve (with its reopening, if any), so closing notes and reopen reasons survive for the repair history (`RM-MachineRecord`). Derived: *Last work log entry* (`RM-OpenDefects`), time to first work log entry and to resolved (`RM-RepairTimes` – which resolution counts after a reopen is a detail for the story, recommendation: the latest).
+A defect keeps one *Resolution* per resolve and one *Reopening* per reopen; both are only added, never changed. In the order they happened they alternate, so the repair history (`RM-MachineRecord`) shows each closing note with the reopen reason that followed it. Derived: *Last work log entry* (`RM-OpenDefects`), time to first work log entry and to resolved (`RM-RepairTimes` – which resolution counts after a reopen is a detail for the story, recommendation: the latest).
 
 ---
 

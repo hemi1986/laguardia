@@ -1,19 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { machineForReporting, type MachineStatus } from "@/modules/collection";
-import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
+import { journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import {
-  claimDefectCommand,
-  defectDetails,
-  openDefects,
-  openDefectTitles,
-  reportProblemAndTriageCommand,
-  resolveDefectCommand,
-} from ".";
+import { claimDefectCommand, defectDetails, openDefects, openDefectTitles, resolveDefectCommand } from ".";
+import { anOpenDefectIn } from "@/test-support/defects";
 
 /** CMD-ResolveDefect (ST-028) through the command layer: a team member resolves a defect with a closing note. */
 const db = testDatabase();
@@ -22,29 +16,8 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
 /** An open defect on a machine of its own, reported and recorded by Tom (ST-023). */
-async function anOpenDefect(title: string, suitableForHelpers = false, machineStatus: MachineStatus = "playable") {
-  await anExistingTeamMember(db, tom, "Tom");
-  await anExistingTeamMember(db, anna, "Anna");
-  const machineId = await aRegisteredMachine(db, machineStatus);
-  const reported = await executeCommand(
-    reportProblemAndTriageCommand,
-    {
-      machineId,
-      description: `${title} – first seen`,
-      triage: {
-        outcome: "defect-recorded",
-        title,
-        priority: undefined,
-        suitableForHelpers,
-        machineStatus: undefined,
-        machineVersion: undefined,
-      },
-    },
-    { actor: tom, db, clock: recorded, newId: randomUUID },
-  );
-  if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
-  return { machineId, defectId: reported.result.defectId };
-}
+const anOpenDefect = (title: string, suitableForHelpers = false, machineStatus: MachineStatus = "playable") =>
+  anOpenDefectIn(db, { title, suitableForHelpers, machineStatus, recordedBy: tom, at: recorded });
 
 function resolve(defectId: string, version: number, closingNote: string, actor: Actor, at = "2026-10-13T10:00:00Z") {
   return executeCommand(
@@ -53,6 +26,11 @@ function resolve(defectId: string, version: number, closingNote: string, actor: 
     { actor, db, clock: fixedClock(at), newId: randomUUID },
   );
 }
+
+beforeAll(async () => {
+  await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, anna, "Anna");
+});
 
 describe("CMD-ResolveDefect", () => {
   it("ST-028: Technician resolves a defect", async () => {

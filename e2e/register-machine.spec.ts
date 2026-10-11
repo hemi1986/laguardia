@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { expect, logIn, openMore, pageWidth, test, unique } from "./fixtures";
 
 /**
  * Registering a machine on a phone (ST-007) and the Server Action runner in the browser (ST-073, proof moved here by
@@ -10,18 +10,6 @@ import { expect, openMore, test } from "./fixtures";
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
-
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as = { username: username!, password: password! }) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /** A machine model of this test's own, so the registration has one to choose. */
 async function aMachineModel(page: Page): Promise<string> {
@@ -43,10 +31,6 @@ async function openRegistration(page: Page) {
   await expect(page).toHaveURL(/\/team\/machines$/);
   await page.getByRole("link", { name: "Gerät erfassen" }).click();
   await expect(page).toHaveURL(/\/team\/machines\/new$/);
-}
-
-async function pageWidth(page: Page): Promise<number> {
-  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 /** Fills the registration with a museum number in another format and submits it. */

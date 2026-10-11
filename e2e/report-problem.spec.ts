@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, openMore, pageWidth, test } from "./fixtures";
 
 /**
  * A visitor reports a problem on a phone (ST-013): from the visitor machine page to the report form page
@@ -14,7 +14,10 @@ test.beforeEach(() => {
 });
 
 /** A machine registered by the e2e technician, who logs out again – returns its museum number. */
-async function aPlayableMachine(page: Page, machineStatus: "playable" | "not-on-display" = "playable"): Promise<string> {
+async function aPlayableMachine(
+  page: Page,
+  machineStatus: "playable" | "not-on-display" = "playable",
+): Promise<string> {
   await page.goto("/login");
   await page.getByLabel("Benutzername").fill(username!);
   await page.getByLabel("Passwort").fill(password!);
@@ -57,10 +60,6 @@ async function openReportForm(phone: Page, museumNumber: string, button = "Probl
   await phone.goto(`/m/${museumNumber}`);
   await phone.getByRole("link", { name: button }).click();
   await expect(phone).toHaveURL(new RegExp(`/m/${museumNumber}/melden$`));
-}
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 test("ST-013: Visitor reports a problem", async ({ page, browser }) => {

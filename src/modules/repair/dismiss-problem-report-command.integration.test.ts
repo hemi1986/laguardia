@@ -6,7 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { dismissProblemReportCommand, reportProblemCommand, triageList, type DismissProblemReportInput } from ".";
-import { storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedProblemReport } from "./command-probes.test-support";
 
 /** CMD-DismissProblemReport (ST-020) through the command layer – a triage outcome for technicians only. */
 const db = testDatabase();

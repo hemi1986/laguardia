@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, openMore, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, openMore, pageWidth, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
 
 /**
  * Resolving a problem on the spot on a phone (ST-019): a helper goes from the triage list to the problem report's page,
@@ -16,18 +16,6 @@ test.beforeEach(() => {
 
 type Account = { username: string; password: string };
 const technician = (): Account => ({ username: username!, password: password! });
-
-function unique(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as: Account) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /**
  * Logs out through "Mehr" – with the keyboard, not a click: with JavaScript disabled and several workers running,
@@ -95,10 +83,6 @@ async function technicianTriagesMeanwhile(browser: Browser, museumNumber: string
 const note = (page: Page) => page.getByLabel("Was wurde gemacht?");
 const listed = (page: Page, museumNumber: string) =>
   page.getByRole("main").getByRole("article").filter({ hasText: museumNumber });
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 test("ST-019: A note is required", async ({ page }) => {
   const { museumNumber, title, helper } = await aProblemReportAndAHelper(page);

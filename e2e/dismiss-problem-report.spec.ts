@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
 
 /**
  * Dismissing a problem report on a phone (ST-020): a technician goes from the triage list to the problem report's page,
@@ -12,18 +12,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /** As the e2e technician: a machine and an untriaged problem report for it. Returns its museum number and model title. */
 async function aProblemReport(page: Page, description = "Way too hard to score") {
@@ -56,10 +44,6 @@ const reasonText = (page: Page) => page.getByLabel("Begründung (nur bei „Ande
 const submit = (page: Page) => page.getByRole("button", { name: "Meldung verwerfen" });
 const listed = (page: Page, museumNumber: string) =>
   page.getByRole("main").getByRole("article").filter({ hasText: museumNumber });
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 test('ST-020: "Machine retired" cannot be chosen by hand', async ({ page }) => {
   const { museumNumber, title } = await aProblemReport(page);

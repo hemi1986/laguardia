@@ -6,6 +6,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineStatus } from "@/modules/collection";
 import type { Priority } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
+import { VersionField } from "@/app/_actions/form-parts";
 
 const { recordDefect: texts, machines } = teamMessages;
 
@@ -87,7 +88,7 @@ export function DefectFields({
           <FieldDescription id="machineStatus-hint">
             {texts.currentStatus(museumNumber, machines.statuses[machine.status])}
           </FieldDescription>
-          <input type="hidden" name="machineVersion" value={machine.version} />
+          <VersionField name="machineVersion" version={machine.version} />
           <NativeSelect
             id="machineStatus"
             name="machineStatus"

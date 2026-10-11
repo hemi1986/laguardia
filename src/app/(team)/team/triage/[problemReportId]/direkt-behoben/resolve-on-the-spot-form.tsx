@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
 import type { ResolveOnTheSpotState } from "./actions";
 import { triageRejectionText } from "../triage-rejection-text";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { resolveOnTheSpot: texts, triage } = teamMessages;
 
@@ -30,12 +31,12 @@ export function ResolveOnTheSpotForm({
   const [state, action, pending] = useActionState(resolve, null);
   const rejectionId = useId();
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = state?.error === "note-required";
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <Field data-invalid={invalid}>
         <FieldLabel htmlFor="note">{texts.note}</FieldLabel>
         <Textarea

@@ -26,7 +26,7 @@ export async function resolveDefectAction(
     input: (fields) => resolveDefectInput(fields, defectId),
     onSuccess: async (resolved) => {
       revalidatePath("/team/defects");
-      redirect(`/team/defects/${resolved.defectId}?resolved=1`);
+      redirect(`/team/defects/${resolved.defectId}?done=resolve`);
     },
   })(previous, formData);
 }

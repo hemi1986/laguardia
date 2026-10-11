@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, openMore, test } from "./fixtures";
+import { expect, logIn, openMore, pageWidth, test, unique, aMachine } from "./fixtures";
 
 /**
  * Changing the machine status on a phone (ST-012): from the machine record to its own page and back. Needs a
@@ -13,32 +13,9 @@ test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
 
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as = { username: username!, password: password! }) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
-
-/** A machine model and a playable machine registered through the pages – returns the assigned museum number. */
+/** A playable machine, registered by the e2e technician. Returns its museum number. */
 async function aPlayableMachine(page: Page): Promise<string> {
-  const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
-  await page.getByLabel("Titel").fill(title);
-  await page.getByLabel("Hersteller").fill("Williams");
-  await page.getByLabel("Kategorie").selectOption("pinball");
-  await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-  await page.goto("/team/machines/new");
-  await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
-  await page.getByLabel("Standort").fill("Hall 2, row 3");
-  await page.getByRole("button", { name: "Gerät erfassen" }).click();
-  return (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
+  return (await aMachine(page)).museumNumber;
 }
 
 /** From the machine record to the status change, the way a team member gets there. */
@@ -46,10 +23,6 @@ async function openStatusChange(page: Page, museumNumber: string) {
   await page.goto(`/team/machines/${museumNumber}`);
   await page.getByRole("link", { name: "Status ändern" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Status von ${museumNumber} ändern`);
-}
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
 test("ST-012: A helper is offered only Außer Betrieb", async ({ page }) => {

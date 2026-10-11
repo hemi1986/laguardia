@@ -1,5 +1,6 @@
 import type { LinkProblemReportToDefectInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
+import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const linkToDefectFields = ["version", "defectId"] as const;
@@ -14,12 +15,9 @@ export function linkToDefectInput(
   fields: FormFields<LinkToDefectField>,
   problemReportId: string,
 ): LinkProblemReportToDefectInput {
-  const version = Number(fields.version);
   return {
     problemReportId,
-    version: fields.version && Number.isInteger(version) ? version : NO_VERSION_SEEN,
+    version: versionSeen(fields.version),
     defectId: fields.defectId || undefined,
   };
 }
-
-const NO_VERSION_SEEN = -1;

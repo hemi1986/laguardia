@@ -1,12 +1,5 @@
 import { machineLabels } from "@/modules/collection";
-import {
-  claimRefusal,
-  defectDetails,
-  logWorkRefusal,
-  resolveRefusal,
-  takenOverFrom,
-  type Priority,
-} from "@/modules/repair";
+import { defectActions, defectDetails, lastDefectActionBy, type DefectAction, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -45,23 +38,17 @@ export type DefectDetailsData = {
   version: number;
   /** Its claimant, if any (ST-025). */
   claimant: ShownClaimant | undefined;
+  /** What the team member looking at the page can do to it, in the order the page offers it (G11, G21). */
+  offered: DefectAction[];
   /**
-   * Whom the claimant took it over from, by name – only for the claimant just back from claiming, for the confirmation
-   * (G3); undefined otherwise.
+   * What that team member just did to it – for the confirmation (G3); after a claim with whom it was taken over from,
+   * by name. Undefined unless they are just back from doing it and nobody acted since.
    */
-  takenOverFrom: string | undefined;
-  /** Whether the team member looking at the page may claim it – or take it over (G11). */
-  canClaim: boolean;
+  confirmed: { action: DefectAction; takenOverFrom: string | undefined } | undefined;
   /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
-  resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date; you: boolean } | undefined;
-  /** Whether the team member looking at the page may resolve it (G11). */
-  canResolve: boolean;
+  resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date } | undefined;
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
   workLog: ShownWorkLogEntry[];
-  /** Whether the newest entry is the viewer's own – for the confirmation just after logging work (G3). */
-  youLoggedLast: boolean;
-  /** Whether work can be logged on it as it is – every team member may (HS-8, G11). */
-  canLogWork: boolean;
 };
 
 /** A work log entry on the defect's page. */
@@ -76,26 +63,21 @@ export type ShownWorkLogEntry = {
 /**
  * The defect page's data: Repair's defect with its problem reports, Collection's museum number and title, Team's names
  * – the page composes the modules' public queries (ST-009). Undefined when there is no such defect. `viewer` is the
- * team member looking at the page: whether they may claim the defect, and whether its claim is theirs (ST-025);
- * `justClaimed` says they are just back from claiming it.
+ * team member looking at the page: what they can do to the defect, and whether its claim is theirs; `done` is the
+ * action the address says they just did (`?done=claim`) – confirmed only if the defect's journal says so too.
  */
 export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  {
-    storage = blobStorage(),
-    viewer,
-    justClaimed = false,
-  }: PhotoSource & { viewer?: Viewer; justClaimed?: boolean } = {},
+  { storage = blobStorage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: string } = {},
 ): Promise<DefectDetailsData | undefined> {
-  const defect = await defectDetails(db, defectId);
+  const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
-  // Read only for the confirmation: the claimant, just back from claiming.
-  const previousClaimant =
-    justClaimed && defect.claim && defect.claim.claimedBy === viewer?.id
-      ? await takenOverFrom(db, defect.id, defect.claim.claimedBy)
-      : undefined;
+  // Read only for the confirmation: someone just back from an action.
+  const last = done && viewer ? await lastDefectActionBy(db, defect.id, viewer.id) : undefined;
+  const confirmed = last?.action === done ? last : undefined;
+  const previousClaimant = confirmed?.takenOverFrom;
   const [machines, names, photos] = await Promise.all([
     machineLabels(db, [defect.machineId]),
     teamMemberNames(db, [
@@ -133,24 +115,22 @@ export async function loadDefectDetails(
     id: defect.id,
     version: defect.version,
     claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
-    takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
-    // CMD-ClaimDefect's own rule, asked so nobody is shown a button that can only be rejected (G11).
-    canClaim: !!viewer && claimRefusal(defect, { teamMemberId: viewer.id, role: viewer.role }) === undefined,
+    // The commands' own rules, asked so nobody is shown a control that can only be rejected (G11).
+    offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),
+    confirmed: confirmed && {
+      action: confirmed.action,
+      takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
+    },
     resolution: defect.resolution && {
       closingNote: defect.resolution.closingNote,
       resolvedBy: names.get(defect.resolution.resolvedBy) ?? teamMessages.machineRecord.unknownTeamMember,
       resolvedAt: defect.resolution.resolvedAt,
-      you: defect.resolution.resolvedBy === viewer?.id,
     },
-    // CMD-ResolveDefect's own rule, asked like the claim's (G11).
-    canResolve: !!viewer && resolveRefusal(defect, viewer) === undefined,
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,
         loggedBy: names.get(entry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
       }))
       .reverse(),
-    youLoggedLast: !!viewer && defect.workLog.at(-1)?.loggedBy === viewer.id,
-    canLogWork: !!viewer && logWorkRefusal(defect) === undefined,
   };
 }

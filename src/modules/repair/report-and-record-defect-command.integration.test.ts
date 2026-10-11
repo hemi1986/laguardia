@@ -14,7 +14,7 @@ import {
   reportProblemCommand,
   triageList,
 } from ".";
-import { storedDefect, storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedDefect, storedProblemReport } from "./command-probes.test-support";
 
 /**
  * CMD-ReportProblem by a technician (ST-023): the problem report is triaged in the same step – here with the outcome

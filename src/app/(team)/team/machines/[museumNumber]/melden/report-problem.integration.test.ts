@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { reportProblemCommand, untriagedProblemReportCount } from "@/modules/repair";
-import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { formRunner, photoFormRunner } from "@/app/_actions/form-runner";
 import sharp from "sharp";
@@ -10,6 +10,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "./report-problem-input";
+import { post } from "@/test-support/forms";
 
 /**
  * A team member's problem report from the machine record (ST-015): the report form's fields and input function run
@@ -17,12 +18,6 @@ import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto
  */
 const db = testDatabase();
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
-
-function post(fields: Record<string, string>): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  return form;
-}
 
 describe("the team's report form", () => {
   it("ST-015: Helper reports a problem", async () => {

@@ -192,20 +192,30 @@ and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY
 `drizzle/0014_…`: the defect's reference to its problem report).
 
 **A command behind a single button** (first: CMD-ClaimDefect, ST-025): the button is a small client form that posts
-the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule, asked
-by the page: the decision's reasons for refusing are one exported function (`claimRefusal(defect, actor)`), which the
-decision applies and the page's data function calls with the team member looking at the page (`viewer`) – no second
-copy of the rule in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
+the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule: the
+decision's reasons for refusing are one function next to it (`claimRefusal(defect, actor)`), which the decision applies
+and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
+in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
 over from) is a reference in the event's journal data, listed in `events.yaml`, and read back by a function that sits
 next to the journal mapping (`takenOverFrom` in `claim-defect-command.ts`) – only for the confirmation, never taken
 from the address.
 
+**What a team member can do to a defect** (architecture review 2026-10-11): `src/modules/repair/defect-actions.ts` is
+the one place that knows the actions on a defect (`defectActions`, in the order the page offers them), each command's
+reason for refusing a team member (`defectActionRefusals`, built from the refusal function next to each decision) and
+which event belongs to which action. `defectDetails(db, id, teamMember)` returns that answer as `actions`; the defect's
+page shows what is `offered`, and a form page shows the reason in place of its form (`defect-form-data.ts`) – no page
+carries a rule or a `can…` flag of its own (G11). **A new command on a defect** adds: its action and refusal there, its
+event in `actionOfEvent`, a confirmation text and – if it needs input – its form page in the two small maps of
+`defect-details.tsx`. After an action the Server Action lands on `/team/defects/<id>?done=<action>`; the page confirms it
+only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
+never from the address alone, and without a state field per action.
+
 **An action on a defect that needs input** (first: CMD-ResolveDefect, ST-028 – G21): a button-styled link on the
-defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`), which repeats the defect, loads only
-what it shows (`defect-form-data.ts`, shared with „Arbeitsschritt eintragen“, ST-024) and lands on the defect's page with a confirmation (`?resolved=1`, shown
-only to who did it). The offer is the command's own rule again (`resolveRefusal`); the form page shows that reason in
-place of the form to someone who may not, unless there is an action state to keep. A history on the defect (its
-resolutions) is stored like the machine status history – the store wraps the row store with `saveHistory`.
+defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`, `…/arbeitsschritt/`), which repeats the
+defect, loads only what it shows (`loadDefectForForm(db, defectId, viewer, action)`) and lands on the defect's page. The
+form page shows the command's reason in place of the form to someone it would refuse, unless there is an action state to
+keep.
 
 **Two transactions racing for one row** in a test: `whileHoldingRow(db, sql\`SELECT … FOR UPDATE\`, race)` from
 `src/test-support/held-row.ts` – it counts only the sessions blocked by its own holding transaction, so tests running
@@ -220,17 +230,30 @@ twice, and the other module's tables are never imported. Such a read takes **no 
 current state at command time, not an invariant (context map) – a change in the same second is caught by the other
 module's events and policies (e.g. the retirement policies).
 
-**Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012). A history – the machine
-status history, a work log, defect resolutions – is a list in the aggregate's state; the decision appends an entry
-with an ID from `context.newId()` and never changes or removes one. The store saves it with
-`saveHistory(tx, { table, owner: "machineId" }, aggregateId, rows)` (`src/platform/command/history.ts`) – `owner` names
-the column holding the aggregate's ID, which the helper fills in itself: it inserts the entries whose ID is not stored yet and never updates or deletes a stored entry, whatever the state says about it. A history
-table has its own `id` (the entry's ID, no database default), the owner column and a `position bigserial` for the order entries were
-stored in (entries of one command share their point in time); the store loads the list ordered by `position`.
-Example: `machines.ts` (`saveStatusHistory`). Proven by `src/platform/command/history.integration.test.ts` (a stand-in
-aggregate) and the machine status history test in `change-machine-status-command.integration.test.ts` – both install
-a trigger in their own database that refuses UPDATE. The real tables get no such trigger: an entry's free text (a
-reason) may one day have to be removed.
+**Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012; the store keeps them since
+the architecture review 2026-10-11). A history – the machine status history, a work log, defect resolutions – is a list
+in the aggregate's state; the decision appends an entry with an ID from `context.newId()` and never changes or removes
+one. The module describes it once – `history({ table, owner: "defectId", toEntry, toRow })`
+(`src/platform/command/history.ts`) – and names it in its store under the name of the list in the state:
+`aggregateStore({ …, histories: { workLog, resolutions }, toState: (row, histories) => … })`. The store loads the lists
+into the state (the oldest entry first), and saves them with the aggregate: it inserts the entries whose ID is not
+stored yet and never updates or deletes a stored entry, whatever the state says about it. No module writes a store by
+hand for a history. A history table has its own `id` (the entry's ID, no database default), the owner column and a
+`position bigserial` for the order entries were stored in (entries of one command share their point in time).
+- **A fact that comes later is an entry of its own** – a reopening after a resolution (data model, ST-030) is appended
+  as a *Reopening*, never written onto the stored *Resolution*; the page puts the two in order.
+- **A list inside a history entry** (the photos of a work log entry, ST-032) is a history of its own on the aggregate,
+  each entry naming the entry it belongs to – the store has no nested lists.
+- **Read models load a history through its description** – `workLog.load(db, defectIds)` gives the entries of many
+  aggregates in one query, by aggregate ID (the repair history of a machine, ST-033) – and never map the rows a second
+  time.
+- A list whose entries are changed or removed (the tasks of the maintenance plan, ST-040) is not a history; the store
+  gets that kind when its first story needs it.
+Examples: `defects.ts`, `machines.ts` (which wraps its store only to keep the museum number register). Proven by
+`src/platform/command/history.integration.test.ts` (a stand-in aggregate, with a trigger in its own database that
+refuses UPDATE), the machine status history test in `change-machine-status-command.integration.test.ts` and
+"ST-024: Work log entries cannot be changed". The real tables get no such trigger: an entry's free text (a reason) may
+one day have to be removed.
 
 What `executeCommand` (`src/platform/command/index.ts`) guarantees – don't re-implement any of it:
 1. **Authorization first**: the actor must be in `allowedActors` (`"visitor" | "helper" | "technician" | "system"`), else `not-authorized` before the command runs. Role rules beyond that (e.g. "only the claimant") are domain rules in the decision.
@@ -268,8 +291,11 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **One small typed input function per action** (Q19), no schema library: it reads and converts the fields, domain validation stays in the decision. **The empty-field rule:** a missing or empty field becomes "no value given" and the decision decides – a text field an empty string; a field that is not free text `undefined`. Example ST-007: a missing machine model becomes "no machine model given", which CMD-RegisterMachine rejects ("Machine model and location are required"); a missing museum number – optional there – becomes "no museum number given" and the command assigns one. The input function **never fills in a default** and never throws; an unknown enumeration value is "no value given" too. This holds for every form on the runner; the ST-005 account actions predate it (their `role()` helper falls back to helper) and follow it when they move onto a command.
 - **A form on an existing aggregate** (first: ST-012, `…/[museumNumber]/status/`) posts the aggregate's ID and the
   version its page loaded as hidden fields; the page reads them with a query that returns the version (e.g.
-  `machineForTeamForm`). The input function converts a version that is not a whole number to `-1` – a version
-  nobody saw, which the command layer answers with `version-conflict`. **Every Server Action re-renders the page it
+  `machineForTeamForm`). The form renders the version with `<VersionField version={…} />` and keys every field that
+  keeps its value on `keptKey(state)` (`src/app/_actions/form-parts.tsx`); the input function reads it with
+  `versionSeen(fields.version)` (`src/app/_actions/version.ts`) – a version that is not a whole number is `-1`, a
+  version nobody saw, which the command layer answers with `version-conflict`. No form writes these three by hand
+  (architecture review 2026-10-11). **Every Server Action re-renders the page it
   was posted from** (`currentPerson()` renews the session cookie, and a cookie change makes Next.js re-render the
   current route in the action's response – ST-019 review, 2026-10-05). So after a rejection the form posts the version
   stored *now*, not the one the page first loaded. That is safe because the decision runs first: a domain rejection
@@ -387,6 +413,17 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 | Everything | `npm run verify` (`--e2e` for browser tests) | lint, types, tests, traceability |
 
 - **Titles:** every Gherkin scenario of a story has exactly one test titled `ST-NNN: <scenario title>` (checked by `verify.ts`). Tech-task tests describe behaviour without the prefix.
+- **Things that exist** (architecture review 2026-10-11): what a scenario's "Given" names comes from `src/test-support/`,
+  set up through the commands – `aRegisteredMachine(db, status)` (`machines.ts`), `anOpenDefectIn(db, { recordedBy, at,
+  title, suitableForHelpers, machineStatus })` (`defects.ts`, returns machine, defect and problem report IDs),
+  `post(fields, photo?)` for a posted form (`forms.ts`). A test binds its database, acting people and clock once in a
+  one-line helper of its own (`const anOpenDefect = (title) => anOpenDefectIn(db, { title, recordedBy: tom, at })`) – it
+  does not copy the command call. A page test in an isolated database that needs "LG-042" of a given machine model
+  still registers its machines itself.
+- **Probes of the command layer** live in `src/modules/repair/command-probes.test-support.ts`: commands that do what
+  no real command does (for the version check, the policies, the histories), and `storedProblemReport` /
+  `storedDefect` for the few command tests that check a state no read model shows. Prefer the read model
+  (`defectDetails`, `problemReportsOfMachine`) wherever it shows the fact; a real command is never stood in for.
 - **Test data:** builders in `src/test-support/builders.ts` (`aMachine`, `aDefect`, `aHelper`, `aTechnician`, …) – override only what the test is about. Switch a builder to the real domain type when the aggregate gets one.
 - **Time:** `fixedClock(…)` for every command and rule; `BUILDER_TIME` is the builders' default.
 - **Acting team members exist:** a test actor `{ kind: "team-member", teamMemberId }` must exist as an account (foreign keys, ST-004): `anExistingTeamMember(db, actor)` from `src/test-support/team-members.ts`; accounts with a password come from the Team module's own test support.
@@ -397,6 +434,10 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **The QR address `/m/<museum number>`** (ST-010, scheme and domain: `docs/architecture/qr-address.md`, ST-060) is public and never stored by a shared cache: its page reads the request (`headers()`, `cookies()` – the language, with ST-011 the session), so Next.js renders it per request and sends `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate` itself. A `Cache-Control` from `next.config.ts` would be overridden – don't add one. `next dev` sends its own header, so the check runs against the preview only. `notFound()` gives 404 only for non-streamed responses, and `not-found.tsx` gets no props. A malformed percent-encoding in the address never reaches a page – Next.js answers 400 itself.
 - **The QR sticker's domain** is the constant `QR_DOMAIN` in `src/app/qr-address.ts` (`qrAddress(museumNumber)`) – never the request's host or `VERCEL_PROJECT_PRODUCTION_URL` (ST-011, `docs/architecture/qr-address.md`). A logged-in team member opening `/m/<number>` is redirected to the machine record. Pages made for printing live in the route group `src/app/(print)/` – no team navigation, they check access themselves; the label sheet's millimetres are one `LabelSheet` entry (`L7160`).
 - **A second browser context** (a visitor's phone beside the test's own page) needs the preview's protection bypass too: `allowPreview(page, baseURL)` from `e2e/fixtures.ts`, then one navigation before the response under test.
+- **Browser tests share their helpers in `e2e/fixtures.ts`** (architecture review 2026-10-11): `logIn(page, account?)`
+  (the e2e technician by default), `aHelper(page)`, `aMachine(page, machineStatus?, location?)`, `anOpenDefect(page,
+  { suitableForHelpers })`, `openDefect`, `openDefectsEntry`, `unique` / `uniqueId`, `pageWidth`, `TECHNICIAN`. A spec
+  defines a helper of its own only for what is particular to it – never a second copy of one of these.
 - **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
 - Never weaken or delete a test to get green.
 

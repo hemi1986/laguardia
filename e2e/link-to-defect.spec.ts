@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
 
 /**
  * Linking a problem report to an open defect on a phone (ST-022): a technician goes from the triage list to the problem
@@ -13,18 +13,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 async function report(page: Page, museumNumber: string, description: string) {
   await reportAsVisitor(page, museumNumber, description);
@@ -72,10 +60,6 @@ async function openLinkToDefect(page: Page, museumNumber: string, title: string)
 
 const listed = (page: Page, museumNumber: string) =>
   page.getByRole("main").getByRole("article").filter({ hasText: museumNumber });
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 test("ST-022: A defect has to be chosen", async ({ page }) => {
   const { museumNumber, title, defect } = await anOpenDefectAndAProblemReport(page);

@@ -1,5 +1,5 @@
-import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, test } from "./fixtures";
+import type { Browser } from "@playwright/test";
+import { allowPreview, expect, logIn, test, aMachine } from "./fixtures";
 
 /**
  * QR stickers (ST-011): printing them, and what the address on them opens for a visitor and for a logged-in team
@@ -12,31 +12,6 @@ test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
 
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
-
-/** A machine registered by the logged-in technician; returns its museum number and machine model title. */
-async function aRegisteredMachine(page: Page) {
-  const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto("/team/machine-models");
-  await page.getByLabel("Titel").fill(title);
-  await page.getByLabel("Hersteller").fill("Williams");
-  await page.getByLabel("Kategorie").selectOption("pinball");
-  await page.getByRole("button", { name: "Modell anlegen" }).click();
-  await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-  await page.goto("/team/machines/new");
-  await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
-  await page.getByLabel("Standort").fill("Hall 1");
-  await page.getByRole("button", { name: "Gerät erfassen" }).click();
-  const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
-  return { museumNumber, title };
-}
-
 async function visitorPhone(browser: Browser) {
   const context = await browser.newContext({ locale: "de-DE", viewport: { width: 360, height: 800 }, isMobile: true });
   const phone = await context.newPage();
@@ -46,7 +21,7 @@ async function visitorPhone(browser: Browser) {
 
 test("ST-011: Technician prints a QR sticker", async ({ page }) => {
   await logIn(page);
-  const { museumNumber, title } = await aRegisteredMachine(page);
+  const { museumNumber, title } = await aMachine(page);
 
   await page.getByRole("navigation", { name: "Navigation" }).getByRole("link", { name: "Geräte" }).click();
   await page.getByRole("link", { name: "QR-Sticker drucken" }).click();
@@ -69,7 +44,7 @@ test("ST-011: Technician prints a QR sticker", async ({ page }) => {
 
 test("ST-011: Visitor scans the sticker", async ({ page, browser }) => {
   await logIn(page);
-  const { museumNumber, title } = await aRegisteredMachine(page);
+  const { museumNumber, title } = await aMachine(page);
   const phone = await visitorPhone(browser);
 
   await phone.goto(`/m/${museumNumber}`);
@@ -81,7 +56,7 @@ test("ST-011: Visitor scans the sticker", async ({ page, browser }) => {
 
 test("ST-011: Team member scans the sticker", async ({ page }) => {
   await logIn(page);
-  const { museumNumber, title } = await aRegisteredMachine(page);
+  const { museumNumber, title } = await aMachine(page);
 
   await page.goto(`/m/${museumNumber}`);
 
@@ -92,7 +67,7 @@ test("ST-011: Team member scans the sticker", async ({ page }) => {
 
 test("ST-011: Visitor and team member scan one after the other", async ({ page, browser }) => {
   await logIn(page);
-  const { museumNumber } = await aRegisteredMachine(page);
+  const { museumNumber } = await aMachine(page);
   await page.goto(`/m/${museumNumber}`);
   await expect(page).toHaveURL(new RegExp(`/team/machines/${museumNumber}$`));
 
@@ -106,7 +81,7 @@ test("ST-011: Visitor and team member scan one after the other", async ({ page, 
 
 test("ST-011: No machine chosen for printing", async ({ page }) => {
   await logIn(page);
-  await aRegisteredMachine(page);
+  await aMachine(page);
   await page.goto("/team/machines/stickers");
 
   await page.getByRole("button", { name: "QR-Sticker drucken" }).click();
@@ -120,8 +95,8 @@ test("ST-011: No machine chosen for printing", async ({ page }) => {
 
 test("ST-011: Finding the machines to print for", async ({ page }) => {
   await logIn(page);
-  const first = await aRegisteredMachine(page);
-  const second = await aRegisteredMachine(page);
+  const first = await aMachine(page);
+  const second = await aMachine(page);
   await page.goto("/team/machines/stickers");
 
   await page.getByLabel("Suche").fill(first.title);

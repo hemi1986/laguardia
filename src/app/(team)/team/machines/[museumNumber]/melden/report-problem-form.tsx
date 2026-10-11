@@ -10,6 +10,7 @@ import { commandErrorText, teamMessages } from "@/platform/messages";
 import { PhotoField } from "../../../../../photo-field";
 import type { TeamReportProblemState } from "./actions";
 import { isAboutDescription } from "./report-section";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { reportProblem: texts } = teamMessages;
 
@@ -29,7 +30,7 @@ export function TeamReportProblemForm({
   const [state, action, pending] = useActionState(report, null);
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const invalid = isAboutDescription(state?.error);
 
   return (

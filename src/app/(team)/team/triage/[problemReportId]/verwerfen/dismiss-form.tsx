@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
 import type { DismissState } from "./actions";
 import { triageRejectionText } from "../triage-rejection-text";
+import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { dismiss: texts, triage } = teamMessages;
 
@@ -40,7 +41,7 @@ export function DismissForm({
   if (state?.asking) {
     return (
       <form action={action} className="flex flex-col gap-4">
-        <input type="hidden" name="version" value={version} />
+        <VersionField version={version} />
         <input type="hidden" name="reason" value={state.values.reason} />
         <input type="hidden" name="reasonText" value={state.values.reasonText} />
         <p className="font-medium" role="alert">
@@ -58,13 +59,13 @@ export function DismissForm({
     );
   }
 
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const rejection = state?.error ? state : undefined;
   const invalid = rejection?.error;
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="version" value={version} />
+      <VersionField version={version} />
       <FieldSet
         data-invalid={invalid === "dismissal-reason-required" || undefined}
         aria-describedby={invalid === "dismissal-reason-required" ? rejectionId : undefined}

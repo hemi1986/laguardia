@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, unique } from "./fixtures";
 
 /**
  * Recording a defect on a phone (ST-018): from the triage list to the problem report's page, to the form „Defekt
@@ -12,18 +12,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-function unique(prefix: string): string {
-  return `${prefix} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /**
  * A machine with the given status and a problem report for it, then the form „Defekt erfassen“ opened the way a
@@ -52,10 +40,6 @@ async function openRecordDefect(page: Page, machineStatus: "playable" | "limited
 }
 
 const status = (page: Page) => page.getByLabel("Status", { exact: true });
-
-async function pageWidth(page: Page) {
-  return page.evaluate(() => document.documentElement.scrollWidth);
-}
 
 test("ST-018: Only Limited or Out of order in the same step", async ({ page }) => {
   await logIn(page);
@@ -136,7 +120,10 @@ test.describe("without JavaScript", () => {
   });
 });
 
-test("a technician who loses the triage race keeps the title and learns who triaged first", async ({ page, browser }) => {
+test("a technician who loses the triage race keeps the title and learns who triaged first", async ({
+  page,
+  browser,
+}) => {
   await logIn(page);
   const museumNumber = await openRecordDefect(page, "playable");
   await page.getByLabel("Titel").fill("Left flipper weak");

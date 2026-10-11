@@ -8,7 +8,8 @@ import { allowPreview, expect, openMore, test } from "./fixtures";
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
-const needsMachines = () => test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
+const needsMachines = () =>
+  test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
@@ -61,7 +62,10 @@ test("ST-010: Visitor with a German browser opens the page", async ({ page, brow
   await expect(phone.getByRole("heading", { level: 1 })).toHaveText(title);
   await expect(phone.getByRole("main")).toContainText("Williams · 1997");
   await expect(phone.getByRole("main")).toContainText("Status: Spielbereit");
-  await expect(phone.getByRole("link", { name: "Problem melden" })).toHaveAttribute("href", `/m/${museumNumber}/melden`);
+  await expect(phone.getByRole("link", { name: "Problem melden" })).toHaveAttribute(
+    "href",
+    `/m/${museumNumber}/melden`,
+  );
   expect(await phone.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });
 

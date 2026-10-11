@@ -14,7 +14,7 @@ import {
   reportProblemCommand,
   resolveDefectCommand,
 } from ".";
-import { storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedProblemReport } from "./command-probes.test-support";
 
 /**
  * A defect resolved while a technician links a problem report to it (ST-022) – two real transactions, not a sequence.

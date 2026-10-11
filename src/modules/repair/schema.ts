@@ -67,8 +67,8 @@ export const defect = pgTable("defect", {
 
 /**
  * The resolutions of a defect (data model: Resolution entity, ST-028) – one per resolve, so closing notes survive a
- * reopening for the repair history. Rows are inserted only, never updated (Q13): ST-030 decides where a reopening is
- * kept. resolved_by is a TeamMemberId; its foreign key to team_member.id is added
+ * reopening for the repair history. Rows are inserted only, never updated (Q13): a reopening gets rows of its own
+ * (data model, ST-030). resolved_by is a TeamMemberId; its foreign key to team_member.id is added
  * in the migration.
  */
 export const defectResolution = pgTable(

@@ -11,7 +11,6 @@ import {
   recordDefectCommand,
   reportProblemCommand,
 } from "@/modules/repair";
-import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -183,8 +182,8 @@ describe("a problem report's own page", () => {
   it("ST-018: Recording a defect is not offered on a triaged problem report", async () => {
     const id = await anUntriagedProblemReport();
     const triaged = await executeCommand(
-      triageForTest,
-      { problemReportId: id, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: eva, db, newId: randomUUID },
     );
     if (!triaged.ok) throw new Error("not triaged");
@@ -212,8 +211,8 @@ describe("a problem report's own page", () => {
   it("ST-019: Resolving on the spot is not offered on a triaged problem report", async () => {
     const id = await anUntriagedProblemReport();
     const triaged = await executeCommand(
-      triageForTest,
-      { problemReportId: id, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: eva, db, newId: randomUUID },
     );
     if (!triaged.ok) throw new Error("not triaged");
@@ -240,8 +239,8 @@ describe("a problem report's own page", () => {
   it("ST-020: Dismissing is not offered on a triaged problem report", async () => {
     const id = await anUntriagedProblemReport();
     const triaged = await executeCommand(
-      triageForTest,
-      { problemReportId: id, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: eva, db, newId: randomUUID },
     );
     if (!triaged.ok) throw new Error("not triaged");
@@ -290,8 +289,8 @@ describe("a problem report's own page", () => {
   it("ST-022: Linking is not offered on a triaged problem report", async () => {
     const { problemReportId: id } = await anUntriagedProblemReportBesideAnOpenDefect();
     const triaged = await executeCommand(
-      triageForTest,
-      { problemReportId: id, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: id, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: eva, db, newId: randomUUID },
     );
     if (!triaged.ok) throw new Error("not triaged");

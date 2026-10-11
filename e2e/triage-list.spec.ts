@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, openMore, reportAsVisitor, test } from "./fixtures";
+import { expect, logIn, openMore, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
 
 /**
  * The triage list on a phone (ST-017). The login check needs no account and runs against the preview too; the others
@@ -8,18 +8,6 @@ import { expect, openMore, reportAsVisitor, test } from "./fixtures";
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
 const needsTeam = () => test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
-
-function unique(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
-async function logIn(page: Page, as = { username: username!, password: password! }) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(as.username);
-  await page.getByLabel("Passwort").fill(as.password);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /** A machine and a problem report for it, both through the pages; the e2e technician stays logged in. */
 async function aProblemReport(page: Page, description: string): Promise<string> {

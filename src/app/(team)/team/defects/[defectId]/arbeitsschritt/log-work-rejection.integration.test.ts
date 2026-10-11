@@ -1,20 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import {
-  claimDefectCommand,
-  defectDetails,
-  logWorkCommand,
-  reportProblemAndTriageCommand,
-  resolveDefectCommand,
-} from "@/modules/repair";
+import { beforeAll, describe, expect, it } from "vitest";
+import { claimDefectCommand, defectDetails, logWorkCommand, resolveDefectCommand } from "@/modules/repair";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { logWorkFields, logWorkInput } from "./log-work-input";
+import { post } from "@/test-support/forms";
+import { anOpenDefectIn } from "@/test-support/defects";
 
 /**
  * The form „Arbeitsschritt eintragen“ (ST-024): its fields and input function run through the Server Action runner as
@@ -25,35 +20,9 @@ const clock = fixedClock("2026-10-13T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
-function post(fields: Record<string, string>): FormData {
-  const form = new FormData();
-  for (const [name, value] of Object.entries(fields)) form.append(name, value);
-  return form;
-}
-
 /** An open defect that is not suitable for helpers, recorded by Tom. */
-async function anOpenDefect() {
-  await anExistingTeamMember(db, tom, "Tom");
-  await anExistingTeamMember(db, anna, "Anna");
-  const reported = await executeCommand(
-    reportProblemAndTriageCommand,
-    {
-      machineId: await aRegisteredMachine(db),
-      description: "Display flickers – first seen",
-      triage: {
-        outcome: "defect-recorded",
-        title: "Display flickers",
-        priority: undefined,
-        suitableForHelpers: false,
-        machineStatus: undefined,
-        machineVersion: undefined,
-      },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
-  return reported.result.defectId;
-}
+const anOpenDefect = async () =>
+  (await anOpenDefectIn(db, { title: "Display flickers", recordedBy: tom, at: clock })).defectId;
 
 /** The form's action for one defect, as the given team member. */
 function formFor(defectId: string, actor: Actor) {
@@ -65,6 +34,11 @@ function formFor(defectId: string, actor: Actor) {
   });
   return { action, logged };
 }
+
+beforeAll(async () => {
+  await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, anna, "Anna");
+});
 
 describe("the form „Arbeitsschritt eintragen“", () => {
   it("keeps what was typed when it is rejected, and says why in the catalogue's words", async () => {

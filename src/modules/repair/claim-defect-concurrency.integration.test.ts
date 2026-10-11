@@ -8,8 +8,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { whileHoldingRow } from "@/test-support/held-row";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { claimDefectCommand, reportProblemAndTriageCommand } from ".";
-import { storedDefect } from "./problem-report-stand-ins.test-support";
+import { defectDetails, claimDefectCommand, reportProblemAndTriageCommand } from ".";
 
 /**
  * Two team members claim the same defect at the same time (ST-025, ST-003) – two real transactions on the same version
@@ -64,7 +63,7 @@ describe("two team members and one defect", () => {
     expect(await toms).toEqual({ ok: true, result: { defectId } });
     const rejected = await evas;
     expect(rejected).toEqual({ ok: false, error: "version-conflict" });
-    expect((await storedDefect(db, defectId))?.claim?.claimedBy).toBe(tom.teamMemberId);
+    expect((await defectDetails(db, defectId))?.claim?.claimedBy).toBe(tom.teamMemberId);
     expect((await journalOf(db, { aggregateId: defectId })).map((entry) => [entry.type, entry.actor])).toEqual([
       ["EVT-DefectClaimed", tom],
     ]);

@@ -9,6 +9,7 @@ import { formatDateTime } from "@/platform/time";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { isAboutDescription, ReportSection } from "../report-section";
 import type { ReportAndLinkState } from "./actions";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { reportAndLink: texts, link, reportProblem } = teamMessages;
 
@@ -36,7 +37,7 @@ export function ReportAndLinkForm({
   const rejectionId = useId();
   if (retired && !state) return <p>{reportProblem.retired}</p>;
   if (openDefects.length === 0 && !state) return <p>{link.noOpenDefects(museumNumber)}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const defectInvalid = state?.error === "defect-required" || state?.error === "defect-not-open";
 
   return (

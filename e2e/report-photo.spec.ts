@@ -1,6 +1,6 @@
 import type { Browser, Page } from "@playwright/test";
 import sharp from "sharp";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, logIn, openMore, test } from "./fixtures";
 
 /**
  * The photo on a problem report on a phone (ST-016): a visitor takes or chooses a photo on the report form, the browser
@@ -13,14 +13,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 const needsMachines = () =>
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 const needsBlob = () => test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "needs the Development Blob store");
-
-async function logIn(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Benutzername").fill(username!);
-  await page.getByLabel("Passwort").fill(password!);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/team$/);
-}
 
 /** A playable machine registered by the e2e technician, who logs out again – returns its museum number. */
 async function aPlayableMachine(page: Page): Promise<string> {

@@ -5,8 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { reportProblemCommand } from "@/modules/repair";
-import { triageForTest } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { dismissProblemReportCommand, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -152,8 +151,8 @@ describe("the triage list", () => {
     const triaged = await reported(machineId, "Ball stuck", hoursBefore(5));
     await reported(machineId, "Rubber cracked", hoursBefore(4));
     const outcome = await executeCommand(
-      triageForTest,
-      { problemReportId: triaged, version: 0 },
+      dismissProblemReportCommand,
+      { problemReportId: triaged, version: 0, reason: "not-a-fault", reasonText: "" },
       { actor: eva, db, clock: fixedClock(NOW), newId: randomUUID },
     );
     if (!outcome.ok) throw new Error("not triaged");

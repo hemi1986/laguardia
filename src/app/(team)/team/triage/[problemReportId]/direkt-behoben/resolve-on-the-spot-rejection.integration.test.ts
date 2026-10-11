@@ -4,7 +4,7 @@ import { recordDefectCommand, reportProblemCommand, resolveProblemOnTheSpotComma
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { storedProblemReport } from "@/modules/repair/problem-report-stand-ins.test-support";
+import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { triageRejectionText } from "../triage-rejection-text";

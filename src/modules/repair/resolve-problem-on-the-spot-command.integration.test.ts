@@ -6,7 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportProblemCommand, resolveProblemOnTheSpotCommand, triageList } from ".";
-import { storedProblemReport } from "./problem-report-stand-ins.test-support";
+import { storedProblemReport } from "./command-probes.test-support";
 
 /** CMD-ResolveProblemOnTheSpot (ST-019) through the command layer – a triage outcome helpers may choose too. */
 const db = testDatabase();

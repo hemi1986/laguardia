@@ -26,7 +26,7 @@ export async function logWorkAction(
     input: (fields) => logWorkInput(fields, defectId),
     onSuccess: async (logged) => {
       revalidatePath("/team/defects");
-      redirect(`/team/defects/${logged.defectId}?logged=1`);
+      redirect(`/team/defects/${logged.defectId}?done=log-work`);
     },
   })(previous, formData);
 }

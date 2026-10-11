@@ -9,6 +9,7 @@ import { teamMessages } from "@/platform/messages";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { isAboutDescription, ReportSection } from "../report-section";
 import type { ReportAndResolveState } from "./actions";
+import { keptKey } from "@/app/_actions/form-parts";
 
 const { reportAndResolveOnTheSpot: texts, resolveOnTheSpot, reportProblem } = teamMessages;
 
@@ -32,7 +33,7 @@ export function ReportAndResolveForm({
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   if (retired && !state) return <p>{reportProblem.retired}</p>;
-  const kept = state ? JSON.stringify(state) : "empty";
+  const kept = keptKey(state);
   const noteInvalid = state?.error === "note-required";
 
   return (

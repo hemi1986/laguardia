@@ -1,6 +1,7 @@
 import { machineStatuses } from "@/modules/collection";
 import { priorities } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
+import { NO_VERSION_SEEN, wholeNumber } from "@/app/_actions/version";
 
 /**
  * The fields of a new defect as a form posts them – shared by the form „Defekt erfassen“ in triage (ST-018) and the
@@ -23,12 +24,4 @@ export function defectInput(fields: FormFields<DefectInputField>) {
     machineStatus: machineStatuses.find((status) => status === fields.machineStatus),
     machineVersion: fields.machineVersion ? (wholeNumber(fields.machineVersion) ?? NO_VERSION_SEEN) : undefined,
   };
-}
-
-/** A version nobody saw – the command layer answers it with a conflict. */
-export const NO_VERSION_SEEN = -1;
-
-export function wholeNumber(value: string | undefined): number | undefined {
-  const number = Number(value);
-  return value && Number.isInteger(number) ? number : undefined;
 }

@@ -13,8 +13,8 @@ export type Claim = { claimedBy: TeamMemberId; claimedAt: Date };
 
 /**
  * The Resolution entity of AGG-Defect (data model, ST-028): how a defect ended – one per resolve, kept for the repair
- * history. An entry is stored once and never updated (Q13, `saveHistory`) – so how ST-030 keeps a reopening (reason, by
- * whom, when) is that story's decision; setting it on a stored resolution would be lost silently.
+ * history. An entry is stored once and never updated (Q13) – a reopening is an entry of its own (data model, ST-030),
+ * never a change of the resolution it follows.
  */
 export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
 

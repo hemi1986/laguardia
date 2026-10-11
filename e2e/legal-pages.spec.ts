@@ -73,7 +73,9 @@ test("ST-064: Legal pages in English", async ({ browser }) => {
   // The language switch of a legal page comes back to the same legal page.
   await english.getByRole("button", { name: "Deutsch" }).click();
   await expect(phone).toHaveURL(/\/datenschutz$/);
-  await expect(phone.locator('[lang="de"]').getByRole("heading", { level: 1, name: "Datenschutzhinweis" })).toBeVisible();
+  await expect(
+    phone.locator('[lang="de"]').getByRole("heading", { level: 1, name: "Datenschutzhinweis" }),
+  ).toBeVisible();
   await phone.getByRole("button", { name: "English" }).click();
   await expect(english.getByRole("heading", { level: 1, name: "Privacy notice" })).toBeVisible();
 
