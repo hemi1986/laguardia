@@ -303,6 +303,12 @@ export const teamMessages = {
     whatWasDone: "Was wurde gemacht?",
     partsUsed: "Verwendete Teile (optional)",
     workLogged: (title: string) => `Arbeitsschritt zu „${title}“ eingetragen.`,
+    /**
+     * A change of the defect made meanwhile (a claim, another work log entry) – the expected rejection of this form.
+     * The form already shows the defect as it is now and keeps the texts, so sending again is all it takes.
+     */
+    logWorkConflict:
+      "Jemand hat den Defekt inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal eintragen.",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,

@@ -186,29 +186,28 @@ describe("CMD-LogWork", () => {
       expect((await defectDetails(db, defectId))?.workLog).toEqual([byTom]);
     }
 
-    // And everything that does happen to the defect afterwards leaves it as it is – stored once, never written again.
-    await db.transaction(async (tx) => {
-      const unchanged = () =>
-        tx.execute(sql`SELECT xmin::text AS written FROM defect_work_log_entry WHERE id = ${byTom.id}`);
-      const before = (await unchanged()).rows;
-      const later = { db: tx, clock: fixedClock("2026-10-15T10:00:00Z"), newId: randomUUID };
-      const more = await executeCommand(
-        logWorkCommand,
-        { defectId, version: 5, whatWasDone: "Adjusted EOS switch", partsUsed: "" },
-        { actor: anna, ...later },
-      );
-      const claimed = await executeCommand(claimDefectCommand, { defectId, version: 6 }, { actor: anna, ...later });
-      const resolved = await executeCommand(
-        resolveDefectCommand,
-        { defectId, version: 7, closingNote: "Flipper tested" },
-        { actor: anna, ...later },
-      );
-      expect([more.ok, claimed.ok, resolved.ok]).toEqual([true, true, true]);
-      expect((await unchanged()).rows).toEqual(before);
-      expect((await defectDetails(tx, defectId))?.workLog).toEqual([
-        byTom,
-        expect.objectContaining({ whatWasDone: "Adjusted EOS switch", loggedBy: anna.teamMemberId }),
-      ]);
-    });
+    // And everything that does happen to the defect afterwards leaves it as it is – its row is stored once and never
+    // written again (xmin names the transaction that last wrote a row).
+    const unchanged = () =>
+      db.execute(sql`SELECT xmin::text AS written FROM defect_work_log_entry WHERE id = ${byTom.id}`);
+    const before = (await unchanged()).rows;
+    const later = { db, clock: fixedClock("2026-10-15T10:00:00Z"), newId: randomUUID };
+    const more = await executeCommand(
+      logWorkCommand,
+      { defectId, version: 5, whatWasDone: "Adjusted EOS switch", partsUsed: "" },
+      { actor: anna, ...later },
+    );
+    const claimed = await executeCommand(claimDefectCommand, { defectId, version: 6 }, { actor: anna, ...later });
+    const resolved = await executeCommand(
+      resolveDefectCommand,
+      { defectId, version: 7, closingNote: "Flipper tested" },
+      { actor: anna, ...later },
+    );
+    expect([more.ok, claimed.ok, resolved.ok]).toEqual([true, true, true]);
+    expect((await unchanged()).rows).toEqual(before);
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([
+      byTom,
+      expect.objectContaining({ whatWasDone: "Adjusted EOS switch", loggedBy: anna.teamMemberId }),
+    ]);
   });
 });

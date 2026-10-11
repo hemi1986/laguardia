@@ -193,6 +193,37 @@ test("no work is logged on a defect resolved meanwhile – the form says so and 
   await expect(page.getByRole("main")).toContainText("Noch kein Arbeitsschritt eingetragen.");
 });
 
+test("a claim made meanwhile asks to send again: the texts are kept, and sending again logs the work", async ({
+  page,
+  browser,
+}) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page);
+  await openLogWork(page, museumNumber, title);
+  await whatWasDone(page).fill("Adjusted EOS switch");
+  await partsUsed(page).fill("none");
+
+  // Meanwhile on a second phone: the same technician claims the defect.
+  const context = await browser.newContext({ viewport: { width: 360, height: 800 } });
+  const other = await context.newPage();
+  await logIn(other);
+  await openDefect(other, museumNumber, title);
+  await other.getByRole("main").getByRole("button", { name: "Übernehmen", exact: true }).click();
+  await expect(other.getByRole("main")).toContainText("Von dir übernommen");
+  await context.close();
+
+  await submit(page).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Jemand hat den Defekt inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal eintragen.",
+  );
+  await expect(whatWasDone(page)).toHaveValue("Adjusted EOS switch");
+  await expect(partsUsed(page)).toHaveValue("none");
+  await submit(page).click();
+
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`Arbeitsschritt zu „${title}“ eingetragen.`);
+  await expect(page.getByRole("main")).toContainText("Adjusted EOS switch");
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 

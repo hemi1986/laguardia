@@ -59,7 +59,9 @@ export function LogWorkForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>
+            {state.error === "version-conflict" ? texts.logWorkConflict : commandErrorText(teamMessages, state.error)}
+          </Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

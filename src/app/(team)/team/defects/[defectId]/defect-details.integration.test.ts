@@ -400,10 +400,15 @@ describe("a defect's own page", () => {
       const afterLogging = await seenByAnna(defectId, true);
       expect(afterLogging.html).toContain("Arbeitsschritt zu „Left flipper weak“ eingetragen.");
       expect(afterLogging.html).not.toContain("Noch kein Arbeitsschritt");
+      // Only who logged last is told so: after Tom's entry the same address confirms nothing to Anna.
+      await logged(defectId, 1, tom, "2026-10-07T09:30:00Z", "Replaced the coil stop");
+      const afterToms = await seenByAnna(defectId, true);
+      expect(afterToms.details?.youLoggedLast).toBe(false);
+      expect(afterToms.html).not.toContain("Arbeitsschritt zu „");
 
       const resolved = await executeCommand(
         resolveDefectCommand,
-        { defectId, version: 1, closingNote: "Fixed" },
+        { defectId, version: 2, closingNote: "Fixed" },
         { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
       );
       if (!resolved.ok) throw new Error(resolved.error);
