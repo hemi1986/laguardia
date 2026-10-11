@@ -20,13 +20,9 @@ import { TriageChoice } from "../triage-choice";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import {
-  reportAndRecordDefectFields,
-  reportAndRecordDefectInput,
-  reportAndRecordDefectPhoto,
-  withPhotoToChooseAgain,
-} from "./report-and-record-defect-input";
-import { rejectionText } from "./report-and-record-defect-rejection-text";
+import { reportAndRecordDefectFields, reportAndRecordDefectInput } from "./report-and-record-defect-input";
+import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
+import { rejectionText } from "../report-and-triage-rejection-text";
 
 /**
  * The form „Problem melden und Defekt erfassen“ (ST-023): its fields and input function run through the Server Action
@@ -60,7 +56,7 @@ function formFor(machineId: string, actor: Actor = tom) {
     reportProblemAndTriageCommand,
     {
       fields: reportAndRecordDefectFields,
-      photo: reportAndRecordDefectPhoto,
+      photo: reportAndTriagePhoto,
       input: (fields, photo) => reportAndRecordDefectInput(fields, machineId, photo),
       onSuccess: async (result) => void reported.push(result),
     },

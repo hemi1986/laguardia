@@ -16,7 +16,7 @@ export type DefectField = "title" | "priority" | "suitableForHelpers" | "machine
 
 /**
  * The fields of a new defect (ST-018, story review 2026-10-03), shared by the form „Defekt erfassen“ in triage and
- * the form that reports and records in the same step (ST-023): title, priority (normal preselected), the mark for
+ * the form that reports and records in the same step (ST-023) – beside the routes, like the other shared pieces: title, priority (normal preselected), the mark for
  * helpers and – only when there is a stricter one – the machine status, „Status nicht ändern“ preselected. There is
  * no reason field: the status history's reason is the defect's title. `values` are the ones a rejection kept, `kept`
  * the key that makes React show them again; `invalid` marks the field a rejection is about (G8).

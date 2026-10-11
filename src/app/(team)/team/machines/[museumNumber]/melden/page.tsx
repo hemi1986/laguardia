@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
 import { machineForTeamForm, machineLabels } from "@/modules/collection";
+import { openDefects } from "@/modules/repair";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -14,7 +15,8 @@ const { machineRecord, reportProblem: texts } = teamMessages;
  * A team member reports a problem from the machine record (ST-015) – a page of its own with nothing but the form
  * (G1, user 2026-10-03). Every team member may report, also for a machine not on display; not for a retired one.
  * A technician's own problem report is triaged in the same step (ST-023, G21a): instead of the form the technician
- * chooses the triage outcome here, and its form page takes the problem report too.
+ * chooses the triage outcome here, and its form page takes the problem report too. A helper's form leads to resolving
+ * on the spot in the same step, the one triage outcome a helper may choose (ST-052, H2).
  */
 export default async function TeamReportProblemPage({
   params,
@@ -25,8 +27,14 @@ export default async function TeamReportProblemPage({
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
   const technician = member.role === "technician";
-  // Only the technician's choice page names the machine model.
-  const label = machine && technician ? (await machineLabels(db, [machine.id])).get(machine.id) : undefined;
+  // Only the technician's choice page names the machine model and needs to know whether there is a defect to link to.
+  const [label, defects] =
+    machine && technician
+      ? await Promise.all([
+          machineLabels(db, [machine.id]).then((labels) => labels.get(machine.id)),
+          openDefects(db, { machineId: machine.id }),
+        ])
+      : [undefined, []];
   const triageRequired = (await searchParams).triageRequired !== undefined;
 
   return (
@@ -39,10 +47,14 @@ export default async function TeamReportProblemPage({
         <TriageChoice
           museumNumber={museumNumber}
           machineModelTitle={label?.machineModelTitle ?? ""}
+          canLink={defects.length > 0}
           triageRequired={triageRequired}
         />
       ) : (
-        <TeamReportProblemForm action={teamReportProblemAction.bind(null, museumNumber)} />
+        <TeamReportProblemForm
+          action={teamReportProblemAction.bind(null, museumNumber)}
+          resolveOnTheSpot={`/team/machines/${encodeURIComponent(museumNumber)}/melden/direkt-behoben`}
+        />
       )}
       <Link
         href={`/team/machines/${encodeURIComponent(museumNumber)}`}
