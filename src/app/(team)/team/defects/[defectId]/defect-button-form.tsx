@@ -16,6 +16,9 @@ export type DefectButtonAction<Error extends TeamCommandErrorCode> = (
   formData: FormData,
 ) => Promise<DefectButtonState<Error>>;
 
+/** A button that names a team member wraps at 360 px instead of running out of the page (G16). */
+export const longLabel = "h-auto min-h-8 max-w-full py-1 text-start whitespace-normal";
+
 /**
  * An action on a defect that is one tap (G22): claiming it (ST-025) or releasing its claim (ST-026). One button that
  * says what will happen (G14) – „Übernehmen“, „Von Tom übernehmen“, „Abgeben“ – and posts the version of the defect the
@@ -45,7 +48,7 @@ export function DefectButtonForm<Error extends TeamCommandErrorCode>({
       <VersionField version={version} />
       {state && <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>}
       {offered && (
-        <Button type="submit" variant={variant} disabled={pending} className="self-start">
+        <Button type="submit" variant={variant} disabled={pending} className={`self-start ${longLabel}`}>
           {label}
         </Button>
       )}

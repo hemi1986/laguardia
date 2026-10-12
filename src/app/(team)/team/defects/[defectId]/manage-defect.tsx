@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Rejection } from "@/components/ui/message";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import type { ReleaseClaimState } from "./actions";
+import { longLabel } from "./defect-button-form";
 
 type ReleaseAction = (previous: ReleaseClaimState, formData: FormData) => Promise<ReleaseClaimState>;
 
@@ -43,11 +44,11 @@ export function ManageDefect({
           </Link>
         )}
         {release && (release.offered || state) && (
-          <form action={action} className="flex flex-col items-start gap-2">
+          <form action={action} className="flex max-w-full flex-col items-start gap-2">
             <VersionField version={release.version} />
             {state && <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>}
             {release.offered && (
-              <Button type="submit" variant="outline" disabled={pending}>
+              <Button type="submit" variant="outline" disabled={pending} className={longLabel}>
                 {release.label}
               </Button>
             )}

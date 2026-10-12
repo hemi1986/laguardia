@@ -196,7 +196,7 @@ and are inserted together need one of the two foreign keys `DEFERRABLE INITIALLY
 `drizzle/0014_…`: the defect's reference to its problem report).
 
 **A command behind a single button** (first: CMD-ClaimDefect, ST-025): the button is a small client form that posts
-the version its page showed (`claim-defect-form.tsx`). Whether the control is offered is the command's own rule: the
+the version its page showed (`defect-button-form.tsx`). Whether the control is offered is the command's own rule: the
 decision's reasons for refusing are one function next to it (`claimRefusal(defect, actor)`), which the decision applies
 and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
 in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
@@ -214,6 +214,16 @@ event in `actionOfEvent`, a confirmation text and – if it needs input – its 
 `defect-details.tsx`. After an action the Server Action lands on `/team/defects/<id>?done=<action>`; the page confirms it
 only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
 never from the address alone, and without a state field per action.
+
+**Where an action sits on the defect's page** (G22, first: ST-026): the work – `claim`, `release`, `log-work`,
+`resolve` – as buttons under the header; what manages the defect behind the fold „Verwalten“ (`manage-defect.tsx`, a
+native `<details>` that a rejection opens). One command can be two actions – CMD-ClaimDefect is `claim` and, with
+`assignTo`, `assign` – and one action can sit in two places: releasing one's own claim stands where „Übernehmen“ stood,
+releasing someone else's behind „Verwalten“. A one-tap action is a `DefectButtonForm` with `defectVersionInput`. A
+choice of team members comes from Team's `activeTeamMembers`, filtered with the command's own rule per team member
+(`assigneeRefusal`); the command reads the chosen team member's role itself (`activeTeamMemberRole` in its facts) – it
+never trusts the list. A form whose empty choice would mean something else (no `assignTo` is a claim of one's own)
+sends the empty value, so the command rejects it.
 
 **An action on a defect that needs input** (first: CMD-ResolveDefect, ST-028 – G21): a button-styled link on the
 defect's page leads to a form page of its own (`…/defects/[defectId]/beheben/`, `…/arbeitsschritt/`), which repeats the
