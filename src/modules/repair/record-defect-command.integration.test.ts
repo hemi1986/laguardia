@@ -123,7 +123,11 @@ describe("CMD-RecordDefect", () => {
     await anExistingTeamMember(db, tom);
     const machineId = await aRegisteredMachine(db);
     const problemReportId = await anUntriagedProblemReport(machineId);
-    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, db, clock, newId: randomUUID });
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
     if (!retired.ok) throw new Error("not retired");
     const journalBefore = (await journalOf(db, { machineId })).length;
 

@@ -9,11 +9,7 @@ const onDisplay = { machine: { machineStatus: "playable", retired: false } } as 
 
 describe("CMD-ReportProblem – the decision", () => {
   it("records the problem report with its ID, machine, trimmed description, reporter and time", () => {
-    const decision = reportProblem(
-      onDisplay,
-      { machineId: "m-1", description: "  Left flipper is weak  " },
-      context,
-    );
+    const decision = reportProblem(onDisplay, { machineId: "m-1", description: "  Left flipper is weak  " }, context);
 
     const report = {
       id: "report-1",

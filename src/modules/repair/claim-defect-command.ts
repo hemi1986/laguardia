@@ -1,5 +1,12 @@
+import { activeTeamMemberRole } from "@/modules/team";
 import { aggregateCommand, journalOf, type Database } from "@/platform/command";
-import { claimDefect, claimingActors, type DefectClaimed } from "./claim-defect";
+import {
+  claimDefect,
+  claimingActors,
+  type ClaimDefectInput,
+  type ClaimingFacts,
+  type DefectClaimed,
+} from "./claim-defect";
 import { defects } from "./defects";
 
 /**
@@ -11,8 +18,23 @@ function journalDefectClaimed(event: DefectClaimed) {
     type: event.type,
     aggregate: { type: "AGG-Defect", id: event.defectId },
     machineId: event.machineId,
-    data: { claimedBy: event.claimedBy, ...(event.takenOverFrom ? { takenOverFrom: event.takenOverFrom } : {}) },
+    data: {
+      claimedBy: event.claimedBy,
+      ...(event.takenOverFrom ? { takenOverFrom: event.takenOverFrom } : {}),
+      ...(event.assignedBy ? { assignedBy: event.assignedBy } : {}),
+    },
   } as const;
+}
+
+/**
+ * The facts of an assignment (ST-026): the role of the team member the defect is assigned to, as Team knows it now –
+ * read in the command's transaction, without a lock (context map: Team → all contexts). Nothing is read for a claim of
+ * one's own.
+ */
+async function claimingFacts(tx: Database, input: ClaimDefectInput): Promise<ClaimingFacts> {
+  if (!input.assignTo) return { assignee: undefined };
+  const role = await activeTeamMemberRole(tx, input.assignTo);
+  return { assignee: role && { role } };
 }
 
 /**
@@ -25,6 +47,7 @@ export const claimDefectCommand = aggregateCommand({
   allowedActors: claimingActors,
   store: defects,
   target: (input) => ({ id: input.defectId, version: input.version }),
+  facts: claimingFacts,
   decide: claimDefect,
   journal: journalDefectClaimed,
   result: (defect) => ({ defectId: defect.id }),

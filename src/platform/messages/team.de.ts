@@ -402,6 +402,10 @@ export const teamMessages = {
     "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
     "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
     "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
+    /** Assigning a defect (ST-026). */
+    "team-member-required": "Bitte ein Teammitglied auswählen.",
+    "team-member-not-active": "Dieses Teammitglied hat kein aktives Konto. Bitte jemand anderen auswählen.",
+    "already-claimed-by-them": "Dieses Teammitglied hat den Defekt schon übernommen.",
     "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
     "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",

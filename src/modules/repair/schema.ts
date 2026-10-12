@@ -61,6 +61,8 @@ export const defect = pgTable("defect", {
    */
   claimedBy: uuid("claimed_by"),
   claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  /** The technician who assigned the claim (ST-026) – only with a claim, and none when the claimant claimed it themselves. */
+  assignedBy: uuid("assigned_by"),
   /** Optimistic version check (HS-16). */
   version: integer("version").notNull().default(0),
 });

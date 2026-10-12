@@ -8,8 +8,11 @@ export type Priority = (typeof priorities)[number];
 export const defectStates = ["open", "resolved", "closed-on-retirement"] as const;
 export type DefectState = (typeof defectStates)[number];
 
-/** The Claim value object of AGG-Defect (data model, ST-025): who took the defect on, and since when. */
-export type Claim = { claimedBy: TeamMemberId; claimedAt: Date };
+/**
+ * The Claim value object of AGG-Defect (data model, ST-025): who took the defect on, and since when – and, when a
+ * technician assigned it to them, who did (ST-026).
+ */
+export type Claim = { claimedBy: TeamMemberId; claimedAt: Date; assignedBy?: TeamMemberId };
 
 /**
  * The Resolution entity of AGG-Defect (data model, ST-028): how a defect ended – one per resolve, kept for the repair

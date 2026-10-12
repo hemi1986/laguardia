@@ -56,7 +56,7 @@ export const defects = aggregateStore({
     recordedBy: row.recordedBy,
     recordedAt: row.recordedAt,
     state: row.state,
-    ...(row.claimedBy && row.claimedAt ? { claim: { claimedBy: row.claimedBy, claimedAt: row.claimedAt } } : {}),
+    ...claimOf(row),
     workLog: histories.workLog,
     resolutions: histories.resolutions,
   }),
@@ -73,8 +73,21 @@ export const defects = aggregateStore({
     state: state.state,
     claimedBy: state.claim?.claimedBy ?? null,
     claimedAt: state.claim?.claimedAt ?? null,
+    assignedBy: state.claim?.assignedBy ?? null,
   }),
 });
+
+/** The Claim value object of a stored defect – none while it is unclaimed. */
+function claimOf(row: Pick<typeof defect.$inferSelect, "claimedBy" | "claimedAt" | "assignedBy">): { claim?: Claim } {
+  if (!row.claimedBy || !row.claimedAt) return {};
+  return {
+    claim: {
+      claimedBy: row.claimedBy,
+      claimedAt: row.claimedAt,
+      ...(row.assignedBy ? { assignedBy: row.assignedBy } : {}),
+    },
+  };
+}
 
 /**
  * The titles of a machine's open defects, the oldest first – what the visitor machine page shows (RM-VisitorMachinePage,
@@ -239,7 +252,7 @@ export async function defectDetails(
   if (!isId(defectId)) return undefined;
   const [row] = await db.select().from(defect).where(eq(defect.id, defectId));
   if (!row) return undefined;
-  const claim = row.claimedBy && row.claimedAt ? { claimedBy: row.claimedBy, claimedAt: row.claimedAt } : undefined;
+  const { claim } = claimOf(row);
   return {
     id: row.id,
     machineId: row.machineId,
