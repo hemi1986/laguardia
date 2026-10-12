@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
 import { claimDefectCommand, defectDetails } from "@/modules/repair";
+import { deactivateAccount } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { commandErrorText, teamMessages } from "@/platform/messages";
@@ -51,7 +51,8 @@ beforeAll(async () => {
   await anExistingTeamMember(db, eva, "Eva");
   await anExistingTeamMember(db, anna, "Anna");
   await anExistingTeamMember(db, gone, "Gone");
-  await db.execute(sql`UPDATE team_member SET banned = true WHERE id = ${gone.teamMemberId}`);
+  const deactivated = await deactivateAccount({ teamMemberId: gone.teamMemberId }, { db, actor: tom });
+  if (!deactivated.ok) throw new Error(deactivated.error);
 });
 
 describe("the form „Defekt zuweisen“", () => {

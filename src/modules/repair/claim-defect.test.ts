@@ -138,6 +138,12 @@ describe("CMD-ClaimDefect – the decision", () => {
     expect(decide(actor, defect, assignTo)).toEqual(expected);
   });
 
+  it("takes an ID in another spelling for nobody with an active account – never for oneself or the claimant (ST-026)", () => {
+    // Team answers only for the ID as it spells it, so the facts name no assignee.
+    expect(decide(tom, aDefect(), { teamMemberId: "TOM" })).toBe("team-member-not-active");
+    expect(decide(tom, aDefect({ claim: claimedBy("ben") }), { teamMemberId: "BEN" })).toBe("team-member-not-active");
+  });
+
   it("takes an assignment to oneself as a claim of one's own (ST-026)", () => {
     expect(decide(tom, aDefect(), { teamMemberId: "tom", role: "technician" })).toEqual({
       claim: { claimedBy: "tom", claimedAt: now },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import type { Defect } from "./defect";
+import type { Defect, DefectState } from "./defect";
 import { releaseClaim } from "./release-claim";
 
 /** CMD-ReleaseClaim – the decision's table (ST-026): who may release whose claim. */
@@ -48,6 +48,15 @@ describe("CMD-ReleaseClaim – the decision", () => {
   ] as const)("%s", (_case, actor, claimedBy, expected) => {
     expect(decide(actor, aDefectClaimedBy(claimedBy))).toEqual(expected);
   });
+
+  it.each(["resolved", "closed-on-retirement"] satisfies DefectState[])(
+    "refuses a defect that is %s, whoever asks and whatever became of its claim",
+    (state) => {
+      expect(decide(tom, { ...aDefectClaimedBy("anna"), state })).toBe("defect-not-open");
+      expect(decide(anna, { ...aDefectClaimedBy("anna"), state })).toBe("defect-not-open");
+      expect(decide(tom, { ...aDefectClaimedBy(), state })).toBe("defect-not-open");
+    },
+  );
 
   it("leaves everything else of the defect as it is", () => {
     const defect = aDefectClaimedBy("anna");

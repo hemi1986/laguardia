@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { deactivateAccount } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -194,10 +194,14 @@ describe("CMD-ClaimDefect", () => {
     const { machineId, defectId } = await anOpenDefect("Rubber cracked", true);
     const gone = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     await anExistingTeamMember(db, gone, "Gone");
-    await db.execute(sql`UPDATE team_member SET banned = true WHERE id = ${gone.teamMemberId}`);
+    const deactivated = await deactivateAccount({ teamMemberId: gone.teamMemberId }, { db, actor: tom });
+    if (!deactivated.ok) throw new Error(deactivated.error);
 
     for (const [assignTo, error] of [
       [gone.teamMemberId, "team-member-not-active"],
+      // An ID in another spelling is nobody – not Tom himself, not Anna: nothing but Team's spelling is stored.
+      [tom.teamMemberId.toUpperCase(), "team-member-not-active"],
+      [anna.teamMemberId.toUpperCase(), "team-member-not-active"],
       [randomUUID(), "team-member-not-active"],
       ["not an ID", "team-member-not-active"],
       ["", "team-member-required"],

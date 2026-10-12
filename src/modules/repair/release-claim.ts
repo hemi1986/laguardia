@@ -25,17 +25,19 @@ export type DefectClaimReleased = {
   releasedBy: TeamMemberId;
 };
 
-export type ReleaseClaimError = "not-claimed" | "not-your-claim";
+export type ReleaseClaimError = "defect-not-open" | "not-claimed" | "not-your-claim";
 
 /**
  * Why this team member may not release the defect's claim as it is – undefined when they may. The one rule of
  * CMD-ReleaseClaim: the decision applies it, and a page asks it to offer the control only to someone it will not
- * reject (G11). A defect that is not open has no claim: resolving ends it (AGG-Defect invariants).
+ * reject (G11). Only an open defect: a resolved one can only be reopened, one closed on retirement is final
+ * (AGG-Defect invariants) – whatever became of its claim.
  */
 export function releaseRefusal(
-  defect: Pick<Defect, "claim">,
+  defect: Pick<Defect, "state" | "claim">,
   actor: Pick<ReleasingPerson, "teamMemberId" | "role">,
 ): ReleaseClaimError | undefined {
+  if (defect.state !== "open") return "defect-not-open";
   if (!defect.claim) return "not-claimed";
   if (actor.role !== "technician" && defect.claim.claimedBy !== actor.teamMemberId) return "not-your-claim";
   return undefined;

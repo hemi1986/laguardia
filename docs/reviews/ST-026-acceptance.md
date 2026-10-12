@@ -59,3 +59,9 @@ All six go through the command layer (`executeCommand`), the real entry point of
 
 ## Verdict
 accepted with remarks
+
+## After the review (2026-10-12)
+
+- **Minor 1 fixed:** the comment of `release-claim-command.ts` says what happens (a helper is told the claim is not theirs any more, a technician gets a conflict); the command test checks both.
+- **Minor 2 fixed:** command test "assigns no defect that is resolved"; browser test "a claim released meanwhile is said at the button – the fold „Verwalten“ stays open" – which found that the rejection was lost, fixed in the page.
+- **Minor 3:** the migration `drizzle/0018_defect_claim_assigned_by.sql` adds the column, its CHECK and its foreign key; the code review found nothing on it.
