@@ -61,10 +61,7 @@ export function recordDefect(
   if (report.triage) return { ok: false, error: "already-triaged" };
   const title = input.title.trim();
   if (!title) return { ok: false, error: "title-required" };
-  if (
-    input.machineStatus &&
-    !(machine && stricterMachineStatuses(machine.machineStatus).includes(input.machineStatus))
-  ) {
+  if (input.machineStatus && !(machine && stricterMachineStatuses(machine.machineStatus).includes(input.machineStatus))) {
     return { ok: false, error: "machine-status-not-stricter" };
   }
   const now = clock.now();

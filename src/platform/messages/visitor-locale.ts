@@ -17,12 +17,7 @@ export function visitorLocale(acceptLanguage: string | undefined, remembered: st
     .split(",")
     .map((entry, position) => {
       const [tag, ...parameters] = entry.trim().split(";");
-      const q = Number(
-        parameters
-          .find((p) => p.trim().startsWith("q="))
-          ?.trim()
-          .slice(2) ?? "1",
-      );
+      const q = Number(parameters.find((p) => p.trim().startsWith("q="))?.trim().slice(2) ?? "1");
       return { language: tag.trim().toLowerCase().split("-")[0], q: Number.isFinite(q) ? q : 0, position };
     })
     .filter((entry) => entry.q > 0)

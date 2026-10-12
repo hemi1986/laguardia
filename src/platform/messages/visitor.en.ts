@@ -23,8 +23,7 @@ export const visitorEn: VisitorMessages = {
       count === 1
         ? "1 report is waiting to be checked by the team."
         : `${count} reports are waiting to be checked by the team.`,
-    notOnDisplay:
-      "This machine is not on display at the moment. Problems can only be reported for machines on display.",
+    notOnDisplay: "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     unknown: "There is no machine with this museum number.",
     toStart: "To the start page",
   },
@@ -84,15 +83,13 @@ export const visitorEn: VisitorMessages = {
     "description-too-long": "Please keep it shorter: at most 2000 characters.",
     "too-large": "The photo is too large: at most 20 MB.",
     "not-an-image": "This is not a photo. Please choose a photo or leave it out.",
-    "unsupported-format":
-      "This image format is not supported. Please choose a photo (JPEG, PNG or WebP) or leave it out.",
+    "unsupported-format": "This image format is not supported. Please choose a photo (JPEG, PNG or WebP) or leave it out.",
     "not-stored": "The photo could not be sent. Please try again or send the report without a photo.",
     "machine-not-on-display":
       "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     "machine-not-found": "There is no machine with this museum number.",
     "machine-retired": "This machine is no longer in the museum.",
-    "triage-required":
-      "As a technician, report from the machine record in the team area – the problem report is triaged right there. Nothing was saved.",
+    "triage-required": "As a technician, report from the machine record in the team area – the problem report is triaged right there. Nothing was saved.",
     "not-authorized": "You are not allowed to do that.",
     "not-found": "This no longer exists.",
     "version-conflict": "Someone has changed this in the meantime. Please reload the page and try again.",

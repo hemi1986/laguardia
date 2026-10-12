@@ -5,7 +5,11 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { problemReportsOfMachine, reportProblemCommand } from ".";
-import { changeDescriptionForTest, changeWithoutVersionForTest, splitForTest } from "./command-probes.test-support";
+import {
+  changeDescriptionForTest,
+  changeWithoutVersionForTest,
+  splitForTest,
+} from "./command-probes.test-support";
 import { problemReports } from "./problem-reports";
 import { aRegisteredMachine } from "@/test-support/machines";
 

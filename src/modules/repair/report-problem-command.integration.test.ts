@@ -101,9 +101,7 @@ describe("CMD-ReportProblem by a visitor", () => {
   it("accepts a description of 2000 characters and rejects one of 2001, storing nothing", async () => {
     const machineId = await aRegisteredMachine(db);
 
-    expect((await executeCommand(reportProblemCommand, { machineId, description: "x".repeat(2000) }, deps)).ok).toBe(
-      true,
-    );
+    expect((await executeCommand(reportProblemCommand, { machineId, description: "x".repeat(2000) }, deps)).ok).toBe(true);
     expect(await executeCommand(reportProblemCommand, { machineId, description: "y".repeat(2001) }, deps)).toEqual({
       ok: false,
       error: "description-too-long",
@@ -126,14 +124,10 @@ describe("CMD-ReportProblem by a visitor", () => {
     const helper = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     await anExistingTeamMember(db, helper);
 
-    const reported = await executeCommand(
-      reportProblemCommand,
-      { machineId, description: "Coil burnt" },
-      {
-        ...deps,
-        actor: helper,
-      },
-    );
+    const reported = await executeCommand(reportProblemCommand, { machineId, description: "Coil burnt" }, {
+      ...deps,
+      actor: helper,
+    });
 
     expect(reported.ok).toBe(true);
     expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual(["Coil burnt"]);
@@ -170,17 +164,11 @@ describe("CMD-ReportProblem by a team member", () => {
     const machineId = await aRegisteredMachine(db);
     const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
     await anExistingTeamMember(db, technician);
-    const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
-      { ...deps, actor: technician },
-    );
+    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { ...deps, actor: technician });
     if (!retired.ok) throw new Error("not retired");
 
     for (const actor of [helper, technician]) {
-      expect(
-        await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { ...deps, actor }),
-      ).toEqual({
+      expect(await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, { ...deps, actor })).toEqual({
         ok: false,
         error: "machine-retired",
       });
