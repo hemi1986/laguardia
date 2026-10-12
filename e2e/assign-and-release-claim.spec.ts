@@ -95,6 +95,42 @@ test("a helper cannot release someone else's claim; a technician releases it beh
   await expect(main).not.toContainText("Übernommen von");
 });
 
+test("a claim released meanwhile is said at the button – the fold „Verwalten“ stays open", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page, { suitableForHelpers: true });
+  const helper = await aHelper(page);
+  await logIn(page, helper);
+  await openDefect(page, museumNumber, title);
+  const main = page.getByRole("main");
+  await main.getByRole("button", { name: "Übernehmen", exact: true }).click();
+  await expect(main.getByRole("status")).toBeVisible();
+  await logIn(page);
+  await openDefect(page, museumNumber, title);
+  await main.getByText("Verwalten", { exact: true }).click();
+  const release = main.getByRole("button", { name: `Übernahme von E2E ${helper.username} aufheben` });
+  await expect(release).toBeVisible();
+
+  // Meanwhile on a second phone: the helper releases the claim themselves.
+  const context = await browser.newContext({ viewport: { width: 360, height: 800 } });
+  const other = await context.newPage();
+  await allowPreview(other, baseURL);
+  await logIn(other, helper);
+  await openDefect(other, museumNumber, title);
+  await other.getByRole("main").getByRole("button", { name: "Abgeben" }).click();
+  await expect(other.getByRole("main").getByRole("status")).toBeVisible();
+  await context.close();
+
+  await release.click();
+
+  await expect(main.getByRole("alert")).toHaveText("Diesen Defekt hat gerade niemand übernommen.");
+  await expect(main.locator("details", { hasText: "Verwalten" })).toHaveAttribute("open", "");
+  await expect(main.getByRole("button", { name: /aufheben/ })).toHaveCount(0);
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 

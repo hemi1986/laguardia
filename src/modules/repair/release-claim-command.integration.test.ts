@@ -98,6 +98,8 @@ describe("CMD-ReleaseClaim", () => {
       { actor: tom, db, clock: fixedClock("2026-10-12T09:30:00Z"), newId: randomUUID },
     );
     expect(await release(defectId, 1, anna)).toEqual({ ok: false, error: "not-your-claim" });
+    // A technician may release any claim – but not one they have not seen: Eva saw Anna's.
+    expect(await release(defectId, 1, eva)).toEqual({ ok: false, error: "version-conflict" });
     expect(await claimantOf(machineId)).toBe(tom.teamMemberId);
   });
 

@@ -110,15 +110,15 @@ export function DefectDetailsView({
                   />
                 )
               : action === "release"
-                ? // One's own claim is released where it was claimed; someone else's behind „Verwalten“ (G22).
-                  releaseAction &&
-                  details.claimant?.you && (
+                ? // One's own claim is released where it was claimed; someone else's behind „Verwalten“ (G22). The
+                  // form stays when the claim is gone meanwhile, so its rejection is not lost.
+                  releaseAction && (
                     <DefectButtonForm
                       key={action}
                       action={releaseAction}
                       version={details.version}
                       label={texts.release}
-                      offered={details.offered.includes(action)}
+                      offered={details.offered.includes(action) && !!details.claimant?.you}
                       variant="outline"
                     />
                   )
@@ -138,14 +138,12 @@ export function DefectDetailsView({
             details.offered.includes("assign") ? `/team/defects/${details.id}/${formPages.assign.path}` : undefined
           }
           release={
-            releaseAction && details.claimant && !details.claimant.you
-              ? {
-                  action: releaseAction,
-                  version: details.version,
-                  label: texts.releaseClaimOf(claimantName(details.claimant)),
-                  offered: details.offered.includes("release"),
-                }
-              : undefined
+            releaseAction && {
+              action: releaseAction,
+              version: details.version,
+              label: details.claimant ? texts.releaseClaimOf(claimantName(details.claimant)) : "",
+              offered: details.offered.includes("release") && !!details.claimant && !details.claimant.you,
+            }
           }
         />
       </section>

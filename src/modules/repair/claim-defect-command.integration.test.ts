@@ -210,6 +210,22 @@ describe("CMD-ClaimDefect", () => {
     expect(await claimantOf(machineId)).toBeUndefined();
   });
 
+  it("assigns no defect that is resolved (ST-026)", async () => {
+    const { defectId } = await anOpenDefect("Coin door jammed", true);
+    const resolved = await executeCommand(
+      resolveDefectCommand,
+      { defectId, version: 0, closingNote: "Fixed" },
+      { actor: tom, db, clock: recorded, newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error("not resolved");
+
+    expect(await assign(defectId, 1, tom, anna, "2026-10-12T10:00:00Z")).toEqual({
+      ok: false,
+      error: "defect-not-open",
+    });
+    expect((await defectDetails(db, defectId))?.claim).toBeUndefined();
+  });
+
   it("is not for visitors", async () => {
     const { defectId } = await anOpenDefect("Left flipper weak", true);
 

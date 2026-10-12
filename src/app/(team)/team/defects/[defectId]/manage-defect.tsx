@@ -25,7 +25,10 @@ export function ManageDefect({
 }: {
   /** The form page of assigning the defect – none when it cannot be assigned. */
   assignHref: string | undefined;
-  /** Releasing someone else's claim – none where the page is only looked at, or when there is no such claim. */
+  /**
+   * Releasing someone else's claim – none where the page is only looked at. `offered` says whether there is such a
+   * claim the team member may release (G11); the form stays without it while it has a rejection to show.
+   */
   release: { action: ReleaseAction; version: number; label: string; offered: boolean } | undefined;
 }) {
   const { defects: texts } = teamMessages;
