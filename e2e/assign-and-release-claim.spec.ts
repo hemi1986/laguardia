@@ -1,4 +1,14 @@
-import { aHelper, anOpenDefect, expect, logIn, openDefect, openDefectsEntry, pageWidth, test } from "./fixtures";
+import {
+  aHelper,
+  allowPreview,
+  anOpenDefect,
+  expect,
+  logIn,
+  openDefect,
+  openDefectsEntry,
+  pageWidth,
+  test,
+} from "./fixtures";
 
 /**
  * Assigning a defect and releasing claims on a phone (ST-026, G22): the defect's page → „Verwalten“ → „Zuweisen“ → the
@@ -88,11 +98,16 @@ test("a helper cannot release someone else's claim; a technician releases it beh
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("the fold opens, the defect is assigned and the claim released", async ({ page }) => {
+  test("the fold opens, the defect is assigned and the claim released", async ({ page, browser, baseURL }) => {
+    // The helper to assign to is created on a phone with JavaScript: only the pages of this story are under test.
+    const context = await browser.newContext({ javaScriptEnabled: true, viewport: { width: 360, height: 800 } });
+    const scripted = await context.newPage();
+    await allowPreview(scripted, baseURL);
+    await logIn(scripted);
+    const helper = await aHelper(scripted);
+    await context.close();
     await logIn(page);
     const { museumNumber, title } = await anOpenDefect(page, { suitableForHelpers: true });
-    const helper = await aHelper(page);
-    await logIn(page);
     await openDefect(page, museumNumber, title);
     const main = page.getByRole("main");
 
