@@ -38,13 +38,16 @@ export type DefectDetailsData = {
   version: number;
   /** Its claimant, if any (ST-025). */
   claimant: ShownClaimant | undefined;
+  /** The technician who assigned it to its claimant, if one did (ST-026) – by name, and whether it is the viewer. */
+  assignedBy: ShownClaimant | undefined;
   /** What the team member looking at the page can do to it, in the order the page offers it (G11, G21). */
   offered: DefectAction[];
   /**
    * What that team member just did to it – for the confirmation (G3); after a claim with whom it was taken over from,
-   * by name. Undefined unless they are just back from doing it and nobody acted since.
+   * after an assignment also with whom it was assigned to, by name. Undefined unless they are just back from doing it
+   * and nobody acted since.
    */
-  confirmed: { action: DefectAction; takenOverFrom: string | undefined } | undefined;
+  confirmed: { action: DefectAction; takenOverFrom: string | undefined; assignedTo: string | undefined } | undefined;
   /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
   resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date } | undefined;
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
@@ -78,6 +81,7 @@ export async function loadDefectDetails(
   const last = done && viewer ? await lastDefectActionBy(db, defect.id, viewer.id) : undefined;
   const confirmed = last?.action === done ? last : undefined;
   const previousClaimant = confirmed?.takenOverFrom;
+  const assignedBy = defect.claim?.assignedBy;
   const [machines, names, photos] = await Promise.all([
     machineLabels(db, [defect.machineId]),
     teamMemberNames(db, [
@@ -85,6 +89,7 @@ export async function loadDefectDetails(
         reporter.kind === "team-member" ? [reporter.teamMemberId] : [],
       ),
       ...(defect.claim ? [defect.claim.claimedBy] : []),
+      ...(assignedBy ? [assignedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
       ...(defect.resolution ? [defect.resolution.resolvedBy] : []),
       ...defect.workLog.map((entry) => entry.loggedBy),
@@ -115,11 +120,15 @@ export async function loadDefectDetails(
     id: defect.id,
     version: defect.version,
     claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
+    assignedBy: shownClaimant(assignedBy, names, viewer),
     // The commands' own rules, asked so nobody is shown a control that can only be rejected (G11).
     offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),
     confirmed: confirmed && {
       action: confirmed.action,
       takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
+      // Whom it was assigned to is its claimant: the assignment is the defect's latest event.
+      assignedTo:
+        confirmed.assignedTo && (names.get(confirmed.assignedTo) ?? teamMessages.machineRecord.unknownTeamMember),
     },
     resolution: defect.resolution && {
       closingNote: defect.resolution.closingNote,
