@@ -406,6 +406,9 @@ export const teamMessages = {
     "team-member-required": "Bitte ein Teammitglied auswählen.",
     "team-member-not-active": "Dieses Teammitglied hat kein aktives Konto. Bitte jemand anderen auswählen.",
     "already-claimed-by-them": "Dieses Teammitglied hat den Defekt schon übernommen.",
+    /** Releasing a claim (ST-026). */
+    "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
+    "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",
     "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
     "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",
     "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
