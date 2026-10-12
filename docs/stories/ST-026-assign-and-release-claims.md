@@ -9,7 +9,7 @@ risk: low
 events: [EVT-DefectClaimed, EVT-DefectClaimReleased]
 depends_on: [ST-025]
 labels: [mvp, defect-work, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

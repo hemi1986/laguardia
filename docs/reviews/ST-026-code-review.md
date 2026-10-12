@@ -68,3 +68,8 @@ Most important: finding 1 – an ID that differs only in case makes the decision
 - **#15 not changed here:** the story's Context names ST-048 for highlighting stale claims; the backlog grooming of 2026-10-11 moved that to ST-058. Story files of a running story are not edited by the implementation – noted for the user in the pull request.
 
 Security review: done inline by the implementing session on its own diff, no finding – not an independent review. `/code-review` not run: size S, no change to the command layer.
+
+### After the user's acceptance (2026-10-12)
+
+- Accepted on the preview. The confirmation after a release stays „„Titel“ ist wieder frei.“ for one's own and someone else's claim.
+- The new paragraph of the engineering conventions ("Where an action sits on the defect's page") is approved with the acceptance.
