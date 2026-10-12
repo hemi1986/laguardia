@@ -284,6 +284,23 @@ export const teamMessages = {
     /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
     onlyClaimedByMe: "Nur von mir übernommene",
     noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
+    /**
+     * Releasing a claim and assigning a defect (ST-026, G22; CONTEXT.md: Release = „Abgeben“ / „Übernahme aufheben“,
+     * Assign = „Zuweisen“): „Abgeben“ stands where „Übernehmen“ stood; the rest is behind the fold „Verwalten“.
+     */
+    release: "Abgeben",
+    releaseClaimOf: (name: string) => `Übernahme von ${name} aufheben`,
+    released: (title: string) => `„${title}“ ist wieder frei.`,
+    manage: "Verwalten",
+    assign: "Zuweisen",
+    assignTitle: (museumNumber: string) => `Defekt zuweisen · ${museumNumber}`,
+    assignTo: "Zuweisen an",
+    assignChoose: "Bitte wählen",
+    assignee: (name: string, role: string) => `${name} (${role})`,
+    assignToNobody: "Es gibt gerade niemanden, dem dieser Defekt zugewiesen werden kann.",
+    assigned: (title: string, name: string) => `Du hast „${title}“ ${name} zugewiesen.`,
+    assignedBy: (name: string) => `Zugewiesen von ${name}`,
+    assignedByYou: "Von dir zugewiesen",
     /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */
     resolve: "Beheben",
     resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,

@@ -48,10 +48,9 @@ export function releaseClaim(
 ): Decision<Defect, DefectClaimReleased, ReleaseClaimError> {
   const refusal = releaseRefusal(defect, actor);
   if (refusal) return { ok: false, error: refusal };
-  const { claim: _released, ...unclaimed } = defect;
   return {
     ok: true,
-    state: unclaimed,
+    state: { ...defect, claim: undefined },
     events: [
       {
         type: "EVT-DefectClaimReleased",

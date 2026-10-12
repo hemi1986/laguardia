@@ -10,6 +10,7 @@ import {
   linkProblemReportToDefectCommand,
   logWorkCommand,
   recordDefectCommand,
+  releaseClaimCommand,
   reportProblemCommand,
   resolveDefectCommand,
 } from "@/modules/repair";
@@ -302,6 +303,102 @@ describe("a defect's own page", () => {
     });
   });
 
+  describe("assigning it and releasing its claim (ST-026, G22)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+    const asBen = { id: ben.teamMemberId, role: ben.role };
+
+    /** The page as that team member sees it, just back from the given action. */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        done,
+      });
+      return { offered: details?.offered, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
+    }
+
+    async function aDefect() {
+      await anExistingTeamMember(db, anna, "Anna");
+      await anExistingTeamMember(db, ben, "Ben");
+      return recorded(await reported(await registered("LG-042"), "Left flipper barely moves", NOW), NOW);
+    }
+
+    it("offers assigning behind „Verwalten“ to technicians only, and releasing to nobody while it is unclaimed", async () => {
+      const defectId = await aDefect();
+
+      const toms = await seenBy(defectId, asTom);
+      expect(toms.offered).toEqual(["claim", "log-work", "resolve", "assign"]);
+      expect(toms.html).toMatch(/<details[^>]*><summary[^>]*>Verwalten/);
+      expect(toms.html).toContain(`href="/team/defects/${defectId}/zuweisen"`);
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas.offered).toEqual(["claim", "log-work", "resolve"]);
+      expect(annas.html).not.toContain("Verwalten");
+      expect(annas.html).not.toContain("zuweisen");
+    });
+
+    it("says who assigned it, to the one who did and to the one it was assigned to", async () => {
+      const defectId = await aDefect();
+      const assigned = await executeCommand(
+        claimDefectCommand,
+        { defectId, version: 0, assignTo: anna.teamMemberId },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!assigned.ok) throw new Error(assigned.error);
+
+      const toms = await seenBy(defectId, asTom, "assign");
+      expect(toms.html).toContain("Du hast „Left flipper weak“ Anna zugewiesen.");
+      expect(toms.html).toContain("Übernommen von Anna");
+      expect(toms.html).toContain("Von dir zugewiesen");
+      // A technician may take it over, assign it to someone else, or release Anna's claim.
+      expect(toms.offered).toEqual(["claim", "release", "log-work", "resolve", "assign"]);
+      const annas = await seenBy(defectId, asAnna, "assign");
+      expect(annas.html).toContain("Von dir übernommen");
+      expect(annas.html).toContain("Zugewiesen von Tom");
+      expect(annas.html).not.toContain("Du hast");
+      // Her own claim: she may release it, not claim it again.
+      expect(annas.offered).toEqual(["release", "log-work", "resolve"]);
+      // Another helper may take it over, but not release it.
+      expect((await seenBy(defectId, asBen)).offered).toEqual(["claim", "log-work", "resolve"]);
+
+      // Assigned on, the confirmation names who had it.
+      const reassigned = await executeCommand(
+        claimDefectCommand,
+        { defectId, version: 1, assignTo: ben.teamMemberId },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!reassigned.ok) throw new Error(reassigned.error);
+      expect((await seenBy(defectId, asTom, "assign")).html).toContain(
+        "Du hast „Left flipper weak“ Ben zugewiesen. Vorher: Anna.",
+      );
+      // An assignment is not confirmed as a claim of one's own.
+      expect((await seenBy(defectId, asTom, "claim")).html).not.toContain("Du hast");
+    });
+
+    it("tells who released a claim that the defect is free again, and names no claimant any more", async () => {
+      const defectId = await aDefect();
+      for (const [command, version] of [
+        [claimDefectCommand, 0],
+        [releaseClaimCommand, 1],
+      ] as const) {
+        const outcome = await executeCommand(
+          command,
+          { defectId, version },
+          { actor: anna, db, clock: fixedClock(NOW), newId: randomUUID },
+        );
+        if (!outcome.ok) throw new Error(outcome.error);
+      }
+
+      const annas = await seenBy(defectId, asAnna, "release");
+      expect(annas.html).toContain("„Left flipper weak“ ist wieder frei.");
+      expect(annas.html).not.toContain("bernommen");
+      expect(annas.offered).toEqual(["claim", "log-work", "resolve"]);
+      expect((await seenBy(defectId, asTom, "release")).html).not.toContain("wieder frei");
+    });
+  });
+
   describe("its work log (ST-024)", () => {
     const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     const asAnna = { id: anna.teamMemberId, role: anna.role };
@@ -466,7 +563,11 @@ describe("a defect's own page", () => {
       const defectId = await aDefect(false);
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.details).toMatchObject({ offered: ["claim", "log-work", "resolve"], resolution: undefined });
+      // A technician is also offered assigning it (ST-026).
+      expect(toms.details).toMatchObject({
+        offered: ["claim", "log-work", "resolve", "assign"],
+        resolution: undefined,
+      });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
       // The address alone (`?done=resolve`) makes the page say nothing.
       expect(toms.html).not.toContain("behoben");

@@ -56,7 +56,6 @@ describe("CMD-ReleaseClaim – the decision", () => {
       { defectId: defect.id, version: 0 },
       { actor: anna, clock: fixedClock("2026-10-11T09:00:00Z"), newId: () => "unused" },
     );
-    const { claim: _claim, ...rest } = defect;
-    expect(decision.ok && decision.state).toEqual(rest);
+    expect(decision.ok && decision.state).toEqual({ ...defect, claim: undefined });
   });
 });
