@@ -2,16 +2,17 @@ import { journalOf, type Database, type Role, type TeamMemberId } from "@/platfo
 import { assignRefusal, claimRefusal } from "./claim-defect";
 import type { Defect } from "./defect";
 import { logWorkRefusal, type LogWorkError } from "./log-work";
+import { prioritizeRefusal } from "./prioritize-defect";
 import { releaseRefusal, type ReleaseClaimError } from "./release-claim";
 import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
 
 /**
  * What a team member can do to a defect – one entry per action on AGG-Defect, in the order its page offers them
  * (G22): the work first – claiming it or, in the same place, releasing its claim –, then what manages it (assigning,
- * ST-026; CMD-ClaimDefect for someone else). A new command on a defect adds its action here, its refusal below and its event to `actionOfEvent`; the
+ * ST-026; CMD-ClaimDefect for someone else) and changing its priority (ST-027). A new command on a defect adds its action here, its refusal below and its event to `actionOfEvent`; the
  * defect's page and the form pages read the answer and carry no rule of their own (G11).
  */
-export const defectActions = ["claim", "release", "log-work", "resolve", "assign"] as const;
+export const defectActions = ["claim", "release", "log-work", "resolve", "assign", "prioritize"] as const;
 export type DefectAction = (typeof defectActions)[number];
 
 /** Per action: why the command would refuse this team member on the defect as it is – undefined when it would not. */
@@ -22,6 +23,8 @@ export type DefectActionRefusals = {
   resolve: Exclude<ResolveDefectError, "closing-note-required"> | undefined;
   /** Whether they may assign it at all – whom to is asked per team member (`assigneeRefusal`). */
   assign: ReturnType<typeof assignRefusal>;
+  /** Whether they may change its priority at all – to which one is the form's choice. */
+  prioritize: ReturnType<typeof prioritizeRefusal>;
 };
 
 /** The team member a page asks for – the acting person of the commands, without the session. */
@@ -38,6 +41,7 @@ export function defectActionRefusals(
     "log-work": logWorkRefusal(defect),
     resolve: resolveRefusal(defect, teamMember),
     assign: assignRefusal(defect, teamMember),
+    prioritize: prioritizeRefusal(defect, teamMember),
   };
 }
 
@@ -46,6 +50,7 @@ const actionOfEvent: Record<string, DefectAction> = {
   "EVT-DefectClaimReleased": "release",
   "EVT-WorkLogged": "log-work",
   "EVT-DefectResolved": "resolve",
+  "EVT-DefectPrioritized": "prioritize",
 };
 
 /**
