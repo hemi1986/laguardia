@@ -4,15 +4,20 @@
 
 **Progress: 26 of 58 domain stories done** · scenarios 236 of 450
 
-**81 stories** · In Progress: 0 · Ready: 38 · In Review: 0 · Draft: 5 · Done: 38
+**81 stories** · In Progress: 1 · Ready: 37 · In Review: 0 · Draft: 5 · Done: 38
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-033](ST-033-repair-history-on-machine-record.md) | Repair history on the machine record | story | Repair | must | M | medium | ST-011, ST-019, ST-024 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-033](ST-033-repair-history-on-machine-record.md) | Repair history on the machine record | story | Repair | must | M | medium | ST-011, ST-019, ST-024 |
 | [ST-040](ST-040-maintenance-plan-add-task.md) | Maintenance plan – view and add maintenance tasks | story | Maintenance | must | M | medium | ST-003, ST-006 |
 | [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | medium | ST-003, ST-007, ST-040 |
 | [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | must | S | medium | ST-001 |

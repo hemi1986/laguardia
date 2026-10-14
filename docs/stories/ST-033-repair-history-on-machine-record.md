@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-ProblemResolvedOnTheSpot, EVT-DefectDetailsChanged]
 depends_on: [ST-011, ST-019, ST-024]
 labels: [mvp, defect-work, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
