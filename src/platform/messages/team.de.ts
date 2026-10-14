@@ -129,6 +129,15 @@ export const teamMessages = {
     wholeRepairHistory: (count: number) => `Ganze Reparaturhistorie (${count})`,
     whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
   },
+  /** The repair history's own page (ST-033): the years first, each with its number of entries (G4a). */
+  repairHistory: {
+    title: (museumNumber: string) => `Reparaturhistorie · ${museumNumber}`,
+    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
+    chooseYear: "Welches Jahr?",
+    defectOpen: "Offen",
+    allYears: "Alle Jahre",
+    backToMachine: "Zurück zum Gerät",
+  },
   /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
   problemReportPhoto: {
     alt: "Foto zur Meldung",
