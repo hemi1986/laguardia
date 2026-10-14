@@ -15,6 +15,7 @@ export const teamMessages = {
     "Museum number": "Museumsnummer",
     "Serial number": "Seriennummer",
     "Status history": "Status-Historie",
+    "Repair history": "Reparaturhistorie",
     Location: "Standort",
     File: "Datei",
     "Problem report": "Meldung",
@@ -119,6 +120,14 @@ export const teamMessages = {
     reportProblem: "Problem melden",
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,
     statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
+    /** Section 4 (ST-033): the machine's open defects – the same entries as the open defects list. */
+    openDefects: "Offene Defekte",
+    noOpenDefects: "Keine offenen Defekte.",
+    /** Section 7 (ST-033): the most recent repairs, and the way to the whole repair history (G4a). */
+    nothingRepaired: "An diesem Gerät wurde noch nichts repariert.",
+    defectResolved: "Defekt behoben",
+    wholeRepairHistory: (count: number) => `Ganze Reparaturhistorie (${count})`,
+    whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
   },
   /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
   problemReportPhoto: {

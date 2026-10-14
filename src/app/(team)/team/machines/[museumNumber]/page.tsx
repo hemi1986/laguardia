@@ -18,7 +18,7 @@ export default async function MachineRecordPage({
 }: PageProps<"/team/machines/[museumNumber]">) {
   const member = await requireTeamMember();
   const museumNumber = decodeURIComponent((await params).museumNumber);
-  const [record, query] = await Promise.all([loadMachineRecord(database(), museumNumber), searchParams]);
+  const [record, query] = await Promise.all([loadMachineRecord(database(), museumNumber, { clock: systemClock, viewer: member }), searchParams]);
   // Just back from reporting a problem and triaging it in the same step (ST-023, ST-052).
   const triagedWhenReporting = record && (await loadTriagedWhenReporting(database(), systemClock, record, query));
 
