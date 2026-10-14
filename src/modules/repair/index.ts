@@ -39,6 +39,8 @@ export { assigneeRefusal } from "./claim-defect";
 export type { ClaimDefectError, ClaimDefectInput } from "./claim-defect";
 export { releaseClaimCommand } from "./release-claim-command";
 export type { ReleaseClaimError, ReleaseClaimInput } from "./release-claim";
+export { prioritizeDefectCommand } from "./prioritize-defect-command";
+export type { PrioritizeDefectError, PrioritizeDefectInput } from "./prioritize-defect";
 export { resolveDefectCommand } from "./resolve-defect-command";
 export type { ResolveDefectError, ResolveDefectInput } from "./resolve-defect";
 export { logWorkCommand } from "./log-work-command";
