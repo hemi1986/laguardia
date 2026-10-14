@@ -9,7 +9,10 @@ export type DefectForPrioritizing = DefectForForm<"prioritize"> & {
   priorities: Priority[];
 };
 
-/** The defect as every form page of a defect loads it. Undefined when there is no such defect. */
+/**
+ * The defect as every form page of a defect loads it, with the priorities CMD-PrioritizeDefect would accept – its own
+ * rule per priority (`priorityRefusal`), never a second copy here. Undefined when there is no such defect.
+ */
 export async function loadDefectForPrioritizing(
   db: Database,
   defectId: string,
