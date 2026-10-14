@@ -73,7 +73,11 @@ const as = (actor: typeof eva | typeof anna, at: string) => ({ actor, db, clock:
 /** A problem report a visitor sends for LG-042 – untriaged, at version 0. */
 const reported = (description: string, at: string) =>
   run(
-    executeCommand(reportProblemCommand, { machineId: lg042, description }, { ...as(eva, at), actor: { kind: "visitor" } }),
+    executeCommand(
+      reportProblemCommand,
+      { machineId: lg042, description },
+      { ...as(eva, at), actor: { kind: "visitor" } },
+    ),
   );
 
 /** A defect of LG-042, recorded by Eva through triage – at version 0. */

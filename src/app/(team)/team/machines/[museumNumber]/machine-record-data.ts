@@ -1,5 +1,5 @@
 import { machineRecord, type MachineRecord, type Retirement, type StatusChange } from "@/modules/collection";
-import { openDefects, repairHistory, type RepairHistoryEntry } from "@/modules/repair";
+import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -15,29 +15,18 @@ export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retiremen
   retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string | undefined };
   /** Section 4 (ST-033): its open defects, as the open defects list shows them – high priority first. */
   openDefects: OpenDefectsItem[];
-  /** Section 7 (ST-033): its most recent repairs, the most recently ended first – at most `RECENT_REPAIRS`. */
-  recentRepairs: Repair[];
+  /** Section 7 (ST-033): its most recently ended entries of the repair history, the most recently ended first – at most `RECENT_REPAIR_HISTORY_ENTRIES`. */
+  recentRepairHistory: ShownEndedRepairHistoryEntry[];
   /** How many entries its whole repair history has – open defects included (ST-033). */
   repairHistoryCount: number;
 };
 
-/** How many of the most recent repairs the machine record shows (user, 2026-10-14, `/implement ST-033`). */
-export const RECENT_REPAIRS = 3;
+/** How many of the most recently ended entries of the repair history the machine record shows (user, 2026-10-14, `/implement ST-033`). */
+export const RECENT_REPAIR_HISTORY_ENTRIES = 3;
 
-/**
- * A repair that has ended, as section 7 shows it: a resolved defect with its closing note, or a problem report resolved
- * on the spot with its note – who ended it by name, and when.
- */
-export type Repair = {
-  kind: "defect" | "resolved-on-the-spot";
-  /** The defect's or the problem report's ID. */
-  id: string;
-  /** The defect's title, or the problem report's description. */
-  title: string | undefined;
-  /** The closing note, or the note of the resolution on the spot. */
-  note: string;
+/** An entry of the repair history that has ended, as section 7 shows it – who ended it by name. */
+export type ShownEndedRepairHistoryEntry = Omit<EndedRepairHistoryEntry, "resolvedBy"> & {
   resolvedBy: string | undefined;
-  resolvedAt: Date;
 };
 
 /**
@@ -53,13 +42,14 @@ export async function loadMachineRecord(
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
-  const [open, history] = await Promise.all([openDefects(db, { machineId: record.id }), repairHistory(db, record.id)]);
-  const recent = history.flatMap(endedRepair).sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime());
-  const shown = recent.slice(0, RECENT_REPAIRS);
+  const [open, recent] = await Promise.all([
+    openDefects(db, { machineId: record.id }),
+    recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
+  ]);
   const ids = [
     ...record.statusHistory.map((change) => change.changedBy),
     record.retirement?.retiredBy,
-    ...shown.map((repair) => repair.resolvedBy),
+    ...recent.entries.map((entry) => entry.resolvedBy),
   ];
   const [names, shownOpen] = await Promise.all([
     teamMemberNames(
@@ -73,27 +63,7 @@ export async function loadMachineRecord(
     statusHistory: record.statusHistory.map((change) => ({ ...change, changedBy: names.get(change.changedBy) })),
     retirement: record.retirement && { ...record.retirement, retiredBy: names.get(record.retirement.retiredBy) },
     openDefects: shownOpen,
-    recentRepairs: shown.map((repair) => ({ ...repair, resolvedBy: names.get(repair.resolvedBy) })),
-    repairHistoryCount: history.length,
+    recentRepairHistory: recent.entries.map((entry) => ({ ...entry, resolvedBy: names.get(entry.resolvedBy) })),
+    repairHistoryCount: recent.total,
   };
-}
-
-/** An entry of the repair history as a repair that has ended – none while its defect is open. Who ended it by ID. */
-function endedRepair(entry: RepairHistoryEntry): (Omit<Repair, "resolvedBy"> & { resolvedBy: string })[] {
-  if (entry.kind === "resolved-on-the-spot") {
-    const { id, description, note, resolvedBy, resolvedAt } = entry;
-    return [{ kind: entry.kind, id, title: description, note, resolvedBy, resolvedAt }];
-  }
-  const latest = entry.resolutions.at(-1);
-  if (entry.state !== "resolved" || !latest) return [];
-  return [
-    {
-      kind: "defect",
-      id: entry.id,
-      title: entry.title,
-      note: latest.closingNote,
-      resolvedBy: latest.resolvedBy,
-      resolvedAt: latest.resolvedAt,
-    },
-  ];
 }

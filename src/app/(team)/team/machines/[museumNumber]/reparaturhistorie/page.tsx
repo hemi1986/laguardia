@@ -19,7 +19,7 @@ export default async function RepairHistoryPage({
   const data = await loadRepairHistory(database(), museumNumber, typeof jahr === "string" ? jahr : undefined);
 
   return (
-    <Page title={teamMessages.repairHistory.title(museumNumber)} wide>
+    <Page title={data ? teamMessages.repairHistory.title(museumNumber) : teamMessages.terms.Machine} wide>
       <RepairHistoryView data={data} museumNumber={museumNumber} />
     </Page>
   );

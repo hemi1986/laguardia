@@ -1,8 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import type { Database, TeamMemberId } from "@/platform/command";
 import type { DefectState, Resolution, WorkLogEntry } from "./defect";
 import { resolutions, workLog } from "./defects";
-import { defect, problemReport } from "./schema";
+import { defect, defectResolution, problemReport } from "./schema";
 
 /**
  * One entry of a machine's repair history (CONTEXT.md: Repair history; RM-MachineRecord, ST-033): a defect with its
@@ -54,8 +54,7 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
         resolvedAt: problemReport.triagedAt,
       })
       .from(problemReport)
-      .where(and(eq(problemReport.machineId, machineId), eq(problemReport.triageOutcome, "resolved-on-the-spot")))
-      .orderBy(desc(problemReport.reportedAt)),
+      .where(resolvedOnTheSpotOf(machineId)),
   ]);
   const ids = defects.map((row) => row.id);
   const [workLogs, resolutionsByDefect] = await Promise.all([workLog.load(db, ids), resolutions.load(db, ids)]);
@@ -69,7 +68,16 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
     // Resolved on the spot: triaged, with its note – all three set together (ST-019).
     ...resolvedOnTheSpot.flatMap(({ note, resolvedBy, resolvedAt, description, ...row }) =>
       note !== null && resolvedBy && resolvedAt
-        ? [{ kind: "resolved-on-the-spot" as const, ...row, description: description ?? undefined, note, resolvedBy, resolvedAt }]
+        ? [
+            {
+              kind: "resolved-on-the-spot" as const,
+              ...row,
+              description: description ?? undefined,
+              note,
+              resolvedBy,
+              resolvedAt,
+            },
+          ]
         : [],
     ),
   ];
@@ -77,6 +85,89 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
 }
 
 /** When an entry of the repair history began – the defect recorded, the problem reported. */
-export function startOf(entry: RepairHistoryEntry): Date {
+function startOf(entry: RepairHistoryEntry): Date {
   return entry.kind === "defect" ? entry.recordedAt : entry.reportedAt;
+}
+
+/**
+ * An entry of the repair history that has ended (ST-033): a resolved defect with the closing note of its latest
+ * resolution, or a problem report resolved on the spot with its note – who ended it by ID, and when.
+ */
+export type EndedRepairHistoryEntry = {
+  kind: "defect" | "resolved-on-the-spot";
+  /** The defect's or the problem report's ID. */
+  id: string;
+  /** The defect's title, or the problem report's description. */
+  title: string | undefined;
+  /** The closing note, or the note of the resolution on the spot. */
+  note: string;
+  resolvedBy: TeamMemberId;
+  resolvedAt: Date;
+};
+
+/**
+ * The most recently ended entries of a machine's repair history (RM-MachineRecord, section 7 – ST-033): at most
+ * `limit`, the most recently ended first, and how many entries its whole repair history has, open defects included.
+ * Only what the machine record shows is read – never the whole history. A reopened defect (ST-030) and one closed on
+ * retirement (ST-039) change what "ended" means here, not in the page.
+ */
+export async function recentRepairHistory(
+  db: Database,
+  machineId: string,
+  limit: number,
+): Promise<{ entries: EndedRepairHistoryEntry[]; total: number }> {
+  const latestResolution = sql`${defectResolution.position} = (SELECT max(r.position) FROM ${defectResolution} r WHERE r.defect_id = ${defect.id})`;
+  const [resolvedDefects, resolvedOnTheSpot, [defects], [problemReports]] = await Promise.all([
+    db
+      .select({
+        id: defect.id,
+        title: defect.title,
+        note: defectResolution.closingNote,
+        resolvedBy: defectResolution.resolvedBy,
+        resolvedAt: defectResolution.resolvedAt,
+      })
+      .from(defect)
+      .innerJoin(defectResolution, eq(defectResolution.defectId, defect.id))
+      .where(and(eq(defect.machineId, machineId), eq(defect.state, "resolved"), latestResolution))
+      .orderBy(desc(defectResolution.resolvedAt))
+      .limit(limit),
+    db
+      .select({
+        id: problemReport.id,
+        title: problemReport.description,
+        note: problemReport.triageNote,
+        resolvedBy: problemReport.triagedBy,
+        resolvedAt: problemReport.triagedAt,
+      })
+      .from(problemReport)
+      .where(resolvedOnTheSpotOf(machineId))
+      .orderBy(desc(problemReport.triagedAt))
+      .limit(limit),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(defect)
+      .where(eq(defect.machineId, machineId)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(problemReport)
+      .where(resolvedOnTheSpotOf(machineId)),
+  ]);
+  const entries: EndedRepairHistoryEntry[] = [
+    ...resolvedDefects.map((row) => ({ kind: "defect" as const, ...row })),
+    // Resolved on the spot: triaged, with its note – all three set together (ST-019).
+    ...resolvedOnTheSpot.flatMap(({ title, note, resolvedBy, resolvedAt, id }) =>
+      note !== null && resolvedBy && resolvedAt
+        ? [{ kind: "resolved-on-the-spot" as const, id, title: title ?? undefined, note, resolvedBy, resolvedAt }]
+        : [],
+    ),
+  ];
+  return {
+    entries: entries.sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime()).slice(0, limit),
+    total: defects.count + problemReports.count,
+  };
+}
+
+/** The machine's problem reports resolved on the spot – the only triage outcome of a problem report in its history. */
+function resolvedOnTheSpotOf(machineId: string) {
+  return and(eq(problemReport.machineId, machineId), eq(problemReport.triageOutcome, "resolved-on-the-spot"));
 }

@@ -5,7 +5,7 @@ import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
-import type { MachineRecordData, NamedStatusChange, Repair } from "./machine-record-data";
+import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
 import type { TriagedWhenReporting } from "./triaged-when-reporting";
 
 const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
@@ -150,7 +150,7 @@ export function MachineRecordView({
           </CardContent>
         </Card>
       </section>
-      {/* Section 7 (ST-033): the most recent repairs; the whole repair history is a page of its own (G4a). */}
+      {/* Section 7 (ST-033): the most recently ended entries of the repair history; the whole repair history is a page of its own (G4a). */}
       <section>
         <Card>
           <CardHeader>
@@ -161,11 +161,11 @@ export function MachineRecordView({
               <p className="text-sm">{texts.nothingRepaired}</p>
             ) : (
               <>
-                {record.recentRepairs.length > 0 && (
+                {record.recentRepairHistory.length > 0 && (
                   <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-                    {record.recentRepairs.map((repair) => (
+                    {record.recentRepairHistory.map((repair) => (
                       <li key={repair.id}>
-                        <RepairEntry repair={repair} />
+                        <EndedEntry entry={repair} />
                       </li>
                     ))}
                   </ol>
@@ -187,7 +187,7 @@ export function MachineRecordView({
 }
 
 /** A repair that has ended: what it was, its closing note or note, who ended it and when. Texts are plain text. */
-function RepairEntry({ repair }: { repair: Repair }) {
+function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) {
   return (
     <article className="flex flex-col gap-1 text-sm">
       {repair.kind === "defect" ? (

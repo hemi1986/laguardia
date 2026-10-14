@@ -73,10 +73,15 @@ async function millisecondsOf(work: () => Promise<unknown>): Promise<number> {
 }
 
 describe("the machine record with five years of repair history", () => {
+  // The QR address itself – `/m/LG-042` leading a team member to this page – is checked in the browser:
+  // `e2e/repair-history.spec.ts` (and ST-011's `e2e/qr-sticker.spec.ts`). Here: what that page shows, and how fast.
   it("ST-033: Status and history directly from the QR address", async () => {
     let html = "";
     const elapsed = await millisecondsOf(async () => {
-      const record = await loadMachineRecord(db, "LG-042", { clock: fixedClock(NOW), viewer: { id: eva.teamMemberId, role: "technician" } });
+      const record = await loadMachineRecord(db, "LG-042", {
+        clock: fixedClock(NOW),
+        viewer: { id: eva.teamMemberId, role: "technician" },
+      });
       html = renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber: "LG-042" }));
     });
 

@@ -4,10 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import {
-  retireMachineForTest,
-  withoutMachines,
-} from "@/modules/collection/machines.test-support";
+import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
   recordDefectCommand,
@@ -40,7 +37,13 @@ beforeAll(async () => {
   await anExistingTeamMember(db, tom, "Tom");
   const created = await executeCommand(
     createMachineModelCommand,
-    { title: "Medieval Madness", manufacturer: "Williams", year: "1997", machineCategory: "pinball", technology: "dmd" },
+    {
+      title: "Medieval Madness",
+      manufacturer: "Williams",
+      year: "1997",
+      machineCategory: "pinball",
+      technology: "dmd",
+    },
     { actor: eva, db, newId: randomUUID },
   );
   if (!created.ok) throw new Error(created.error);

@@ -11,7 +11,13 @@ const { repairHistory: texts, machineRecord, defects, terms } = teamMessages;
  * first like on the defect's page, and every problem resolved on the spot. Plain GET links, so it works without
  * JavaScript. Texts are plain text: React escapes them. Photos of work log entries follow with ST-032.
  */
-export function RepairHistoryView({ data, museumNumber }: { data: RepairHistoryData | undefined; museumNumber: string }) {
+export function RepairHistoryView({
+  data,
+  museumNumber,
+}: {
+  data: RepairHistoryData | undefined;
+  museumNumber: string;
+}) {
   const machine = `/team/machines/${encodeURIComponent(museumNumber)}`;
   if (!data) return <p>{machineRecord.unknown(museumNumber)}</p>;
   return (
