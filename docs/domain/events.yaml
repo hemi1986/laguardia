@@ -320,6 +320,9 @@ commands:
     name: Prioritize defect
     actor: ACT-Technician
     produces: [EVT-DefectPrioritized]
+    rules:
+      - The defect is open – not resolved and not closed on retirement
+      - A priority is chosen, and it differs from the defect's current priority
   - id: CMD-ChangeDefectDetails
     name: Change defect details
     actor: ACT-Technician

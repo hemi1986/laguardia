@@ -19,25 +19,30 @@ const formPages: Record<Exclude<DefectAction, "claim" | "release">, { path: stri
   "log-work": { path: "arbeitsschritt", label: texts.logWork },
   resolve: { path: "beheben", label: texts.resolve },
   assign: { path: "zuweisen", label: texts.assign },
+  prioritize: { path: "prioritaet", label: texts.prioritize },
 };
 
 /** The work on a defect, offered as buttons under its header – the rest is behind „Verwalten“ (G22). */
 const work = ["claim", "release", "log-work", "resolve"] as const satisfies readonly DefectAction[];
 
-/** What the page says to who just did it (G3). */
-const confirmations: Record<DefectAction, (title: string, assignedTo: string) => string> = {
+/** What the page says to who just did it (G3) – about the defect as it is now. */
+const confirmations: Record<
+  DefectAction,
+  (title: string, { assignedTo, priority }: { assignedTo: string; priority: string }) => string
+> = {
   claim: texts.claimed,
   release: texts.released,
   "log-work": texts.workLogged,
   resolve: texts.resolved,
-  assign: texts.assigned,
+  assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
+  prioritize: (title, { priority }) => texts.prioritized(title, priority),
 };
 
 /**
  * A defect's own page (ST-021): its machine – leading to the machine record –, title, priority, whether it is suitable
  * for helpers, how long it is open and who has claimed it – with the buttons to claim it or take it over (ST-025), to
  * release one's own claim in the same place (ST-026) and to resolve it (ST-028, G21), then for technicians the fold
- * „Verwalten“ with assigning it and releasing someone else's claim (ST-026, G22) –, for a resolved defect how it ended (closing note, by whom, when), then
+ * „Verwalten“ with assigning it, releasing someone else's claim (ST-026, G22) and changing its priority (ST-027) –, for a resolved defect how it ended (closing note, by whom, when), then
  * the problem reports it came from: the originating one first, then the
  * linked ones (ST-022). Before them its work log, the newest entry first, with the button to log work (ST-024, G21).
  * Texts are plain text.
@@ -68,7 +73,10 @@ export function DefectDetailsView({
       {/* Only who just did it is told so – the address alone cannot make the page say it (G3). */}
       {details.confirmed && (
         <Confirmation>
-          {confirmations[details.confirmed.action](details.title, details.confirmed.assignedTo ?? "")}
+          {confirmations[details.confirmed.action](details.title, {
+            assignedTo: details.confirmed.assignedTo ?? "",
+            priority: recordDefect.priorities[details.priority],
+          })}
           {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
         </Confirmation>
       )}
@@ -122,7 +130,7 @@ export function DefectDetailsView({
                       variant="outline"
                     />
                   )
-                : action !== "assign" &&
+                : work.some((workAction) => workAction === action) &&
                   details.offered.includes(action) && (
                     <Link
                       key={action}
@@ -136,6 +144,11 @@ export function DefectDetailsView({
         <ManageDefect
           assignHref={
             details.offered.includes("assign") ? `/team/defects/${details.id}/${formPages.assign.path}` : undefined
+          }
+          prioritizeHref={
+            details.offered.includes("prioritize")
+              ? `/team/defects/${details.id}/${formPages.prioritize.path}`
+              : undefined
           }
           release={
             releaseAction && {

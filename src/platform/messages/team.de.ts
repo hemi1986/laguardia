@@ -301,6 +301,12 @@ export const teamMessages = {
     assigned: (title: string, name: string) => `Du hast „${title}“ ${name} zugewiesen.`,
     assignedBy: (name: string) => `Zugewiesen von ${name}`,
     assignedByYou: "Von dir zugewiesen",
+    /** Changing a defect's priority (ST-027, G22): behind „Verwalten“, with a form page of its own (G21). */
+    prioritize: "Priorität ändern",
+    prioritizeTitle: (museumNumber: string) => `Priorität ändern · ${museumNumber}`,
+    prioritizeTo: "Neue Priorität",
+    prioritizeChoose: "Bitte wählen",
+    prioritized: (title: string, priority: string) => `„${title}“ hat jetzt die Priorität ${priority}.`,
     /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */
     resolve: "Beheben",
     resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,
@@ -423,6 +429,9 @@ export const teamMessages = {
     "team-member-required": "Bitte ein Teammitglied auswählen.",
     "team-member-not-active": "Dieses Teammitglied hat kein aktives Konto. Bitte jemand anderen auswählen.",
     "already-claimed-by-them": "Dieses Teammitglied hat den Defekt schon übernommen.",
+    /** Changing a defect's priority (ST-027). */
+    "priority-required": "Bitte eine Priorität auswählen.",
+    "priority-unchanged": "Der Defekt hat diese Priorität schon. Bitte eine andere wählen.",
     /** Releasing a claim (ST-026). */
     "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
     "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",

@@ -1,17 +1,18 @@
 import { machineLabels } from "@/modules/collection";
-import { defectDetails, type DefectAction, type DefectActionRefusals } from "@/modules/repair";
+import { defectDetails, type DefectAction, type DefectActionRefusals, type Priority } from "@/modules/repair";
 import type { Viewer } from "../../claimant";
 import type { Database } from "@/platform/command";
 
 /**
  * What a form page of a defect repeats about it (G21) and what its form posts – for „Defekt beheben“ (ST-028) and
- * „Arbeitsschritt eintragen“ (ST-024).
+ * „Arbeitsschritt eintragen“ (ST-024) and „Priorität ändern“ (ST-027).
  */
 export type DefectForForm<Action extends DefectAction> = {
   id: string;
   /** The version this page shows (HS-16). */
   version: number;
   title: string;
+  priority: Priority;
   museumNumber: string;
   machineModelTitle: string;
   /** Why the form's command would refuse this team member – the command's own reason (G11); none if it would not. */
@@ -36,6 +37,7 @@ export async function loadDefectForForm<Action extends DefectAction>(
     id: defect.id,
     version: defect.version,
     title: defect.title,
+    priority: defect.priority,
     museumNumber: machine?.museumNumber ?? "",
     machineModelTitle: machine?.machineModelTitle ?? "",
     whyNot: defect.actions?.[action],

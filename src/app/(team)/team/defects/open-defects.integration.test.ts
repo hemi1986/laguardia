@@ -9,6 +9,7 @@ import {
   claimDefectCommand,
   linkProblemReportToDefectCommand,
   logWorkCommand,
+  prioritizeDefectCommand,
   recordDefectCommand,
   reportProblemCommand,
   type Priority,
@@ -393,4 +394,27 @@ describe("the open defects list", () => {
     // Alone and matching nothing, it says what it was filtered for.
     expect(await page({ claimedByMe: true })).toContain("Du hast keinen offenen Defekt übernommen.");
   });
+
+  it("ST-027: Filter by priority", async () => {
+    const lg042 = await registered("LG-042");
+    await prioritized(await anOpenDefect(lg042, "Display flickers"), "high");
+    await prioritized(await anOpenDefect(lg042, "Rubber cracked"), "low");
+
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), { priority: "high" });
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Display flickers"]);
+    const html = await page({ priority: "high" });
+    expect(html).toContain("Display flickers");
+    expect(html).not.toContain("Rubber cracked");
+  });
 });
+
+/** A technician changes the defect's priority (CMD-PrioritizeDefect, ST-027) – it was recorded with normal. */
+async function prioritized(defectId: string, priority: Priority) {
+  const outcome = await executeCommand(
+    prioritizeDefectCommand,
+    { defectId, version: 0, priority },
+    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+}

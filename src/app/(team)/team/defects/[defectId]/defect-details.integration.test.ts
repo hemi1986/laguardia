@@ -9,6 +9,7 @@ import {
   claimDefectCommand,
   linkProblemReportToDefectCommand,
   logWorkCommand,
+  prioritizeDefectCommand,
   recordDefectCommand,
   releaseClaimCommand,
   reportProblemCommand,
@@ -330,7 +331,7 @@ describe("a defect's own page", () => {
       const defectId = await aDefect();
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.offered).toEqual(["claim", "log-work", "resolve", "assign"]);
+      expect(toms.offered).toEqual(["claim", "log-work", "resolve", "assign", "prioritize"]);
       expect(toms.html).toMatch(/<details[^>]*><summary[^>]*>Verwalten/);
       expect(toms.html).toContain(`href="/team/defects/${defectId}/zuweisen"`);
       const annas = await seenBy(defectId, asAnna);
@@ -353,7 +354,7 @@ describe("a defect's own page", () => {
       expect(toms.html).toContain("Übernommen von Anna");
       expect(toms.html).toContain("Von dir zugewiesen");
       // A technician may take it over, assign it to someone else, or release Anna's claim.
-      expect(toms.offered).toEqual(["claim", "release", "log-work", "resolve", "assign"]);
+      expect(toms.offered).toEqual(["claim", "release", "log-work", "resolve", "assign", "prioritize"]);
       const annas = await seenBy(defectId, asAnna, "assign");
       expect(annas.html).toContain("Von dir übernommen");
       expect(annas.html).toContain("Zugewiesen von Tom");
@@ -396,6 +397,42 @@ describe("a defect's own page", () => {
       expect(annas.html).not.toContain("bernommen");
       expect(annas.offered).toEqual(["claim", "log-work", "resolve"]);
       expect((await seenBy(defectId, asTom, "release")).html).not.toContain("wieder frei");
+    });
+  });
+
+  describe("changing its priority (ST-027, G22)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    /** The page as that team member sees it, just back from the given action. */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer, done });
+      return { offered: details?.offered, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
+    }
+
+    it("offers „Priorität ändern“ behind „Verwalten“ to technicians only, and confirms the new priority", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(await reported(await registered("LG-042"), "Display flickers", NOW), NOW);
+
+      const toms = await seenBy(defectId, asTom);
+      expect(toms.offered).toContain("prioritize");
+      const fold = toms.html.slice(toms.html.indexOf("<details"));
+      expect(fold).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}/prioritaet"[^>]*>Priorität ändern</a>`));
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas.offered).not.toContain("prioritize");
+      expect(annas.html).not.toContain("prioritaet");
+
+      const lowered = await executeCommand(
+        prioritizeDefectCommand,
+        { defectId, version: 0, priority: "low" },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!lowered.ok) throw new Error(lowered.error);
+      const after = await seenBy(defectId, asTom, "prioritize");
+      expect(after.html).toContain("„Left flipper weak“ hat jetzt die Priorität niedrig.");
+      expect(after.html).toContain("Priorität: niedrig");
+      expect((await seenBy(defectId, asAnna, "prioritize")).html).not.toContain("hat jetzt die Priorität");
     });
   });
 
@@ -563,9 +600,9 @@ describe("a defect's own page", () => {
       const defectId = await aDefect(false);
 
       const toms = await seenBy(defectId, asTom);
-      // A technician is also offered assigning it (ST-026).
+      // A technician is also offered assigning it (ST-026) and changing its priority (ST-027).
       expect(toms.details).toMatchObject({
-        offered: ["claim", "log-work", "resolve", "assign"],
+        offered: ["claim", "log-work", "resolve", "assign", "prioritize"],
         resolution: undefined,
       });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);

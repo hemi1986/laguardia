@@ -39,6 +39,7 @@ export async function loadDefectForAssigning(
     id: defect.id,
     version: defect.version,
     title: defect.title,
+    priority: defect.priority,
     museumNumber: machine?.museumNumber ?? "",
     machineModelTitle: machine?.machineModelTitle ?? "",
     whyNot,

@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 25 of 58 domain stories done** · scenarios 232 of 450
+**Progress: 26 of 58 domain stories done** · scenarios 236 of 450
 
-**81 stories** · In Progress: 0 · Ready: 39 · In Review: 0 · Draft: 5 · Done: 37
+**81 stories** · In Progress: 0 · Ready: 38 · In Review: 0 · Draft: 5 · Done: 38
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-027](ST-027-prioritize-defect.md) | Prioritize a defect | story | Repair | must | XS | low | ST-021, ST-028 |
 | [ST-033](ST-033-repair-history-on-machine-record.md) | Repair history on the machine record | story | Repair | must | M | medium | ST-011, ST-019, ST-024 |
 | [ST-040](ST-040-maintenance-plan-add-task.md) | Maintenance plan – view and add maintenance tasks | story | Maintenance | must | M | medium | ST-003, ST-006 |
 | [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | medium | ST-003, ST-007, ST-040 |
@@ -98,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-028](ST-028-resolve-defect.md) | Resolve a defect with a closing note | story | Repair | must | S | low | ST-025 |
 | [ST-024](ST-024-log-work.md) | Log work on a defect | story | Repair | must | S | low | ST-021, ST-028 |
 | [ST-026](ST-026-assign-and-release-claims.md) | Assign a defect and release claims | story | Repair | must | S | low | ST-025 |
+| [ST-027](ST-027-prioritize-defect.md) | Prioritize a defect | story | Repair | must | XS | low | ST-021, ST-028 |
 | [ST-052](ST-052-report-and-link-or-resolve-on-the-spot.md) | Report a problem and link it or resolve it on the spot in the same step | story | Repair | must | M | medium | ST-019, ST-022, ST-023 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
