@@ -24,7 +24,8 @@ test("a team member logs in and out on a 360 px phone", async ({ page }) => {
   await page.getByRole("button", { name: "Anmelden" }).click();
 
   await expect(page).toHaveURL(/\/team$/);
-  await expect(page.getByText(/Angemeldet als/)).toBeVisible();
+  // The e2e technician lands on the technician dashboard, which replaced the start page placeholder (ST-048).
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Übersicht");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 
   await openMore(page);
