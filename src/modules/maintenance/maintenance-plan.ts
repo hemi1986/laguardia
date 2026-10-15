@@ -23,6 +23,9 @@ export type MaintenanceTask = {
 };
 
 /** AGG-MaintenancePlan – the single, museum-wide set of all maintenance tasks (CONTEXT.md: Maintenance plan). */
+/** The ID of the one maintenance plan – created by the migration `drizzle/0019_maintenance_plan.sql`. */
+export const MAINTENANCE_PLAN_ID = "7a1e0f40-0000-4000-8000-000000000040";
+
 export type MaintenancePlan = {
   id: string;
   /** In the order they were added. */
