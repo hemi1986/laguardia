@@ -196,7 +196,7 @@ describe("the due maintenance list", () => {
 
     const { data, html } = await page("2026-05-01");
 
-    expect(data.tasks.map(({ name, machines, overdue }) => [name, machines, overdue])).toEqual([
+    expect(data.tasks.map(({ name, machineCount, overdueCount }) => [name, machineCount, overdueCount])).toEqual([
       ["Clean glass (inside & out)", 12, 3],
       ["Wax playfield", 2, 0],
     ]);
@@ -249,6 +249,12 @@ describe("the due maintenance list", () => {
       suitableForHelpers: false,
     });
 
+    // Unfiltered, both are due.
+    expect((await page("2026-04-02")).data.tasks.map((task) => task.name).sort()).toEqual([
+      "Check fuses, connectors, boards for burn marks",
+      "Clean glass (inside & out)",
+    ]);
+
     const { data, html } = await page("2026-04-02", { suitableForHelpers: true });
 
     expect(data.tasks.map((task) => task.name)).toEqual(["Clean glass (inside & out)"]);
@@ -280,7 +286,7 @@ describe("the due maintenance list", () => {
     const april = await page("2026-04-03", { maintenanceTaskId: wax });
     expect(april.data.chosen?.machines[0].overdue).toBe(true);
     expect(april.html).toContain("Überfällig");
-    expect(april.data.tasks).toEqual([{ id: wax, name: "Wax playfield", machines: 1, overdue: 1 }]);
+    expect(april.data.tasks).toEqual([{ id: wax, name: "Wax playfield", machineCount: 1, overdueCount: 1 }]);
   });
 
   it("ST-043: Restriction decides which machines are listed", async () => {
@@ -318,10 +324,30 @@ describe("the due maintenance list", () => {
 
     const { data, html } = await page("2026-04-02");
 
-    expect(data.tasks.map(({ name, machines }) => [name, machines])).toEqual([["Clean playfield", 1]]);
+    expect(data.tasks.map(({ name, machineCount }) => [name, machineCount])).toEqual([["Clean playfield", 1]]);
     expect(html).not.toContain("Wax playfield");
     const chosen = await page("2026-04-02", { maintenanceTaskId: data.tasks[0].id });
     expect(chosen.html).toContain("LG-042");
     expect(chosen.html).not.toContain("LG-013");
+  });
+
+  it("shows the tasks with the most overdue machines first, then the most due machines, then by name", async () => {
+    // Registered before the start dates: overdue on 1 May. Registered on 25 January: due since 25 April, not overdue.
+    for (const number of ["001", "002"]) await aMachine(`LG-${number}`, { registeredAt: "2025-06-01T09:00:00Z" });
+    await aMachine("LG-101", { technology: "em", registeredAt: "2026-01-25T09:00:00Z" });
+    await aMachine("LG-102", { technology: "em", registeredAt: "2026-01-25T09:00:00Z" });
+    await aMaintenanceTask("B – overdue on two", { machineCategory: "pinball", technology: "dmd" });
+    await aMaintenanceTask("C – due on two", { machineCategory: "pinball", technology: "em" });
+    await aMaintenanceTask("A – due on two", { machineCategory: "pinball", technology: "em" });
+    await aMaintenanceTask("D – due on four, overdue on two", { machineCategory: "pinball" });
+
+    const { data } = await page("2026-05-01");
+
+    expect(data.tasks.map(({ name, machineCount, overdueCount }) => [name, machineCount, overdueCount])).toEqual([
+      ["D – due on four, overdue on two", 4, 2],
+      ["B – overdue on two", 2, 2],
+      ["A – due on two", 2, 0],
+      ["C – due on two", 2, 0],
+    ]);
   });
 });

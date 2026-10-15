@@ -11,7 +11,7 @@ export type DueMaintenanceFilter = {
 };
 
 /** An entry of the list's first step: a due maintenance task by name, with its counts (G4a). */
-export type DueMaintenanceEntry = { id: string; name: string; machines: number; overdue: number };
+export type DueMaintenanceEntry = { id: string; name: string; machineCount: number; overdueCount: number };
 
 export type DueMaintenanceData = {
   tasks: DueMaintenanceEntry[];
@@ -19,6 +19,15 @@ export type DueMaintenanceData = {
   chosen: DueMaintenanceTask | undefined;
   filter: DueMaintenanceFilter;
 };
+
+/** The list's address with the filter – the counterpart of `dueMaintenanceFilterOf`. */
+export function dueMaintenanceAddress({ suitableForHelpers, maintenanceTaskId }: DueMaintenanceFilter): string {
+  const params = new URLSearchParams();
+  if (maintenanceTaskId) params.set("task", maintenanceTaskId);
+  if (suitableForHelpers) params.set("helpers", "1");
+  const query = params.toString();
+  return `/team/maintenance${query ? `?${query}` : ""}`;
+}
 
 /** The filter in the address – plain GET parameters, so the list works without JavaScript. */
 export function dueMaintenanceFilterOf(params: Record<string, string | string[] | undefined>): DueMaintenanceFilter {
@@ -43,7 +52,12 @@ export async function loadDueMaintenance(
     (task) => !filter.suitableForHelpers || task.suitableForHelpers,
   );
   return {
-    tasks: due.map((task) => ({ id: task.id, name: task.name, machines: task.machines.length, overdue: task.overdue })),
+    tasks: due.map((task) => ({
+      id: task.id,
+      name: task.name,
+      machineCount: task.machines.length,
+      overdueCount: task.overdueCount,
+    })),
     chosen: due.find((task) => task.id === filter.maintenanceTaskId),
     filter,
   };

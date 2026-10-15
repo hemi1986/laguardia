@@ -64,23 +64,30 @@ export async function maintenancePlan(
     maintenancePlanVersion(db),
     maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID]),
   ]);
-  const tasks = stored.get(MAINTENANCE_PLAN_ID) ?? [];
+  const tasks = activeOf(stored.get(MAINTENANCE_PLAN_ID) ?? []);
   return {
     version,
-    maintenanceTasks: tasks
-      .filter((task) => !task.removedAt)
-      .map((task) => ({
-        id: task.id,
-        name: task.name,
-        instruction: task.instruction,
-        intervalMonths: task.intervalMonths,
-        suitableForHelpers: task.suitableForHelpers,
-        machineCategory: task.machineCategory,
-        technology: task.technology,
-        startDate: task.startDate,
-        firstDue: maintenanceDates(task.startDate, task.intervalMonths).dueDate,
-      })),
+    maintenanceTasks: tasks.map((task) => ({
+      id: task.id,
+      name: task.name,
+      instruction: task.instruction,
+      intervalMonths: task.intervalMonths,
+      suitableForHelpers: task.suitableForHelpers,
+      machineCategory: task.machineCategory,
+      technology: task.technology,
+      startDate: task.startDate,
+      firstDue: maintenanceDates(task.startDate, task.intervalMonths).dueDate,
+    })),
   };
+}
+
+/** The maintenance tasks of the plan that are not removed – a removed maintenance task is never due (invariant). */
+export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceTask[]> {
+  return activeOf((await maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID])).get(MAINTENANCE_PLAN_ID) ?? []);
+}
+
+function activeOf(tasks: MaintenanceTask[]): MaintenanceTask[] {
+  return tasks.filter((task) => !task.removedAt);
 }
 
 /**

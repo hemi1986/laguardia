@@ -11,4 +11,4 @@ export {
   maintenanceTaskAppliesTo,
   type ListedMaintenanceTask,
 } from "./maintenance-plans";
-export { dueMaintenance, type DueMachine, type DueMaintenanceTask, type MaintainedMachine } from "./due-maintenance";
+export { dueMaintenance, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";

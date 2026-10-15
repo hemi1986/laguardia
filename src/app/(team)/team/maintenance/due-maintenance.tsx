@@ -2,18 +2,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
-import type { DueMaintenanceData, DueMaintenanceFilter } from "./due-maintenance-data";
+import { dueMaintenanceAddress, type DueMaintenanceData } from "./due-maintenance-data";
 
 const { dueMaintenance: texts, terms } = teamMessages;
-
-/** The list's address with the filter – the helpers filter is kept when a task is chosen or left. */
-function addressOf({ suitableForHelpers, maintenanceTaskId }: DueMaintenanceFilter): string {
-  const params = new URLSearchParams();
-  if (maintenanceTaskId) params.set("task", maintenanceTaskId);
-  if (suitableForHelpers) params.set("helpers", "1");
-  const query = params.toString();
-  return `/team/maintenance${query ? `?${query}` : ""}`;
-}
 
 /**
  * The due maintenance list (RM-DueMaintenance, ST-043, G4a): first every due maintenance task with on how many machines
@@ -25,13 +16,20 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   if (chosen) {
     return (
       <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
+        {/* The way back sits above the machines – a task can be due on 60 of them (G17). */}
+        <Link
+          href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}
+          className="self-start text-sm underline underline-offset-4"
+        >
+          {texts.allDue}
+        </Link>
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold">{chosen.name}</h2>
           <p className="text-sm whitespace-pre-line">{chosen.instruction}</p>
           {chosen.suitableForHelpers && (
             <p className="text-muted-foreground text-sm">{terms["Suitable for helpers"]}</p>
           )}
-          <p className="text-sm">{texts.counts(chosen.machines.length, chosen.overdue)}</p>
+          <p className="text-sm">{texts.counts(chosen.machines.length, chosen.overdueCount)}</p>
         </div>
         <ol className="flex flex-col gap-4">
           {chosen.machines.map((machine) => (
@@ -55,12 +53,6 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
             </li>
           ))}
         </ol>
-        <Link
-          href={addressOf({ ...filter, maintenanceTaskId: undefined })}
-          className="self-start text-sm underline underline-offset-4"
-        >
-          {texts.allDue}
-        </Link>
       </section>
     );
   }
@@ -88,10 +80,10 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
           {data.tasks.map((task) => (
             <li key={task.id}>
               <Link
-                href={addressOf({ ...filter, maintenanceTaskId: task.id })}
+                href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: task.id })}
                 className="underline underline-offset-4"
               >
-                {task.name} · {texts.counts(task.machines, task.overdue)}
+                {task.name} · {texts.counts(task.machineCount, task.overdueCount)}
               </Link>
             </li>
           ))}

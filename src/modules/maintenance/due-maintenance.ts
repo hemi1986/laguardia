@@ -1,19 +1,8 @@
-import type { MachineCategory, Technology } from "@/modules/collection";
+import type { MachineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, maintenanceDates, today, type CalendarDate } from "@/platform/time";
-import { maintenancePlan, maintenanceTaskAppliesTo } from "./maintenance-plans";
-
-/** A machine as maintenance needs it – what Collection publishes (context map); the page passes it in. */
-export type MaintainedMachine = {
-  id: string;
-  museumNumber: string;
-  machineModelTitle: string;
-  location: string;
-  machineCategory: MachineCategory;
-  technology: Technology | undefined;
-  registeredAt: Date;
-};
+import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 
 /** A machine on which a maintenance task is due (EVT-MaintenanceTaskDue, computed on read – ADR 0002). */
 export type DueMachine = {
@@ -35,11 +24,12 @@ export type DueMaintenanceTask = {
   suitableForHelpers: boolean;
   machines: DueMachine[];
   /** How many of its machines it is overdue on. */
-  overdue: number;
+  overdueCount: number;
 };
 
 /**
- * RM-DueMaintenance (ST-043): every maintenance task of the plan that is due today on a machine it applies to, with
+ * RM-DueMaintenance (ST-043) – on Collection's machines as it publishes them for maintenance (context map), which the
+ * page passes in: every maintenance task of the plan that is due today on a machine it applies to, with
  * those machines – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the
  * most due machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
@@ -49,11 +39,10 @@ export type DueMaintenanceTask = {
 export async function dueMaintenance(
   db: Database,
   clock: Clock,
-  machines: readonly MaintainedMachine[],
+  machines: readonly MachineForMaintenance[],
 ): Promise<DueMaintenanceTask[]> {
   const now = today(clock);
-  const { maintenanceTasks } = await maintenancePlan(db);
-  const due = maintenanceTasks.flatMap((task) => {
+  const due = (await activeMaintenanceTasks(db)).flatMap((task) => {
     const dueMachines = machines.flatMap((machine) => {
       if (!maintenanceTaskAppliesTo(task, machine)) return [];
       const registered = calendarDate(machine.registeredAt);
@@ -80,12 +69,13 @@ export async function dueMaintenance(
         instruction: task.instruction,
         suitableForHelpers: task.suitableForHelpers,
         machines: dueMachines.sort(byLocation),
-        overdue: dueMachines.filter((machine) => machine.overdue).length,
+        overdueCount: dueMachines.filter((machine) => machine.overdue).length,
       },
     ];
   });
   return due.sort(
-    (a, b) => b.overdue - a.overdue || b.machines.length - a.machines.length || a.name.localeCompare(b.name, "de"),
+    (a, b) =>
+      b.overdueCount - a.overdueCount || b.machines.length - a.machines.length || a.name.localeCompare(b.name, "de"),
   );
 }
 
