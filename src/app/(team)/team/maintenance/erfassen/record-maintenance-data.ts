@@ -1,4 +1,4 @@
-import { machineForMaintenance, machineIdOf, machineLabels, machinesForMaintenance } from "@/modules/collection";
+import { machineForMaintenance, machineIdOf, machineLabels } from "@/modules/collection";
 import {
   LONGEST_BACK_DATING_DAYS,
   maintenancePlan,
@@ -35,11 +35,7 @@ export async function loadMaintenanceForRecording(
   const [plan, machineId] = await Promise.all([maintenancePlan(db), machineIdOf(db, museumNumber)]);
   const task = plan.maintenanceTasks.find((candidate) => candidate.id === maintenanceTaskId);
   if (!task || !machineId) return undefined;
-  const [facts, labels, located] = await Promise.all([
-    machineForMaintenance(db, machineId),
-    machineLabels(db, [machineId]),
-    machinesForMaintenance(db),
-  ]);
+  const [facts, labels] = await Promise.all([machineForMaintenance(db, machineId), machineLabels(db, [machineId])]);
   const label = labels.get(machineId);
   if (!facts || !label) return undefined;
   const now = today(clock);
@@ -49,7 +45,7 @@ export async function loadMaintenanceForRecording(
       id: machineId,
       museumNumber: label.museumNumber,
       machineModelTitle: label.machineModelTitle,
-      location: located.find((machine) => machine.id === machineId)?.location ?? "",
+      location: facts.location,
     },
     whyNot: recordRefusal(task, facts, { role: viewer.role }),
     today: now,

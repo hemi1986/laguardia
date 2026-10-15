@@ -118,7 +118,9 @@ function latest(...dates: (CalendarDate | undefined)[]): CalendarDate {
 
 /**
  * Back on display (HS-20, as revised in D5; ST-056): a task already due when the machine returned counts as due since
- * the return, and overdue 25 % of the interval's actual days after it; any other task keeps its normal dates.
+ * the return, and overdue 25 % of the actual days of the interval *starting on the return* after it – the time
+ * convention's `graceDays(start, months)` was built for this start (ST-003, engineering conventions); any other task
+ * keeps its normal dates.
  */
 function dueAfterReturn(
   dates: { dueDate: CalendarDate; overdueFrom: CalendarDate },
