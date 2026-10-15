@@ -10,11 +10,11 @@ export type DueMaintenanceFilter = {
   maintenanceTaskId?: string;
 };
 
-/** A due maintenance task as the first step of the list shows it: its name and its counts (G4a). */
-export type DueMaintenanceSummary = { id: string; name: string; machines: number; overdue: number };
+/** An entry of the list's first step: a due maintenance task by name, with its counts (G4a). */
+export type DueMaintenanceEntry = { id: string; name: string; machines: number; overdue: number };
 
 export type DueMaintenanceData = {
-  tasks: DueMaintenanceSummary[];
+  tasks: DueMaintenanceEntry[];
   /** The chosen task with its machines – only one that is due and matches the filter. */
   chosen: DueMaintenanceTask | undefined;
   filter: DueMaintenanceFilter;
