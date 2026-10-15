@@ -54,8 +54,11 @@ project; the second account is the price.
   without anyone looking.
 - Negative / cost: two more vendors in the data processing record; a free-tier limit change could force a plan or a
   switch – the SDK is the only code dependency, the uptime checks need none.
-- The DPAs of Sentry (https://sentry.io/legal/dpa/) and Better Stack are recorded with their acceptance, like the
-  Vercel and Neon DPAs (ST-065).
+- The DPAs of Sentry (https://sentry.io/legal/dpa/5.0.0, accepted electronically in the account) and Better Stack
+  (https://betterstack.com/dpa) are recorded with their acceptance, like the Vercel and Neon DPAs (ST-065).
+- Facts as of 2026-10-15, from the vendors' pages: Sentry offers the EU data region (Frankfurt) on every plan,
+  including the free Developer plan, which includes one uptime monitor and cannot buy more; Better Stack's free tier has
+  10 monitors with a 3-minute interval and e-mail alerts, data in the EU by default.
 - Follow-up: ST-061 builds it – in the museum's Vercel Pro team after ST-065, so nothing is set up twice.
 
 ## Open Points
