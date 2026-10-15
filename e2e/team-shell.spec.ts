@@ -15,7 +15,14 @@ test.beforeEach(async () => {
 test("every team page carries the same navigation, once per destination, with logout", async ({ page }) => {
   await logIn(page);
 
-  for (const path of ["/team", "/team/machines", "/team/machine-models", "/team/members", "/team/password"]) {
+  for (const path of [
+    "/team",
+    "/team/machines",
+    "/team/maintenance-plan",
+    "/team/machine-models",
+    "/team/members",
+    "/team/password",
+  ]) {
     await page.goto(path);
     await expect(page.getByRole("navigation", { name: "Navigation" })).toHaveCount(1);
     await expect(page.getByRole("main")).toHaveCount(1);
@@ -25,6 +32,7 @@ test("every team page carries the same navigation, once per destination, with lo
     await expect(page.getByRole("link", { name: "Sichtung" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeVisible();
     await openMore(page);
+    await expect(page.getByRole("link", { name: "Wartungsplan" })).toBeVisible(); // since ST-040, G19 row 6
     await expect(page.getByRole("link", { name: "Modelle" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Teammitglieder" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Passwort ändern" })).toBeVisible();
@@ -44,6 +52,8 @@ test("every team page carries the same navigation, once per destination, with lo
   await page.keyboard.press("Tab");
   await expect(page.getByRole("navigation").locator("summary")).toBeFocused();
   await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Wartungsplan" })).toBeFocused(); // since ST-040, G19 row 6
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Modelle" })).toBeFocused();
 });

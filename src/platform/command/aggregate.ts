@@ -3,7 +3,9 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Clock } from "../clock";
 import type { Database } from "../database";
 import { NotFound, VersionConflict } from "./errors";
+import type { Entities } from "./entities";
 import type { History } from "./history";
+import type { StoredList } from "./stored-list";
 import type { Actor, ActorOf, AllowedActor, Command, CommandContext, JournalEvent } from "./index";
 
 /**
@@ -29,27 +31,35 @@ type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
 type EntryOf<List> = List extends (infer Entry extends { id: string })[] ? Entry : never;
 
 /**
- * A module's store of one kind of aggregate: its row, versioned, and its histories (Q13; architecture review
- * 2026-10-11) – each a list in the state under the name it has here. Loading reads them into the state, the oldest
- * entry first; saving inserts the entries not stored yet, after the row was saved at the expected version.
+ * A module's store of one kind of aggregate: its row, versioned, its histories (Q13; architecture review 2026-10-11)
+ * and its lists of entities (ST-040) – each a list in the state under the name it has here. Loading reads them into
+ * the state, the oldest entry first; saving – after the row was saved at the expected version – inserts the history
+ * entries not stored yet, and inserts new entities and changes stored ones. Nothing is ever deleted.
  */
 export function aggregateStore<
   State extends { id: string },
   T extends VersionedTable,
   Names extends keyof State & string = never,
+  EntityNames extends keyof State & string = never,
 >(definition: {
   type: `AGG-${string}`;
   table: T;
   /** The histories of the aggregate, by the name of their list in the state. */
   histories?: { [Name in Names]: History<EntryOf<State[Name]>> };
-  toState: (row: T["$inferSelect"], histories: Pick<State, Names>) => State;
-  /** The row without its version – the store sets the version. The histories are saved by the store itself. */
+  /** The lists of entities of the aggregate, by the name of their list in the state. */
+  entities?: { [Name in EntityNames]: Entities<EntryOf<State[Name]>> };
+  toState: (row: T["$inferSelect"], lists: Pick<State, Names | EntityNames>) => State;
+  /** The row without its version – the store sets the version. The lists are saved by the store itself. */
   toRow: (state: State) => Omit<T["$inferInsert"], "version">;
 }): AggregateStore<State> {
   const { type, table, toState, toRow } = definition;
-  const histories = Object.entries(definition.histories ?? {}) as [Names, History<{ id: string }>][];
-  const saveHistories = async (tx: Database, state: State) => {
-    for (const [name, history] of histories) await history.save(tx, state.id, state[name] as { id: string }[]);
+  // A history and a list of entities are loaded and saved alike; each knows how it saves.
+  const lists = [...Object.entries(definition.histories ?? {}), ...Object.entries(definition.entities ?? {})] as [
+    Names | EntityNames,
+    StoredList<{ id: string }>,
+  ][];
+  const saveLists = async (tx: Database, state: State) => {
+    for (const [name, list] of lists) await list.save(tx, state.id, state[name] as { id: string }[]);
   };
   return {
     type,
@@ -61,16 +71,16 @@ export function aggregateStore<
         .limit(1);
       const [row] = options?.lock ? await query.for("update") : await query;
       if (!row) return undefined;
-      const lists: Record<string, unknown[]> = {};
-      for (const [name, history] of histories) lists[name] = (await history.load(tx, [id])).get(id) ?? [];
+      const loaded: Record<string, unknown[]> = {};
+      for (const [name, list] of lists) loaded[name] = (await list.load(tx, [id])).get(id) ?? [];
       return {
-        state: toState(row as T["$inferSelect"], lists as Pick<State, Names>),
+        state: toState(row as T["$inferSelect"], loaded as Pick<State, Names | EntityNames>),
         version: (row as { version: number }).version,
       };
     },
     async insert(tx, state) {
       await tx.insert(table).values({ ...toRow(state), version: 0 } as never);
-      await saveHistories(tx, state);
+      await saveLists(tx, state);
     },
     async update(tx, state, expectedVersion) {
       const updated = await tx
@@ -79,7 +89,7 @@ export function aggregateStore<
         .where(and(eq(table.id, state.id), eq(table.version, expectedVersion)))
         .returning({ id: table.id });
       if (updated.length === 0) return false;
-      await saveHistories(tx, state);
+      await saveLists(tx, state);
       return true;
     },
   };

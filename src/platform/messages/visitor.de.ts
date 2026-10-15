@@ -121,13 +121,16 @@ export const visitorDe = {
     /** The photo errors (ST-016), defined once in the photo module – the original limit people know is 20 MB. */
     "too-large": "Das Foto ist zu groß: höchstens 20 MB.",
     "not-an-image": "Das ist kein Foto. Bitte wähle ein Foto aus oder lass es weg.",
-    "unsupported-format": "Dieses Bildformat wird nicht unterstützt. Bitte wähle ein Foto (JPEG, PNG oder WebP) aus oder lass es weg.",
+    "unsupported-format":
+      "Dieses Bildformat wird nicht unterstützt. Bitte wähle ein Foto (JPEG, PNG oder WebP) aus oder lass es weg.",
     "not-stored": "Das Foto konnte nicht gesendet werden. Versuche es noch einmal oder sende die Meldung ohne Foto.",
-    "machine-not-on-display": "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
+    "machine-not-on-display":
+      "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
     "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
     "machine-retired": "Dieses Gerät ist nicht mehr im Museum.",
     /** Only for a logged-in technician who sends the visitors' form: their problem reports are triaged in the same step (ST-023). */
-    "triage-required": "Als Techniker:in meldest du über die Geräteseite im Team-Bereich – dort wird die Meldung gleich gesichtet. Es wurde nichts gespeichert.",
+    "triage-required":
+      "Als Techniker:in meldest du über die Geräteseite im Team-Bereich – dort wird die Meldung gleich gesichtet. Es wurde nichts gespeichert.",
     "not-authorized": "Das darfst du nicht.",
     "not-found": "Das gibt es nicht mehr.",
     "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",

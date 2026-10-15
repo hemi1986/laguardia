@@ -38,6 +38,19 @@ export function formatDateTime(instant: Date): string {
   return berlinDateTime.format(instant);
 }
 
+/** Whether a text is a real calendar date `YYYY-MM-DD` – "2026-02-31" and "2026-13-01" are not. */
+export function isCalendarDate(value: string): value is CalendarDate {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = parse(value);
+  return !Number.isNaN(date.getTime()) && format(date) === value;
+}
+
+/** A calendar date as the team sees it, e.g. "01.11.2026" (a start date, a due date – ST-040). */
+export function formatCalendarDate(date: CalendarDate): string {
+  const [year, month, day] = date.split("-");
+  return `${day}.${month}.${year}`;
+}
+
 export function today(clock: Clock): CalendarDate {
   return calendarDate(clock.now());
 }

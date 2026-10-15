@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { Database } from "../database";
+import type { StoredList } from "./stored-list";
 
 /**
  * Histories are append-only lists (architecture review 2026-09-27, Q13; ST-012): a history – the machine status
@@ -18,11 +18,9 @@ import type { Database } from "../database";
 type HistoryTable = PgTable & { id: PgColumn; position: PgColumn };
 
 /** How one history of an aggregate is stored. */
-export type History<Entry extends { id: string }> = {
-  /** The entries of the given aggregates, the oldest first – an aggregate without entries is not in the map. */
-  load(db: Database, aggregateIds: readonly string[]): Promise<Map<string, Entry[]>>;
+export type History<Entry extends { id: string }> = StoredList<Entry> & {
   /** Inserts the entries not stored yet; a stored entry is never updated or deleted. */
-  save(tx: Database, aggregateId: string, entries: readonly Entry[]): Promise<void>;
+  readonly kind: "history";
 };
 
 export function history<
@@ -40,6 +38,7 @@ export function history<
   const { table, owner, toEntry, toRow } = definition;
   const ownerColumn = table[owner] as PgColumn;
   return {
+    kind: "history",
     async load(db, aggregateIds) {
       const byAggregate = new Map<string, Entry[]>();
       if (aggregateIds.length === 0) return byAggregate;

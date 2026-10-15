@@ -40,6 +40,11 @@ export function TeamNavigation({ role }: { role: Role }) {
             {technician && (
               <>
                 <li>
+                  <Link href="/team/maintenance-plan" className={link}>
+                    {team.maintenancePlan}
+                  </Link>
+                </li>
+                <li>
                   <Link href="/team/machine-models" className={link}>
                     {team.machineModels}
                   </Link>

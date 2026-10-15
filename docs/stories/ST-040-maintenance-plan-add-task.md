@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MaintenancePlanChanged]
 depends_on: [ST-003, ST-006]
 labels: [mvp, maintenance, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -22,6 +22,7 @@ Command `CMD-ChangeMaintenancePlan` (technicians only), read model `RM-Maintenan
 - Optional restriction to a machine category, or to a machine category plus a technology; a technology restriction always needs a machine category and must fit it (e.g. Pinball/EM only).
 - The maintenance plan is one single, museum-wide set (`CONTEXT.md`).
 UI wording (de): Wartungsplan, Wartungsaufgabe, Für Helfer:innen geeignet.
+Decided during `/implement ST-040` (user, 2026-10-15): every entry of the maintenance plan shows its start date and when it is first due („Start 01.10.2026 · erstmals fällig 01.11.2026“) – the observable of "first due on applicable machines" until the due maintenance list (ST-043) exists. The maintenance tasks are stored with a new store kind for a list of entities that are changed but never deleted (engineering conventions: "the store gets that kind when its first story needs it").
 
 ## Acceptance Criteria
 

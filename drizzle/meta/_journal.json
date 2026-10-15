@@ -134,6 +134,13 @@
       "when": 1791832962240,
       "tag": "0018_defect_claim_assigned_by",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792087235266,
+      "tag": "0019_maintenance_plan",
+      "breakpoints": true
     }
   ]
 }
