@@ -363,6 +363,10 @@ export type MachineForMaintenance = {
   machineCategory: MachineCategory;
   technology: Technology | undefined;
   registeredAt: Date;
+  /** Its machine status now – a machine *Not on display* is never due (ST-056). */
+  machineStatus: MachineStatus;
+  /** When it last came back from *Not on display* – none if it never was (ST-056, HS-20). */
+  returnedToDisplayAt: Date | undefined;
 };
 
 /** Every machine that is not retired, as maintenance needs it (ST-043) – retired machines are never due. */
@@ -376,11 +380,21 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
       machineCategory: machineModel.machineCategory,
       technology: machineModel.technology,
       registeredAt: machine.registeredAt,
+      machineStatus: machine.machineStatus,
+      // The latest change of the status history away from Not on display.
+      returnedToDisplayAt: sql<Date | null>`(SELECT max(${machineStatusChange.changedAt}) FROM ${machineStatusChange}
+        WHERE ${machineStatusChange.machineId} = ${machine.id}
+          AND ${machineStatusChange.previousStatus} = 'not-on-display'
+          AND ${machineStatusChange.newStatus} <> 'not-on-display')`.mapWith(machineStatusChange.changedAt),
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(isNull(machine.retiredAt));
-  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+  return rows.map((row) => ({
+    ...row,
+    technology: row.technology ?? undefined,
+    returnedToDisplayAt: row.returnedToDisplayAt ?? undefined,
+  }));
 }
 
 /**

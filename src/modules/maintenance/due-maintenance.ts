@@ -1,7 +1,7 @@
 import type { MachineCategory, MachineForMaintenance, Technology } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { calendarDate, maintenanceDates, today, type CalendarDate } from "@/platform/time";
+import { addDays, calendarDate, graceDays, maintenanceDates, today, type CalendarDate } from "@/platform/time";
 import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 import { lastDoneByRecord, lastDoneKey } from "./maintenance-records";
 
@@ -38,7 +38,8 @@ export type DueMaintenanceTask = {
  * most due machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
  * Last done is the latest of the task's start date, the machine's registration date (HS-20) and its latest maintenance
- * record *done* (ST-044) – a record *partially done* restarts nothing. Machines *Not on display* follow with ST-056.
+ * record *done* (ST-044) – a record *partially done* restarts nothing. A machine *Not on display* is never due; after
+ * its return a task that was already due counts from the return (ST-056).
  */
 export async function dueMaintenance(
   db: Database,
@@ -55,7 +56,8 @@ export async function dueMaintenance(
   ]);
   const due = tasks.flatMap((task) => {
     const dueMachines = machines.flatMap((machine) => {
-      if (!maintenanceTaskAppliesTo(task, machine)) return [];
+      // A machine Not on display is never due; maintenance recorded there still counts (HS-13, ST-056).
+      if (machine.machineStatus === "not-on-display" || !maintenanceTaskAppliesTo(task, machine)) return [];
       // The latest record *done* – but never before the start date or the registration, which count as last done too
       // (user, 2026-10-15, ST-044).
       const lastDone = latest(
@@ -63,7 +65,11 @@ export async function dueMaintenance(
         calendarDate(machine.registeredAt),
         recorded.get(lastDoneKey(task.id, machine.id)),
       );
-      const { dueDate, overdueFrom } = maintenanceDates(lastDone, task.intervalMonths);
+      const { dueDate, overdueFrom } = dueAfterReturn(
+        maintenanceDates(lastDone, task.intervalMonths),
+        machine.returnedToDisplayAt && calendarDate(machine.returnedToDisplayAt),
+        task.intervalMonths,
+      );
       if (now < dueDate) return [];
       return [
         {
@@ -108,4 +114,17 @@ function byLocation(a: DueMachine, b: DueMachine): number {
 /** The latest of the given calendar dates – they compare as text. */
 function latest(...dates: (CalendarDate | undefined)[]): CalendarDate {
   return dates.filter((date): date is CalendarDate => date !== undefined).reduce((a, b) => (b > a ? b : a));
+}
+
+/**
+ * Back on display (HS-20, as revised in D5; ST-056): a task already due when the machine returned counts as due since
+ * the return, and overdue 25 % of the interval's actual days after it; any other task keeps its normal dates.
+ */
+function dueAfterReturn(
+  dates: { dueDate: CalendarDate; overdueFrom: CalendarDate },
+  returnedOn: CalendarDate | undefined,
+  intervalMonths: number,
+): { dueDate: CalendarDate; overdueFrom: CalendarDate } {
+  if (!returnedOn || dates.dueDate >= returnedOn) return dates;
+  return { dueDate: returnedOn, overdueFrom: addDays(returnedOn, graceDays(returnedOn, intervalMonths)) };
 }
