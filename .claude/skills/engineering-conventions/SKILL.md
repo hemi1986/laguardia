@@ -95,6 +95,8 @@ file in ST-076, which is why shadcn's `select` was removed again and `NativeSele
 guards it. It is a test, not a blacklist: `Checkbox`, `Switch` and `RadioGroup` often *do* render a hidden native
 input and pass. Record the outcome here when you test one, so nobody tests it twice. Tested so far: `NativeSelect` passes (ST-076);
 `textarea` passes – it is a styled native `<textarea>` (ST-013, `e2e/report-problem.spec.ts` without JavaScript).
+`Input` with `type="date"` and `type="number"` passes – a styled native `<input>`, the browser sends `YYYY-MM-DD` and the
+digits (ST-040, `e2e/maintenance-plan.spec.ts` without JavaScript).
 The skill's "Form inputs: `Input`, `Select`, `Combobox`, …" table has not run this test. A scripted component is
 still fine where the interaction needs JavaScript anyway (the camera photo, ST-002/ST-016).
 
