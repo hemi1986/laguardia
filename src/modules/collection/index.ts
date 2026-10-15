@@ -22,6 +22,8 @@ export {
   machineForReporting,
   machineIdOf,
   machineLabels,
+  machinesForMaintenance,
+  type MachineForMaintenance,
   type MachineForTeamForm,
   visitorMachine,
   machineStatusCounts,

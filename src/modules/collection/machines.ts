@@ -349,3 +349,36 @@ export async function machineLabels(
     .where(inArray(machine.id, unique));
   return new Map(rows.map(({ id, ...label }) => [id, label]));
 }
+
+/**
+ * A machine as maintenance needs it (context map: Collection → Maintenance, Published Language): which machine, where
+ * it stands, what kind of machine its machine model is – to decide which maintenance tasks apply – and when it was
+ * registered, which can be its last done (ST-043).
+ */
+export type MachineForMaintenance = {
+  id: string;
+  museumNumber: string;
+  machineModelTitle: string;
+  location: string;
+  machineCategory: MachineCategory;
+  technology: Technology | undefined;
+  registeredAt: Date;
+};
+
+/** Every machine that is not retired, as maintenance needs it (ST-043) – retired machines are never due. */
+export async function machinesForMaintenance(db: Database): Promise<MachineForMaintenance[]> {
+  const rows = await db
+    .select({
+      id: machine.id,
+      museumNumber: machine.museumNumber,
+      machineModelTitle: machineModel.title,
+      location: machine.location,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
+      registeredAt: machine.registeredAt,
+    })
+    .from(machine)
+    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
+    .where(isNull(machine.retiredAt));
+  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+}
