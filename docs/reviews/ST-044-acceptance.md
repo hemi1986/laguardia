@@ -50,3 +50,4 @@ Remarks (none meets the follow-up hurdle): (1) add the command-level retired-mac
 - **3 (note length)** – a product question for the user at acceptance.
 - **4 (two simultaneous records)** – harmless for the interval, as noted; no change.
 - Found by the security scan and fixed: the due list page did not pass the signed-in team member, so „Wartung erfassen“ and the confirmation never appeared on the real page.
+- Accepted by the user on 2026-10-15: the outcome as a choice in one form (G21 deviation) and no limit on the note length stay as built.

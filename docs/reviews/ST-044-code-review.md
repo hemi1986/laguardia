@@ -31,7 +31,7 @@ What holds up: the command goes through `aggregateCommand` (creating, `facts` re
 - **Retired machine through the command fixed** – `record-maintenance-command.integration.test.ts` retires the machine with Collection's stand-in and expects `machine-retired`.
 - **Someone else's record fixed** – the confirmation test views Anna's record as Tom: nothing confirmed.
 - **The 7 days fixed** – `LONGEST_BACK_DATING_DAYS` is exported and used by the form page.
-- **G21 (select instead of one button per outcome) – open for the user at acceptance.** Both outcomes have the same fields, so one form with a choice is shorter at 360 px; recorded here as the deviation.
+- **G21 (select instead of one button per outcome) – accepted by the user (2026-10-15, at acceptance).** Both outcomes have the same fields, so one form with a choice is shorter at 360 px; recorded here as the deviation.
 - **Skipped – G3 naming task and outcome, the `helpers=1` filter on the way back:** revisit with ST-045, which records several machines at once from the same list.
 - **Skipped – rule inputs built by the page (`retired: false`), four queries on the form page, the UUID regex, the name of `machineForMaintenance`:** revisit with ST-047, which offers recording from the machine record and is the second caller of the same rule.
 - **Skipped – index order (task, machine):** the migration has run on the preview database; at the museum's volume (tens of machines, a few hundred records a year) the order makes no measurable difference. Revisit if the due list gets slow.
