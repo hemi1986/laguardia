@@ -3,6 +3,7 @@ import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, maintenanceDates, today, type CalendarDate } from "@/platform/time";
 import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
+import { lastDoneByRecord, lastDoneKey } from "./maintenance-records";
 
 /** A machine on which a maintenance task is due (EVT-MaintenanceTaskDue, computed on read – ADR 0002). */
 export type DueMachine = {
@@ -33,8 +34,8 @@ export type DueMaintenanceTask = {
  * those machines – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the
  * most due machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
- * Last done is the task's start date – or the machine's registration date if it was registered later (HS-20). The
- * latest maintenance record *done* follows with ST-044, machines *Not on display* with ST-056.
+ * Last done is the latest of the task's start date, the machine's registration date (HS-20) and its latest maintenance
+ * record *done* (ST-044) – a record *partially done* restarts nothing. Machines *Not on display* follow with ST-056.
  */
 export async function dueMaintenance(
   db: Database,
@@ -42,11 +43,23 @@ export async function dueMaintenance(
   machines: readonly MachineForMaintenance[],
 ): Promise<DueMaintenanceTask[]> {
   const now = today(clock);
-  const due = (await activeMaintenanceTasks(db)).flatMap((task) => {
+  const [tasks, recorded] = await Promise.all([
+    activeMaintenanceTasks(db),
+    lastDoneByRecord(
+      db,
+      machines.map((machine) => machine.id),
+    ),
+  ]);
+  const due = tasks.flatMap((task) => {
     const dueMachines = machines.flatMap((machine) => {
       if (!maintenanceTaskAppliesTo(task, machine)) return [];
-      const registered = calendarDate(machine.registeredAt);
-      const lastDone = registered > task.startDate ? registered : task.startDate;
+      // The latest record *done* – but never before the start date or the registration, which count as last done too
+      // (user, 2026-10-15, ST-044).
+      const lastDone = latest(
+        task.startDate,
+        calendarDate(machine.registeredAt),
+        recorded.get(lastDoneKey(task.id, machine.id)),
+      );
       const { dueDate, overdueFrom } = maintenanceDates(lastDone, task.intervalMonths);
       if (now < dueDate) return [];
       return [
@@ -85,4 +98,9 @@ function byLocation(a: DueMachine, b: DueMachine): number {
     a.location.localeCompare(b.location, "de", { numeric: true }) ||
     a.museumNumber.localeCompare(b.museumNumber, "de", { numeric: true })
   );
+}
+
+/** The latest of the given calendar dates – they compare as text. */
+function latest(...dates: (CalendarDate | undefined)[]): CalendarDate {
+  return dates.filter((date): date is CalendarDate => date !== undefined).reduce((a, b) => (b > a ? b : a));
 }

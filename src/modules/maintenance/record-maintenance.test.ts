@@ -35,8 +35,11 @@ const input: RecordMaintenanceInput = {
   note: "",
 };
 
-const record = (changes: Partial<RecordMaintenanceInput>, changedFacts: Partial<MaintenanceFacts> = {}, actor = tom) =>
-  recordMaintenance({ ...facts, ...changedFacts }, { ...input, ...changes }, as(actor));
+const record = (
+  changes: Partial<RecordMaintenanceInput>,
+  changedFacts: Partial<MaintenanceFacts> = {},
+  actor: typeof anna | typeof tom = tom,
+) => recordMaintenance({ ...facts, ...changedFacts }, { ...input, ...changes }, as(actor));
 
 describe("CMD-RecordMaintenance – the decision", () => {
   it("records who carried out which maintenance task on which machine, when and with which outcome", () => {

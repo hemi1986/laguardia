@@ -1,6 +1,7 @@
 import type { MachineCategory, Technology } from "@/modules/collection";
 import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
 import { addDays, isCalendarDate, today, type CalendarDate } from "@/platform/time";
+import type { MaintenanceOutcome } from "./maintenance-outcome";
 import type { MaintenanceTask } from "./maintenance-plan";
 import { maintenanceTaskAppliesTo } from "./maintenance-plans";
 
@@ -15,9 +16,7 @@ export const recordingActors = ["helper", "technician"] as const;
 
 type RecordingPerson = ActorOf<(typeof recordingActors)[number]>;
 
-/** The outcomes of a maintenance record (CONTEXT.md: Maintenance record – Erledigt / Teilweise erledigt). */
-export const maintenanceOutcomes = ["done", "partially-done"] as const;
-export type MaintenanceOutcome = (typeof maintenanceOutcomes)[number];
+export { maintenanceOutcomes, type MaintenanceOutcome } from "./maintenance-outcome";
 
 /** How far back a maintenance record may be dated (decision D6). */
 export const LONGEST_BACK_DATING_DAYS = 7;

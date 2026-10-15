@@ -22,6 +22,7 @@ export {
   machineForReporting,
   machineIdOf,
   machineLabels,
+  machineForMaintenance,
   machinesForMaintenance,
   type MachineForMaintenance,
   type MachineForTeamForm,
