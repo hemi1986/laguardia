@@ -145,6 +145,21 @@ export const teamMessages = {
     filter: "Filtern",
     allDue: "Alle fälligen Wartungen",
   },
+  /** Recording maintenance on a machine (ST-044): from the due maintenance list, on a form page of its own. */
+  recordMaintenance: {
+    record: "Wartung erfassen",
+    title: (museumNumber: string) => `Wartung erfassen · ${museumNumber}`,
+    outcome: "Ergebnis",
+    chooseOutcome: "Bitte wählen",
+    outcomes: { done: "Erledigt", "partially-done": "Teilweise erledigt" },
+    date: "Datum",
+    dateHint: "Heute oder bis zu 7 Tage zurück.",
+    note: "Notiz (optional)",
+    submit: "Wartung eintragen",
+    recorded: (museumNumber: string) => `Wartung an ${museumNumber} eingetragen.`,
+    unknown: "Diese Wartungsaufgabe oder dieses Gerät gibt es nicht.",
+    back: "Zurück zur fälligen Wartung",
+  },
   /** The maintenance plan (ST-040): its page, the form page of adding a maintenance task, and the confirmation (G3). */
   maintenancePlan: {
     add: "Wartungsaufgabe hinzufügen",
@@ -456,6 +471,15 @@ export const teamMessages = {
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
     "machine-category-required": "Bitte eine Kategorie wählen.",
     "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
+    /** Recording maintenance (ST-044). */
+    "maintenance-task-unknown": "Diese Wartungsaufgabe gibt es nicht mehr.",
+    "machine-unknown": "Dieses Gerät gibt es nicht.",
+    "maintenance-task-does-not-apply": "Diese Wartungsaufgabe gilt nicht für dieses Gerät.",
+    "maintenance-not-suitable-for-helpers": "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
+    "outcome-required": "Bitte ein Ergebnis auswählen.",
+    "date-invalid": "Bitte ein gültiges Datum angeben.",
+    "date-too-early": "Bitte ein Datum aus den letzten 7 Tagen angeben – nicht früher.",
+    "date-in-the-future": "Das Datum darf nicht in der Zukunft liegen.",
     /** Adding a maintenance task (ST-040). */
     "name-required": "Bitte einen Namen angeben.",
     "instruction-required": "Bitte eine Anleitung angeben.",

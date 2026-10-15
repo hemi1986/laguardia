@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 29 of 58 domain stories done** · scenarios 261 of 450
+**Progress: 30 of 58 domain stories done** · scenarios 272 of 450
 
-**81 stories** · In Progress: 0 · Ready: 35 · In Review: 0 · Draft: 5 · Done: 41
+**81 stories** · In Progress: 0 · Ready: 34 · In Review: 0 · Draft: 5 · Done: 42
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -17,7 +17,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-063](ST-063-dependency-and-security-routine.md) | Dependency and security update routine | tech-task | Repair | must | XS | low | ST-059 |
 | [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | must | S | medium | ST-001 |
 | [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | must | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-078 |
-| [ST-044](ST-044-record-maintenance.md) | Record maintenance on a machine | story | Maintenance | must | S | low | ST-043 |
 | [ST-048](ST-048-technician-dashboard.md) | Technician dashboard – untriaged problem reports and machines ready to return to play | story | Repair | must | S | low | ST-012, ST-017, ST-028 |
 | [ST-056](ST-056-not-on-display-and-return-to-display.md) | Due maintenance for machines not on display and returning to display | story | Maintenance | must | S | medium | ST-012, ST-043 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
@@ -98,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-033](ST-033-repair-history-on-machine-record.md) | Repair history on the machine record | story | Repair | must | M | medium | ST-011, ST-019, ST-024 |
 | [ST-040](ST-040-maintenance-plan-add-task.md) | Maintenance plan – view and add maintenance tasks | story | Maintenance | must | M | medium | ST-003, ST-006 |
 | [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | medium | ST-003, ST-007, ST-040 |
+| [ST-044](ST-044-record-maintenance.md) | Record maintenance on a machine | story | Maintenance | must | S | low | ST-043 |
 | [ST-052](ST-052-report-and-link-or-resolve-on-the-spot.md) | Report a problem and link it or resolve it on the spot in the same step | story | Repair | must | M | medium | ST-019, ST-022, ST-023 |
 | [ST-076](ST-076-ui-foundation-shadcn-and-team-shell.md) | UI foundation – shadcn/ui, the shared phone layout and the team shell | tech-task | Repair | must | L | medium | ST-004, ST-005 |
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |

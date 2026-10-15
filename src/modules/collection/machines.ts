@@ -382,3 +382,35 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
     .where(isNull(machine.retiredAt));
   return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
 }
+
+/**
+ * One machine as maintenance needs it to check a maintenance record (context map, Collection → Maintenance: the
+ * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Read
+ * without a lock, like every rule on another module's data. Undefined for an unknown machine.
+ */
+export async function machineForMaintenance(
+  db: Database,
+  machineId: string,
+): Promise<
+  { id: string; machineCategory: MachineCategory; technology: Technology | undefined; retired: boolean } | undefined
+> {
+  if (!isUuid(machineId)) return undefined;
+  const [row] = await db
+    .select({
+      id: machine.id,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
+      retiredAt: machine.retiredAt,
+    })
+    .from(machine)
+    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
+    .where(eq(machine.id, machineId));
+  return (
+    row && {
+      id: row.id,
+      machineCategory: row.machineCategory,
+      technology: row.technology ?? undefined,
+      retired: row.retiredAt !== null,
+    }
+  );
+}

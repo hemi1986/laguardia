@@ -8,8 +8,9 @@ import { DueMaintenanceView } from "./due-maintenance";
 
 /** The due maintenance list (ST-043) – „Wartung“ in the navigation, for every team member (G19 row 5). */
 export default async function DueMaintenancePage({ searchParams }: PageProps<"/team/maintenance">) {
-  await requireTeamMember();
-  const data = await loadDueMaintenance(database(), systemClock, dueMaintenanceFilterOf(await searchParams));
+  const member = await requireTeamMember();
+  // The team member looking at the list: „Wartung erfassen“ only where they may, and only their own record confirmed.
+  const data = await loadDueMaintenance(database(), systemClock, dueMaintenanceFilterOf(await searchParams), member);
 
   return (
     <Page title={teamMessages.dueMaintenance.title} wide>

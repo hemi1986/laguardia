@@ -12,7 +12,7 @@ export async function withoutMaintenanceTasks(db: Database): Promise<void> {
   if (!/^laguardia_.+_test$/.test(rows[0].name) || rows[0].name === "laguardia_test") {
     throw new Error(`withoutMaintenanceTasks only empties an isolated test database, not "${rows[0].name}"`);
   }
-  await db.execute(sql`TRUNCATE maintenance_task`);
+  await db.execute(sql`TRUNCATE maintenance_record, maintenance_task`);
 }
 
 /** Test stand-in for removing a maintenance task (CMD-ChangeMaintenancePlan, ST-041): it keeps `removedAt`. */

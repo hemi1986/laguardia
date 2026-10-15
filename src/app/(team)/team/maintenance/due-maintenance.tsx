@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
 import { dueMaintenanceAddress, type DueMaintenanceData } from "./due-maintenance-data";
@@ -13,9 +14,13 @@ const { dueMaintenance: texts, terms } = teamMessages;
  */
 export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   const { filter, chosen } = data;
+  const confirmation = data.confirmed && (
+    <Confirmation>{teamMessages.recordMaintenance.recorded(data.confirmed.museumNumber)}</Confirmation>
+  );
   if (chosen) {
     return (
       <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
+        {confirmation}
         {/* The way back sits above the machines – a task can be due on 60 of them (G17). */}
         <Link
           href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}
@@ -49,6 +54,15 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
                   {texts.lastDoneAndDue(formatCalendarDate(machine.lastDone), formatCalendarDate(machine.dueSince))}
                 </p>
                 {machine.overdue && <p className="font-medium">{texts.overdue}</p>}
+                {/* The one action people come to the list for (G5), offered only where it will be accepted (G11). */}
+                {machine.recordOffered && (
+                  <Link
+                    href={`/team/maintenance/erfassen?task=${encodeURIComponent(chosen.id)}&machine=${encodeURIComponent(machine.museumNumber)}`}
+                    className={buttonVariants({ variant: "outline", size: "sm", className: "mt-1 self-start" })}
+                  >
+                    {teamMessages.recordMaintenance.record}
+                  </Link>
+                )}
               </article>
             </li>
           ))}
@@ -58,6 +72,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   }
   return (
     <>
+      {confirmation}
       <form method="get" action="/team/maintenance" className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
