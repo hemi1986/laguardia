@@ -55,3 +55,12 @@ All tests are in `src/app/(team)/team/maintenance/due-maintenance.integration.te
 
 ## Verdict
 **accepted with remarks.** All 9 scenarios have a real test that passes, the e2e specs pass, and no rule of the story or the UX guidelines is violated. Nothing reaches the follow-up hurdle; the remarks (back link above the list, unfiltered assertion in scenario 6, replacing the stand-ins in ST-039/ST-041, preview not checked because of the missing account) can be handled in this story or are tracked in existing stories.
+
+## Disposition (`/implement`, 2026-10-15)
+
+- **1 fixed** – „Alle fälligen Wartungen“ sits above the chosen task's machines (G17).
+- **2 fixed** – the filter scenario asserts first that both tasks are due unfiltered.
+- **3** – the stand-ins are replaced when ST-039 and ST-041 bring the real commands (both stories touch this list).
+- **4** – see code review #7: revisit with ST-044.
+- **5** – tap sizes: no guideline sets one; left to the UX owner.
+- Questions: `calendarDate()` uses Europe/Berlin (ST-003 time convention) – a machine registered at 23:30 Berlin time counts for that Berlin day. An unknown or stale `?task=` shows the list of tasks – intended (a task that is no longer due has no machines to show).

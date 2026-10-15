@@ -23,3 +23,14 @@ Not findings (checked and accepted):
 
 **Verdict: ready to merge** – 0 blockers, 0 major, 8 minor.
 Most important finding: #1/#2 together – ST-056 and ST-041 will both change the inputs of `dueMaintenance`. One published machine shape and one home for "removed tasks are never due" would keep those changes in one place.
+
+## Disposition (`/implement`, 2026-10-15)
+
+- **#1 fixed** – `dueMaintenance` takes Collection's `MachineForMaintenance`; Maintenance declares no second machine type.
+- **#2 fixed** – `activeMaintenanceTasks(db)` (module-internal) is the one home of "a removed maintenance task is never due"; RM-MaintenancePlan and RM-DueMaintenance both read it.
+- **#3 fixed** – `overdueCount` on a due maintenance task; `machineCount` / `overdueCount` on an entry of the list.
+- **#4 skipped** – the glossary lists *Due / Overdue* as one pair, which the catalogue test cannot map to one `terms` key; the words used are the glossary's „fällig“ / „überfällig“. Revisit if a page needs the term as a label of its own.
+- **#5 fixed** – an untitled test covers the whole order (most overdue, then most due, then name); removing the tie-breaks fails it.
+- **#6 fixed** – `dueMaintenanceAddress` sits next to `dueMaintenanceFilterOf` in `due-maintenance-data.ts`.
+- **#7 open** – the filled list cannot be shown in a browser test (every machine there is registered today); the page is one column with `overflow-wrap`. Revisit with ST-044, whose recorded maintenance makes due entries possible in the browser.
+- **#8 skipped** – an empty maintenance plan saying „Gerade ist keine Wartung fällig.“ is true; whether technicians get a way to the maintenance plan there is a UX question for the acceptance, not text to decide in code.
