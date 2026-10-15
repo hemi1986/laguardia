@@ -25,6 +25,7 @@ All values are computed when the dashboard is opened (`docs/adr/0002-modular-mon
 - The team navigation is already decided (ST-008); this story takes its place in it, it does not re-decide it (G19).
 - The dashboard says **how many** and **how old**, in words (G6, G6a), and leads to the triage list – and later to the due maintenance list (ST-058); it does not repeat either of them (G5).
 - "Empty" is the good state here, and it still says so in words (G7).
+- Decided during `/implement ST-048` (user, 2026-10-15): helpers keep today's team start page under „Übersicht“ until ST-049 builds their dashboard. Section 1 gives the number of untriaged problem reports and how many of them wait longer than 3 days, in words, with a link to the triage list – no list of its own. With both sections empty the dashboard says only that nothing needs attention right now; an empty section next to a filled one says so in a short sentence of its own.
 
 ## Acceptance Criteria
 
