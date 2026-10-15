@@ -29,7 +29,7 @@ Most important: #1 – section 7 loads the whole repair history and decides in t
 - **#4 skipped** – two short pieces of markup on two pages; revisit when a third page shows a problem resolved on the spot.
 - **#5 fixed** – `startOf` is module-private, the redundant `orderBy` is gone.
 - **#6 fixed** – `Repair` is now `ShownEndedRepairHistoryEntry` / `EndedRepairHistoryEntry`, `recentRepairHistory`; no new glossary term.
-- **#7 open for the user at acceptance** – section 7 of a machine with only open defects shows only „Ganze Reparaturhistorie (N)“.
+- **#7 accepted as is** (user, 2026-10-15, at acceptance) – section 7 of a machine with only open defects shows only „Ganze Reparaturhistorie (N)“.
 - **#8 → `docs/stories/OPEN_QUESTIONS.md`** (ST-032, ST-033): should ST-032 show work log photos on the repair history page too.
 - **#9 fixed** – the history page of an unknown museum number is titled „Gerät“, like the machine record.
 - **#10 fixed** – the story's files are formatted with Prettier.
