@@ -1,5 +1,10 @@
 import { machineForMaintenance, machineIdOf, machineLabels, machinesForMaintenance } from "@/modules/collection";
-import { maintenancePlan, recordRefusal, type RecordMaintenanceError } from "@/modules/maintenance";
+import {
+  LONGEST_BACK_DATING_DAYS,
+  maintenancePlan,
+  recordRefusal,
+  type RecordMaintenanceError,
+} from "@/modules/maintenance";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
@@ -48,6 +53,6 @@ export async function loadMaintenanceForRecording(
     },
     whyNot: recordRefusal(task, facts, { role: viewer.role }),
     today: now,
-    earliest: addDays(now, -7),
+    earliest: addDays(now, -LONGEST_BACK_DATING_DAYS),
   };
 }

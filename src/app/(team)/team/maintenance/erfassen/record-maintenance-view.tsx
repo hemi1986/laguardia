@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
 import type { RecordMaintenanceState } from "./actions";
 import type { MaintenanceForRecording } from "./record-maintenance-data";
 import { RecordMaintenanceForm } from "./record-maintenance-form";
@@ -8,7 +8,7 @@ const { recordMaintenance: texts } = teamMessages;
 
 /**
  * The form page „Wartung erfassen“ (ST-044): it repeats the maintenance task with its instruction and the machine, and
- * shows the form – or CMD-RecordMaintenance's reason in its place to someone it would refuse (G11).
+ * shows the form – which says CMD-RecordMaintenance's reason in its place to someone it would refuse (G11).
  */
 export function RecordMaintenancePage({
   data,
@@ -28,17 +28,14 @@ export function RecordMaintenancePage({
           {machine.museumNumber} · {machine.machineModelTitle} · {machine.location}
         </p>
       </div>
-      {data.whyNot ? (
-        <p>{commandErrorText(teamMessages, data.whyNot)}</p>
-      ) : (
-        <RecordMaintenanceForm
-          action={action ?? (async () => null)}
-          maintenanceTaskId={maintenanceTask.id}
-          machineId={machine.id}
-          today={data.today}
-          earliest={data.earliest}
-        />
-      )}
+      <RecordMaintenanceForm
+        action={action ?? (async () => null)}
+        maintenanceTaskId={maintenanceTask.id}
+        machineId={machine.id}
+        today={data.today}
+        earliest={data.earliest}
+        whyNot={data.whyNot}
+      />
       <Link
         href={`/team/maintenance?task=${encodeURIComponent(maintenanceTask.id)}`}
         className="self-start text-sm underline underline-offset-4"

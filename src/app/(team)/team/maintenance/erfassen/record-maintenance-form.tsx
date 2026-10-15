@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
 import type { RecordMaintenanceState } from "./actions";
 import type { RecordMaintenanceField } from "./record-maintenance-input";
 
@@ -35,15 +35,21 @@ export function RecordMaintenanceForm({
   machineId,
   today,
   earliest,
+  whyNot,
 }: {
   action: (previous: RecordMaintenanceState, formData: FormData) => Promise<RecordMaintenanceState>;
   maintenanceTaskId: string;
   machineId: string;
   today: string;
   earliest: string;
+  /** Why CMD-RecordMaintenance would refuse this team member here – its own reason (G11). */
+  whyNot: TeamCommandErrorCode | undefined;
 }) {
   const [state, action, pending] = useActionState(record, null);
   const rejectionId = useId();
+  // Shown in place of the form only while there is nothing to keep: a rejection after the machine was retired or the
+  // task removed meanwhile keeps the form, the typed note and the reason (engineering conventions, ST-019 review).
+  if (whyNot && !state) return <p>{commandErrorText(teamMessages, whyNot)}</p>;
   const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
   const marked = (field: RecordMaintenanceField, hint?: string) => {

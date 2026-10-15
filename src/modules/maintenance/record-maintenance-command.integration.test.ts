@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
+  changeMachineStatusCommand,
   createMachineModelCommand,
   machinesForMaintenance,
   registerMachineCommand,
@@ -134,7 +135,15 @@ describe("CMD-RecordMaintenance", () => {
     expect(await maintenanceRecords(db, { machineId: lg030 })).toEqual([
       expect.objectContaining({ maintenanceTaskId: cleanPlayfield, outcome: "done", date: "2026-06-10" }),
     ]);
-    // The interval counts from that day (whether a machine not on display is due is ST-056's).
+    // The interval counts from that day: back on display on 1 July, it is not due before 10 September. (A machine not
+    // on display is never due – ST-056; brought back first, the test holds after it too.)
+    const back = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId: lg030, version: 0, machineStatus: "playable", reason: "Restoration finished" },
+      { actor: tom, db, clock: fixedClock("2026-07-01T09:00:00Z"), newId: randomUUID },
+    );
+    if (!back.ok) throw new Error(back.error);
+    expect(await dueOn("2026-09-09", cleanPlayfield, lg030)).toBeUndefined();
     expect(await dueOn("2026-09-10", cleanPlayfield, lg030)).toMatchObject({
       lastDone: "2026-06-10",
       dueSince: "2026-09-10",

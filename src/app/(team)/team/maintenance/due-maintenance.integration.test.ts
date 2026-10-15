@@ -537,7 +537,8 @@ describe("the due maintenance list", () => {
       expect(form.recordedIds).toHaveLength(1);
       const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: form.recordedIds[0] }, anna);
       expect(after.html).toContain("Wartung an LG-042 eingetragen.");
-      // An address naming someone else's record, or none, confirms nothing.
+      // An address naming someone else's record, or no record, confirms nothing.
+      expect((await page("2026-06-10", { recorded: form.recordedIds[0] }, tom)).html).not.toContain("eingetragen");
       expect((await page("2026-06-10", { recorded: randomUUID() }, anna)).html).not.toContain("eingetragen");
     });
 
