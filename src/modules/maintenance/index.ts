@@ -5,4 +5,9 @@ export type {
   ChangeMaintenancePlanInput,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
-export { maintenancePlan, maintenanceTaskAppliesTo, type ListedMaintenanceTask } from "./maintenance-plans";
+export {
+  maintenancePlan,
+  maintenancePlanVersion,
+  maintenanceTaskAppliesTo,
+  type ListedMaintenanceTask,
+} from "./maintenance-plans";

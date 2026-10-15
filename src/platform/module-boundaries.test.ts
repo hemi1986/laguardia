@@ -71,7 +71,8 @@ describe("module boundaries", () => {
   });
 
   it("reject test support in production code – and allow it in a test and in a module's test support (ST-067)", async () => {
-    const code = 'import { aRegisteredMachine } from "@/test-support/machines";\nexport const x = aRegisteredMachine;\n';
+    const code =
+      'import { aRegisteredMachine } from "@/test-support/machines";\nexport const x = aRegisteredMachine;\n';
 
     for (const production of [
       "src/app/deliberate-violation.ts",
@@ -133,7 +134,7 @@ describe("module boundaries", () => {
   it("reject a second definition of Role or Reporter under src/ – and allow their one home", async () => {
     const secondRole = await ruleErrors(
       "src/modules/team/deliberate-duplicate.ts",
-      "export type Role = \"helper\" | \"technician\";\n",
+      'export type Role = "helper" | "technician";\n',
     );
     const secondReporter = await ruleErrors(
       "src/app/deliberate-duplicate.ts",
@@ -141,11 +142,11 @@ describe("module boundaries", () => {
     );
     const roleAtHome = await ruleErrors(
       "src/platform/command/index.ts",
-      "export type Role = \"helper\" | \"technician\";\n",
+      'export type Role = "helper" | "technician";\n',
     );
     const reporterAtHome = await ruleErrors(
       "src/modules/repair/report-problem.ts",
-      "export type Reporter = { kind: \"visitor\" };\n",
+      'export type Reporter = { kind: "visitor" };\n',
     );
 
     expect(secondRole).toEqual([expect.stringContaining("src/platform/command")]);
@@ -155,17 +156,17 @@ describe("module boundaries", () => {
   });
 
   it("reject executeCommand in the app outside the Server Action runner – by alias and by relative path", async () => {
-    const importing = "import { executeCommand } from \"@/platform/command\";\nexport const x = executeCommand;\n";
+    const importing = 'import { executeCommand } from "@/platform/command";\nexport const x = executeCommand;\n';
     const byAlias = await importErrors("src/app/(team)/team/deliberate-violation/actions.ts", importing);
     const byRelativePath = await importErrors(
       "src/app/deliberate-violation.ts",
-      "import { executeCommand } from \"../platform/command\";\nexport const x = executeCommand;\n",
+      'import { executeCommand } from "../platform/command";\nexport const x = executeCommand;\n',
     );
     const inTheRunner = await importErrors("src/app/_actions/allowed.ts", importing);
     const inATest = await importErrors("src/app/allowed.integration.test.ts", importing);
     const otherNames = await importErrors(
       "src/app/allowed.ts",
-      "import { journalOf } from \"@/platform/command\";\nexport const x = journalOf;\n",
+      'import { journalOf } from "@/platform/command";\nexport const x = journalOf;\n',
     );
 
     expect(byAlias).toEqual([expect.stringContaining("src/app/_actions/")]);
@@ -176,8 +177,7 @@ describe("module boundaries", () => {
   });
 
   it("reject building a runner with an own acting person outside the runner and its tests", async () => {
-    const importing =
-      "import { formRunner } from \"@/app/_actions/form-runner\";\nexport const x = formRunner;\n";
+    const importing = 'import { formRunner } from "@/app/_actions/form-runner";\nexport const x = formRunner;\n';
 
     expect(await importErrors("src/app/deliberate-violation/actions.ts", importing)).toEqual([
       expect.stringContaining("formAction"),
@@ -189,11 +189,11 @@ describe("module boundaries", () => {
   it("treat the Server Action runner as part of the app element", async () => {
     const runnerIntoInternals = await boundaryErrors(
       "src/app/_actions/deliberate-violation.ts",
-      "import { problemReport } from \"@/modules/repair/schema\";\nexport const x = problemReport;\n",
+      'import { problemReport } from "@/modules/repair/schema";\nexport const x = problemReport;\n',
     );
     const moduleIntoRunner = await boundaryErrors(
       "src/modules/repair/deliberate-violation.ts",
-      "import { currentPerson } from \"@/app/_actions/current-person\";\nexport const x = currentPerson;\n",
+      'import { currentPerson } from "@/app/_actions/current-person";\nexport const x = currentPerson;\n',
     );
 
     expect(runnerIntoInternals).toHaveLength(1);

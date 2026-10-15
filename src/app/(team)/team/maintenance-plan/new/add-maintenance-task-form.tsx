@@ -28,7 +28,9 @@ const fieldOf: Partial<Record<ErrorCode, AddMaintenanceTaskField>> = {
   "name-required": "name",
   "instruction-required": "instruction",
   "interval-not-positive": "intervalMonths",
+  "interval-too-long": "intervalMonths",
   "start-date-required": "startDate",
+  "start-date-out-of-range": "startDate",
   "technology-without-machine-category": "technology",
   "technology-does-not-fit-machine-category": "technology",
 };
@@ -44,6 +46,8 @@ export function AddMaintenanceTaskForm({ version, machineCategories, technologie
   const rejectionId = useId();
   const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
+  // A technology that does not fit its machine category: either of the two may be the one to change (G8).
+  const categoryInvalid = state?.error === "technology-does-not-fit-machine-category";
   const marked = (field: AddMaintenanceTaskField, hint?: string) => {
     const describedBy = [hint, invalid === field ? rejectionId : undefined].filter(Boolean).join(" ");
     return { "aria-invalid": invalid === field || undefined, "aria-describedby": describedBy || undefined };
@@ -99,13 +103,15 @@ export function AddMaintenanceTaskForm({ version, machineCategories, technologie
         />
         {terms["Suitable for helpers"]}
       </label>
-      <Field>
+      <Field data-invalid={categoryInvalid}>
         <FieldLabel htmlFor="machineCategory">{texts.machineCategory}</FieldLabel>
         <NativeSelect
           id="machineCategory"
           name="machineCategory"
           defaultValue={state?.values.machineCategory ?? ""}
           key={`machineCategory-${kept}`}
+          aria-invalid={categoryInvalid || undefined}
+          aria-describedby={categoryInvalid ? rejectionId : undefined}
         >
           <option value="">{texts.noRestriction}</option>
           {machineCategories.map((category) => (

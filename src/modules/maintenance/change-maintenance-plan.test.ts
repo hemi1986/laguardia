@@ -73,6 +73,16 @@ describe("CMD-ChangeMaintenancePlan – the decision on adding a maintenance tas
     expect(add({ instruction: "  " })).toEqual({ ok: false, error: "instruction-required" });
   });
 
+  it("keeps the interval and the start date within what the due dates can be computed for", () => {
+    expect(add({ intervalMonths: 1200 }).ok).toBe(true);
+    expect(add({ intervalMonths: 1201 })).toEqual({ ok: false, error: "interval-too-long" });
+    expect(add({ intervalMonths: 100000 })).toEqual({ ok: false, error: "interval-too-long" });
+    expect(add({ startDate: "2026-02-31" })).toEqual({ ok: false, error: "start-date-required" });
+    expect(add({ startDate: "1899-12-31" })).toEqual({ ok: false, error: "start-date-out-of-range" });
+    expect(add({ startDate: "9999-06-01" })).toEqual({ ok: false, error: "start-date-out-of-range" });
+    expect(add({ startDate: "2999-12-31" }).ok).toBe(true);
+  });
+
   it("needs a name", () => {
     expect(add({ name: "" })).toEqual({ ok: false, error: "name-required" });
   });

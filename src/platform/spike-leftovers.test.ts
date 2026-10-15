@@ -20,7 +20,6 @@ const allowed: Record<string, string[]> = {
 };
 const thisFile = "src/platform/spike-leftovers.test.ts";
 
-
 function leftoversIn(file: string, text: string): string[] {
   return text
     .split("\n")

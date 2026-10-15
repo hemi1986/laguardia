@@ -108,6 +108,11 @@ beforeAll(async () => {
       BEGIN RAISE EXCEPTION 'an entity of the list is never deleted'; END $$;
     CREATE TRIGGER test_shelf_item_never_deleted BEFORE DELETE ON test_shelf_item
       FOR EACH ROW EXECUTE FUNCTION test_refuse_delete();
+    CREATE TABLE test_shelf_item_update (id uuid NOT NULL);
+    CREATE FUNCTION test_count_update() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN INSERT INTO test_shelf_item_update VALUES (NEW.id); RETURN NEW; END $$;
+    CREATE TRIGGER test_shelf_item_updates AFTER UPDATE ON test_shelf_item
+      FOR EACH ROW EXECUTE FUNCTION test_count_update();
   `);
 });
 
@@ -122,6 +127,9 @@ describe("an aggregate store with a list of entities", () => {
 
     expect(await executeCommand(rearrange, { shelfId, version: 0 }, dependencies)).toEqual({ ok: true, result: {} });
 
+    // Only the entity the decision changed is updated – not the ones it left as they were.
+    const updates = await db.execute(sql`SELECT count(*)::int AS count FROM test_shelf_item_update`);
+    expect(updates.rows).toEqual([{ count: 1 }]);
     // The first changed where it stood, the second kept although the state left it out, the new one last.
     expect(await itemsOf(db, shelfId)).toEqual(["relabelled", "second", "third", "added"]);
     expect((await shelves.load(db, shelfId))?.state.items.map((item) => item.label)).toEqual([

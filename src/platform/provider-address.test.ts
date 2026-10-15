@@ -13,11 +13,8 @@ const PROVIDER_ADDRESS = /\.vercel\.app\b/i;
 
 const thisFile = "src/platform/provider-address.test.ts";
 
-
 function providerAddressesIn(file: string, text: string): string[] {
-  return text
-    .split("\n")
-    .flatMap((line, index) => (PROVIDER_ADDRESS.test(line) ? [`${file}:${index + 1}`] : []));
+  return text.split("\n").flatMap((line, index) => (PROVIDER_ADDRESS.test(line) ? [`${file}:${index + 1}`] : []));
 }
 
 describe("the provider's default address", () => {
@@ -34,9 +31,11 @@ describe("the provider's default address", () => {
     expect(providerAddressesIn("src/app/page.tsx", 'const url = "https://laguardia.vercel.app/m/LG-042";')).toEqual([
       "src/app/page.tsx:1",
     ]);
-    expect(providerAddressesIn("scripts/x.ts", "const url = `https://${project}.vercel.app`;")).toEqual(["scripts/x.ts:1"]);
-    expect(providerAddressesIn("src/app/page.tsx", 'const url = "https://eschbach.michaelschempp.de/m/LG-042";')).toEqual(
-      [],
-    );
+    expect(providerAddressesIn("scripts/x.ts", "const url = `https://${project}.vercel.app`;")).toEqual([
+      "scripts/x.ts:1",
+    ]);
+    expect(
+      providerAddressesIn("src/app/page.tsx", 'const url = "https://eschbach.michaelschempp.de/m/LG-042";'),
+    ).toEqual([]);
   });
 });

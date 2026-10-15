@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeAll, describe, expect, it } from "vitest";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
 import { changeMaintenancePlanCommand, maintenancePlan } from "@/modules/maintenance";
 import { fixedClock } from "@/platform/clock";
 import type { Actor } from "@/platform/command";
 import { commandErrorText, teamMessages } from "@/platform/messages";
-import { testDatabase } from "@/test-support/database";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "./maintenance-plan";
@@ -15,10 +16,12 @@ import { addMaintenanceTaskFields, addMaintenanceTaskInput } from "./new/add-mai
 
 /**
  * The maintenance plan's page and its form „Wartungsaufgabe hinzufügen“ (ST-040): the form's fields and input function
- * run through the Server Action runner as the signed-in team member; the page lists what was added. Every test adds
- * to the one maintenance plan of the shared database and finds its own maintenance task by a name no other test uses.
+ * run through the Server Action runner as the signed-in team member; the page lists what was added. In a database of
+ * its own: the maintenance plan is one aggregate, and the command's tests change it in the shared database at the same
+ * time (ST-040 code review). Every test finds its own maintenance task by a name no other test uses.
  */
-const db = testDatabase();
+const isolated = isolatedTestDatabase("maintenance_plan_page");
+let db: NodePgDatabase;
 const clock = fixedClock("2026-10-15T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
@@ -65,9 +68,12 @@ async function page() {
 }
 
 beforeAll(async () => {
+  db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, anna, "Anna");
 });
+
+afterAll(() => isolated.close());
 
 describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", () => {
   it("adds the maintenance task, which the maintenance plan then lists with all it was given", async () => {
@@ -119,6 +125,13 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
     expect((await formOf(tom).action(null, await filledIn({ startDate: "" })))?.error).toBe("start-date-required");
     expect((await formOf(tom).action(null, await filledIn({ startDate: "31.01.2026" })))?.error).toBe(
       "start-date-required",
+    );
+    // Not a real calendar date: rejected at the form, never a failing insert.
+    expect((await formOf(tom).action(null, await filledIn({ startDate: "2026-02-31" })))?.error).toBe(
+      "start-date-required",
+    );
+    expect((await formOf(tom).action(null, await filledIn({ intervalMonths: "99999999999" })))?.error).toBe(
+      "interval-too-long",
     );
     expect((await formOf(tom).action(null, await filledIn({ machineCategory: "", technology: "lcd" })))?.error).toBe(
       "technology-without-machine-category",

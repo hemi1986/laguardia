@@ -5,6 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { changeMaintenancePlanCommand, maintenancePlan, maintenanceTaskAppliesTo, type NewMaintenanceTask } from ".";
+import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 
 /**
  * CMD-ChangeMaintenancePlan (ST-040) through the command layer: a technician adds a maintenance task to the one
@@ -71,7 +72,7 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
       // The start date counts as last done: first due one interval later (HS-12).
       firstDue: "2026-11-01",
     });
-    const [entry] = await journalOf(db, { aggregateId: "7a1e0f40-0000-4000-8000-000000000040" }).then((entries) =>
+    const [entry] = await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID }).then((entries) =>
       entries.filter((candidate) => candidate.data.maintenanceTaskId === task?.id),
     );
     // Only references and non-personal facts in the journal – the name and the instruction are typed text.

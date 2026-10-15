@@ -1,6 +1,6 @@
 import { technologiesOf, type MachineCategory, type Technology } from "@/modules/collection";
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
-import type { CalendarDate } from "@/platform/time";
+import { isCalendarDate, type CalendarDate } from "@/platform/time";
 import type { MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
 
 /**
@@ -42,9 +42,19 @@ export type ChangeMaintenancePlanError =
   | "name-required"
   | "instruction-required"
   | "interval-not-positive"
+  | "interval-too-long"
   | "start-date-required"
+  | "start-date-out-of-range"
   | "technology-without-machine-category"
   | "technology-does-not-fit-machine-category";
+
+/**
+ * Technical limits, not rules of the domain (ST-040 code review, 2026-10-15): beyond them the calendar arithmetic of
+ * due dates (ST-003) leaves four-digit years, and the maintenance plan could no longer be shown.
+ */
+export const LONGEST_INTERVAL_MONTHS = 1200;
+export const EARLIEST_START_DATE = "1900-01-01";
+export const LATEST_START_DATE = "2999-12-31";
 
 export function changeMaintenancePlan(
   plan: MaintenancePlan,
@@ -59,7 +69,11 @@ export function changeMaintenancePlan(
   if (task.intervalMonths === undefined || !Number.isInteger(task.intervalMonths) || task.intervalMonths < 1) {
     return { ok: false, error: "interval-not-positive" };
   }
-  if (!task.startDate) return { ok: false, error: "start-date-required" };
+  if (task.intervalMonths > LONGEST_INTERVAL_MONTHS) return { ok: false, error: "interval-too-long" };
+  if (!task.startDate || !isCalendarDate(task.startDate)) return { ok: false, error: "start-date-required" };
+  if (task.startDate < EARLIEST_START_DATE || task.startDate > LATEST_START_DATE) {
+    return { ok: false, error: "start-date-out-of-range" };
+  }
   // A restriction to a technology fits the restricted machine category (AGG-MaintenancePlan invariant, HS-10).
   if (task.technology && !task.machineCategory) return { ok: false, error: "technology-without-machine-category" };
   if (task.technology && task.machineCategory && !technologiesOf(task.machineCategory).includes(task.technology)) {

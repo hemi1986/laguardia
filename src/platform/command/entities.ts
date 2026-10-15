@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { history, type History } from "./history";
+import { history } from "./history";
+import type { StoredList } from "./stored-list";
 
 /**
  * A list of entities that are changed but never deleted (ST-040 – the maintenance tasks of the maintenance plan): a
@@ -16,8 +17,11 @@ import { history, type History } from "./history";
 /** A table of such a list: its own `id` (the entity's ID, no database default) and a `position bigserial`. */
 type EntityTable = PgTable & { id: PgColumn; position: PgColumn };
 
-/** How one list of entities of an aggregate is stored – loaded and saved like a history, saved differently. */
-export type Entities<Entity extends { id: string }> = History<Entity>;
+/** How one list of entities of an aggregate is stored – loaded like a history, saved differently. */
+export type Entities<Entity extends { id: string }> = StoredList<Entity> & {
+  /** Inserts the entities not stored yet and changes the stored ones that differ; nothing is ever deleted. */
+  readonly kind: "entities";
+};
 
 export function entities<
   T extends EntityTable,
@@ -33,14 +37,17 @@ export function entities<
 }): Entities<Entity> {
   const { table, owner, toEntity, toRow } = definition;
   const ownerColumn = table[owner] as PgColumn;
-  // Loaded exactly like a history – in the order the entities were added.
-  const { load } = history({ table, owner, toEntry: toEntity, toRow });
+  // Loaded exactly like a history, in the order the entities were added – and new ones are inserted like its entries.
+  const asHistory = history({ table, owner, toEntry: toEntity, toRow });
+  /** The columns an entity is saved with – compared to change only what differs. */
+  const columnsOf = (entity: Entity) => JSON.stringify(toRow(entity));
   return {
-    load,
+    kind: "entities",
+    load: asHistory.load,
     async save(tx, aggregateId, list) {
       if (list.length === 0) return;
       const stored = await tx
-        .select({ id: table.id })
+        .select()
         .from(table as PgTable)
         .where(
           and(
@@ -51,12 +58,13 @@ export function entities<
             ),
           ),
         );
-      const storedIds = new Set(stored.map((row) => row.id as string));
-      const added = list
-        .filter((entity) => !storedIds.has(entity.id))
-        .map((entity) => ({ ...toRow(entity), [owner]: aggregateId }));
-      if (added.length > 0) await tx.insert(table).values(added as never);
-      for (const entity of list.filter((candidate) => storedIds.has(candidate.id))) {
+      const storedById = new Map(
+        (stored as T["$inferSelect"][]).map((row) => [row.id as string, columnsOf(toEntity(row))]),
+      );
+      await asHistory.save(tx, aggregateId, list);
+      for (const entity of list) {
+        const storedColumns = storedById.get(entity.id);
+        if (storedColumns === undefined || storedColumns === columnsOf(entity)) continue;
         await tx
           .update(table)
           .set(toRow(entity) as never)

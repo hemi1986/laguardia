@@ -2,6 +2,7 @@ import { machineCategories, technologies } from "@/modules/collection";
 import type { ChangeMaintenancePlanInput } from "@/modules/maintenance";
 import type { FormFields } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
+import { isCalendarDate } from "@/platform/time";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const addMaintenanceTaskFields = [
@@ -35,7 +36,7 @@ export function addMaintenanceTaskInput(fields: FormFields<AddMaintenanceTaskFie
       suitableForHelpers: fields.suitableForHelpers !== undefined,
       machineCategory: machineCategories.find((category) => category === fields.machineCategory),
       technology: technologies.find((technology) => technology === fields.technology),
-      startDate: /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? startDate : undefined,
+      startDate: isCalendarDate(startDate) ? startDate : undefined,
     },
   };
 }

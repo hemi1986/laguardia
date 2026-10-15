@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
 import { machineCategories, technologies, technologiesOf } from "@/modules/collection";
-import { maintenancePlan } from "@/modules/maintenance";
+import { maintenancePlanVersion } from "@/modules/maintenance";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -28,7 +28,7 @@ const choices: Choices = {
 /** Adding a maintenance task (ST-040) – a page with nothing but the form (G2a); technicians only (G11). */
 export default async function AddMaintenanceTaskPage() {
   await requireTechnician();
-  const { version } = await maintenancePlan(database());
+  const version = await maintenancePlanVersion(database());
 
   return (
     <Page title={texts.add}>

@@ -263,8 +263,14 @@ hand for a history. A history table has its own `id` (the entry's ID, no databas
 - **Read models load a history through its description** – `workLog.load(db, defectIds)` gives the entries of many
   aggregates in one query, by aggregate ID (the repair history of a machine, ST-033) – and never map the rows a second
   time.
-- A list whose entries are changed or removed (the tasks of the maintenance plan, ST-040) is not a history; the store
-  gets that kind when its first story needs it.
+- **A list of entities that are changed** (the maintenance tasks of the maintenance plan, built in ST-040) is not a
+  history: `entities({ table, owner, toEntity, toRow })` (`src/platform/command/entities.ts`), named in the store under
+  `entities: { maintenanceTasks }`. It is loaded like a history; saving inserts the entities not stored yet and updates
+  only the stored ones whose columns differ. **Nothing is ever deleted** – an entity that ends is marked in its own
+  columns (a removed maintenance task keeps `removed_at`, ST-041), and one the state leaves out stays stored as it was.
+  Proven by `src/platform/command/entities.integration.test.ts` (a stand-in aggregate, a trigger refusing DELETE, a
+  count of UPDATEs). `History` and `Entities` are both a `StoredList` – the store treats them alike, each says in its
+  `kind` what saving means.
 Examples: `defects.ts`, `machines.ts` (which wraps its store only to keep the museum number register). Proven by
 `src/platform/command/history.integration.test.ts` (a stand-in aggregate, with a trigger in its own database that
 refuses UPDATE), the machine status history test in `change-machine-status-command.integration.test.ts` and

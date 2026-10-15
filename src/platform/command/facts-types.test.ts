@@ -10,8 +10,25 @@ const decide = (facts: { taken: string[] }) => ({ ok: true as const, state: { id
 
 describe("the facts of a creating command", () => {
   it("are required when the decision takes facts", () => {
-    aggregateCommand({ id: "CMD-TestFacts", allowedActors: ["technician"], store: things, creates: true, facts: async () => ({ taken: ["x"] }), decide, journal, result: () => ({}) });
+    aggregateCommand({
+      id: "CMD-TestFacts",
+      allowedActors: ["technician"],
+      store: things,
+      creates: true,
+      facts: async () => ({ taken: ["x"] }),
+      decide,
+      journal,
+      result: () => ({}),
+    });
     // @ts-expect-error – the decision needs facts, so they must be read
-    aggregateCommand({ id: "CMD-TestNoFacts", allowedActors: ["technician"], store: things, creates: true, decide, journal, result: () => ({}) });
+    aggregateCommand({
+      id: "CMD-TestNoFacts",
+      allowedActors: ["technician"],
+      store: things,
+      creates: true,
+      decide,
+      journal,
+      result: () => ({}),
+    });
   });
 });

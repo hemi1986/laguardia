@@ -44,6 +44,15 @@ export type ListedMaintenanceTask = Omit<MaintenanceTask, "removedAt"> & {
   firstDue: CalendarDate;
 };
 
+/** The version of the maintenance plan – what the form page of adding a maintenance task posts (HS-16). */
+export async function maintenancePlanVersion(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ version: maintenancePlanTable.version })
+    .from(maintenancePlanTable)
+    .where(eq(maintenancePlanTable.id, MAINTENANCE_PLAN_ID));
+  return row?.version ?? 0;
+}
+
 /**
  * RM-MaintenancePlan (ST-040): the maintenance plan's tasks that are not removed, in the order they were added, and the
  * version a change of the plan names (HS-16).
@@ -51,13 +60,13 @@ export type ListedMaintenanceTask = Omit<MaintenanceTask, "removedAt"> & {
 export async function maintenancePlan(
   db: Database,
 ): Promise<{ version: number; maintenanceTasks: ListedMaintenanceTask[] }> {
-  const [row] = await db
-    .select({ version: maintenancePlanTable.version })
-    .from(maintenancePlanTable)
-    .where(eq(maintenancePlanTable.id, MAINTENANCE_PLAN_ID));
-  const tasks = (await maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID])).get(MAINTENANCE_PLAN_ID) ?? [];
+  const [version, stored] = await Promise.all([
+    maintenancePlanVersion(db),
+    maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID]),
+  ]);
+  const tasks = stored.get(MAINTENANCE_PLAN_ID) ?? [];
   return {
-    version: row?.version ?? 0,
+    version,
     maintenanceTasks: tasks
       .filter((task) => !task.removedAt)
       .map((task) => ({

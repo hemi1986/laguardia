@@ -6,6 +6,7 @@ import {
   elapsedHours,
   elapsedMoreThanHours,
   formatCalendarDate,
+  isCalendarDate,
   formatDateTime,
   graceDays,
   maintenanceDates,
@@ -105,6 +106,20 @@ describe("time convention", () => {
     ])("%s is shown as %s", (instant, shown) => {
       expect(formatDateTime(new Date(instant))).toBe(shown);
     });
+  });
+});
+
+describe("isCalendarDate", () => {
+  it.each([
+    ["2026-02-28", true],
+    ["2024-02-29", true],
+    ["2026-02-29", false],
+    ["2026-02-31", false],
+    ["2026-13-01", false],
+    ["01.10.2026", false],
+    ["", false],
+  ])("%s → %s", (value, valid) => {
+    expect(isCalendarDate(value)).toBe(valid);
   });
 });
 
