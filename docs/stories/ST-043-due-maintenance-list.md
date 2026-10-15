@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenancePlanChanged, EVT-MachineRegistered]
 depends_on: [ST-003, ST-007, ST-040]
 labels: [mvp, maintenance, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

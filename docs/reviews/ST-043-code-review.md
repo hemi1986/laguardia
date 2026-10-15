@@ -33,4 +33,4 @@ Most important finding: #1/#2 together – ST-056 and ST-041 will both change th
 - **#5 fixed** – an untitled test covers the whole order (most overdue, then most due, then name); removing the tie-breaks fails it.
 - **#6 fixed** – `dueMaintenanceAddress` sits next to `dueMaintenanceFilterOf` in `due-maintenance-data.ts`.
 - **#7 open** – the filled list cannot be shown in a browser test (every machine there is registered today); the page is one column with `overflow-wrap`. Revisit with ST-044, whose recorded maintenance makes due entries possible in the browser.
-- **#8 skipped** – an empty maintenance plan saying „Gerade ist keine Wartung fällig.“ is true; whether technicians get a way to the maintenance plan there is a UX question for the acceptance, not text to decide in code.
+- **#8 decided** (user, 2026-10-15, at acceptance) – no link to the maintenance plan on the empty list; „Gerade ist keine Wartung fällig.“ stays.
