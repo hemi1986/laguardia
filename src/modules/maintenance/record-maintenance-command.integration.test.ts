@@ -9,6 +9,7 @@ import {
 } from "@/modules/collection";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
@@ -177,5 +178,19 @@ describe("CMD-RecordMaintenance", () => {
     });
     expect(await record(cleanGlass, randomUUID(), undefined)).toEqual({ ok: false, error: "machine-unknown" });
     expect(await record("not-an-id", lg042, undefined)).toEqual({ ok: false, error: "maintenance-task-unknown" });
+  });
+
+  it("reads whether the machine is retired from Collection – a retired machine gets no maintenance record", async () => {
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const lg013 = await aMachine();
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId: lg013, version: 0 },
+      { actor: tom, db, clock: fixedClock("2026-06-01T09:00:00Z"), newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error(retired.error);
+
+    expect(await record(cleanGlass, lg013, undefined)).toEqual({ ok: false, error: "machine-retired" });
+    expect(await maintenanceRecords(db, { machineId: lg013 })).toEqual([]);
   });
 });
