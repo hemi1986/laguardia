@@ -4,15 +4,20 @@
 
 **Progress: 28 of 58 domain stories done** · scenarios 252 of 450
 
-**81 stories** · In Progress: 0 · Ready: 36 · In Review: 0 · Draft: 5 · Done: 40
+**81 stories** · In Progress: 1 · Ready: 35 · In Review: 0 · Draft: 5 · Done: 40
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | medium | ST-003, ST-007, ST-040 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-043](ST-043-due-maintenance-list.md) | Due maintenance list grouped by maintenance task | story | Maintenance | must | M | medium | ST-003, ST-007, ST-040 |
 | [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | must | S | medium | ST-001 |
 | [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | must | S | medium | ST-061 |
 | [ST-063](ST-063-dependency-and-security-routine.md) | Dependency and security update routine | tech-task | Repair | must | XS | low | ST-059 |
