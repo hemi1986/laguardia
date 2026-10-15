@@ -30,7 +30,7 @@ test("every team page carries the same navigation, once per destination, with lo
     // Playwright's strict mode fails these if a page offered a destination twice.
     await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sichtung" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sichtung", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Wartung", exact: true })).toBeVisible(); // since ST-043, G19 row 5
     await openMore(page);
@@ -48,7 +48,7 @@ test("every team page carries the same navigation, once per destination, with lo
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Sichtung" })).toBeFocused(); // since ST-017, G19 row 3
+  await expect(page.getByRole("link", { name: "Sichtung", exact: true })).toBeFocused(); // since ST-017, G19 row 3
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeFocused(); // since ST-021, G19 row 4
   await page.keyboard.press("Tab");
