@@ -22,8 +22,14 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { formRunner } from "@/app/_actions/form-runner";
+import { commandErrorText, teamMessages } from "@/platform/messages";
+import { post } from "@/test-support/forms";
 import { loadDueMaintenance, type DueMaintenanceFilter } from "./due-maintenance-data";
 import { DueMaintenanceView } from "./due-maintenance";
+import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
+import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
+import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
 
 /**
  * The due maintenance list (RM-DueMaintenance, ST-043): Maintenance's maintenance tasks, due on Collection's machines –
@@ -167,8 +173,11 @@ async function listedOn(on: string, maintenanceTaskId: string) {
 }
 
 /** The page on that day – as a team member sees it, with the filter and the chosen maintenance task. */
-async function page(on: string, filter: DueMaintenanceFilter = {}) {
-  const data = await loadDueMaintenance(db, fixedClock(`${on}T10:00:00Z`), filter);
+async function page(on: string, filter: DueMaintenanceFilter = {}, viewer: typeof tom | typeof anna = tom) {
+  const data = await loadDueMaintenance(db, fixedClock(`${on}T10:00:00Z`), filter, {
+    id: viewer.teamMemberId,
+    role: viewer.role,
+  });
   return { data, html: renderToStaticMarkup(createElement(DueMaintenanceView, { data })) };
 }
 
@@ -448,6 +457,113 @@ describe("the due maintenance list", () => {
       expect((await page("2026-06-10", { maintenanceTaskId: switchTest })).data.chosen?.machines).toEqual([
         expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
       ]);
+    });
+  });
+
+  describe("„Wartung erfassen“ from the list (ST-044)", () => {
+    /** The form „Wartung erfassen“ through the Server Action runner, as that team member on that day. */
+    function formOf(actor: typeof tom | typeof anna, on: string) {
+      const recordedIds: string[] = [];
+      const action = formRunner({
+        currentPerson: async () => actor,
+        db,
+        clock: fixedClock(`${on}T10:00:00Z`),
+        newId: randomUUID,
+      })(recordMaintenanceCommand, {
+        fields: recordMaintenanceFields,
+        input: recordMaintenanceInput,
+        onSuccess: async ({ maintenanceRecordId }) => void recordedIds.push(maintenanceRecordId),
+      });
+      return { action, recordedIds };
+    }
+
+    it("offers „Wartung erfassen“ on each due machine – to helpers only for tasks suitable for helpers", async () => {
+      await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+
+      const link = (task: string) => `href="/team/maintenance/erfassen?task=${task}&amp;machine=LG-042"`;
+      expect((await page("2026-04-02", { maintenanceTaskId: cleanGlass }, anna)).html).toContain(link(cleanGlass));
+      expect((await page("2026-04-02", { maintenanceTaskId: fuses }, anna)).html).not.toContain(link(fuses));
+      expect((await page("2026-04-02", { maintenanceTaskId: fuses }, tom)).html).toContain(link(fuses));
+    });
+
+    it("shows the form page with the task and the machine, and says why to someone it would refuse", async () => {
+      await aMachine("LG-042", { location: "Hall 1, row 3" });
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+      const clock = fixedClock("2026-06-10T10:00:00Z");
+      const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+      const forTom = await loadMaintenanceForRecording(db, clock, fuses, "LG-042", {
+        id: tom.teamMemberId,
+        role: "technician",
+      });
+      expect(forTom).toMatchObject({
+        maintenanceTask: { id: fuses, name: "Check fuses, connectors, boards for burn marks" },
+        machine: {
+          museumNumber: "LG-042",
+          machineModelTitle: "Medieval Madness pinball/dmd",
+          location: "Hall 1, row 3",
+        },
+        whyNot: undefined,
+        today: "2026-06-10",
+        earliest: "2026-06-03",
+      });
+      const html = renderToStaticMarkup(createElement(RecordMaintenancePage, { data: forTom! }));
+      expect(html).toMatch(/<input[^>]*type="date"[^>]*value="2026-06-10"/);
+      expect(html).toContain('min="2026-06-03"');
+      expect(html).toContain('max="2026-06-10"');
+
+      const forAnna = await loadMaintenanceForRecording(db, clock, fuses, "LG-042", asAnna);
+      expect(forAnna?.whyNot).toBe("maintenance-not-suitable-for-helpers");
+      expect(renderToStaticMarkup(createElement(RecordMaintenancePage, { data: forAnna! }))).toContain(
+        "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
+      );
+      expect(await loadMaintenanceForRecording(db, clock, fuses, "LG-999", asAnna)).toBeUndefined();
+      expect(await loadMaintenanceForRecording(db, clock, randomUUID(), "LG-042", asAnna)).toBeUndefined();
+    });
+
+    it("records it as the signed-in team member, and the list confirms it", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+        intervalMonths: 1,
+        suitableForHelpers: true,
+      });
+      const form = formOf(anna, "2026-06-10");
+
+      const fields = { maintenanceTaskId: cleanGlass, machineId: lg042, outcome: "done", date: "2026-06-10", note: "" };
+      expect(await form.action(null, post(fields))).toBeNull();
+
+      expect(form.recordedIds).toHaveLength(1);
+      const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: form.recordedIds[0] }, anna);
+      expect(after.html).toContain("Wartung an LG-042 eingetragen.");
+      // An address naming someone else's record, or none, confirms nothing.
+      expect((await page("2026-06-10", { recorded: randomUUID() }, anna)).html).not.toContain("eingetragen");
+    });
+
+    it("keeps what was typed when it is rejected – a forged role is not read", async () => {
+      const lg042 = await aMachine("LG-042");
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+      const typed = {
+        maintenanceTaskId: fuses,
+        machineId: lg042,
+        outcome: "partially-done",
+        date: "2026-06-02",
+        note: "Row 3",
+      };
+
+      const tooEarly = await formOf(tom, "2026-06-10").action(null, post(typed));
+      expect(tooEarly).toEqual({ error: "date-too-early", values: typed });
+      expect(commandErrorText(teamMessages, tooEarly!.error)).toBe(
+        "Bitte ein Datum aus den letzten 7 Tagen angeben – nicht früher.",
+      );
+      expect((await formOf(tom, "2026-06-10").action(null, post({ ...typed, outcome: "", date: "" })))?.error).toBe(
+        "outcome-required",
+      );
+
+      const byHelper = await formOf(anna, "2026-06-10").action(null, post({ ...typed, date: "", role: "technician" }));
+      expect(byHelper?.error).toBe("maintenance-not-suitable-for-helpers");
+      expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
     });
   });
 });

@@ -20,5 +20,5 @@ export const recordMaintenanceCommand = aggregateCommand({
     machineId: event.machineId,
     data: { maintenanceTaskId: event.maintenanceTaskId, outcome: event.outcome, date: event.date },
   }),
-  result: (record) => ({ maintenanceRecordId: record.id }),
+  result: (record) => ({ maintenanceRecordId: record.id, maintenanceTaskId: record.maintenanceTaskId }),
 });

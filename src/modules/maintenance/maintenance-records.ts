@@ -83,3 +83,13 @@ export async function lastDoneByRecord(
 export function lastDoneKey(maintenanceTaskId: string, machineId: string): string {
   return `${maintenanceTaskId}/${machineId}`;
 }
+
+/** One maintenance record by its ID – for the confirmation after recording it (G3). Undefined for an unknown ID. */
+export async function maintenanceRecordById(
+  db: Database,
+  maintenanceRecordId: string,
+): Promise<MaintenanceRecord | undefined> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(maintenanceRecordId)) return undefined;
+  const [row] = await db.select().from(maintenanceRecord).where(eq(maintenanceRecord.id, maintenanceRecordId));
+  return row && toRecord(row);
+}

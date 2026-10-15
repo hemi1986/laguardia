@@ -1,4 +1,4 @@
-import type { MachineForMaintenance } from "@/modules/collection";
+import type { MachineCategory, MachineForMaintenance, Technology } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, maintenanceDates, today, type CalendarDate } from "@/platform/time";
@@ -23,6 +23,9 @@ export type DueMaintenanceTask = {
   name: string;
   instruction: string;
   suitableForHelpers: boolean;
+  /** Its restriction – which machines it applies to (HS-10). */
+  machineCategory: MachineCategory | undefined;
+  technology: Technology | undefined;
   machines: DueMachine[];
   /** How many of its machines it is overdue on. */
   overdueCount: number;
@@ -81,6 +84,8 @@ export async function dueMaintenance(
         name: task.name,
         instruction: task.instruction,
         suitableForHelpers: task.suitableForHelpers,
+        machineCategory: task.machineCategory,
+        technology: task.technology,
         machines: dueMachines.sort(byLocation),
         overdueCount: dueMachines.filter((machine) => machine.overdue).length,
       },

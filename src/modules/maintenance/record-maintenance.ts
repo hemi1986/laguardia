@@ -89,7 +89,7 @@ export type RecordMaintenanceError =
  */
 export function recordRefusal(
   maintenanceTask:
-    Pick<MaintenanceTask, "suitableForHelpers" | "machineCategory" | "technology" | "removedAt"> | undefined,
+    (Pick<MaintenanceTask, "suitableForHelpers" | "machineCategory" | "technology"> & { removedAt?: Date }) | undefined,
   machine: Omit<MachineForRecording, "id"> | undefined,
   teamMember: { role: Role },
 ):

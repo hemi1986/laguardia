@@ -21,4 +21,4 @@ export {
   type RecordMaintenanceError,
   type RecordMaintenanceInput,
 } from "./record-maintenance";
-export { maintenanceRecords } from "./maintenance-records";
+export { maintenanceRecordById, maintenanceRecords } from "./maintenance-records";
