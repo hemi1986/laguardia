@@ -83,14 +83,30 @@ export type RecordMaintenanceError =
   | "date-in-the-future";
 
 /**
- * Why this team member may not record the maintenance task at all, on any machine – undefined when they may. The
- * decision applies it, and a page asks it to offer „Wartung erfassen“ only to someone it will not reject (G11).
+ * Why this team member may not record the maintenance task on the machine, whatever they enter – undefined when they
+ * may. The one rule of CMD-RecordMaintenance about who records what where: the decision applies it, and a page asks it
+ * to offer „Wartung erfassen“ only where the command will not reject it (G11).
  */
 export function recordRefusal(
-  task: Pick<MaintenanceTask, "suitableForHelpers">,
+  maintenanceTask:
+    Pick<MaintenanceTask, "suitableForHelpers" | "machineCategory" | "technology" | "removedAt"> | undefined,
+  machine: Omit<MachineForRecording, "id"> | undefined,
   teamMember: { role: Role },
-): "maintenance-not-suitable-for-helpers" | undefined {
-  return teamMember.role === "helper" && !task.suitableForHelpers ? "maintenance-not-suitable-for-helpers" : undefined;
+):
+  | "maintenance-task-unknown"
+  | "machine-unknown"
+  | "machine-retired"
+  | "maintenance-task-does-not-apply"
+  | "maintenance-not-suitable-for-helpers"
+  | undefined {
+  // A removed maintenance task is never due, and nothing is recorded for it any more.
+  if (!maintenanceTask || maintenanceTask.removedAt) return "maintenance-task-unknown";
+  if (!machine) return "machine-unknown";
+  if (machine.retired) return "machine-retired";
+  if (!maintenanceTaskAppliesTo(maintenanceTask, machine)) return "maintenance-task-does-not-apply";
+  if (teamMember.role === "helper" && !maintenanceTask.suitableForHelpers)
+    return "maintenance-not-suitable-for-helpers";
+  return undefined;
 }
 
 export function recordMaintenance(
@@ -98,14 +114,8 @@ export function recordMaintenance(
   input: RecordMaintenanceInput,
   { actor, clock, newId }: DecisionContext<RecordingPerson>,
 ): Decision<MaintenanceRecord, MaintenanceRecorded, RecordMaintenanceError> {
-  // A removed maintenance task is never due, and nothing is recorded for it any more.
-  if (!maintenanceTask || maintenanceTask.removedAt) return { ok: false, error: "maintenance-task-unknown" };
-  if (!machine) return { ok: false, error: "machine-unknown" };
-  if (machine.retired) return { ok: false, error: "machine-retired" };
-  if (!maintenanceTaskAppliesTo(maintenanceTask, machine))
-    return { ok: false, error: "maintenance-task-does-not-apply" };
-  const refusal = recordRefusal(maintenanceTask, actor);
-  if (refusal) return { ok: false, error: refusal };
+  const refusal = recordRefusal(maintenanceTask, machine, actor);
+  if (refusal || !maintenanceTask || !machine) return { ok: false, error: refusal ?? "maintenance-task-unknown" };
   if (!input.outcome) return { ok: false, error: "outcome-required" };
   const now = today(clock);
   // No date given is today; a date given must be a real calendar date – never silently today.
