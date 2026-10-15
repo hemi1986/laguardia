@@ -4,8 +4,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/native-select";
 import { priorities } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
-import { formatDateTime } from "@/platform/time";
-import { claimantText } from "../claimant";
+import { OpenDefectEntry } from "./open-defect-entry";
 import type { OpenDefectsData, OpenDefectsFilter } from "./open-defects-data";
 
 const { defects: texts, recordDefect, terms } = teamMessages;
@@ -37,33 +36,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
         <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
           {data.entries.map((entry) => (
             <li key={entry.id}>
-              <article className="flex flex-col gap-1 text-sm">
-                <Link href={`/team/defects/${entry.id}`} className="font-medium underline underline-offset-4">
-                  {entry.title}
-                </Link>
-                <p>
-                  {entry.museumNumber} · {entry.machineModelTitle}
-                </p>
-                <p className="text-muted-foreground">
-                  {texts.priority(recordDefect.priorities[entry.priority])}
-                  {entry.suitableForHelpers && ` · ${terms["Suitable for helpers"]}`}
-                </p>
-                <p className="text-muted-foreground">
-                  {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
-                </p>
-                {entry.claimant && <p className="text-muted-foreground">{claimantText(entry.claimant)}</p>}
-                {entry.lastWorkLogEntry && (
-                  <p className="text-muted-foreground">
-                    {texts.lastWorkLogEntry(
-                      formatDateTime(entry.lastWorkLogEntry.loggedAt),
-                      entry.lastWorkLogEntry.loggedBy,
-                    )}
-                  </p>
-                )}
-                {entry.linkedProblemReports > 0 && (
-                  <p className="text-muted-foreground">{texts.linkedProblemReports(entry.linkedProblemReports)}</p>
-                )}
-              </article>
+              <OpenDefectEntry entry={entry} />
             </li>
           ))}
         </ol>

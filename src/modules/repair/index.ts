@@ -24,6 +24,12 @@ export {
   type OpenDefectsQuery,
 } from "./defects";
 export type { DefectProblemReport } from "./problem-reports";
+export {
+  recentRepairHistory,
+  repairHistory,
+  type EndedRepairHistoryEntry,
+  type RepairHistoryEntry,
+} from "./repair-history";
 export type { Reporter } from "./report-problem";
 export { dismissProblemReportCommand } from "./dismiss-problem-report-command";
 export {

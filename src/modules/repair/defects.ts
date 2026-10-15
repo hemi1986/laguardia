@@ -15,7 +15,7 @@ import { problemReportsOfDefect, type DefectProblemReport } from "./problem-repo
 import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
 
 /** The work log of a defect (ST-024) – append-only (Q13). */
-const workLog = history({
+export const workLog = history({
   table: defectWorkLogEntry,
   owner: "defectId",
   toEntry: (row): WorkLogEntry => ({
@@ -29,7 +29,7 @@ const workLog = history({
 });
 
 /** The resolutions of a defect (ST-028) – append-only (Q13). */
-const resolutions = history({
+export const resolutions = history({
   table: defectResolution,
   owner: "defectId",
   toEntry: (row): Resolution => ({

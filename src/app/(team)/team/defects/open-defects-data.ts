@@ -1,5 +1,5 @@
 import { machineIdOf, machineLabels } from "@/modules/collection";
-import { openDefects, priorities, type Priority } from "@/modules/repair";
+import { openDefects, priorities, type OpenDefect, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -89,39 +89,60 @@ export async function loadOpenDefects(
           claimedBy: filter.claimedByMe ? viewer?.id : undefined,
         }),
   ]);
-  const [labels, names] = await Promise.all([
+  const [entries, labels] = await Promise.all([
+    shownOpenDefects(db, clock, matching, viewer),
     machineLabels(
       db,
       all.map((defect) => defect.machineId),
     ),
+  ]);
+  return {
+    entries,
+    total: all.length,
+    machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
+    filter,
+  };
+}
+
+/**
+ * Open defects as the team sees them (RM-OpenDefects, ST-021) – with Collection's museum numbers and titles and Team's
+ * names, and how long each has been open, computed when the page loads. Shared by the open defects list and the
+ * machine record's open defects (ST-033), so both say the same facts in the same words.
+ */
+export async function shownOpenDefects(
+  db: Database,
+  clock: Clock,
+  defects: OpenDefect[],
+  viewer?: Viewer,
+): Promise<OpenDefectsItem[]> {
+  const [labels, names] = await Promise.all([
+    machineLabels(
+      db,
+      defects.map((defect) => defect.machineId),
+    ),
     teamMemberNames(
       db,
-      matching.flatMap((defect) => [
+      defects.flatMap((defect) => [
         ...(defect.claimedBy ? [defect.claimedBy] : []),
         ...(defect.lastWorkLogEntry ? [defect.lastWorkLogEntry.loggedBy] : []),
       ]),
     ),
   ]);
   const now = today(clock);
-  return {
-    entries: matching.map((defect) => ({
-      id: defect.id,
-      museumNumber: labels.get(defect.machineId)?.museumNumber ?? "",
-      machineModelTitle: labels.get(defect.machineId)?.machineModelTitle ?? "",
-      title: defect.title,
-      priority: defect.priority,
-      suitableForHelpers: defect.suitableForHelpers,
-      openSince: defect.openSince,
-      openDays: daysBetween(calendarDate(defect.openSince), now),
-      linkedProblemReports: defect.linkedProblemReports,
-      claimant: shownClaimant(defect.claimedBy, names, viewer),
-      lastWorkLogEntry: defect.lastWorkLogEntry && {
-        loggedBy: names.get(defect.lastWorkLogEntry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
-        loggedAt: defect.lastWorkLogEntry.loggedAt,
-      },
-    })),
-    total: all.length,
-    machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
-    filter,
-  };
+  return defects.map((defect) => ({
+    id: defect.id,
+    museumNumber: labels.get(defect.machineId)?.museumNumber ?? "",
+    machineModelTitle: labels.get(defect.machineId)?.machineModelTitle ?? "",
+    title: defect.title,
+    priority: defect.priority,
+    suitableForHelpers: defect.suitableForHelpers,
+    openSince: defect.openSince,
+    openDays: daysBetween(calendarDate(defect.openSince), now),
+    linkedProblemReports: defect.linkedProblemReports,
+    claimant: shownClaimant(defect.claimedBy, names, viewer),
+    lastWorkLogEntry: defect.lastWorkLogEntry && {
+      loggedBy: names.get(defect.lastWorkLogEntry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+      loggedAt: defect.lastWorkLogEntry.loggedAt,
+    },
+  }));
 }
