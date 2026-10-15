@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenancePlanChanged, EVT-MachineRegistered]
 depends_on: [ST-003, ST-007, ST-040]
 labels: [mvp, maintenance, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -27,6 +27,7 @@ Rules (`CONTEXT.md` *Due* / *Overdue*, `docs/architecture/data-model.md`, HS-20 
 - Within the chosen maintenance task, machines are sorted by location. A filter shows only maintenance tasks suitable for helpers.
 - When no maintenance task is due, the page says so in words (G7).
 - Machines *Not on display* and machines returning to display: ST-056.
+- Decided during `/implement ST-043` (user, 2026-10-15): the maintenance tasks are shown with the most overdue machines first, then the most due machines, then by name. Machines *Not on display* stay listed until ST-056 builds that rule. No separate UX review before building – the acceptance review checks the page against the UX guidelines.
 
 ## Acceptance Criteria
 

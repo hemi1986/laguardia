@@ -1,0 +1,94 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { teamMessages } from "@/platform/messages";
+import { formatCalendarDate } from "@/platform/time";
+import { dueMaintenanceAddress, type DueMaintenanceData } from "./due-maintenance-data";
+
+const { dueMaintenance: texts, terms } = teamMessages;
+
+/**
+ * The due maintenance list (RM-DueMaintenance, ST-043, G4a): first every due maintenance task with on how many machines
+ * it is due and how many of those are overdue, in words; its machines – sorted by location – only after choosing it.
+ * Overdue is said in words, not only by a colour (G6a). Texts are plain text: React escapes them.
+ */
+export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
+  const { filter, chosen } = data;
+  if (chosen) {
+    return (
+      <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
+        {/* The way back sits above the machines – a task can be due on 60 of them (G17). */}
+        <Link
+          href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}
+          className="self-start text-sm underline underline-offset-4"
+        >
+          {texts.allDue}
+        </Link>
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold">{chosen.name}</h2>
+          <p className="text-sm whitespace-pre-line">{chosen.instruction}</p>
+          {chosen.suitableForHelpers && (
+            <p className="text-muted-foreground text-sm">{terms["Suitable for helpers"]}</p>
+          )}
+          <p className="text-sm">{texts.counts(chosen.machines.length, chosen.overdueCount)}</p>
+        </div>
+        <ol className="flex flex-col gap-4">
+          {chosen.machines.map((machine) => (
+            <li key={machine.machineId}>
+              <article className="flex flex-col gap-1 text-sm">
+                <p>
+                  <Link
+                    href={`/team/machines/${encodeURIComponent(machine.museumNumber)}`}
+                    className="font-medium underline underline-offset-4"
+                  >
+                    {machine.museumNumber}
+                  </Link>{" "}
+                  · {machine.machineModelTitle}
+                </p>
+                <p>{machine.location}</p>
+                <p className="text-muted-foreground">
+                  {texts.lastDoneAndDue(formatCalendarDate(machine.lastDone), formatCalendarDate(machine.dueSince))}
+                </p>
+                {machine.overdue && <p className="font-medium">{texts.overdue}</p>}
+              </article>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  }
+  return (
+    <>
+      <form method="get" action="/team/maintenance" className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="helpers"
+            value="1"
+            defaultChecked={filter.suitableForHelpers ?? false}
+            className="size-4"
+          />
+          {texts.onlySuitableForHelpers}
+        </label>
+        <Button type="submit" variant="outline" size="sm">
+          {texts.filter}
+        </Button>
+      </form>
+      {data.tasks.length === 0 ? (
+        <p>{filter.suitableForHelpers ? texts.nothingDueForHelpers : texts.nothingDue}</p>
+      ) : (
+        <ul className="flex flex-col gap-3 [overflow-wrap:anywhere]">
+          {data.tasks.map((task) => (
+            <li key={task.id}>
+              <Link
+                href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: task.id })}
+                className="underline underline-offset-4"
+              >
+                {task.name} · {texts.counts(task.machineCount, task.overdueCount)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}

@@ -18,6 +18,7 @@ test("every team page carries the same navigation, once per destination, with lo
   for (const path of [
     "/team",
     "/team/machines",
+    "/team/maintenance",
     "/team/maintenance-plan",
     "/team/machine-models",
     "/team/members",
@@ -31,6 +32,7 @@ test("every team page carries the same navigation, once per destination, with lo
     await expect(page.getByRole("link", { name: "Geräte", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Sichtung" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Wartung", exact: true })).toBeVisible(); // since ST-043, G19 row 5
     await openMore(page);
     await expect(page.getByRole("link", { name: "Wartungsplan" })).toBeVisible(); // since ST-040, G19 row 6
     await expect(page.getByRole("link", { name: "Modelle" })).toBeVisible();
@@ -49,6 +51,8 @@ test("every team page carries the same navigation, once per destination, with lo
   await expect(page.getByRole("link", { name: "Sichtung" })).toBeFocused(); // since ST-017, G19 row 3
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Defekte", exact: true })).toBeFocused(); // since ST-021, G19 row 4
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Wartung", exact: true })).toBeFocused(); // since ST-043, G19 row 5
   await page.keyboard.press("Tab");
   await expect(page.getByRole("navigation").locator("summary")).toBeFocused();
   await page.keyboard.press("Enter");

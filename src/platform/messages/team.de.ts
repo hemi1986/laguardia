@@ -44,6 +44,7 @@ export const teamMessages = {
     loggedInAs: "Angemeldet als",
     logout: "Abmelden",
     accounts: "Teammitglieder",
+    maintenance: "Wartung",
     maintenancePlan: "Wartungsplan",
     machineModels: "Modelle",
     machines: "Geräte",
@@ -130,6 +131,19 @@ export const teamMessages = {
     defectResolved: "Defekt behoben",
     wholeRepairHistory: (count: number) => `Ganze Reparaturhistorie (${count})`,
     whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
+  },
+  /** The due maintenance list (ST-043): the due tasks with their counts first, a task's machines after choosing it (G4a). */
+  dueMaintenance: {
+    title: "Fällige Wartung",
+    counts: (machines: number, overdue: number) =>
+      `${machines === 1 ? "1 Gerät" : `${machines} Geräte`}${overdue > 0 ? `, ${overdue} überfällig` : ""}`,
+    lastDoneAndDue: (lastDone: string, due: string) => `Zuletzt erledigt ${lastDone} · fällig seit ${due}`,
+    overdue: "Überfällig",
+    nothingDue: "Gerade ist keine Wartung fällig.",
+    nothingDueForHelpers: "Gerade ist keine Wartung für Helfer:innen fällig.",
+    onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
+    filter: "Filtern",
+    allDue: "Alle fälligen Wartungen",
   },
   /** The maintenance plan (ST-040): its page, the form page of adding a maintenance task, and the confirmation (G3). */
   maintenancePlan: {

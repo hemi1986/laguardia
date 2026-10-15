@@ -35,6 +35,9 @@ export function TeamNavigation({ role }: { role: Role }) {
         <Link href="/team/defects" className={link}>
           {team.defects}
         </Link>
+        <Link href="/team/maintenance" className={link}>
+          {team.maintenance}
+        </Link>
         <MoreMenu label={team.more}>
           <ul className="bg-background absolute end-0 z-10 mt-2 flex min-w-48 flex-col gap-3 rounded-lg border p-3 shadow-sm">
             {technician && (
