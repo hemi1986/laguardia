@@ -26,6 +26,7 @@ Command `CMD-RecordMaintenance` (any team member). Rules and invariants (`AGG-Ma
 - A maintenance record is never changed or removed.
 - Maintenance can be recorded from the due maintenance list and from the machine record (ST-047).
 UI wording (de): Wartungseintrag.
+Decided during `/implement ST-044` (user, 2026-10-15): maintenance is recorded from the due maintenance list for now – „Wartung erfassen“ on each machine of the chosen maintenance task, offered only to whom the command allows (G5, G11) – on a form page of its own; the machine record follows with ST-047. *Last done* is the later of the latest maintenance record *done* and the task's start date (or the machine's registration date). Nothing is due in the browser tests and on the preview, so the form is covered by integration tests; its browser test follows with ST-047, where every applicable machine can be recorded.
 
 ## Acceptance Criteria
 
