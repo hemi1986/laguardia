@@ -38,6 +38,12 @@ export function formatDateTime(instant: Date): string {
   return berlinDateTime.format(instant);
 }
 
+/** A calendar date as the team sees it, e.g. "01.11.2026" (a start date, a due date – ST-040). */
+export function formatCalendarDate(date: CalendarDate): string {
+  const [year, month, day] = date.split("-");
+  return `${day}.${month}.${year}`;
+}
+
 export function today(clock: Clock): CalendarDate {
   return calendarDate(clock.now());
 }

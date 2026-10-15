@@ -58,8 +58,8 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
       }),
     );
 
-    expect(added.ok).toBe(true);
     const task = await listed(name);
+    expect(added).toEqual({ ok: true, result: { maintenanceTaskId: task?.id } });
     expect(task).toMatchObject({
       name,
       instruction: "Glass out, clean both sides.",

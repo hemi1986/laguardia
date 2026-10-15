@@ -5,6 +5,7 @@ import {
   calendarDate,
   elapsedHours,
   elapsedMoreThanHours,
+  formatCalendarDate,
   formatDateTime,
   graceDays,
   maintenanceDates,
@@ -104,6 +105,15 @@ describe("time convention", () => {
     ])("%s is shown as %s", (instant, shown) => {
       expect(formatDateTime(new Date(instant))).toBe(shown);
     });
+  });
+});
+
+describe("formatCalendarDate", () => {
+  it.each([
+    ["2026-11-01", "01.11.2026"],
+    ["2026-02-28", "28.02.2026"],
+  ])("%s is shown as %s", (date, shown) => {
+    expect(formatCalendarDate(date)).toBe(shown);
   });
 });
 
