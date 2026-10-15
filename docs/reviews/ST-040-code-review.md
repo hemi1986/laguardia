@@ -28,3 +28,24 @@ paragraph. #4–#6 are judgement calls for the refactor step or a line here.
 
 **Verdict: fix blockers first.**
 Most important: #1. A maintenance task with a very large interval, or a start date near year 9999, is accepted and stored. After that, RM-MaintenancePlan throws on every load and the maintenance plan pages break for all technicians, with no way to fix it in the app.
+
+## Disposition (`/implement`, 2026-10-15)
+
+- **#1 fixed** – the decision rejects an interval above 1200 months (`interval-too-long`) and a start date outside 1900–2999 (`start-date-out-of-range`), with table cases at the decision. These are **technical limits** that keep the due dates computable (`LONGEST_INTERVAL_MONTHS`, `EARLIEST_START_DATE`, `LATEST_START_DATE`), not rules of the domain – put to the user at acceptance. A huge interval no longer reaches the int4 column.
+- **#2 fixed** – `isCalendarDate` (`src/platform/time.ts`, table test) in the input function and the decision: „2026-02-31“ is `start-date-required`, never a failing insert.
+- **#3 fixed** – the engineering conventions describe `entities` under *Histories are append-only lists*.
+- **#4 fixed** – `History` and `Entities` are both a `StoredList` with their own `kind`; `aggregateStore` calls the merged lists `lists`.
+- **#5 fixed** – `entities` inserts new entities through the history's save and loads through its load; only the update is its own.
+- **#6 fixed** – only stored entities whose columns differ are updated (the test counts the UPDATEs).
+- **#7 fixed** – the doc comment sits on `MaintenancePlan`.
+- **#8 fixed** – the command test imports `MAINTENANCE_PLAN_ID`.
+- **#9 skipped** – allowed by the journal convention; revisit in ST-058 if its recent changes want to show interval or restriction.
+
+### `/code-review high` (run alongside, 2026-10-15)
+
+- No upper limit on the interval / a start date near 9999 / a start date that is no calendar date – fixed with #1 and #2 above.
+- Two test files raced for the one maintenance plan in the shared database – fixed: the page test has a database of its own (`maintenance_plan_page`).
+- Every save updated every entity / `Entities` aliased `History` – fixed with #4–#6 above.
+- The form page loaded the whole read model for its version – fixed: `maintenancePlanVersion(db)`.
+- The read model copies each field by hand – skipped: `ListedMaintenanceTask` has every field as a required key, so the type check fails when one is forgotten.
+- Only the technology marked on a combination that does not fit – fixed: the machine category is marked too (G8).

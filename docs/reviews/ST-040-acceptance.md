@@ -45,3 +45,8 @@ Remark: "rejected" in the decision tests means `ok:false` with an error code. "N
 accepted
 
 No finding reaches the follow-up hurdle. The remarks are open questions on input bounds (name/instruction length, date plausibility, maximum interval) for the product owner. No fix is needed in this story.
+
+## Disposition (`/implement`, 2026-10-15)
+
+- Lengths of name and instruction, plausible start dates, very long intervals, duplicate names: product questions – put to the user at acceptance. Technical limits that keep due dates computable were added (interval ≤ 1200 months, start date 1900–2999; code review #1).
+- The outline's rejections are asserted at the decision (seam catalog: many cases); the form-level rejection is in the browser test without JavaScript – as intended.
