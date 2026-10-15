@@ -10,7 +10,13 @@ import {
   type Technology,
 } from "@/modules/collection";
 import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
-import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
+import {
+  changeMaintenancePlanCommand,
+  maintenancePlanVersion,
+  maintenanceRecords,
+  recordMaintenanceCommand,
+  type MaintenanceOutcome,
+} from "@/modules/maintenance";
 import { removeMaintenanceTaskForTest, withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -27,11 +33,13 @@ import { DueMaintenanceView } from "./due-maintenance";
 const isolated = isolatedTestDatabase("due_maintenance");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const models = new Map<string, string>();
 
 beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, anna, "Anna");
 });
 
 afterAll(() => isolated.close());
@@ -131,6 +139,31 @@ async function aMaintenanceTask(
     ),
   );
   return added.maintenanceTaskId;
+}
+
+/** A maintenance record made on that day, for that day (CMD-RecordMaintenance, ST-044). */
+async function recorded(
+  maintenanceTaskId: string,
+  machineId: string,
+  on: string,
+  {
+    outcome = "done",
+    note = "",
+    actor = tom,
+  }: { outcome?: MaintenanceOutcome; note?: string; actor?: typeof tom | typeof anna } = {},
+) {
+  return run(
+    executeCommand(
+      recordMaintenanceCommand,
+      { maintenanceTaskId, machineId, outcome, date: undefined, note },
+      { actor, db, clock: fixedClock(`${on}T10:00:00Z`), newId: randomUUID },
+    ),
+  );
+}
+
+/** The museum numbers the chosen maintenance task lists on that day. */
+async function listedOn(on: string, maintenanceTaskId: string) {
+  return (await page(on, { maintenanceTaskId })).data.chosen?.machines.map((machine) => machine.museumNumber) ?? [];
 }
 
 /** The page on that day – as a team member sees it, with the filter and the chosen maintenance task. */
@@ -349,5 +382,72 @@ describe("the due maintenance list", () => {
       ["A – due on two", 2, 0],
       ["C – due on two", 2, 0],
     ]);
+  });
+
+  describe("after maintenance is recorded (ST-044)", () => {
+    it("ST-044: Helper records maintenance as done", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+        intervalMonths: 1,
+        suitableForHelpers: true,
+      });
+      expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042"]);
+
+      await recorded(cleanGlass, lg042, "2026-06-10", { actor: anna });
+
+      expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+        expect.objectContaining({
+          maintenanceTaskId: cleanGlass,
+          outcome: "done",
+          date: "2026-06-10",
+          recordedBy: anna.teamMemberId,
+        }),
+      ]);
+      expect(await listedOn("2026-06-10", cleanGlass)).toEqual([]);
+      expect((await page("2026-06-10")).html).not.toContain("Clean glass");
+      // Next due one interval later.
+      expect(await listedOn("2026-07-09", cleanGlass)).toEqual([]);
+      expect((await page("2026-07-10", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+        expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-06-10", dueSince: "2026-07-10" }),
+      ]);
+    });
+
+    it("ST-044: Recording a task that is not due restarts the interval", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+      await recorded(cleanGlass, lg042, "2026-06-01");
+      expect(await listedOn("2026-06-15", cleanGlass)).toEqual([]);
+
+      await recorded(cleanGlass, lg042, "2026-06-15");
+
+      // Not due on 1 July any more, as the record of 1 June would have made it – but on 15 July.
+      expect(await listedOn("2026-07-01", cleanGlass)).toEqual([]);
+      expect(await listedOn("2026-07-14", cleanGlass)).toEqual([]);
+      expect((await page("2026-07-15", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+        expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-06-15", dueSince: "2026-07-15" }),
+      ]);
+    });
+
+    it("ST-044: Partially done does not reset the interval", async () => {
+      const lg042 = await aMachine("LG-042");
+      const switchTest = await aMaintenanceTask("Switch test (every switch)", { intervalMonths: 3 });
+      expect(await listedOn("2026-06-10", switchTest)).toEqual(["LG-042"]);
+
+      await recorded(switchTest, lg042, "2026-06-10", {
+        outcome: "partially-done",
+        note: "Switch matrix row 3 not tested – shooter lane blocked",
+      });
+
+      expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+        expect.objectContaining({
+          maintenanceTaskId: switchTest,
+          outcome: "partially-done",
+          note: "Switch matrix row 3 not tested – shooter lane blocked",
+        }),
+      ]);
+      expect((await page("2026-06-10", { maintenanceTaskId: switchTest })).data.chosen?.machines).toEqual([
+        expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
+      ]);
+    });
   });
 });
