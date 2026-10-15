@@ -137,7 +137,13 @@ export const teamMessages = {
     toTriage: "Meldungen zur Sichtung",
     waiting: (count: number, waitingLong: number) =>
       `${count === 1 ? "1 Meldung wartet" : `${count} Meldungen warten`} auf die Sichtung${
-        waitingLong > 0 ? ` – ${waitingLong} davon länger als 3 Tage` : ""
+        waitingLong === 0
+          ? ""
+          : waitingLong === count
+            ? count === 1
+              ? " – länger als 3 Tage"
+              : " – alle länger als 3 Tage"
+            : ` – ${waitingLong} davon länger als 3 Tage`
       }.`,
     openTriage: "Zur Sichtung",
     noneToTriage: "Keine Meldung wartet auf die Sichtung.",

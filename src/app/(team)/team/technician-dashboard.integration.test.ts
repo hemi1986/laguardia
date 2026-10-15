@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   changeMachineStatusCommand,
   createMachineModelCommand,
+  machineOverview,
   registerMachineCommand,
   type MachineStatus,
 } from "@/modules/collection";
@@ -155,6 +156,9 @@ describe("the technician dashboard", () => {
       ),
     );
 
+    expect((await machineOverview(db, { machineStatus: "playable" })).map((machine) => machine.museumNumber)).toEqual([
+      "LG-042",
+    ]);
     expect((await dashboard()).data.machinesToReturnToPlay).toEqual([]);
   });
 

@@ -12,7 +12,7 @@ const { team, terms } = teamMessages;
  * „Übersicht“ – where logging in lands (user, 2026-10-01): technicians see the technician dashboard (ST-048); helpers
  * keep the team start page until their dashboard follows with ST-049. Navigation and logout live in the shell (ST-076).
  */
-export default async function TeamStartPage() {
+export default async function DashboardPage() {
   const member = await requireTeamMember();
   if (member.role === "technician") {
     return (
