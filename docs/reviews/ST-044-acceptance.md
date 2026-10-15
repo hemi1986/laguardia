@@ -42,3 +42,11 @@ Date: 2026-10-15 · Tests run: `npm test -- -t "ST-044"` → 15 passed, 0 failed
 accepted with remarks
 
 Remarks (none meets the follow-up hurdle): (1) add the command-level retired-machine test; (2) the form is not verified at 360 px in a browser, which follows with the ST-047 browser test; (3) note length limit is a question.
+
+## Disposition (`/implement`, 2026-10-15)
+
+- **1 fixed** – a command-level test with a really retired machine (`record-maintenance-command.integration.test.ts`).
+- **2** – the browser test at 360 px follows with ST-047, as decided.
+- **3 (note length)** – a product question for the user at acceptance.
+- **4 (two simultaneous records)** – harmless for the interval, as noted; no change.
+- Found by the security scan and fixed: the due list page did not pass the signed-in team member, so „Wartung erfassen“ and the confirmation never appeared on the real page.

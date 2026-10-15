@@ -251,8 +251,10 @@ events:
   - id: EVT-MaintenanceRecorded
     aggregate: AGG-MaintenanceRecord
     name: Maintenance recorded
-    data: [Machine, Maintenance task, Outcome (done, partially done), Note, Recorded by, Recorded at]
-    description: Only "done" resets the interval.
+    data: [Machine, Maintenance task, Date (carried out), Outcome (done, partially done), Note, Recorded by, Recorded at]
+    description: >-
+      Only "done" resets the interval, counted from the date it was carried out (a calendar day, Europe/Berlin), not from
+      when it was recorded.
 
 commands:
   # --- Problem reports ---
@@ -467,8 +469,8 @@ commands:
       - The maintenance task applies to the machine's category and technology
       - Helpers can only record maintenance tasks suitable for helpers
       - The machine is not retired
-      - The date may be up to 7 days in the past (default today), never in the future
-      - Any machine the maintenance task applies to can be recorded, whether due or not; the interval restarts from the recorded date
+      - The date it was carried out (a calendar day, Europe/Berlin) may be up to 7 days in the past (default today), never in the future
+      - Any machine the maintenance task applies to can be recorded, whether due or not; the interval restarts from the date it was carried out
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect

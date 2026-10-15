@@ -352,14 +352,15 @@ stateDiagram-v2
 | | | Maintenance task | `MaintenanceTaskId` | yes | EVT-MaintenanceRecorded |
 | | | Outcome | `MaintenanceOutcome` | yes | EVT-MaintenanceRecorded |
 | | | Note | `Text` | no | EVT-MaintenanceRecorded |
+| | | Date (carried out) | `Date` | yes | EVT-MaintenanceRecorded – calendar day (Europe/Berlin) the maintenance was carried out; today by default, up to 7 days back, never in the future (CMD-RecordMaintenance) |
 | | | Recorded by | `TeamMemberId` | yes | EVT-MaintenanceRecorded |
-| | | Recorded at | `Timestamp` | yes | EVT-MaintenanceRecorded |
+| | | Recorded at | `Timestamp` | yes | EVT-MaintenanceRecorded – when it was recorded, independent of the date it was carried out |
 
 ### Derived: due status per machine and maintenance task (not stored)
 
 A maintenance task **applies** to a machine when the machine is registered and not retired and the task's restriction (if any) matches the machine model's machine category / technology. For each applicable pair:
 
-- *Last done* = latest *Recorded at* with outcome *done*, otherwise the task's *Start date* (`RM-DueMaintenance`).
+- *Last done* = latest *Date (carried out)* of a maintenance record with outcome *done* – but never earlier than the task's *Start date* or the machine's registration date (whichever is later); without such a record, that later date (`RM-DueMaintenance`; user decision 2026-10-15, ST-044).
 - *Due since* = *Last done* + *Interval*; never due while the machine is *Not on display* (status history).
 - *Overdue* once due for more than 25% of the interval.
 - A machine returning from *Not on display* follows the normal interval rule; only a task already due at the return counts as due since the return date, overdue counted from there. For a machine registered after a task's start date, or a task newly applying after a machine model correction, last done is the registration or correction date (HS-20, revised in the story review D5).
