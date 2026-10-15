@@ -60,8 +60,15 @@ export async function maintenancePlan(
     version: row?.version ?? 0,
     maintenanceTasks: tasks
       .filter((task) => !task.removedAt)
-      .map(({ removedAt: _removed, ...task }) => ({
-        ...task,
+      .map((task) => ({
+        id: task.id,
+        name: task.name,
+        instruction: task.instruction,
+        intervalMonths: task.intervalMonths,
+        suitableForHelpers: task.suitableForHelpers,
+        machineCategory: task.machineCategory,
+        technology: task.technology,
+        startDate: task.startDate,
         firstDue: maintenanceDates(task.startDate, task.intervalMonths).dueDate,
       })),
   };
