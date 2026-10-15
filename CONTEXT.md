@@ -221,7 +221,7 @@ _Avoid_: Schedule, checklist
 _UI (de)_: Wartungsplan
 
 **Due** / **Overdue**:
-A maintenance task is due on a machine once its interval has passed since it was last done there (or since the task's start date, or the machine's registration if later), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*.
+A maintenance task is due on a machine once its interval has passed since it was last done there (or since the task's start date, or the machine's registration if later), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*. After a machine returns to display, a task that was already due counts as due since the return, and overdue 25% of its interval after it.
 _Avoid_: Pending, late
 _UI (de)_: Fällig / Überfällig
 

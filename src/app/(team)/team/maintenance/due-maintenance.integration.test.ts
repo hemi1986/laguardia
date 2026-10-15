@@ -4,9 +4,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  changeMachineStatusCommand,
   createMachineModelCommand,
   registerMachineCommand,
   type MachineCategory,
+  type MachineStatus,
   type Technology,
 } from "@/modules/collection";
 import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
@@ -145,6 +147,17 @@ async function aMaintenanceTask(
     ),
   );
   return added.maintenanceTaskId;
+}
+
+/** The machine's status changed by Tom on that day – `version`: the machine's version before the change. */
+async function statusChanged(machineId: string, version: number, machineStatus: MachineStatus, on: string) {
+  await run(
+    executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version, machineStatus, reason: `Now ${machineStatus}` },
+      { actor: tom, db, clock: fixedClock(`${on}T08:00:00Z`), newId: randomUUID },
+    ),
+  );
 }
 
 /** A maintenance record made on that day, for that day (CMD-RecordMaintenance, ST-044). */
@@ -565,6 +578,71 @@ describe("the due maintenance list", () => {
       const byHelper = await formOf(anna, "2026-06-10").action(null, post({ ...typed, date: "", role: "technician" }));
       expect(byHelper?.error).toBe("maintenance-not-suitable-for-helpers");
       expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+    });
+  });
+
+  describe("machines not on display and returning to display (ST-056)", () => {
+    it("ST-056: Machines not on display are never due", async () => {
+      const lg030 = await aMachine("LG-030", { registeredAt: "2024-01-01T09:00:00Z" });
+      await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1, startDate: "2024-06-01" });
+      await statusChanged(lg030, 0, "not-on-display", "2024-07-01");
+
+      const { data, html } = await page("2026-06-10");
+
+      expect(data.tasks).toEqual([]);
+      expect(html).not.toContain("LG-030");
+      expect(html).toContain("Gerade ist keine Wartung fällig.");
+    });
+
+    it("ST-056: Task already due at the return counts from the return date", async () => {
+      const lg030 = await aMachine("LG-030", { registeredAt: "2025-01-01T09:00:00Z" });
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+        intervalMonths: 1,
+        startDate: "2025-05-01",
+      });
+      await statusChanged(lg030, 0, "not-on-display", "2025-06-01");
+
+      await statusChanged(lg030, 1, "playable", "2026-06-01");
+
+      expect((await page("2026-06-01", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+        expect.objectContaining({
+          museumNumber: "LG-030",
+          lastDone: "2025-05-01",
+          dueSince: "2026-06-01",
+          overdue: false,
+        }),
+      ]);
+      // 1 June + 25 % of the 30 days of June, rounded up: overdue from 9 June, not before.
+      expect((await page("2026-06-08", { maintenanceTaskId: cleanGlass })).data.chosen?.machines[0].overdue).toBe(
+        false,
+      );
+      expect((await page("2026-06-09", { maintenanceTaskId: cleanGlass })).data.chosen?.machines[0].overdue).toBe(true);
+    });
+
+    it("ST-056: Task not yet due at the return follows the normal rule", async () => {
+      const lg030 = await aMachine("LG-030", { registeredAt: "2025-01-01T09:00:00Z" });
+      const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2025-01-01" });
+      await statusChanged(lg030, 0, "not-on-display", "2025-12-01");
+      await recorded(wax, lg030, "2026-03-01");
+
+      await statusChanged(lg030, 1, "playable", "2026-06-01");
+
+      expect(await listedOn("2026-06-01", wax)).toEqual([]);
+      expect(await listedOn("2027-02-28", wax)).toEqual([]);
+      expect((await page("2027-03-01", { maintenanceTaskId: wax })).data.chosen?.machines).toEqual([
+        expect.objectContaining({ museumNumber: "LG-030", lastDone: "2026-03-01", dueSince: "2027-03-01" }),
+      ]);
+    });
+
+    it("ST-056: Going off display removes a due task from the list", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+      expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
+
+      await statusChanged(lg042, 0, "not-on-display", "2026-04-02");
+
+      expect(await listedOn("2026-04-02", cleanGlass)).toEqual([]);
+      expect((await page("2026-04-02")).data.tasks).toEqual([]);
     });
   });
 });

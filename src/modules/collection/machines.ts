@@ -363,7 +363,13 @@ export type MachineForMaintenance = {
   machineCategory: MachineCategory;
   technology: Technology | undefined;
   registeredAt: Date;
+  /** Its machine status now – a machine *Not on display* is never due (ST-056). */
+  machineStatus: MachineStatus;
+  /** When it last came back from *Not on display* – none if it never was (ST-056, HS-20). */
+  returnedToDisplayAt: Date | undefined;
 };
+
+const NOT_ON_DISPLAY: MachineStatus = "not-on-display";
 
 /** Every machine that is not retired, as maintenance needs it (ST-043) – retired machines are never due. */
 export async function machinesForMaintenance(db: Database): Promise<MachineForMaintenance[]> {
@@ -376,11 +382,21 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
       machineCategory: machineModel.machineCategory,
       technology: machineModel.technology,
       registeredAt: machine.registeredAt,
+      machineStatus: machine.machineStatus,
+      // The latest change of the status history away from Not on display – the status as a typed parameter.
+      returnedToDisplayAt: sql<Date | null>`(SELECT max(${machineStatusChange.changedAt}) FROM ${machineStatusChange}
+        WHERE ${machineStatusChange.machineId} = ${machine.id}
+          AND ${machineStatusChange.previousStatus} = ${NOT_ON_DISPLAY}
+          AND ${machineStatusChange.newStatus} <> ${NOT_ON_DISPLAY})`.mapWith(machineStatusChange.changedAt),
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(isNull(machine.retiredAt));
-  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+  return rows.map((row) => ({
+    ...row,
+    technology: row.technology ?? undefined,
+    returnedToDisplayAt: row.returnedToDisplayAt ?? undefined,
+  }));
 }
 
 /**
@@ -392,7 +408,14 @@ export async function machineForMaintenance(
   db: Database,
   machineId: string,
 ): Promise<
-  { id: string; machineCategory: MachineCategory; technology: Technology | undefined; retired: boolean } | undefined
+  | {
+      id: string;
+      machineCategory: MachineCategory;
+      technology: Technology | undefined;
+      location: string;
+      retired: boolean;
+    }
+  | undefined
 > {
   if (!isUuid(machineId)) return undefined;
   const [row] = await db
@@ -400,6 +423,7 @@ export async function machineForMaintenance(
       id: machine.id,
       machineCategory: machineModel.machineCategory,
       technology: machineModel.technology,
+      location: machine.location,
       retiredAt: machine.retiredAt,
     })
     .from(machine)
@@ -410,6 +434,7 @@ export async function machineForMaintenance(
       id: row.id,
       machineCategory: row.machineCategory,
       technology: row.technology ?? undefined,
+      location: row.location,
       retired: row.retiredAt !== null,
     }
   );
