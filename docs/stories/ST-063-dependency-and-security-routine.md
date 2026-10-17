@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-059]
 labels: [mvp, foundation]
-status: in-progress
+status: done
 ---
 
 ## Task
