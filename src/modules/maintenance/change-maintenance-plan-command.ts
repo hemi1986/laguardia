@@ -2,6 +2,7 @@ import { aggregateCommand } from "@/platform/command";
 import { changeMaintenancePlan, maintenancePlanActors } from "./change-maintenance-plan";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { maintenancePlans } from "./maintenance-plans";
+import { maintenanceEvents } from "./events";
 
 /**
  * CMD-ChangeMaintenancePlan through the command layer: a change of the one AGG-MaintenancePlan at the version the
@@ -14,11 +15,6 @@ export const changeMaintenancePlanCommand = aggregateCommand({
   store: maintenancePlans,
   target: (input) => ({ id: MAINTENANCE_PLAN_ID, version: input.version }),
   decide: changeMaintenancePlan,
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-MaintenancePlan", id: MAINTENANCE_PLAN_ID },
-    machineId: null,
-    data: { maintenanceTaskId: event.maintenanceTaskId, change: event.change },
-  }),
+  journal: maintenanceEvents.journal,
   result: (_plan, events) => ({ maintenanceTaskId: events[0].maintenanceTaskId }),
 });

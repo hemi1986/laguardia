@@ -2,6 +2,7 @@ import { changeMachineStatusCommand } from "@/modules/collection";
 import { aggregateCommand, run } from "@/platform/command";
 import { problemReports, reportingFacts } from "./problem-reports";
 import { recordDefect, recordingActors, type DefectRecorded, type RecordDefectInput } from "./record-defect";
+import { repairEvents } from "./events";
 
 /**
  * CMD-RecordDefect through the command layer: a change of AGG-ProblemReport at the version the technician saw that
@@ -10,20 +11,6 @@ import { recordDefect, recordingActors, type DefectRecorded, type RecordDefectIn
  * (`context.run`, HS-3) – its rejection rejects the defect too. The status history's reason is the defect's title.
  */
 const NO_VERSION_SEEN = -1;
-
-/**
- * EVT-DefectRecorded in the journal – for every command that records a defect (CMD-RecordDefect, and CMD-ReportProblem
- * with that triage outcome in the same step, ST-023). References and non-personal facts only: the title is typed text
- * and lives in the defect (ST-003).
- */
-export function journalDefectRecorded(event: DefectRecorded) {
-  return {
-    type: event.type,
-    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
-    machineId: event.machineId,
-    data: { defectId: event.defectId, priority: event.priority, suitableForHelpers: event.suitableForHelpers },
-  } as const;
-}
 
 /**
  * The stricter machine status chosen in the same step as recording a defect (HS-3): Collection's
@@ -53,7 +40,7 @@ export const recordDefectCommand = aggregateCommand({
   target: (input) => ({ id: input.problemReportId, version: input.version }),
   facts: (tx, _input, report) => reportingFacts(tx, report),
   decide: recordDefect,
-  journal: journalDefectRecorded,
+  journal: repairEvents.journal,
   runs: (_report, events, input) => events.flatMap((event) => statusChangeWithDefect(event, input)),
   result: (report) => ({ defectId: report.triage?.defectId ?? "" }),
 });

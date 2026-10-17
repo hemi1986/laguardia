@@ -1,6 +1,7 @@
-import { journalOf, type Database, type Role, type TeamMemberId } from "@/platform/command";
+import { readJournal, type Database, type Role, type TeamMemberId } from "@/platform/command";
 import { assignRefusal, claimRefusal } from "./claim-defect";
 import type { Defect } from "./defect";
+import { repairEvents } from "./events";
 import { logWorkRefusal, type LogWorkError } from "./log-work";
 import { prioritizeRefusal } from "./prioritize-defect";
 import { releaseRefusal, type ReleaseClaimError } from "./release-claim";
@@ -45,13 +46,13 @@ export function defectActionRefusals(
   };
 }
 
-const actionOfEvent: Record<string, DefectAction> = {
+const actionOfEvent = {
   "EVT-DefectClaimed": "claim",
   "EVT-DefectClaimReleased": "release",
   "EVT-WorkLogged": "log-work",
   "EVT-DefectResolved": "resolve",
   "EVT-DefectPrioritized": "prioritize",
-};
+} as const satisfies Partial<Record<keyof typeof repairEvents.entries, DefectAction>>;
 
 /**
  * What this team member just did to the defect – the action of the defect's latest event, if it is theirs; undefined
@@ -65,16 +66,17 @@ export async function lastDefectActionBy(
   defectId: string,
   teamMemberId: string,
 ): Promise<{ action: DefectAction; takenOverFrom: string | undefined; assignedTo: string | undefined } | undefined> {
-  const latest = (await journalOf(db, { aggregateId: defectId })).at(-1);
+  const types = Object.keys(actionOfEvent) as (keyof typeof actionOfEvent)[];
+  const latest = (await readJournal(db, repairEvents, { aggregateIds: [defectId] })).at(-1);
   if (!latest || latest.actor.kind !== "team-member" || latest.actor.teamMemberId !== teamMemberId) return undefined;
-  const event = actionOfEvent[latest.type];
-  if (!event) return undefined;
-  const reference = (name: string) => (typeof latest.data[name] === "string" ? latest.data[name] : undefined);
-  if (event !== "claim") return { action: event, takenOverFrom: undefined, assignedTo: undefined };
-  const assigned = reference("assignedBy") !== undefined;
+  if (!types.some((type) => type === latest.type)) return undefined;
+  if (latest.type !== "EVT-DefectClaimed") {
+    return { action: actionOfEvent[latest.type as keyof typeof actionOfEvent], takenOverFrom: undefined, assignedTo: undefined };
+  }
+  const assigned = latest.data.assignedBy !== undefined;
   return {
     action: assigned ? "assign" : "claim",
-    takenOverFrom: reference("takenOverFrom"),
-    assignedTo: assigned ? reference("claimedBy") : undefined,
+    takenOverFrom: latest.data.takenOverFrom,
+    assignedTo: assigned ? latest.data.claimedBy : undefined,
   };
 }

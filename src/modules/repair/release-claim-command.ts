@@ -1,6 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { defects } from "./defects";
 import { releaseClaim, releasingActors } from "./release-claim";
+import { repairEvents } from "./events";
 
 /**
  * CMD-ReleaseClaim through the command layer: a change of AGG-Defect at the version the team member saw, emits
@@ -14,11 +15,6 @@ export const releaseClaimCommand = aggregateCommand({
   store: defects,
   target: (input) => ({ id: input.defectId, version: input.version }),
   decide: releaseClaim,
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Defect", id: event.defectId },
-    machineId: event.machineId,
-    data: {},
-  }),
+  journal: repairEvents.journal,
   result: (defect) => ({ defectId: defect.id }),
 });

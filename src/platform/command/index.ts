@@ -31,6 +31,13 @@ export {
 } from "./aggregate";
 export { history, type History } from "./history";
 export { entities, type Entities } from "./entities";
+export {
+  eventCatalogue,
+  readJournal,
+  type CatalogueEntry,
+  type EventCatalogue,
+  type JournalValue,
+} from "./event-catalogue";
 
 export type Role = "helper" | "technician";
 
@@ -216,14 +223,19 @@ export async function journalOf(
         : eq(eventJournal.machineId, filter.machineId),
     )
     .orderBy(asc(eventJournal.position));
-  return rows.map((row) => ({
+  return rows.map(journalEntryOf);
+}
+
+/** A stored journal row as an entry – for `journalOf` and the typed reads of an event catalogue. */
+export function journalEntryOf(row: typeof eventJournal.$inferSelect): JournalEntry {
+  return {
     type: row.type,
     occurredAt: row.occurredAt,
     actor: journalActor(row),
     aggregate: { type: row.aggregateType, id: row.aggregateId },
     machineId: row.machineId,
     data: row.data,
-  }));
+  };
 }
 
 function journalActor(row: typeof eventJournal.$inferSelect): Actor {

@@ -1,6 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { defects } from "./defects";
 import { prioritizeDefect, prioritizingActors } from "./prioritize-defect";
+import { repairEvents } from "./events";
 
 /**
  * CMD-PrioritizeDefect through the command layer: a change of AGG-Defect at the version the technician saw, emits
@@ -13,11 +14,6 @@ export const prioritizeDefectCommand = aggregateCommand({
   store: defects,
   target: (input) => ({ id: input.defectId, version: input.version }),
   decide: prioritizeDefect,
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Defect", id: event.defectId },
-    machineId: event.machineId,
-    data: { priority: event.priority },
-  }),
+  journal: repairEvents.journal,
   result: (defect) => ({ defectId: defect.id }),
 });
