@@ -9,7 +9,7 @@ risk: low
 events: [EVT-DefectPutOnHold, EVT-DefectResumed]
 depends_on: [ST-024, ST-028, ST-033]
 labels: [mvp, defect-work, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
