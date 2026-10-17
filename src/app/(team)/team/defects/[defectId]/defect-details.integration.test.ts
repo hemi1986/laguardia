@@ -331,7 +331,7 @@ describe("a defect's own page", () => {
       const defectId = await aDefect();
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.offered).toEqual(["claim", "log-work", "resolve", "assign", "prioritize"]);
+      expect(toms.offered).toEqual(["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize"]);
       expect(toms.html).toMatch(/<details[^>]*><summary[^>]*>Verwalten/);
       expect(toms.html).toContain(`href="/team/defects/${defectId}/zuweisen"`);
       const annas = await seenBy(defectId, asAnna);
@@ -354,13 +354,13 @@ describe("a defect's own page", () => {
       expect(toms.html).toContain("Übernommen von Anna");
       expect(toms.html).toContain("Von dir zugewiesen");
       // A technician may take it over, assign it to someone else, or release Anna's claim.
-      expect(toms.offered).toEqual(["claim", "release", "log-work", "resolve", "assign", "prioritize"]);
+      expect(toms.offered).toEqual(["claim", "release", "log-work", "put-on-hold", "resolve", "assign", "prioritize"]);
       const annas = await seenBy(defectId, asAnna, "assign");
       expect(annas.html).toContain("Von dir übernommen");
       expect(annas.html).toContain("Zugewiesen von Tom");
       expect(annas.html).not.toContain("Du hast");
       // Her own claim: she may release it, not claim it again.
-      expect(annas.offered).toEqual(["release", "log-work", "resolve"]);
+      expect(annas.offered).toEqual(["release", "log-work", "put-on-hold", "resolve"]);
       // Another helper may take it over, but not release it.
       expect((await seenBy(defectId, asBen)).offered).toEqual(["claim", "log-work", "resolve"]);
 
@@ -600,9 +600,9 @@ describe("a defect's own page", () => {
       const defectId = await aDefect(false);
 
       const toms = await seenBy(defectId, asTom);
-      // A technician is also offered assigning it (ST-026) and changing its priority (ST-027).
+      // A technician is also offered assigning it (ST-026) and changing its priority (ST-027), and putting it on hold (ST-029).
       expect(toms.details).toMatchObject({
-        offered: ["claim", "log-work", "resolve", "assign", "prioritize"],
+        offered: ["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize"],
         resolution: undefined,
       });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
