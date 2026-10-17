@@ -5,7 +5,14 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { claimDefectCommand, defectDetails, logWorkCommand, openDefects, resolveDefectCommand } from ".";
+import {
+  claimDefectCommand,
+  defectDetails,
+  logWorkCommand,
+  openDefects,
+  putDefectOnHoldCommand,
+  resolveDefectCommand,
+} from ".";
 import { tamperWithWorkLogForTest } from "./command-probes.test-support";
 import { anOpenDefectIn } from "@/test-support/defects";
 
@@ -186,5 +193,24 @@ describe("CMD-LogWork", () => {
       byTom,
       expect.objectContaining({ whatWasDone: "Adjusted EOS switch", loggedBy: anna.teamMemberId }),
     ]);
+  });
+
+  it("ST-029: Logging work does not resume", async () => {
+    const { defectId } = await anOpenDefect("Display flickers", true);
+    const held = await executeCommand(
+      putDefectOnHoldCommand,
+      { defectId, version: 0, reason: "waiting-for-part" },
+      { actor: tom, db, clock: fixedClock("2026-10-12T09:00:00Z"), newId: randomUUID },
+    );
+    if (!held.ok) throw new Error(`not on hold: ${held.error}`);
+
+    expect(await logWork(defectId, 1, { whatWasDone: "Checked the connector while waiting" }, anna)).toEqual({
+      ok: true,
+      result: { defectId },
+    });
+
+    const details = await defectDetails(db, defectId);
+    expect(details?.workLog).toMatchObject([{ whatWasDone: "Checked the connector while waiting" }]);
+    expect(details?.hold).toMatchObject({ reason: "waiting-for-part" });
   });
 });

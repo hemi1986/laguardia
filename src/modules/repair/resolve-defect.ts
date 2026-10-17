@@ -51,12 +51,13 @@ export function resolveDefect(
   if (refusal) return { ok: false, error: refusal };
   const closingNote = input.closingNote.trim();
   if (!closingNote) return { ok: false, error: "closing-note-required" };
-  // Resolving ends the claim (AGG-Defect invariant); a hold ends here too once there are holds (ST-029).
+  // Resolving ends the claim and any hold (AGG-Defect invariant, ST-029).
   return {
     ok: true,
     state: {
       ...defect,
       claim: undefined,
+      hold: undefined,
       state: "resolved",
       resolutions: [
         ...defect.resolutions,
