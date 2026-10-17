@@ -3,7 +3,7 @@ id: ST-062
 title: Backup and restore of database and object storage
 type: tech-task
 context: BC-Repair
-priority: must
+priority: wont
 size: S
 risk: medium
 events: []
@@ -31,3 +31,6 @@ Make sure the repair history, files and photos survive a mistake or a provider f
 
 ## Open Questions
 - none
+
+## Notes
+- **Deferred on 2026-10-17 (user decision): priority `wont` for now.** The domain stories are finished first; hosting, operations and go-live (ST-065, ST-061, ST-062, ST-042) are evaluated together at the end. Until then the application runs on the Hobby account with test data only – no real visitor data (ADR 0006).
