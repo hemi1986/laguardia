@@ -1,5 +1,12 @@
 import { machineLabels } from "@/modules/collection";
-import { defectActions, defectDetails, lastDefectActionBy, type DefectAction, type Priority } from "@/modules/repair";
+import {
+  defectActions,
+  defectDetails,
+  lastDefectActionBy,
+  type DefectAction,
+  type HoldReason,
+  type Priority,
+} from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -37,6 +44,8 @@ export type DefectDetailsData = {
   version: number;
   /** Its claimant, if any (ST-025). */
   claimant: ShownClaimant | undefined;
+  /** Why it waits and the note to it, if it is on hold (ST-029). */
+  hold: { reason: HoldReason; note: string | undefined } | undefined;
   /** The technician who assigned it to its claimant, if one did (ST-026) – by name, and whether it is the viewer. */
   assignedBy: ShownClaimant | undefined;
   /** What the team member looking at the page can do to it, in the order the page offers it (G11, G21). */
@@ -119,6 +128,7 @@ export async function loadDefectDetails(
     id: defect.id,
     version: defect.version,
     claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
+    hold: defect.hold && { reason: defect.hold.reason, note: defect.hold.note },
     assignedBy: shownClaimant(assignedBy, names, viewer),
     // The commands' own rules, asked so nobody is shown a control that can only be rejected (G11).
     offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),

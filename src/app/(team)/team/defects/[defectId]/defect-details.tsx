@@ -6,7 +6,7 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
 import { claimantName, claimantText } from "../../claimant";
-import type { ClaimDefectState, ReleaseClaimState } from "./actions";
+import type { ClaimDefectState, ReleaseClaimState, ResumeDefectState } from "./actions";
 import { DefectButtonForm } from "./defect-button-form";
 import { ManageDefect } from "./manage-defect";
 import type { DefectDetailsData } from "./defect-details-data";
@@ -15,24 +15,27 @@ import { ProblemReportPhoto } from "../../problem-report-photo";
 const { defects: texts, recordDefect, terms } = teamMessages;
 
 /** The actions with a form page of their own (G21): where it is and what its button says (G14). */
-const formPages: Record<Exclude<DefectAction, "claim" | "release">, { path: string; label: string }> = {
+const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, { path: string; label: string }> = {
   "log-work": { path: "arbeitsschritt", label: texts.logWork },
+  "put-on-hold": { path: "pausieren", label: texts.putOnHold },
   resolve: { path: "beheben", label: texts.resolve },
   assign: { path: "zuweisen", label: texts.assign },
   prioritize: { path: "prioritaet", label: texts.prioritize },
 };
 
 /** The work on a defect, offered as buttons under its header – the rest is behind „Verwalten“ (G22). */
-const work = ["claim", "release", "log-work", "resolve"] as const satisfies readonly DefectAction[];
+const work = ["claim", "release", "log-work", "put-on-hold", "resume", "resolve"] as const satisfies readonly DefectAction[];
 
 /** What the page says to who just did it (G3) – about the defect as it is now. */
 const confirmations: Record<
   DefectAction,
-  (title: string, { assignedTo, priority }: { assignedTo: string; priority: string }) => string
+  (title: string, { assignedTo, priority, holdReason }: { assignedTo: string; priority: string; holdReason: string }) => string
 > = {
   claim: texts.claimed,
   release: texts.released,
   "log-work": texts.workLogged,
+  "put-on-hold": (title, { holdReason }) => texts.putOnHoldDone(title, holdReason),
+  resume: texts.resumed,
   resolve: texts.resolved,
   assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
   prioritize: (title, { priority }) => texts.prioritized(title, priority),
@@ -51,12 +54,15 @@ export function DefectDetailsView({
   details,
   claimAction,
   releaseAction,
+  resumeAction,
 }: {
   details: DefectDetailsData | undefined;
   /** CMD-ClaimDefect for this defect (ST-025) – none where the page is only looked at (e.g. a test of its data). */
   claimAction?: (previous: ClaimDefectState, formData: FormData) => Promise<ClaimDefectState>;
   /** CMD-ReleaseClaim for this defect (ST-026) – none where the page is only looked at. */
   releaseAction?: (previous: ReleaseClaimState, formData: FormData) => Promise<ReleaseClaimState>;
+  /** CMD-ResumeDefect for this defect (ST-029) – one tap, in the place of „Pausieren“; none where the page is only looked at. */
+  resumeAction?: (previous: ResumeDefectState, formData: FormData) => Promise<ResumeDefectState>;
 }) {
   if (!details) {
     return (
@@ -76,6 +82,7 @@ export function DefectDetailsView({
           {confirmations[details.confirmed.action](details.title, {
             assignedTo: details.confirmed.assignedTo ?? "",
             priority: recordDefect.priorities[details.priority],
+            holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
           })}
           {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
         </Confirmation>
@@ -96,6 +103,12 @@ export function DefectDetailsView({
           {texts.recordedAt(formatDateTime(details.recordedAt))}
           {details.openDays !== undefined && ` · ${texts.openFor(details.openDays)}`}
         </p>
+        {details.hold && (
+          <p className="text-sm font-medium">
+            {texts.onHold(texts.holdReasons[details.hold.reason])}
+            {details.hold.note && ` · ${details.hold.note}`}
+          </p>
+        )}
         {details.claimant && (
           <p className="text-sm">
             {claimantText(details.claimant)}
@@ -130,7 +143,18 @@ export function DefectDetailsView({
                       variant="outline"
                     />
                   )
-                : work.some((workAction) => workAction === action) &&
+                : action === "resume"
+                  ? resumeAction && (
+                      <DefectButtonForm
+                        key={action}
+                        action={resumeAction}
+                        version={details.version}
+                        label={texts.resume}
+                        offered={details.offered.includes(action)}
+                        variant="outline"
+                      />
+                    )
+                  : work.some((workAction) => workAction === action) &&
                   details.offered.includes(action) && (
                     <Link
                       key={action}

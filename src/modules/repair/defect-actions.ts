@@ -4,8 +4,10 @@ import type { Defect } from "./defect";
 import { repairEvents } from "./events";
 import { logWorkRefusal, type LogWorkError } from "./log-work";
 import { prioritizeRefusal } from "./prioritize-defect";
+import { putOnHoldRefusal } from "./put-defect-on-hold";
 import { releaseRefusal, type ReleaseClaimError } from "./release-claim";
 import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
+import { resumeRefusal } from "./resume-defect";
 
 /**
  * What a team member can do to a defect – one entry per action on AGG-Defect, in the order its page offers them
@@ -13,7 +15,16 @@ import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
  * ST-026; CMD-ClaimDefect for someone else) and changing its priority (ST-027). A new command on a defect adds its action here, its refusal below, its event to `actionOfEvent` and its journal projection to `repairEvents` (`./events.ts`); the
  * defect's page and the form pages read the answer and carry no rule of their own (G11).
  */
-export const defectActions = ["claim", "release", "log-work", "resolve", "assign", "prioritize"] as const;
+export const defectActions = [
+  "claim",
+  "release",
+  "log-work",
+  "put-on-hold",
+  "resume",
+  "resolve",
+  "assign",
+  "prioritize",
+] as const;
 export type DefectAction = (typeof defectActions)[number];
 
 /** Per action: why the command would refuse this team member on the defect as it is – undefined when it would not. */
@@ -21,6 +32,9 @@ export type DefectActionRefusals = {
   claim: ReturnType<typeof claimRefusal>;
   release: ReleaseClaimError | undefined;
   "log-work": Exclude<LogWorkError, "what-was-done-required"> | undefined;
+  /** Whether they may put it on hold at all – with which reason is the form's choice (ST-029). */
+  "put-on-hold": ReturnType<typeof putOnHoldRefusal>;
+  resume: ReturnType<typeof resumeRefusal>;
   resolve: Exclude<ResolveDefectError, "closing-note-required"> | undefined;
   /** Whether they may assign it at all – whom to is asked per team member (`assigneeRefusal`). */
   assign: ReturnType<typeof assignRefusal>;
@@ -33,13 +47,15 @@ export type DefectTeamMember = { teamMemberId: TeamMemberId; role: Role };
 
 /** Each command's own rule, asked for one team member – the decisions apply the same functions. */
 export function defectActionRefusals(
-  defect: Pick<Defect, "state" | "suitableForHelpers" | "claim">,
+  defect: Pick<Defect, "state" | "suitableForHelpers" | "claim" | "hold">,
   teamMember: DefectTeamMember,
 ): DefectActionRefusals {
   return {
     claim: claimRefusal(defect, teamMember),
     release: releaseRefusal(defect, teamMember),
     "log-work": logWorkRefusal(defect),
+    "put-on-hold": putOnHoldRefusal(defect, teamMember),
+    resume: resumeRefusal(defect, teamMember),
     resolve: resolveRefusal(defect, teamMember),
     assign: assignRefusal(defect, teamMember),
     prioritize: prioritizeRefusal(defect, teamMember),
@@ -50,6 +66,8 @@ const actionOfEvent = {
   "EVT-DefectClaimed": "claim",
   "EVT-DefectClaimReleased": "release",
   "EVT-WorkLogged": "log-work",
+  "EVT-DefectPutOnHold": "put-on-hold",
+  "EVT-DefectResumed": "resume",
   "EVT-DefectResolved": "resolve",
   "EVT-DefectPrioritized": "prioritize",
 } as const satisfies Partial<Record<keyof typeof repairEvents.entries, DefectAction>>;
