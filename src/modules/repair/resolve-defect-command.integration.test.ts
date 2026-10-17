@@ -6,7 +6,14 @@ import { testDatabase } from "@/test-support/database";
 import { machineForReporting, type MachineStatus } from "@/modules/collection";
 import { journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { claimDefectCommand, defectDetails, openDefects, openDefectTitles, resolveDefectCommand } from ".";
+import {
+  claimDefectCommand,
+  defectDetails,
+  openDefects,
+  openDefectTitles,
+  putDefectOnHoldCommand,
+  resolveDefectCommand,
+} from ".";
 import { anOpenDefectIn } from "@/test-support/defects";
 
 /** CMD-ResolveDefect (ST-028) through the command layer: a team member resolves a defect with a closing note. */
@@ -160,5 +167,19 @@ describe("CMD-ResolveDefect", () => {
 
     // The state is the reason that explains more – it comes first.
     expect(await resolve(defectId, 1, "Cable plugged in again", anna)).toEqual({ ok: false, error: "defect-not-open" });
+  });
+
+  it("ST-029: Resolving ends the hold", async () => {
+    const { defectId } = await anOpenDefect("Display flickers");
+    const held = await executeCommand(
+      putDefectOnHoldCommand,
+      { defectId, version: 0, reason: "waiting-for-part" },
+      { actor: tom, db, clock: fixedClock("2026-10-12T09:00:00Z"), newId: randomUUID },
+    );
+    if (!held.ok) throw new Error(`not on hold: ${held.error}`);
+
+    expect(await resolve(defectId, 1, "Flyback replaced", tom)).toEqual({ ok: true, result: { defectId } });
+
+    expect(await defectDetails(db, defectId)).toMatchObject({ state: "resolved", hold: undefined });
   });
 });

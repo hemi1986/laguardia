@@ -15,6 +15,19 @@ export type DefectState = (typeof defectStates)[number];
 export type Claim = { claimedBy: TeamMemberId; claimedAt: Date; assignedBy?: TeamMemberId };
 
 /**
+ * Why a defect waits (CONTEXT.md: On hold, ST-029), in the order a choice offers them – the glossary's order, none
+ * preselected (G20).
+ */
+export const holdReasons = ["waiting-for-part", "waiting-for-technician", "other"] as const;
+export type HoldReason = (typeof holdReasons)[number];
+
+/**
+ * The Hold value object of AGG-Defect (data model, ST-029): why an open defect cannot progress for now, an optional
+ * note, and since when. A defect on hold is still open.
+ */
+export type Hold = { reason: HoldReason; note: string | undefined; heldAt: Date };
+
+/**
  * The Resolution entity of AGG-Defect (data model, ST-028): how a defect ended – one per resolve, kept for the repair
  * history. An entry is stored once and never updated (Q13) – a reopening is an entry of its own (data model, ST-030),
  * never a change of the resolution it follows.
@@ -34,7 +47,7 @@ export type WorkLogEntry = {
   loggedAt: Date;
 };
 
-/** AGG-Defect – current state (docs/architecture/data-model.md); its hold follows with its story. */
+/** AGG-Defect – current state (docs/architecture/data-model.md). */
 export type Defect = {
   id: string;
   machineId: string;
@@ -47,6 +60,8 @@ export type Defect = {
   state: DefectState;
   /** None while nobody has claimed it – a defect has at most one claimant. */
   claim?: Claim;
+  /** None unless it is on hold – only an open defect can be (ST-029). */
+  hold?: Hold;
   /** The oldest first – only added to, never changed or removed (Q13). */
   workLog: WorkLogEntry[];
   /** One per resolve, the oldest first – only added to, never changed (Q13). */

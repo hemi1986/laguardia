@@ -10,6 +10,7 @@ import {
   linkProblemReportToDefectCommand,
   logWorkCommand,
   prioritizeDefectCommand,
+  putDefectOnHoldCommand,
   recordDefectCommand,
   reportProblemCommand,
   type Priority,
@@ -179,6 +180,38 @@ describe("the open defects list", () => {
     const html = await page({ suitableForHelpers: true });
     expect(html).toContain("Rubber cracked");
     expect(html).not.toContain("Display flickers");
+  });
+
+  it('ST-029: Filter "on hold"', async () => {
+    const lg042 = await registered("LG-042");
+    const flickers = await anOpenDefect(lg042, "Display flickers");
+    await anOpenDefect(lg042, "Left flipper weak");
+    const held = await executeCommand(
+      putDefectOnHoldCommand,
+      { defectId: flickers, version: 0, reason: "waiting-for-part", note: "Ordered new flyback" },
+      { actor: tom, db, clock: fixedClock(daysBefore(0)), newId: randomUUID },
+    );
+    if (!held.ok) throw new Error(held.error);
+
+    expect(openDefectsFilterOf({ held: "1" })).toEqual({ onHold: true });
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), { onHold: true });
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Display flickers"]);
+    const html = await page({ onHold: true });
+    // The list says it is on hold and why – not the note (ST-029 scenario 1).
+    expect(html).toContain("Pausiert – Wartet auf Ersatzteil");
+    expect(html).not.toContain("Ordered new flyback");
+    expect(html).not.toContain("Left flipper weak");
+  });
+
+  it('ST-029: Filter "on hold" without matches says so', async () => {
+    const lg042 = await registered("LG-042");
+    await anOpenDefect(lg042, "Left flipper weak");
+
+    const { entries } = await loadOpenDefects(db, fixedClock(NOW), { onHold: true });
+
+    expect(entries).toEqual([]);
+    expect(await page({ onHold: true })).toContain("Kein offener Defekt ist pausiert.");
   });
 
   it("ST-021: Filter by machine", async () => {

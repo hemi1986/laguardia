@@ -29,6 +29,7 @@ export function OpenDefectEntry({ entry, withMachine = true }: { entry: OpenDefe
       <p className="text-muted-foreground">
         {formatDateTime(entry.openSince)} · {texts.openFor(entry.openDays)}
       </p>
+      {entry.holdReason && <p className="font-medium">{texts.onHold(texts.holdReasons[entry.holdReason])}</p>}
       {entry.claimant && <p className="text-muted-foreground">{claimantText(entry.claimant)}</p>}
       {entry.lastWorkLogEntry && (
         <p className="text-muted-foreground">

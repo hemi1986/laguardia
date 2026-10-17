@@ -3,11 +3,13 @@ import type { DefectClaimed } from "./claim-defect";
 import type { ProblemReportDismissed } from "./dismiss-problem-report";
 import type { ProblemReportLinkedToDefect } from "./link-problem-report-to-defect";
 import type { WorkLogged } from "./log-work";
+import type { DefectPutOnHold } from "./put-defect-on-hold";
 import type { DefectPrioritized } from "./prioritize-defect";
 import type { DefectRecorded } from "./record-defect";
 import type { DefectClaimReleased } from "./release-claim";
 import type { ProblemReported } from "./report-problem";
 import type { DefectResolved } from "./resolve-defect";
+import type { DefectResumed } from "./resume-defect";
 import type { ProblemResolvedOnTheSpot } from "./resolve-problem-on-the-spot";
 
 /**
@@ -92,6 +94,19 @@ export const repairEvents = eventCatalogue({
       machineId: event.machineId,
       data: { resolvedBy: event.resolvedBy },
     }),
+  },
+  "EVT-DefectPutOnHold": {
+    aggregate: "AGG-Defect",
+    // The reason is a fact from a fixed list; the note is typed text and stays in the defect.
+    project: (event: DefectPutOnHold) => ({
+      aggregateId: event.defectId,
+      machineId: event.machineId,
+      data: { reason: event.reason },
+    }),
+  },
+  "EVT-DefectResumed": {
+    aggregate: "AGG-Defect",
+    project: (event: DefectResumed) => ({ aggregateId: event.defectId, machineId: event.machineId, data: {} }),
   },
   "EVT-DefectPrioritized": {
     aggregate: "AGG-Defect",

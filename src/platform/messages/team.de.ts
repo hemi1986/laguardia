@@ -372,6 +372,16 @@ export const teamMessages = {
     /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
     onlyClaimedByMe: "Nur von mir übernommene",
     noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
+    /** A defect on hold (ST-029, CONTEXT.md: On hold): the reasons in glossary order, and how a defect says it waits. */
+    holdReasons: {
+      "waiting-for-part": "Wartet auf Ersatzteil",
+      "waiting-for-technician": "Wartet auf Techniker:in",
+      other: "Anderer Grund",
+    },
+    onHold: (reason: string) => `Pausiert – ${reason}`,
+    /** The filter "on hold" of the open defects list, and what it says when it matches nothing (G7). */
+    onlyOnHold: "Nur pausierte",
+    noneOnHold: "Kein offener Defekt ist pausiert.",
     /**
      * Releasing a claim and assigning a defect (ST-026, G22; CONTEXT.md: Release = „Abgeben“ / „Übernahme aufheben“,
      * Assign = „Zuweisen“): „Abgeben“ stands where „Übernehmen“ stood; the rest is behind the fold „Verwalten“.
@@ -400,6 +410,18 @@ export const teamMessages = {
     resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,
     resolveSubmit: "Als behoben eintragen",
     backToDefect: "Zurück zum Defekt",
+    /**
+     * Putting a defect on hold (ST-029, G22): „Pausieren“ in the work group leads to its form page; the confirmation
+     * names the reason. „Fortsetzen“ stands in its place while the defect is on hold – one tap.
+     */
+    putOnHold: "Pausieren",
+    putOnHoldTitle: (museumNumber: string) => `Defekt pausieren · ${museumNumber}`,
+    holdReason: "Grund",
+    holdReasonChoose: "Bitte wählen",
+    holdNote: "Notiz (optional)",
+    putOnHoldDone: (title: string, reason: string) => `„${title}“ ist pausiert – ${reason}.`,
+    resume: "Fortsetzen",
+    resumed: (title: string) => `„${title}“ geht weiter.`,
     /** How a resolved defect ended, on its page – and the confirmation for who resolved it (G3). */
     resolvedBy: (name: string, dateTime: string) => `Behoben von ${name} am ${dateTime}`,
     resolved: (title: string) => `Du hast „${title}“ behoben.`,
@@ -547,6 +569,11 @@ export const teamMessages = {
     "priority-unchanged": "Der Defekt hat diese Priorität schon. Bitte eine andere wählen.",
     /** Releasing a claim (ST-026). */
     "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
+    /** Putting a defect on hold and resuming it (ST-029). */
+    "defect-on-hold": "Dieser Defekt ist schon pausiert.",
+    "defect-not-on-hold": "Dieser Defekt ist nicht pausiert.",
+    "not-claimant": "Das dürfen nur Techniker:innen und wer den Defekt übernommen hat.",
+    "hold-reason-required": "Bitte einen Grund wählen.",
     "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",
     "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
     "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",

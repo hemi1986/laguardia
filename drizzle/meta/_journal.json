@@ -148,6 +148,13 @@
       "when": 1792091756604,
       "tag": "0020_maintenance_record",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792272124241,
+      "tag": "0021_defect_hold",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { claimDefectCommand, releaseClaimCommand } from "@/modules/repair";
+import { claimDefectCommand, releaseClaimCommand, resumeDefectCommand } from "@/modules/repair";
 import { formAction } from "@/app/_actions/form-action";
 import type { CommandError } from "@/platform/command";
 import { requireTeamMember } from "../../../../team-session";
@@ -11,6 +11,7 @@ import { defectVersionFields, defectVersionInput } from "./defect-version-input"
 
 export type ClaimDefectState = DefectButtonState<CommandError<typeof claimDefectCommand>>;
 export type ReleaseClaimState = DefectButtonState<CommandError<typeof releaseClaimCommand>>;
+export type ResumeDefectState = DefectButtonState<CommandError<typeof resumeDefectCommand>>;
 
 /**
  * CMD-ClaimDefect from the defect's page (ST-025) – through the Server Action runner (ST-073), as the signed-in team
@@ -49,6 +50,23 @@ export async function releaseClaimAction(
     onSuccess: async (released) => {
       revalidatePath("/team/defects");
       redirect(`/team/defects/${released.defectId}?done=release`);
+    },
+  })(previous, formData);
+}
+
+/** CMD-ResumeDefect from the defect's page (ST-029) – one tap („Fortsetzen“); who may resume which defect is the command's. */
+export async function resumeDefectAction(
+  defectId: string,
+  previous: ResumeDefectState,
+  formData: FormData,
+): Promise<ResumeDefectState> {
+  await requireTeamMember(); // the page's access check
+  return formAction(resumeDefectCommand, {
+    fields: defectVersionFields,
+    input: (fields) => defectVersionInput(fields, defectId),
+    onSuccess: async (resumed) => {
+      revalidatePath("/team/defects");
+      redirect(`/team/defects/${resumed.defectId}?done=resume`);
     },
   })(previous, formData);
 }

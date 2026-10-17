@@ -3,7 +3,7 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
-import { claimDefectAction, releaseClaimAction } from "./actions";
+import { claimDefectAction, releaseClaimAction, resumeDefectAction } from "./actions";
 import { loadDefectDetails } from "./defect-details-data";
 import { DefectDetailsView } from "./defect-details";
 
@@ -23,6 +23,7 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
         details={details}
         claimAction={details && claimDefectAction.bind(null, details.id)}
         releaseAction={details && releaseClaimAction.bind(null, details.id)}
+        resumeAction={details && resumeDefectAction.bind(null, details.id)}
       />
     </Page>
   );
