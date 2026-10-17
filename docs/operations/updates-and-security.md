@@ -1,0 +1,9 @@
+# Updates and security routine
+
+The routine behind the "upgrade and security discipline" of `docs/adr/0001-tech-stack.md` (ST-063). The visitor pages are public, so security fixes are not left waiting.
+
+- **Weekly updates.** Dependabot (`.github/dependabot.yml`) opens grouped pull requests every Monday: minor/patch for the app and the tooling in `.claude/`, all versions (majors too) for the GitHub Actions. Like any pull request they must pass `verify` and `e2e` before they can be merged – branch protection on `main` requires both, for admins too. The maintainer reviews and merges them within the week.
+- **Security updates.** Dependabot alerts and Dependabot security updates are switched on for the repository. An advisory for a dependency in use reaches the maintainer as a GitHub security alert (check *Settings → Notifications → Dependabot alerts* in the personal GitHub account), and Dependabot opens a fix pull request right away, outside the weekly schedule.
+- **Patch deadline.** Critical Next.js / React advisories are applied within **48 hours** (Definition of Done, `docs/stories/ST-059-ci-and-test-harness.md`); other security alerts with the next weekly round.
+- **When Dependabot can't fix it** (a major version, a fix only in a newer framework line, a transitive dependency pinned exactly by its parent): update by hand on a branch `security-<package>` – for a pinned transitive dependency with an `overrides` entry in `package.json` – run `npm run verify`, open a pull request and merge it once CI is green. No story needed. An alert on a development-only dependency whose vulnerable code the project never runs may instead be dismissed in GitHub with that reason.
+- **Major versions** of npm packages are not opened by the weekly round; they are taken deliberately, e.g. when Next.js supports a new ESLint – read the upgrade guide (`node_modules/next/dist/docs/`) first.
