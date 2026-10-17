@@ -10,6 +10,7 @@ import {
   linkProblemReportToDefectCommand,
   logWorkCommand,
   prioritizeDefectCommand,
+  putDefectOnHoldCommand,
   recordDefectCommand,
   releaseClaimCommand,
   reportProblemCommand,
@@ -433,6 +434,48 @@ describe("a defect's own page", () => {
       expect(after.html).toContain("„Left flipper weak“ hat jetzt die Priorität niedrig.");
       expect(after.html).toContain("Priorität: niedrig");
       expect((await seenBy(defectId, asAnna, "prioritize")).html).not.toContain("hat jetzt die Priorität");
+    });
+  });
+
+  describe("its hold (ST-029, G22)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    /** The page as that team member sees it, just back from the given action – with the one-tap form of resuming. */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer, done });
+      const html = renderToStaticMarkup(
+        createElement(DefectDetailsView, { details, resumeAction: async () => null }),
+      );
+      return { offered: details?.offered, html };
+    }
+
+    it("offers „Pausieren“, then says the hold in the header and offers „Fortsetzen“ in its place, confirming both", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(await reported(await registered("LG-042"), "Display flickers", NOW), NOW);
+
+      const before = await seenBy(defectId, asTom);
+      expect(before.html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}/pausieren"[^>]*>Pausieren</a>`));
+      expect(before.html).not.toContain("Fortsetzen");
+      // A helper who has not claimed it is offered neither (G11).
+      expect((await seenBy(defectId, asAnna)).offered).not.toContain("put-on-hold");
+
+      const held = await executeCommand(
+        putDefectOnHoldCommand,
+        { defectId, version: 0, reason: "waiting-for-part", note: "Ordered new flyback" },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!held.ok) throw new Error(held.error);
+
+      const after = await seenBy(defectId, asTom, "put-on-hold");
+      expect(after.html).toContain("„Left flipper weak“ ist pausiert – Wartet auf Ersatzteil.");
+      expect(after.html).toContain("Pausiert – Wartet auf Ersatzteil · Ordered new flyback");
+      expect(after.html).not.toContain("pausieren\"");
+      expect(after.offered).toContain("resume");
+      expect(after.html).toContain(">Fortsetzen</button>");
+      // Only who just did it is told so (G3).
+      expect((await seenBy(defectId, asAnna, "put-on-hold")).html).not.toContain("ist pausiert");
     });
   });
 

@@ -572,7 +572,7 @@ export const teamMessages = {
     /** Putting a defect on hold and resuming it (ST-029). */
     "defect-on-hold": "Dieser Defekt ist schon pausiert.",
     "defect-not-on-hold": "Dieser Defekt ist nicht pausiert.",
-    "not-claimant": "Pausieren und fortsetzen können nur Techniker:innen und wer den Defekt übernommen hat.",
+    "not-claimant": "Das dürfen nur Techniker:innen und wer den Defekt übernommen hat.",
     "hold-reason-required": "Bitte einen Grund wählen.",
     "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",
     "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
