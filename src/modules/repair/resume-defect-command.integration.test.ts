@@ -52,4 +52,14 @@ describe("CMD-ResumeDefect", () => {
       actor: anna,
     });
   });
+
+  it("ST-029: Only a defect on hold can be resumed", async () => {
+    const { defectId } = await anOpenDefectIn(db, { title: "Left flipper weak", recordedBy: tom, at: recorded });
+    const journalBefore = (await journalOf(db, { aggregateId: defectId })).length;
+
+    expect(
+      await executeCommand(resumeDefectCommand, { defectId, version: 0 }, dependencies(tom, "2026-10-13T10:00:00Z")),
+    ).toEqual({ ok: false, error: "defect-not-on-hold" });
+    expect(await journalOf(db, { aggregateId: defectId })).toHaveLength(journalBefore);
+  });
 });
