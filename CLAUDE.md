@@ -23,6 +23,7 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | Open questions | `docs/stories/OPEN_QUESTIONS.md` | everyone |
 | Reviews | `docs/reviews/` | review-stories; per story `ST-NNN-acceptance.md` (acceptance-tester) and, in the normal review lane, `ST-NNN-code-review.md` (code-reviewer) |
 | Engineering conventions, seam catalog | `.claude/skills/engineering-conventions/SKILL.md` | written after ST-003, user approves |
+| Operations routines (updates, later environments, recovery) | `docs/operations/` | `/implement` (ST-061–ST-063) |
 | Application code and tests | repository root (`src/`, …) | `/implement` |
 
 ## Skills
