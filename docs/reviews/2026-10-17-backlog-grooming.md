@@ -143,3 +143,10 @@ Proposed by the ux-designer, to be applied only as decided in section 9.
 6. **UX guidelines:** G10b, G23, G13 clarified, G10 example with *Konto*, G21's condition with ST-053, G22 with „Fortsetzen" as one tap – entered by the ux-designer.
 7. Conflict 4 (ST-051 `must`?) not asked: priority does not decide the order any more (decision 4); ST-051 stays `should`.
 8. All other verdicts of section 4 and the appendix's wording are adopted.
+
+### Round 3 (user, 2026-10-17) – the `[OPEN]` markers the revision left, all as recommended
+
+- ST-047: the machine record shows the 5 latest maintenance records; the link leads to „Wartungseinträge · LG-042" with all of them.
+- ST-051: the row in „Mehr" is „Reparaturzeiten", right after „Wartungsplan" (ux-designer's proposal over the requirements-engineer's "after Teammitglieder").
+- ST-085: direction (b) – abandoned uploads are cleaned up on a later request, without a scheduler; the superseding ADR is written at the start of ST-085.
+- G14's example button changed to „Konto deaktivieren" along with the approved G10 *Konto* correction.

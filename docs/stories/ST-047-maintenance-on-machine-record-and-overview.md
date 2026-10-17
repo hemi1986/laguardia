@@ -21,7 +21,7 @@ Read model `RM-MachineRecord` (maintenance records, due and overdue maintenance 
 Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G7, G18, G3):
 - The content goes into section 5 of the machine record (owner ST-009, G18), headed „Wartung“.
 - First the due and overdue maintenance tasks, each with due since and „Wartung erfassen“, which leads to ST-044's form for that task and machine; after recording, the team member lands back on the machine record with ST-044's confirmation.
-- Then the latest maintenance records, newest first, with a link to all maintenance records of the machine. [OPEN] How many records count as "the latest", and which page the link to all leads to, is not decided (recommendation: the 5 latest; the link leads to a page „Wartungseinträge · LG-042“ with all of them, newest first).
+- Then the latest maintenance records, newest first, with a link to all maintenance records of the machine. The 5 latest are shown; the link leads to a page „Wartungseinträge · LG-042“ with all of them, newest first (user, backlog grooming 2026-10-17).
 - Empty texts: „Gerade ist an diesem Gerät keine Wartung fällig.“ (nothing due), „An diesem Gerät wurde noch keine Wartung eingetragen.“ (no maintenance record), and for a machine that is Not on display „Nicht ausgestellt – es wird keine Wartung fällig.“ in place of the due tasks.
 
 ## Acceptance Criteria
@@ -60,4 +60,4 @@ Scenario: Nothing due and nothing recorded says so
 - Number of overdue maintenance tasks in the machine overview (ST-057)
 
 ## Open Questions
-- [OPEN] How many maintenance records the machine record shows as "the latest", and which page the link to all of them leads to (recommendation: the 5 latest; a page „Wartungseinträge · LG-042“ with all of them, newest first) – `docs/stories/OPEN_QUESTIONS.md`.
+- none – the number of latest records and the page behind the link were decided (user, backlog grooming 2026-10-17).

@@ -30,7 +30,7 @@ Read model `RM-RepairTimes` – measures the success criterion "time from report
 - It depends on ST-030 and ST-039 because its scenarios need a reopened defect and a defect closed on retirement in the Given (lead dev, backlog grooming 2026-10-17).
 
 Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G19, G20, G6, G7):
-- The repair times are reached from a row in „Mehr“ in the team navigation, shown to technicians only (user, 2026-10-17, section 9 item 3; G19). [OPEN] The row's label and its place among the rows of „Mehr“ are not decided (recommendation: „Reparaturzeiten“, after „Teammitglieder“).
+- The repair times are reached from a row in „Mehr“ in the team navigation, shown to technicians only (user, 2026-10-17, section 9 item 3; G19). The row is labelled „Reparaturzeiten“ and comes right after „Wartungsplan“ (user, backlog grooming 2026-10-17).
 - The period is a choice of „Letzte 30 Tage“ / „Letzte 90 Tage“, in this order, „Letzte 30 Tage“ preselected (G20).
 - Per priority (hoch, normal, niedrig) the view shows the two medians and the number of defects, each labelled in words (G6). A priority without defects in the period says so in words instead of showing numbers (G7).
 - On the defect's page the times read „Bis zum ersten Arbeitsschritt: 1,5 Tage · Bis behoben: 4,0 Tage“; a time that does not exist yet is left out.
@@ -110,4 +110,4 @@ Scenario: Helpers cannot open the repair times
 - Export, charts, per-machine statistics
 
 ## Open Questions
-- [OPEN] Label and place of the repair times' row in „Mehr“ (recommendation: „Reparaturzeiten“, after „Teammitglieder“) – `docs/stories/OPEN_QUESTIONS.md`.
+- none – label and place of the row in „Mehr“ were decided (user, backlog grooming 2026-10-17).
