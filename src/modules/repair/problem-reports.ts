@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { machineForReporting } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
-import { aggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, isId, type Database } from "@/platform/command";
 import { elapsedHours, elapsedMoreThanHours } from "@/platform/time";
 import type { DismissalReason, ProblemReport, Reporter, ReportingFacts, TriageOutcome } from "./report-problem";
 import { problemReport } from "./schema";
@@ -164,7 +164,7 @@ export async function problemReportForTriage(
     })
   | undefined
 > {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problemReportId)) return undefined;
+  if (!isId(problemReportId)) return undefined;
   const [row] = await db.select().from(problemReport).where(eq(problemReport.id, problemReportId));
   if (!row) return undefined;
   const report = problemReportOf(row);

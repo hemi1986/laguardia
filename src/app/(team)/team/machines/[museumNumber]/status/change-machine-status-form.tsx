@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineStatus } from "@/modules/collection";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { changeMachineStatusAction, type ChangeMachineStatusState } from "./actions";
 import type { ChangeMachineStatusField } from "./change-machine-status-input";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
@@ -83,7 +84,7 @@ export function ChangeMachineStatusForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

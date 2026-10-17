@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
-import { aggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, isId, type Database } from "@/platform/command";
 import type { CalendarDate } from "@/platform/time";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { maintenancePlans } from "./maintenance-plans";
@@ -89,7 +89,7 @@ export async function maintenanceRecordById(
   db: Database,
   maintenanceRecordId: string,
 ): Promise<MaintenanceRecord | undefined> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(maintenanceRecordId)) return undefined;
+  if (!isId(maintenanceRecordId)) return undefined;
   const [row] = await db.select().from(maintenanceRecord).where(eq(maintenanceRecord.id, maintenanceRecordId));
   return row && toRecord(row);
 }

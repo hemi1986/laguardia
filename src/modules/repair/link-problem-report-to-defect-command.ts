@@ -3,22 +3,9 @@ import { linkingFacts } from "./defects";
 import {
   linkingActors,
   linkProblemReportToDefect,
-  type ProblemReportLinkedToDefect,
 } from "./link-problem-report-to-defect";
 import { problemReports } from "./problem-reports";
-
-/**
- * EVT-ProblemReportLinkedToDefect in the journal – for every command that links (CMD-LinkProblemReportToDefect, and
- * CMD-ReportProblem with that triage outcome in the same step, ST-052).
- */
-export function journalProblemReportLinked(event: ProblemReportLinkedToDefect) {
-  return {
-    type: event.type,
-    aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
-    machineId: event.machineId,
-    data: { defectId: event.defectId },
-  } as const;
-}
+import { repairEvents } from "./events";
 
 /**
  * CMD-LinkProblemReportToDefect through the command layer: a change of AGG-ProblemReport at the version the technician
@@ -32,6 +19,6 @@ export const linkProblemReportToDefectCommand = aggregateCommand({
   target: (input) => ({ id: input.problemReportId, version: input.version }),
   facts: (tx, input) => linkingFacts(tx, input),
   decide: linkProblemReportToDefect,
-  journal: journalProblemReportLinked,
+  journal: repairEvents.journal,
   result: (report) => ({ problemReportId: report.id, defectId: report.triage?.defectId ?? "" }),
 });

@@ -1,11 +1,10 @@
 import { aggregateCommand, type Command } from "@/platform/command";
 import { linkingFacts } from "./defects";
-import { journalProblemReportLinked } from "./link-problem-report-to-defect-command";
 import { problemReports, reportingFacts } from "./problem-reports";
-import { journalDefectRecorded, statusChangeWithDefect } from "./record-defect-command";
+import { statusChangeWithDefect } from "./record-defect-command";
 import { reportingActors, type ReportProblemError, type ReportProblemInput } from "./report-problem";
 import { reportProblemAndTriage, type TriageRequired } from "./report-problem-and-triage";
-import { journalProblemResolvedOnTheSpot } from "./resolve-problem-on-the-spot-command";
+import { repairEvents } from "./events";
 
 /**
  * CMD-ReportProblem through the command layer: a creating command on AGG-ProblemReport, emits EVT-ProblemReported –
@@ -26,23 +25,7 @@ export const reportProblemAndTriageCommand = aggregateCommand({
     ...(await linkingFacts(tx, { defectId: input.triage?.outcome === "linked" ? input.triage.defectId : undefined })),
   }),
   decide: reportProblemAndTriage,
-  journal: (event) => {
-    switch (event.type) {
-      case "EVT-ProblemReported":
-        return {
-          type: event.type,
-          aggregate: { type: "AGG-ProblemReport", id: event.problemReportId },
-          machineId: event.machineId,
-          data: {}, // the reporter is the journal's actor; the description stays in the problem report only
-        };
-      case "EVT-DefectRecorded":
-        return journalDefectRecorded(event);
-      case "EVT-ProblemResolvedOnTheSpot":
-        return journalProblemResolvedOnTheSpot(event);
-      case "EVT-ProblemReportLinkedToDefect":
-        return journalProblemReportLinked(event);
-    }
-  },
+  journal: repairEvents.journal,
   runs: (_report, events, input) =>
     events.flatMap((event) =>
       event.type === "EVT-DefectRecorded" && input.triage?.outcome === "defect-recorded"

@@ -13,7 +13,7 @@ status: draft
 ---
 
 ## Task
-**Not built as a story: the journal mappings are converted on a branch of their own before ST-086, the first story that needs typed journal reads (grooming 2026-10-11; moved from ST-049 when it was split, grooming 2026-10-17).** The text below is kept for the record.
+**Not built as a story – done directly by the architecture review of 2026-10-17** (`src/modules/<module>/events.ts`, `readJournal`; branch `architecture-2026-10-17`), before ST-086, the first story that needs typed journal reads. The `verify.ts` check of Q15 became a test next to each catalogue (`events.test.ts`). The text below is kept for the record.
 
 Build the **event catalogue per module** (architecture review 2026-09-27, decisions **Q4** and **Q15**) and convert every command built so far to it. Until now each command maps its own domain events to journal entries (ST-071).
 

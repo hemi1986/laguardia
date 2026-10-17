@@ -6,6 +6,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import type { LogWorkState } from "./actions";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
@@ -61,7 +62,7 @@ export function LogWorkForm({
       {state && (
         <div id={rejectionId}>
           <Rejection>
-            {state.error === "version-conflict" ? texts.logWorkConflict : commandErrorText(teamMessages, state.error)}
+            {rejectionText(state.error, { "version-conflict": texts.logWorkConflict })}
           </Rejection>
         </div>
       )}

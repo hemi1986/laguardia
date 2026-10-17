@@ -1,6 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { maintenanceFacts, maintenanceRecordStore } from "./maintenance-records";
 import { recordMaintenance, recordingActors } from "./record-maintenance";
+import { maintenanceEvents } from "./events";
 
 /**
  * CMD-RecordMaintenance through the command layer: creates an AGG-MaintenanceRecord and emits EVT-MaintenanceRecorded
@@ -14,11 +15,6 @@ export const recordMaintenanceCommand = aggregateCommand({
   creates: true,
   facts: maintenanceFacts,
   decide: recordMaintenance,
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-MaintenanceRecord", id: event.maintenanceRecordId },
-    machineId: event.machineId,
-    data: { maintenanceTaskId: event.maintenanceTaskId, outcome: event.outcome, date: event.date },
-  }),
+  journal: maintenanceEvents.journal,
   result: (record) => ({ maintenanceRecordId: record.id, maintenanceTaskId: record.maintenanceTaskId }),
 });

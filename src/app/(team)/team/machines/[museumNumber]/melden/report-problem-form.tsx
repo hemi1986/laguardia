@@ -6,7 +6,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { PhotoField } from "../../../../../photo-field";
 import type { TeamReportProblemState } from "./actions";
 import { isAboutDescription } from "./report-section";
@@ -67,7 +68,7 @@ export function TeamReportProblemForm({
       />
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending || preparingPhoto}>

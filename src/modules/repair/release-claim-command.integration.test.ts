@@ -59,7 +59,11 @@ describe("CMD-ReleaseClaim", () => {
     expect((await defectDetails(db, defectId))?.claim).toBeUndefined();
     // The defect stays open, and can be claimed again.
     expect((await defectDetails(db, defectId))?.state).toBe("open");
-    expect(await lastEventOf(defectId)).toEqual(["EVT-DefectClaimReleased", anna, {}]);
+    expect(await lastEventOf(defectId)).toEqual([
+      "EVT-DefectClaimReleased",
+      anna,
+      { formerClaimant: anna.teamMemberId },
+    ]);
   });
 
   it("ST-026: Helpers cannot release someone else's claim", async () => {
@@ -83,7 +87,11 @@ describe("CMD-ReleaseClaim", () => {
 
     expect(await claimantOf(machineId)).toBeUndefined();
     expect((await defectDetails(db, defectId))?.claim).toBeUndefined();
-    expect(await lastEventOf(defectId)).toEqual(["EVT-DefectClaimReleased", eva, {}]);
+    expect(await lastEventOf(defectId)).toEqual([
+      "EVT-DefectClaimReleased",
+      eva,
+      { formerClaimant: anna.teamMemberId },
+    ]);
   });
 
   it("releases nothing that is not claimed, and not a claim someone took over meanwhile", async () => {

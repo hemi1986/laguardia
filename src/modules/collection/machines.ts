@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, history, type AggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import {
   machineStatuses,
@@ -106,7 +106,7 @@ export async function registrationFacts(tx: Database, input: { machineModelId: s
   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('museum-number'))`);
   const givenOut = await tx.select({ museumNumber: museumNumber.museumNumber }).from(museumNumber);
   const model =
-    input.machineModelId && isUuid(input.machineModelId)
+    input.machineModelId && isId(input.machineModelId)
       ? await tx.select({ id: machineModel.id }).from(machineModel).where(eq(machineModel.id, input.machineModelId))
       : [];
   return {
@@ -115,9 +115,6 @@ export async function registrationFacts(tx: Database, input: { machineModelId: s
   } satisfies RegistrationFacts;
 }
 
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
 
 /** One entry of the machine overview (RM-MachineOverview): what tells a machine apart from its neighbours (G5). */
 export type MachineOverviewEntry = {
@@ -311,7 +308,7 @@ export async function machineForReporting(
   db: Database,
   machineId: string,
 ): Promise<{ machineStatus: MachineStatus; retired: boolean } | undefined> {
-  if (!isUuid(machineId)) return undefined;
+  if (!isId(machineId)) return undefined;
   const [row] = await db
     .select({ machineStatus: machine.machineStatus, retiredAt: machine.retiredAt })
     .from(machine)
@@ -367,6 +364,8 @@ export type MachineForMaintenance = {
   machineStatus: MachineStatus;
   /** When it last came back from *Not on display* – none if it never was (ST-056, HS-20). */
   returnedToDisplayAt: Date | undefined;
+  /** Only machines still in the museum are listed – a fact the maintenance rules ask for (ST-044). */
+  retired: false;
 };
 
 const NOT_ON_DISPLAY: MachineStatus = "not-on-display";
@@ -396,6 +395,7 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
     ...row,
     technology: row.technology ?? undefined,
     returnedToDisplayAt: row.returnedToDisplayAt ?? undefined,
+    retired: false as const,
   }));
 }
 
@@ -417,7 +417,7 @@ export async function machineForMaintenance(
     }
   | undefined
 > {
-  if (!isUuid(machineId)) return undefined;
+  if (!isId(machineId)) return undefined;
   const [row] = await db
     .select({
       id: machine.id,

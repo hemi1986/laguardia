@@ -22,6 +22,8 @@ export type DefectClaimReleased = {
   type: "EVT-DefectClaimReleased";
   defectId: string;
   machineId: string;
+  /** Whose claim ended – kept in the journal only, since the claim is gone (ST-086). */
+  formerClaimant: TeamMemberId;
   releasedBy: TeamMemberId;
 };
 
@@ -49,7 +51,7 @@ export function releaseClaim(
   { actor }: DecisionContext<ReleasingPerson>,
 ): Decision<Defect, DefectClaimReleased, ReleaseClaimError> {
   const refusal = releaseRefusal(defect, actor);
-  if (refusal) return { ok: false, error: refusal };
+  if (refusal || !defect.claim) return { ok: false, error: refusal ?? "not-claimed" };
   return {
     ok: true,
     state: { ...defect, claim: undefined },
@@ -58,6 +60,7 @@ export function releaseClaim(
         type: "EVT-DefectClaimReleased",
         defectId: defect.id,
         machineId: defect.machineId,
+        formerClaimant: defect.claim.claimedBy,
         releasedBy: actor.teamMemberId,
       },
     ],

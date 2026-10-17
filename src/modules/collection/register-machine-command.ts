@@ -1,6 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { machines, registrationFacts } from "./machines";
 import { registerMachine, registeringActors } from "./register-machine";
+import { collectionEvents } from "./events";
 
 /**
  * CMD-RegisterMachine through the command layer: a creating command on AGG-Machine, emits EVT-MachineRegistered.
@@ -14,12 +15,6 @@ export const registerMachineCommand = aggregateCommand({
   creates: true,
   facts: registrationFacts,
   decide: registerMachine,
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Machine", id: event.machineId },
-    machineId: event.machineId,
-    // References and non-personal facts only: the location and the serial number are typed text (ST-003).
-    data: { museumNumber: event.museumNumber, machineModelId: event.machineModelId, machineStatus: event.machineStatus },
-  }),
+  journal: collectionEvents.journal,
   result: (machine) => ({ machineId: machine.id, museumNumber: machine.museumNumber }),
 });
