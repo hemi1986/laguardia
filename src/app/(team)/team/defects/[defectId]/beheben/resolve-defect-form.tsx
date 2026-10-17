@@ -6,6 +6,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import type { ResolveDefectState } from "./actions";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
@@ -50,7 +51,7 @@ export function ResolveDefectForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

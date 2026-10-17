@@ -8,6 +8,7 @@ import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { Priority } from "@/modules/repair";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import type { PrioritizeDefectState } from "./actions";
 
 const { defects: texts, recordDefect } = teamMessages;
@@ -62,7 +63,7 @@ export function PrioritizeDefectForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

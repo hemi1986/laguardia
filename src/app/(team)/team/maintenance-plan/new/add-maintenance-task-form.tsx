@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { addMaintenanceTaskAction, type AddMaintenanceTaskState } from "./actions";
 import type { AddMaintenanceTaskField } from "./add-maintenance-task-input";
 
@@ -153,7 +154,7 @@ export function AddMaintenanceTaskForm({ version, machineCategories, technologie
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

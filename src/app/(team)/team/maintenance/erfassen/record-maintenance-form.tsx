@@ -9,6 +9,7 @@ import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import type { RecordMaintenanceState } from "./actions";
 import type { RecordMaintenanceField } from "./record-maintenance-input";
 
@@ -96,7 +97,7 @@ export function RecordMaintenanceForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

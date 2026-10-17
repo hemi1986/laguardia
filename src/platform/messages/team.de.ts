@@ -479,6 +479,14 @@ export const teamMessages = {
    * Texts of rejected commands of the team UI, keyed by their kebab-case error code (ST-006, the first team form).
    * Every error code of a command a team form runs needs one here – otherwise the form fails the type check.
    */
+  /** Texts every form on the form runner shares (architecture review 2026-10-17). */
+  forms: {
+    /**
+     * A change made meanwhile, on a form that keeps what was typed: its page shows the aggregate as it is now, so
+     * sending again is all it takes (G8, G13) – reloading would throw the input away.
+     */
+    conflict: "Jemand hat das inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal senden.",
+  },
   commandErrors: {
     /** The photo errors (ST-016), defined once in the photo module. */
     "too-large": "Das Foto ist zu groß: höchstens 20 MB.",

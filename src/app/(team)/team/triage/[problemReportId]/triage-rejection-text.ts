@@ -1,10 +1,13 @@
-import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 
 /**
  * A rejected triage form in words (ST-018 ff.): who triaged first, when that is the reason and known – else the
- * catalogue's text for the error. Its own file, without server code: the client forms import it.
+ * shared rejection text. Its own file, without server code: the client forms import it.
  */
 export function triageRejectionText(state: { error: TeamCommandErrorCode; triagedBy?: string }): string {
-  if (state.error === "already-triaged" && state.triagedBy) return teamMessages.triage.alreadyTriagedBy(state.triagedBy);
-  return commandErrorText(teamMessages, state.error);
+  return rejectionText(
+    state.error,
+    state.triagedBy ? { "already-triaged": teamMessages.triage.alreadyTriagedBy(state.triagedBy) } : {},
+  );
 }

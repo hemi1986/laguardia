@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineStatus } from "@/modules/collection";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { registerMachineAction, type RegisterMachineState } from "./actions";
 import type { RegisterMachineField } from "./register-machine-input";
 import { keptKey } from "@/app/_actions/form-parts";
@@ -120,7 +121,7 @@ export function RegisterMachineForm({ machineModels, machineStatuses }: Choices)
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

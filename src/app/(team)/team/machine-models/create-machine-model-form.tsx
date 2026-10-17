@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { MachineCategory, Technology } from "@/modules/collection";
-import { commandErrorText, teamMessages } from "@/platform/messages";
+import { teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { createMachineModelAction } from "./actions";
 import { keptKey } from "@/app/_actions/form-parts";
 
@@ -74,7 +75,7 @@ export function CreateMachineModelForm({ categories, technologies }: Choices) {
           ))}
         </NativeSelect>
       </LabelledField>
-      {state && <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>}
+      {state && <Rejection>{rejectionText(state.error)}</Rejection>}
       <Button type="submit" disabled={pending}>
         {texts.create}
       </Button>

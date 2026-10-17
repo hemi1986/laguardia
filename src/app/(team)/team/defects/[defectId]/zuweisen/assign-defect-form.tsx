@@ -8,6 +8,7 @@ import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { ActiveTeamMember } from "@/modules/team";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import type { AssignDefectState } from "./actions";
 
 const { defects: texts, terms } = teamMessages;
@@ -70,7 +71,7 @@ export function AssignDefectForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(teamMessages, state.error)}</Rejection>
+          <Rejection>{rejectionText(state.error)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>
