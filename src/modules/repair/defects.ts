@@ -9,7 +9,12 @@ import {
   type Resolution,
   type WorkLogEntry,
 } from "./defect";
-import { defectActionRefusals, type DefectActionRefusals, type DefectTeamMember } from "./defect-actions";
+import {
+  defectActionRefusals,
+  type DefectAction,
+  type DefectActionRefusals,
+  type DefectTeamMember,
+} from "./defect-actions";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
@@ -249,25 +254,56 @@ export async function defectDetails(
   defectId: string,
   teamMember?: DefectTeamMember,
 ): Promise<DefectDetails | undefined> {
-  if (!isId(defectId)) return undefined;
-  const [row] = await db.select().from(defect).where(eq(defect.id, defectId));
-  if (!row) return undefined;
-  const { claim } = claimOf(row);
+  const loaded = await loadDefect(db, defectId);
+  if (!loaded) return undefined;
+  const { state: stored, version } = loaded;
+  const resolution = stored.state === "resolved" ? stored.resolutions.at(-1) : undefined;
   return {
-    id: row.id,
-    machineId: row.machineId,
-    title: row.title,
-    priority: row.priority,
-    suitableForHelpers: row.suitableForHelpers,
-    recordedAt: row.recordedAt,
-    state: row.state,
-    version: row.version,
-    claim,
-    actions: teamMember && defectActionRefusals({ ...row, claim }, teamMember),
-    workLog: (await workLog.load(db, [row.id])).get(row.id) ?? [],
-    resolution: row.state === "resolved" ? await latestResolution(db, row.id) : undefined,
-    problemReports: await problemReportsOfDefect(db, row),
+    id: stored.id,
+    machineId: stored.machineId,
+    title: stored.title,
+    priority: stored.priority,
+    suitableForHelpers: stored.suitableForHelpers,
+    recordedAt: stored.recordedAt,
+    state: stored.state,
+    version,
+    claim: stored.claim,
+    actions: teamMember && defectActionRefusals(stored, teamMember),
+    workLog: stored.workLog,
+    resolution: resolution && {
+      closingNote: resolution.closingNote,
+      resolvedBy: resolution.resolvedBy,
+      resolvedAt: resolution.resolvedAt,
+    },
+    problemReports: await problemReportsOfDefect(db, stored),
   };
+}
+
+/**
+ * A defect as a form on it needs it (architecture review 2026-10-17): the defect as its store loads it, the version
+ * the form posts (HS-16) and – for the team member who asks – why the form's command would refuse them (G11), none
+ * if it would not. One read for every form page on a defect, so a new field of the defect reaches all of them.
+ * Undefined for an unknown ID, or an address that is no ID at all.
+ */
+export type DefectForAction<Action extends DefectAction> = Defect & {
+  version: number;
+  whyNot: DefectActionRefusals[Action];
+};
+
+export async function defectForAction<Action extends DefectAction>(
+  db: Database,
+  defectId: string,
+  teamMember: DefectTeamMember,
+  action: Action,
+): Promise<DefectForAction<Action> | undefined> {
+  const loaded = await loadDefect(db, defectId);
+  if (!loaded) return undefined;
+  return { ...loaded.state, version: loaded.version, whyNot: defectActionRefusals(loaded.state, teamMember)[action] };
+}
+
+/** The defect through its store – the one mapping from its rows to its state (ST-018). */
+async function loadDefect(db: Database, defectId: string) {
+  return isId(defectId) ? defects.load(db, defectId) : undefined;
 }
 
 /**
@@ -284,11 +320,6 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
     .where(eq(defect.id, input.defectId))
     .for("update");
   return { defect: row };
-}
-
-async function latestResolution(db: Database, defectId: string): Promise<Omit<Resolution, "id"> | undefined> {
-  const latest = (await resolutions.load(db, [defectId])).get(defectId)?.at(-1);
-  return latest && { closingNote: latest.closingNote, resolvedBy: latest.resolvedBy, resolvedAt: latest.resolvedAt };
 }
 
 function isId(value: string): boolean {

@@ -1,9 +1,9 @@
 import { machineLabels } from "@/modules/collection";
-import { assigneeRefusal, defectDetails, type DefectActionRefusals } from "@/modules/repair";
+import { assigneeRefusal, defectForAction } from "@/modules/repair";
 import { activeTeamMembers, teamMemberNames, type ActiveTeamMember } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../../claimant";
-import type { DefectForForm } from "../defect-form-data";
+import { defectForForm, type DefectForForm } from "../defect-form-data";
 
 /** What the form page „Defekt zuweisen“ shows (ST-026): the defect, who has it now, and whom it can be assigned to. */
 export type DefectForAssigning = DefectForForm<"assign"> & {
@@ -26,23 +26,16 @@ export async function loadDefectForAssigning(
   defectId: string,
   viewer: Viewer,
 ): Promise<DefectForAssigning | undefined> {
-  const defect = await defectDetails(db, defectId, { teamMemberId: viewer.id, role: viewer.role });
+  const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "assign");
   if (!defect) return undefined;
-  const whyNot: DefectActionRefusals["assign"] = defect.actions?.assign;
+  const { whyNot } = defect;
   const [machines, names, active] = await Promise.all([
     machineLabels(db, [defect.machineId]),
     teamMemberNames(db, defect.claim ? [defect.claim.claimedBy] : []),
     whyNot ? [] : activeTeamMembers(db),
   ]);
-  const machine = machines.get(defect.machineId);
   return {
-    id: defect.id,
-    version: defect.version,
-    title: defect.title,
-    priority: defect.priority,
-    museumNumber: machine?.museumNumber ?? "",
-    machineModelTitle: machine?.machineModelTitle ?? "",
-    whyNot,
+    ...defectForForm(defect, machines.get(defect.machineId)),
     claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
     teamMembers: active.filter(
       ({ id, role }) => id !== viewer.id && assigneeRefusal(defect, { teamMemberId: id, role }) === undefined,

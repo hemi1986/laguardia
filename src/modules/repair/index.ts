@@ -15,11 +15,13 @@ export type { ResolveProblemOnTheSpotError, ResolveProblemOnTheSpotInput } from 
 export { priorities, type Defect, type Priority, type WorkLogEntry } from "./defect";
 export {
   defectDetails,
+  defectForAction,
   defectTitle,
   openDefectCounts,
   openDefects,
   openDefectTitles,
   type DefectDetails,
+  type DefectForAction,
   type OpenDefect,
   type OpenDefectsQuery,
 } from "./defects";
