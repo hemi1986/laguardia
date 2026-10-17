@@ -4,10 +4,10 @@ title: Attach files to a machine or machine model and find them by file category
 type: story
 context: BC-Collection
 priority: should
-size: M
-risk: medium
+size: L
+risk: high
 events: [EVT-FileAttached]
-depends_on: [ST-001, ST-009, ST-016]
+depends_on: [ST-001, ST-009, ST-016, ST-085]
 labels: [mvp, files, ui]
 status: ready
 ---
@@ -23,21 +23,29 @@ Command `CMD-AttachFile` (any team member). Rules and invariants (`AGG-File`):
 - Files are visible to team members only, like photos (rule on `CMD-AttachFile`, decision D10); visitors can neither see nor open them.
 - PDFs and images can be opened in the browser; every other format is always offered as a download, never opened in the browser.
 - Files of a machine model are shown on the machine record of every machine of that model (`RM-MachineRecord`: files of the machine and its machine model by file category).
-Technical: large files are uploaded directly from the browser to private object storage (ST-001). Content that was uploaded but never attached (e.g. the form was abandoned) is detected and removed; the mechanism works without a scheduler (`docs/adr/0002-modular-monolith-state-based-persistence.md`) and is documented. File metadata stays in PostgreSQL (`docs/adr/0005-hosting-vercel.md`). Taking a photo with the camera as a file follows in ST-054.
+Technical: **split in the backlog grooming of 2026-10-17** (user, section 9 item 2). The direct private large-file upload from the browser to object storage, and what happens to content that was uploaded but never attached, are the tech task **ST-085**, which this story builds on. File metadata stays in PostgreSQL (`docs/adr/0005-hosting-vercel.md`). Taking a photo with the camera as a file follows in ST-054.
 UI wording (de): Datei, Dateikategorie (Handbuch / Schaltplan / Foto / Sonstiges).
+
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G18, G20, G8a, G7):
+- The files go into section 8 of the machine record (owner ST-009, G18): the files of the machine and of its machine model, grouped by file category in glossary order (Handbuch, Schaltplan, Foto, Sonstiges).
+- Section 8 offers „Datei anhängen“, which leads to the form page. It is also the entry for a machine model's files: the choice „Anhängen an“ offers „nur LG-042“ / „alle Geräte des Modells Medieval Madness“, none preselected (G20).
+- The choice „Dateikategorie“ offers „Handbuch“, „Schaltplan“, „Foto“, „Sonstiges“, in this order, none preselected (G20).
+- Empty section 8: „Noch keine Dateien zu diesem Gerät oder seinem Modell.“, with „Datei anhängen“ below it (G7).
+- A rejection of the form names the reason and says what happened to the chosen file (G8a): either „Bitte einen Titel angeben. Die Datei muss erneut ausgewählt werden.“ and the chooser shows itself as empty, or – if the implementation keeps the already uploaded content for the next attempt – that the file is still attached. Not after a rejection of the file itself (above 100 MB): that text already says what to do.
+- After attaching, the team member lands on the machine record with a confirmation naming the file.
 
 ## Acceptance Criteria
 
 Scenario: Helper attaches a manual to a machine model
   Given the machines "LG-042" and "LG-043" are of the machine model "Medieval Madness"
-  When the helper Anna attaches the PDF "MM Operations Manual" with the file category Manual to the machine model "Medieval Madness"
+  When the helper Anna attaches the PDF "MM Operations Manual" with the file category Manual to all machines of the model "Medieval Madness"
   Then the machine records of "LG-042" and "LG-043" both show "MM Operations Manual" under Manual
 
 Scenario: Team member attaches a file to a single machine
-  When a team member attaches the PDF "LG-042 wiring notes" with the file category Other to the machine "LG-042"
+  When a team member attaches the PDF "LG-042 wiring notes" with the file category Other to the machine "LG-042" only
   Then only the machine record of "LG-042" shows it under Other
 
-Scenario: Large manual is uploaded
+Scenario: Large manual is attached
   Given a scanned schematic PDF of 60 MB
   When a technician attaches it to the machine model "Medieval Madness" with the file category Schematic
   Then the file is attached and can be opened from the machine record
@@ -66,15 +74,30 @@ Scenario: Title is required
   When a team member attaches a file without a title
   Then the file is not attached
 
-Scenario: Abandoned uploads do not stay
-  Given a team member uploaded a PDF but closed the page before attaching it
-  When the documented cleanup has run
-  Then the uploaded content is no longer in object storage
+Scenario: Machine or machine model must be chosen
+  When a team member attaches a file without choosing whether it belongs to the machine or to its machine model
+  Then the file is not attached
+
+Scenario: A rejection says what happened to the chosen file
+  When a team member attaches a PDF without a title
+  Then the rejection says "Bitte einen Titel angeben." followed by whether the file must be chosen again or is still attached
+  And the chooser shows the file as attached only if it is still attached
+
+Scenario: No files yet says so
+  Given neither "LG-050" nor its machine model has a file
+  When a team member opens the machine record of "LG-050"
+  Then the files section says that there are no files for this machine or its machine model yet
+  And attaching a file is offered there
 
 ## Out of Scope
+- The direct upload to private object storage and abandoned uploads (ST-085)
 - Taking a photo with the camera as a file (ST-054)
 - Removing files (ST-038)
 - Photos of problem reports and work log entries – they are not files (ST-016, ST-032)
 
 ## Open Questions
 - none
+
+## Notes
+- Order (user, 2026-10-17, section 9 item 2): ST-085 and this story come **after the defect lifecycle** – ST-029, ST-030, ST-053, ST-031. That is a planning order, not a dependency; start them by name.
+- Size L and risk high were estimated by the lead dev before the split; the upload and the abandoned-upload decision moved to ST-085, so the lead dev re-estimates both in the story review.

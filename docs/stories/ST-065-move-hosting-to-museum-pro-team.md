@@ -13,7 +13,7 @@ status: ready
 ---
 
 ## Task
-Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review.md` finding #18, `docs/reviews/ST-001-acceptance.md` edge case "Neon Auth", `docs/adr/0006-hosting-verified-vercel-pro-neon-private-blob.md`, Consequences "Move to production"). Split from the original ST-065 in the story review `docs/reviews/2026-09-27-story-review.md` (decisions 1, 2 and 4). Removing the spike scaffolding is ST-066 (its code part was done with ST-078); it was folded into this task by the backlog grooming of 2026-10-11 and split out again on 2026-10-17 (user decision). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
+Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review.md` finding #18, `docs/reviews/ST-001-acceptance.md` edge case "Neon Auth", `docs/adr/0006-hosting-verified-vercel-pro-neon-private-blob.md`, Consequences "Move to production"). Split from the original ST-065 in the story review `docs/reviews/2026-09-27-story-review.md` (decisions 1, 2 and 4). Removing the spike scaffolding was ST-078 (code) and ST-066 (configuration and data), both done – ST-066 was folded into this task by the backlog grooming of 2026-10-11, split out again on 2026-10-17 (user decision) and done the same day. Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 **Deadline:** this task must be finished before real visitor data is stored, i.e. before visitor reporting (ST-010, ST-013, ST-014) is live in production – ADR 0006: Vercel's data processing agreement covers only Pro and Enterprise, and Hobby Blob storage is limited to 1 GB. Team member accounts (ST-004, ST-005) may stay on the Hobby deployment until then (decision 2).
 
@@ -28,7 +28,7 @@ Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review
 
 **4. Disable the unused Neon Auth integration** and remove its environment variables `NEON_AUTH_BASE_URL` and `VITE_NEON_AUTH_URL` (team login uses Better Auth, ADR 0006).
 
-**5. Spike configuration and data:** moved back to ST-066 on 2026-10-17 (user decision) – the spike cleanup is done now on the current account, not with the move.
+**5. Spike configuration and data:** not part of this task. The spike cleanup was done by ST-066 on 2026-10-17, on the current account (GitHub secrets deleted, spike blobs removed); nothing of it is left for the move.
 
 The acceptance of the DPAs is recorded either in `docs/stories/OPEN_QUESTIONS.md` or in a new ADR that supersedes ADR 0006; ADR 0006 is accepted and is not edited.
 
@@ -43,7 +43,7 @@ The acceptance of the DPAs is recorded either in `docs/stories/OPEN_QUESTIONS.md
 - [ ] All items above are done before visitor reporting (ST-010, ST-013, ST-014) is live in production.
 
 ## Out of Scope
-- The spike **code**, its routes and the test page on `/` (done with ST-078); the spike's configuration and data (ST-066)
+- The spike **code**, its routes and the test page on `/` (done with ST-078); the spike's configuration and data (done with ST-066 on 2026-10-17)
 - Separate preview and production object storage, error monitoring, uptime check (ST-061)
 - Backups, test restore and recovery steps (ST-062)
 - Team login and accounts (ST-004, ST-005)

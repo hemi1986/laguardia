@@ -20,7 +20,13 @@ Second part of the split of ST-039 (story review 2026-09-26).
 - A retired machine is not listed in the machine overview (ST-008) by default; the filter "show retired machines" lists them, marked as retired.
 - Searching by museum number also finds retired machines, marked as retired.
 - Its visitor machine page only says in the visitor's language that the machine is no longer in the museum – no machine status, no defects, no reporting.
-- Its machine record stays reachable, marked as retired (ST-009).
+- Its machine record stays reachable, marked as retired (ST-009), with „Ausgemustert“ in place of the machine status (ST-039).
+
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G6, G7, G10a):
+- The filter in the machine overview's filter form is the checkbox „Auch ausgemusterte Geräte anzeigen“, off by default; turning it on adds the retired machines to the active ones.
+- A retired machine carries the marker „Ausgemustert“ in the overview and in search results (G6).
+- With the filter on and no retired machine, the overview says „Kein Gerät ist ausgemustert.“ below the active machines.
+- The visitor machine page of a retired machine says „Dieses Gerät ist nicht mehr im Museum.“ resp. "This machine is no longer in the museum."
 
 ## Acceptance Criteria
 
@@ -33,6 +39,12 @@ Scenario: Team members find retired machines with a filter
   Given "LG-013" is retired
   When a team member turns on the filter "show retired machines" in the machine overview
   Then "LG-013" is listed and marked as retired
+
+Scenario: The filter says when no machine is retired
+  Given no machine is retired
+  When a team member turns on the filter "show retired machines" in the machine overview
+  Then the active machines are still listed
+  And the overview says that no machine is retired
 
 Scenario: Search by museum number finds retired machines
   Given "LG-013" is retired

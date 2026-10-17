@@ -23,6 +23,14 @@ Command `CMD-ReopenDefect` (any team member, HS-7). Rules and invariants:
 - No time limit; guideline: the same fault months later becomes a new defect (HS-7).
 Manual policy `POL-DefectMayChangeMachineStatus`: when a technician reopens a defect, the technician may set the machine to *Limited* or *Out of order* in the same step; the status history reason refers to the reopened defect, as in ST-018. Helpers cannot change the machine status while reopening (they may still set *Out of order* separately, ST-012).
 Reopening by linking a problem report follows in ST-053.
+
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G21, G22):
+- A resolved defect's page offers only „Wieder öffnen“, under its „Abschlussnotiz“ (G22). It leads to the page „Defekt wieder öffnen · LG-042“ with the field „Warum wieder öffnen?“.
+- For technicians the page also offers the machine status choice in ST-018's wording, with „Status nicht ändern“ preselected; helpers do not see it (G11).
+- Afterwards the team member lands on the defect's page with the confirmation „„Left flipper weak“ ist wieder offen.“ (plus ST-018's status sentence when the status changed).
+- The page of a reopened defect says why it is open again: who reopened it, when, and the reason; the earlier closing note stays visible.
+- Reopening is stored as an entry of its own (the *Reopening* below), not as a change of the resolution – settled by the data model (ST-028 code review #1).
+
 Repair history (ST-033): a defect keeps one resolution per resolve and one *Reopening* per reopen; a *Reopening* is an entry of its own with the reopen reason, shown after the resolution it followed (`docs/architecture/data-model.md`). So the repair history of the machine shows every closing note of a reopened defect, each followed by the reopen reason that came after it – moved here from ST-033 by the backlog grooming of 2026-10-11 (user, 2026-10-12), so that ST-033 does not wait for this story.
 
 ## Acceptance Criteria
@@ -33,6 +41,13 @@ Scenario: Team member reopens a resolved defect
   Then "Left flipper weak" is open, not on hold and not claimed
   And it appears again in the open defects list and on the visitor machine page of "LG-042"
   And the earlier resolution with its closing note and the reopen reason are kept
+
+Scenario: The page of a reopened defect says why it is open again
+  Given the defect "Left flipper weak" was resolved with the closing note "Coil replaced"
+  And the helper Anna reopened it today with the reason "Flipper weak again after an hour of play"
+  When a team member opens the page of "Left flipper weak"
+  Then the page says that Anna reopened it today with the reason "Flipper weak again after an hour of play"
+  And the earlier closing note "Coil replaced" is still shown
 
 Scenario: Technician changes the machine status while reopening
   Given "LG-042" is Playable and "Left flipper weak" is resolved

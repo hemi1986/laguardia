@@ -4,10 +4,10 @@ title: Environments and operations
 type: tech-task
 context: BC-Repair
 priority: wont
-size: S
+size: M
 risk: medium
 events: []
-depends_on: [ST-001]
+depends_on: [ST-001, ST-065]
 labels: [mvp, foundation]
 status: ready
 ---

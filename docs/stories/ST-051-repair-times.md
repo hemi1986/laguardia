@@ -7,9 +7,9 @@ priority: should
 size: M
 risk: medium
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved]
-depends_on: [ST-022, ST-024, ST-028]
+depends_on: [ST-022, ST-024, ST-028, ST-030, ST-039]
 labels: [dashboard, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -18,7 +18,7 @@ As a technician, I want to see the median time from problem report to start of r
 ## Context
 Read model `RM-RepairTimes` – measures the success criterion "time from report to start of repair and to resolution can be measured for every defect" (`docs/product/vision.md`). A simple view, no export. This story is not in the MVP, but it must be done before the trial is evaluated.
 - Grouping uses the defect's current priority.
-- Times are elapsed time (ST-003) shown in days with one decimal (e.g. 2.5 days).
+- Times are elapsed time (ST-003) shown in days with one decimal, in German number format (e.g. „2,5 Tage“, G13).
 - The median of an even number of defects is the mean of the two middle values.
 - The defect details show both times of that defect (to first work log entry, to resolved) once they exist.
 - Report time of a defect = its earliest problem report (originating or linked).
@@ -27,6 +27,13 @@ Read model `RM-RepairTimes` – measures the success criterion "time from report
 - Defects closed on retirement do not count as resolved.
 - After a reopen, the latest resolution counts for the time to resolved.
 - Periods: the time to resolved uses the defects resolved in the period; the time to the first work log entry uses the defects whose first work log entry falls in the period.
+- It depends on ST-030 and ST-039 because its scenarios need a reopened defect and a defect closed on retirement in the Given (lead dev, backlog grooming 2026-10-17).
+
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G19, G20, G6, G7):
+- The repair times are reached from a row in „Mehr“ in the team navigation, shown to technicians only (user, 2026-10-17, section 9 item 3; G19). [OPEN] The row's label and its place among the rows of „Mehr“ are not decided (recommendation: „Reparaturzeiten“, after „Teammitglieder“).
+- The period is a choice of „Letzte 30 Tage“ / „Letzte 90 Tage“, in this order, „Letzte 30 Tage“ preselected (G20).
+- Per priority (hoch, normal, niedrig) the view shows the two medians and the number of defects, each labelled in words (G6). A priority without defects in the period says so in words instead of showing numbers (G7).
+- On the defect's page the times read „Bis zum ersten Arbeitsschritt: 1,5 Tage · Bis behoben: 4,0 Tage“; a time that does not exist yet is left out.
 
 ## Acceptance Criteria
 
@@ -81,13 +88,26 @@ Scenario: Period membership
   Then "Display flickers" counts for the time to resolved
   But not for the time to the first work log entry
 
+Scenario: A priority without defects in the period says so
+  Given no low-priority defect was resolved or got its first work log entry in the last 30 days
+  When a technician opens the repair times for the last 30 days
+  Then for priority low the view says that there is no defect in this period
+  And it shows no median for priority low
+
+Scenario: Technicians reach the repair times from the navigation
+  Given a technician is logged in
+  When the technician opens "Mehr" in the team navigation
+  Then the repair times can be opened from there
+  And the last 30 days are preselected
+
 Scenario: Helpers cannot open the repair times
   Given a helper is logged in
   When the helper opens the repair times
   Then the repair times are not shown
+  And the team navigation does not offer them to the helper
 
 ## Out of Scope
 - Export, charts, per-machine statistics
 
 ## Open Questions
-- none
+- [OPEN] Label and place of the repair times' row in „Mehr“ (recommendation: „Reparaturzeiten“, after „Teammitglieder“) – `docs/stories/OPEN_QUESTIONS.md`.

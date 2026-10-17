@@ -7,7 +7,7 @@ priority: wont
 size: M
 risk: low
 events: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MaintenancePlanChanged]
-depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-078]
+depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070, ST-078]
 labels: [mvp, maintenance, collection]
 status: ready
 ---
@@ -25,7 +25,7 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
    - The technicians write a one or two sentence instruction per task; where none is written yet, the task name is used.
 5. **Operations**: environments, monitoring, backups and the update routine are in place (ST-061, ST-062, ST-063); the legal texts from the museum are online (ST-064).
    - Decision (user, 2026-10-04, ST-064): because the museum has not delivered its texts yet, ST-064 ships the privacy notice with clearly marked placeholder texts in German and English, and shows no imprint until the museum provides one. Replacing them with the museum's own texts is part of this task.
-6. **No spike scaffolding is left** (story review 2026-09-29): the spike code, the password-gated test page on `/` and the spike pages are gone (ST-078), and the spike configuration and data are gone (ST-065, which took over what was left of ST-066 in the backlog grooming of 2026-10-11). This is a go-live blocker, not housekeeping: the blobs under the `spike/` prefix may show identifiable people and must not remain without a DPA (ADR 0006), and a password-gated test page must not be reachable in production on the museum's first day.
+6. **No spike scaffolding is left** (story review 2026-09-29): the spike code, the password-gated test page on `/` and the spike pages are gone (ST-078), and the spike configuration and data are gone – the spike cleanup was done by ST-066 on 2026-10-17 (GitHub secrets deleted, spike blobs removed). At go-live this item is a check that nothing has come back, not work. This is a go-live blocker, not housekeeping: the blobs under the `spike/` prefix may show identifiable people and must not remain without a DPA (ADR 0006), and a password-gated test page must not be reachable in production on the museum's first day.
 
 ## Acceptance Criteria
 - [ ] Every team member who takes part in the trial can log in with a personal account and the right role.
@@ -47,4 +47,5 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
 ## Notes
 - **Deferred on 2026-10-17 (user decision): priority `wont` for now.** The domain stories are finished first; hosting, operations and go-live (ST-065, ST-061, ST-062, ST-042) are evaluated together at the end. Until then the application runs on the Hobby account with test data only – no real visitor data (ADR 0006).
 - Backlog grooming 2026-10-11 (user decision of 2026-10-12): this task no longer depends on ST-070. The full Content Security Policy is `should` now and follows after go-live; the first day in the museum runs with the basic security headers that exist. No checklist item of this task required the full policy, so none was reworded. This replaces the answer of 2026-09-27 in `OPEN_QUESTIONS.md` ("ST-070 done before production go-live").
-- Same grooming: ST-066 was folded into ST-065 and is no dependency any more; ST-065 was already one.
+- Same grooming: ST-066 was folded into ST-065 and is no dependency any more; ST-065 was already one. Superseded on 2026-10-17: ST-066 was split out again and done the same day (see item 6).
+- **ST-070 is a dependency again** (backlog grooming 2026-10-17, user decision section 9 item 5): the inversion that removed it on 2026-10-12 is gone – go-live is deferred to the end, so the full script policy is done before the first day in the museum. This supersedes the first note above.

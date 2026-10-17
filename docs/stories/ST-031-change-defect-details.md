@@ -22,6 +22,11 @@ Command `CMD-ChangeDefectDetails` (technicians only, HS-18). Rules and invariant
 - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers.
 - Removing the suitable-for-helpers mark while a helper holds the claim releases that claim in the same step (rule on `CMD-ChangeDefectDetails`); the helper dashboard shows the release (ST-049).
 
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G21, G22):
+- The action sits behind „Verwalten“ as „Titel und Eignung ändern“ (G22) and leads to its own form page with the title field – carrying the title hint of ST-018's form (understandable for visitors) – and the suitable-for-helpers mark; submit „Defekt ändern“.
+- While a helper holds the claim, the form says next to the mark that removing it releases that helper's claim.
+- The confirmation names the change and, when a claim was released, the released claim and its helper.
+
 ## Acceptance Criteria
 
 Scenario: Technician changes the title
@@ -55,6 +60,12 @@ Scenario: Removing the mark releases a helper's claim
   Then "Rubber cracked" is no longer suitable for helpers
   And Anna's claim is released in the same step
   And "Rubber cracked" is not claimed
+  And the confirmation names that Anna's claim was released
+
+Scenario: The form says that removing the mark releases the helper's claim
+  Given the defect "Rubber cracked" is suitable for helpers and claimed by the helper Anna
+  When a technician opens the form to change its title and suitability
+  Then the form says that removing the suitable-for-helpers mark releases Anna's claim
 
 Scenario: Removing the mark keeps a technician's claim
   Given the defect "Rubber cracked" is suitable for helpers and claimed by the technician Tom
