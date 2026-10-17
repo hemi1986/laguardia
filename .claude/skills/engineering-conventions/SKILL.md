@@ -157,7 +157,7 @@ export const reportProblemCommand = aggregateCommand({
   store: problemReports,
   creates: true,                                         // a creating command: no load, saved at version 0
   decide: reportProblem,
-  journal: (event) => ({ type: event.type, aggregate: { type: "AGG-ProblemReport", id: event.problemReportId }, machineId: event.machineId, data: {} }),
+  journal: repairEvents.journal,                         // the module's event catalogue (see *The event journal*)
   result: (report) => ({ problemReportId: report.id }),
 });
 
@@ -173,7 +173,7 @@ Rules:
 - **A command that runs another** (`context.run`, Q6, built in ST-018): declare it with `runs: (state, events, input) => [run(otherCommand, input)]` – the layer runs it after saving, **as the same acting person**, in the same transaction, after that command's own authorization check (a person it does not allow makes the whole command `not-authorized`). Its rejection rejects everything; its error codes become part of the outer command's result type (so a form needs texts for them – the type check says so). Another module's command is imported through its `index.ts`. Example: CMD-RecordDefect runs Collection's CMD-ChangeMachineStatus (`src/modules/repair/record-defect-command.ts`); the inner command still needs the version the person saw – the form posts it. `runs` run before `policies`; `context.runAsSystem` stays for automatic policies only.
 - **Facts on an existing aggregate** (ST-018): a changing command may declare `facts: (tx, input, state) => Promise<Facts>` too – read after the aggregate is loaded, passed as the decision's fourth argument (`decide(state, input, context, facts)`). CMD-RecordDefect reads the machine's status from Collection this way, so "only a stricter status" stays in its pure decision. A fact about **another aggregate of the same module** that must stay true until the commit locks its row there (ST-022: CMD-LinkProblemReportToDefect reads the chosen defect `FOR UPDATE` in `linkingFacts`, so a concurrent resolution waits – `link-problem-report-to-defect-concurrency.integration.test.ts`); another module's data is still read without a lock (below).
 - **The decision is pure**: no database, no `new Date()`, no `randomUUID()` – the acting person, clock and ID generator come in its context. Rules with many cases get a table test at the decision (seam catalog).
-- **Journal mapping** (`journal`) per command until the event catalogue exists (ST-050) – references and non-personal facts only (see *The event journal*).
+- **Journal mapping** through the module's **event catalogue** (`src/modules/<module>/events.ts`, ST-079, architecture review 2026-10-17): a command passes `<module>Events.journal`; a new event gets its entry there first – references and non-personal facts only (see *The event journal*).
 - **The acting person's type follows from `allowedActors`** (Q5/Q20): `aggregateCommand` infers the literal list, and the decision gets `DecisionContext<ActorOf<…>>` – a command for `["helper", "technician"]` gets `{ kind: "team-member"; teamMemberId: TeamMemberId; role: Role }` without narrowing; one that also allows visitors gets the union. Write the list once as `as const` next to the decision when the decision names it. `Actor` stays the technical type; `Role` (command layer) and `Reporter` (problem report, derived from the acting person in `reporterOf` only) are defined once – lint refuses a second definition. Every "… by" is a `TeamMemberId`.
 - **Policies** the command triggers are declared with `policies: (state, events) => [trigger(policy, input)]` (see *Automatic policies*).
 - **Set-based rules** (ST-007, HS-17): a creating command whose decision must know about the module's other aggregates declares `facts: (tx, input) => Promise<Facts>`; the layer reads them in the command's transaction and passes them to `decide(facts, input, context)` in place of the missing state. Facts that must stay true until the commit take a lock there – CMD-RegisterMachine takes `pg_advisory_xact_lock(hashtext('museum-number'))`, so concurrent registrations run one after the other – and a unique constraint stays the final guarantee (`museum_number`'s primary key).
@@ -187,9 +187,8 @@ problem report, so the rules of both commands apply unchanged and the order of r
 Since ST-052 the triage part is one of three outcomes (`defect-recorded`, `linked`, `resolved-on-the-spot`): the
 decision checks who may choose which – resolving on the spot every team member, the others technicians only, else
 `not-authorized` – and dispatches to that outcome's own decision; the command's facts add the chosen defect, locked as
-in CMD-LinkProblemReportToDefect. Each triage event has **one** journal mapping (`journalDefectRecorded`,
-`journalProblemReportLinked`, `journalProblemResolvedOnTheSpot`), exported by its own command file and used by
-CMD-ReportProblem too. On the pages, the three forms that report and triage in one step share `ReportSection`, the
+in CMD-LinkProblemReportToDefect. Each triage event has **one** journal projection in Repair's event catalogue, used by its own command and by
+CMD-ReportProblem alike. On the pages, the three forms that report and triage in one step share `ReportSection`, the
 rejection text and the photo marker in `…/[museumNumber]/melden/`; the defect's fields and their input function live
 beside the routes (`src/app/(team)/team/defect-fields.tsx`, `defect-input.ts`). The machine record confirms such a
 problem report from the ID in the address, only when it is stored for that machine (`triaged-when-reporting.ts`).
@@ -202,17 +201,18 @@ the version its page showed (`defect-button-form.tsx`). Whether the control is o
 decision's reasons for refusing are one function next to it (`claimRefusal(defect, actor)`), which the decision applies
 and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
 in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
-over from) is a reference in the event's journal data, listed in `events.yaml`, and read back by a function that sits
-next to the journal mapping (`takenOverFrom` in `claim-defect-command.ts`) – only for the confirmation, never taken
-from the address.
+over from) is a reference in the event's journal data, listed in `events.yaml` and in the catalogue, and read back typed with
+`readJournal` (`lastDefectActionBy`) – only for the confirmation, never taken from the address.
 
 **What a team member can do to a defect** (architecture review 2026-10-11): `src/modules/repair/defect-actions.ts` is
 the one place that knows the actions on a defect (`defectActions`, in the order the page offers them), each command's
 reason for refusing a team member (`defectActionRefusals`, built from the refusal function next to each decision) and
 which event belongs to which action. `defectDetails(db, id, teamMember)` returns that answer as `actions`; the defect's
-page shows what is `offered`, and a form page shows the reason in place of its form (`defect-form-data.ts`) – no page
+page shows what is `offered`, and a form page reads the defect with `defectForAction(db, id, teamMember, action)` – the
+defect as its store loads it, its version and that command's refusal – and shows the reason in place of its form
+(`defect-form-data.ts`, architecture review 2026-10-17) – no page
 carries a rule or a `can…` flag of its own (G11). **A new command on a defect** adds: its action and refusal there, its
-event in `actionOfEvent`, a confirmation text and – if it needs input – its form page in the two small maps of
+event in `actionOfEvent` and its projection in `repairEvents`, a confirmation text and – if it needs input – its form page in the two small maps of
 `defect-details.tsx`. After an action the Server Action lands on `/team/defects/<id>?done=<action>`; the page confirms it
 only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
 never from the address alone, and without a state field per action.
@@ -305,7 +305,7 @@ export async function registerMachineAction(previous: RegisterMachineState, form
 
 // the form – a client component
 const [state, action, pending] = useActionState(registerMachineAction, null);
-// state: null, or { error, values } after a rejection → commandErrorText(messages, state.error), defaultValue={state.values.x}
+// state: null, or { error, values } after a rejection → rejectionText(state.error), defaultValue={state.values.x}
 ```
 
 - **A Server Action that runs a command only calls the runner.** (Login, logout and the ST-005 account actions call Team module functions backed by Better Auth, not commands – they take the acting person from the same `currentPerson()`.) `formAction` (`src/app/_actions/form-action.ts`) takes the acting person from `currentPerson()`; it has no parameter for an actor, a role or a team member ID, and form fields named `actor`/`role`/`teamMemberId` are never read. Lint refuses `executeCommand` and the factory `formRunner` anywhere under `src/app/` outside `_actions/` (tests excepted).
@@ -358,7 +358,8 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 
 - `data` holds **only references and non-personal facts** (a new status, a priority, a defect ID) – **never free text a person typed** (descriptions, notes, reasons). Text lives only in the aggregate, where it can be removed (spam dismissal, personal data). Decided 2026-09-27.
 - Set `machineId` whenever the event concerns a machine – timelines and "new since last visit" (ST-050) query by it.
-- Read it with `journalOf(db, { aggregateId } | { machineId })`; it is never replayed to rebuild state.
+- **The event catalogue per module** (`src/modules/<module>/events.ts`, `eventCatalogue` from the command layer; ST-079, architecture review 2026-10-17): per event type its aggregate and its projection – the aggregate ID, the machine and the only fields that reach the journal. Commands pass `<module>Events.journal`; `events.test.ts` next to each catalogue checks it against `events.yaml` (the event exists there, on its own aggregate or on that of a command producing it).
+- Read it typed with `readJournal(db, <module>Events, { types, aggregateIds, machineId, since, notBy })` – the data of each entry is typed by its projection (partial: older entries may lack a later field); `journalOf(db, { aggregateId } | { machineId })` stays for tests and untyped looks. It is never replayed to rebuild state.
 
 ## Version check (HS-16)
 
@@ -411,7 +412,7 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 
 - No text literals in pages. Team pages: `teamMessages` (German, `src/platform/messages/team.de.ts`); domain terms under `terms`, keyed by the glossary term, in the `_UI (de)_` wording – a test compares them with `CONTEXT.md`. Add a term when a page first needs it.
 - Visitor pages: `visitorMessages(locale)` – `visitor.de.ts` and `visitor.en.ts` have the same keys (type and test). The locale of a request (ST-010): `currentVisitorMessages()` (`src/app/visitor-locale.ts`) – the remembered switch (cookie `visitor-locale`, set by the Server Action `switchVisitorLanguage`, one year), else the browser's highest-ranked of German and English in `Accept-Language`, else English (`visitorLocale`, table test). Every visitor page is built on `VisitorPage` (`src/app/visitor-page.tsx`, ST-064), which sets `lang` on its content and shows `VisitorLanguageSwitch` at the top and the legal links (`/datenschutz`, `/impressum` only if the museum provides an imprint) at the end – never assemble that frame by hand.
-- Command errors map to catalog texts by their kebab-case code: the `commandErrors` section of the visitor catalogues, read with `commandErrorText(messages, code)`. A form that shows `commandErrorText(messages, state.error)` fails the type check when one of its command's error codes (including `not-authorized`, `not-found`, `version-conflict`) has no text – the runner itself does not constrain the codes. A team catalogue section follows with the first team form (ST-007).
+- Command errors map to catalog texts by their kebab-case code: the `commandErrors` section of the visitor catalogues, read with `commandErrorText(messages, code)`. A form that shows `commandErrorText(messages, state.error)` fails the type check when one of its command's error codes (including `not-authorized`, `not-found`, `version-conflict`) has no text – the runner itself does not constrain the codes. A team catalogue section follows with the first team form (ST-007). **A team form on the runner shows `rejectionText(state.error, overrides?)`** (`src/app/_actions/rejection-text.ts`, architecture review 2026-10-17): the form kept the input and its page shows the aggregate as it is now, so a conflict asks to send again (`forms.conflict`, G8/G13); a form passes its own text for an error where it knows more (who triaged first, a machine retired meanwhile, log work's conflict). One-tap buttons have nothing to keep and show `commandErrorText` directly. An address that is no aggregate ID is checked with `isId` from the command layer.
 
 ## Security
 
