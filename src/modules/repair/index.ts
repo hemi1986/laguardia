@@ -15,6 +15,8 @@ export type { ResolveProblemOnTheSpotError, ResolveProblemOnTheSpotInput } from 
 export { holdReasons, priorities, type Defect, type Hold, type HoldReason, type Priority, type WorkLogEntry } from "./defect";
 export { putDefectOnHoldCommand } from "./put-defect-on-hold-command";
 export type { PutDefectOnHoldError, PutDefectOnHoldInput } from "./put-defect-on-hold";
+export { resumeDefectCommand } from "./resume-defect-command";
+export type { ResumeDefectError, ResumeDefectInput } from "./resume-defect";
 export {
   defectDetails,
   defectForAction,
