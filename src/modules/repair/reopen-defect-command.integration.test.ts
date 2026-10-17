@@ -5,6 +5,8 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { anOpenDefectIn } from "@/test-support/defects";
+import { machineRecord } from "@/modules/collection";
+import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
   defectDetails,
@@ -40,8 +42,24 @@ async function aResolvedDefect(title: string, closingNote = "Coil replaced") {
   return defect;
 }
 
-function reopen(defectId: string, version: number, reason: string, actor: Actor, at = "2026-10-13T10:00:00Z") {
-  return executeCommand(reopenDefectCommand, { defectId, version, reason }, dependencies(actor, at));
+function reopen(
+  defectId: string,
+  version: number,
+  reason: string,
+  actor: Actor,
+  status: { machineStatus?: "limited" | "out-of-order"; machineVersion?: number } = {},
+) {
+  return executeCommand(
+    reopenDefectCommand,
+    { defectId, version, reason, ...status },
+    dependencies(actor, "2026-10-13T10:00:00Z"),
+  );
+}
+
+/** The museum number the machine was registered with – its journal starts with EVT-MachineRegistered. */
+async function museumNumberOf(machineId: string) {
+  const [registered] = await journalOf(db, { machineId });
+  return registered.data.museumNumber as string;
 }
 
 beforeAll(async () => {
@@ -78,5 +96,57 @@ describe("CMD-ReopenDefect", () => {
     const entry = (await journalOf(db, { aggregateId: defectId })).at(-1);
     expect(entry).toMatchObject({ type: "EVT-DefectReopened", actor: anna, machineId });
     expect(entry?.data).toEqual({});
+  });
+
+  it("ST-030: Technician changes the machine status while reopening", async () => {
+    const { machineId, defectId } = await aResolvedDefect("Left flipper weak");
+
+    const reopened = await reopen(defectId, 2, "Weak again", tom, { machineStatus: "limited", machineVersion: 0 });
+
+    expect(reopened).toEqual({ ok: true, result: { defectId } });
+    expect((await defectDetails(db, defectId))?.state).toBe("open");
+    const record = await machineRecord(db, await museumNumberOf(machineId));
+    expect(record?.machineStatus).toBe("limited");
+    expect(record?.statusHistory[0]).toMatchObject({
+      previousStatus: "playable",
+      newStatus: "limited",
+      reason: "Left flipper weak",
+      changedBy: tom.teamMemberId,
+    });
+  });
+
+  it("ST-030: A reason is required", async () => {
+    const { defectId } = await aResolvedDefect("Coin door sticks");
+
+    expect(await reopen(defectId, 2, "   ", anna)).toEqual({ ok: false, error: "reason-required" });
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+  });
+
+  it("ST-030: Open defects cannot be reopened", async () => {
+    const { defectId } = await anOpenDefectIn(db, { title: "Display flickers", recordedBy: tom, at: recorded });
+
+    expect(await reopen(defectId, 0, "Again", anna)).toEqual({ ok: false, error: "defect-not-resolved" });
+  });
+
+  it("ST-030: No reopening on retired machines", async () => {
+    const { machineId, defectId } = await aResolvedDefect("Coin mech jammed");
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      dependencies(tom, "2026-10-12T12:00:00Z"),
+    );
+    if (!retired.ok) throw new Error(retired.error);
+
+    expect(await reopen(defectId, 2, "Jammed again", tom)).toEqual({ ok: false, error: "machine-retired" });
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+  });
+
+  it("refuses a machine status chosen by a helper – only technicians change it while reopening", async () => {
+    const { machineId, defectId } = await aResolvedDefect("Rubber cracked");
+
+    expect(await reopen(defectId, 2, "Cracked again", anna, { machineStatus: "out-of-order", machineVersion: 0 })).toEqual(
+      { ok: false, error: "not-authorized" },
+    );
+    expect((await machineRecord(db, await museumNumberOf(machineId)))?.machineStatus).toBe("playable");
   });
 });
