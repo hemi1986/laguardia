@@ -4,7 +4,7 @@ title: Backup and restore of database and object storage
 type: tech-task
 context: BC-Repair
 priority: wont
-size: S
+size: M
 risk: medium
 events: []
 depends_on: [ST-061]

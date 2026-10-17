@@ -3,7 +3,7 @@ id: ST-068
 title: Browser test of the real visitor problem report flow
 type: tech-task
 context: BC-Repair
-priority: should
+priority: could
 size: M
 risk: medium
 events: []
@@ -15,11 +15,14 @@ status: ready
 ## Task
 Follow-up of ST-059 (CI and test harness): `docs/reviews/ST-059-code-review.md` finding #15 (follow-up section) and `docs/reviews/ST-059-acceptance.md` ("Edge cases not covered by the story": the one browser test is coupled to the throwaway spike page). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
-The only browser test, `e2e/report-problem.spec.ts`, drives the ST-001 spike test page: it enters the spike password (`SPIKE_PASSWORD`) and reports a problem for the hard-coded machine `"test-machine"`. **ST-078** removes the spike **code** – that page, its Server Action and the browser test itself – and deletes `e2e/report-problem.spec.ts`; ST-066 then removes the spike configuration and data (the `SPIKE_PASSWORD` variables and the blobs). Without a replacement, the pipeline is left with no browser test of the visitor flow, and the ST-059 criterion "at least one browser test runs at 360 px width against a deployed preview" is carried by `e2e/security.spec.ts` alone, which ST-078 re-points at `/login`.
+**State on 2026-10-17 (text refreshed in the backlog grooming of 2026-10-17).** The spike browser test is gone (ST-078 deleted the spike code, ST-066 the spike configuration and data). The real visitor flow of ST-010 and ST-013 **already has a browser test**: `e2e/report-problem.spec.ts` (ST-013) – a visitor opens the visitor machine page by its museum number, reports a problem and sees the confirmation, at 360 px. It runs **locally only**: it registers its machine through the team pages with the e2e technician that each local run creates (ST-083), and it skips itself when `BASE_URL` is set, i.e. in `.github/workflows/e2e-preview.yml` against the Vercel preview.
 
-Replace the spike browser test with a browser test of the real visitor flow from ST-010 and ST-013, run against the commit's Vercel preview by the existing workflow `.github/workflows/e2e-preview.yml`: a visitor opens the visitor machine page of a machine by its museum number and reports a problem.
+**What is missing on the preview**, and what this task builds:
+- the preview's database branch has **no machine on display** and **no technician account** to register one – so the test needs a machine seeded into the preview's database branch;
+- the workflow has **no connection to the preview's database branch** for such a seed step;
+- so the visitor flow is not tested against a deployed preview, and the ST-059 criterion "at least one browser test runs at 360 px width against a deployed preview" is carried by `e2e/security.spec.ts` alone.
 
-**Coverage gap, recorded in the story review of 2026-09-29:** from ST-078 until this story is done, no browser test covers the visitor problem report flow – the flow stays covered by integration tests of `CMD-ReportProblem` only. This story closes that gap; the earlier requirement to run "before or together with ST-066" no longer applies in that form, because the deletion happens in ST-078 and is not blocked on this story.
+The task makes the visitor flow's browser test run against the commit's Vercel preview in `.github/workflows/e2e-preview.yml` as well – by seeding a machine (below) and letting `e2e/report-problem.spec.ts`, or a preview variant of it, use that machine instead of registering one through the team pages.
 
 The test needs a machine that is on display in the preview's database. Decided in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 2): a seed step in the browser-test workflow registers the machine through `CMD-RegisterMachine` (ST-007) in the preview's Neon database branch, so the event journal stays consistent, with a fixed museum number reserved for tests. It runs only against preview database branches, never production; the connection comes from the CI step built by this task (below).
 
@@ -34,7 +37,7 @@ The test needs a machine that is on display in the preview's database. Decided i
 - [ ] The test runs in `.github/workflows/e2e-preview.yml` against the commit's Vercel preview and is green there; the run is linked as evidence.
 - [ ] The test uses neither the spike password nor the machine `"test-machine"`; the browser test needs no secret other than `VERCEL_AUTOMATION_BYPASS_SECRET`, and the seed step none other than those of the connection step below.
 - [ ] The test does not depend on data left behind by earlier runs: a second run against the same preview is green as well.
-- [ ] The new browser test closes the gap ST-078 opened: it is the first browser test of the visitor problem report flow since ST-078 deleted `e2e/report-problem.spec.ts` (that deletion belongs to ST-078, not to this story), and no browser test references the spike page any more.
+- [ ] The visitor problem report flow's browser test no longer skips itself against the preview: it runs locally as today (machine registered by the local e2e technician, ST-083) and against the preview with the seeded machine.
 - [ ] The browser test job still finishes in under 10 minutes including waiting for the preview (ST-059).
 
 ### Foundation (moved from ST-075 on 2026-09-27 – preview database connection, story review decision 2)
@@ -48,7 +51,7 @@ The test needs a machine that is on display in the preview's database. Decided i
 
 ## Out of Scope
 - The separate Blob store and other preview environment settings (ST-061)
-- Removing the spike scaffolding itself: the spike **code**, the test page on `/` and the deletion of `e2e/report-problem.spec.ts` (ST-078); the spike **configuration and data** (ST-066)
+- The spike scaffolding – removed by ST-078 (code) and ST-066 (configuration and data), both done
 - Making "Browser tests on preview" a required check for merging into `main` (`docs/reviews/ST-059-code-review.md` finding #16, to be decided e.g. in ST-061)
 - Browser tests for further flows (team login, triage, maintenance)
 - Photos on problem reports (ST-016)
@@ -57,5 +60,6 @@ The test needs a machine that is on display in the preview's database. Decided i
 - none – how the preview gets a machine on display was answered in the story review of 2026-09-27: seeded through `CMD-RegisterMachine` with a fixed test museum number, preview branches only, never production (see Task).
 
 ## Notes
-- `must` → `should` in the backlog grooming of 2026-10-11 (user decision of 2026-10-12, conflict B): built after go-live; until then the flow is covered locally by `e2e/report-problem.spec.ts`.
+- `must` → `should` in the backlog grooming of 2026-10-11 (user decision of 2026-10-12, conflict B): built after go-live; until then the flow is covered locally by `e2e/report-problem.spec.ts`. `should` → `could` in the backlog grooming of 2026-10-17 (PO): the local browser test covers the flow; the preview part belongs to the hosting block.
+- **Belongs to the hosting block** (user, 2026-10-17: hosting, operations and go-live deferred to the end): build it after ST-065 (museum Pro team) and ST-061 (environments and operations, incl. the preview's own Blob store), together with that block. It deliberately has **no** `depends_on` on them – they are `wont` for now, and a dependency on a `wont` story would block it formally. Start it by name, `/implement ST-068`, once ST-065 and ST-061 are done.
 - The acting person of the seed step (`CMD-RegisterMachine` is for technicians only) is decided in this story's test plan, when login (ST-004) and account management (ST-005) exist – user decision in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 6).

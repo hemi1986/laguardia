@@ -4,7 +4,7 @@ title: Correct a machine's museum number or serial number
 type: story
 context: BC-Collection
 priority: could
-size: M
+size: L
 risk: medium
 events: [EVT-MachineDetailsCorrected]
 depends_on: [ST-011]
@@ -22,6 +22,7 @@ Command `CMD-CorrectMachineDetails` (technicians only, HS-18). Rules:
 - A correction and a registration with the same number at the same time never both succeed; the machine store guarantees uniqueness atomically (HS-17).
 - The QR sticker is reprinted after a museum number correction (ST-011).
 - An old QR sticker with the previous museum number keeps leading to the machine – the old number is reserved, so it cannot become ambiguous.
+- Landing (backlog grooming 2026-10-17, appendix; G3): after a museum number correction the technician lands on the machine record under the new number with the confirmation „LG-420 heißt jetzt LG-042. Bitte einen neuen QR-Sticker drucken.“
 
 ## Acceptance Criteria
 
@@ -35,6 +36,7 @@ Scenario: Technician corrects a mistyped museum number
   And no machine has the museum number "LG-042"
   When a technician corrects its museum number to "LG-042"
   Then the machine has the museum number "LG-042" with all its history
+  And the technician is on the machine record of "LG-042" with a confirmation naming the old and the new museum number and asking to print a new QR sticker
   And a new QR sticker for "LG-042" can be printed
 
 Scenario: The old museum number stays reserved
@@ -89,3 +91,6 @@ Today what a museum number is lives in four places (`registrationFacts` and `giv
 
 ## Open Questions
 - none
+
+## Notes
+- Backlog grooming 2026-10-17 (lead dev): before this story is pulled, its foundation checklist above (the museum number register, facts on changing commands, the redirect) is extracted into a tech task of its own, so the story stays a domain story (user-stories skill: no implementation foundation inside a domain story). Not done now – the story stays `could`.

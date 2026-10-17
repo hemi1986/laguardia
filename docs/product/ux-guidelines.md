@@ -1,7 +1,7 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G22, including G2a, G4a, G6a, G8a, G10a and G21a)
-> is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G23, including G2a, G4a, G6a, G8a, G10a, G10b
+> and G21a) is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
 > now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
 The yardstick every screen is measured against. **How** we arrive at a decision is the skill `ux-design`; **what**
@@ -63,7 +63,8 @@ and keeps the input (G8). Every outcome lands in the same place afterwards, with
 outcomes the person may choose are shown (G11), in an order fixed by the stories that add them, and none is offered
 once the thing is decided.
 *First use:* the problem report's page (ST-017) – in this order: „Mit Defekt verknüpfen“ (only when the machine
-has open defects), „Defekt erfassen“, „Direkt behoben“, „Meldung verwerfen“ (ST-022, ST-018, ST-019, ST-020).
+has open or recently resolved defects – *extended 2026-10-17, grooming, ST-053*: linking may reopen a recently
+resolved defect), „Defekt erfassen“, „Direkt behoben“, „Meldung verwerfen“ (ST-022, ST-018, ST-019, ST-020).
 *Why:* the problem report has four triage outcomes, and the defect page, ST-039 and ST-044 will have more. Four
 inline forms on one page at 360 px put the rejection where nobody looks (G8).
 
@@ -92,7 +93,9 @@ The page of an open defect has two groups of actions, and no story puts an actio
   in G19): „Zuweisen“, „Übernahme von Tom aufheben“, „Priorität ändern“, „Titel und Eignung ändern“.
 
 A resolved defect offers only „Wieder öffnen“, under its „Abschlussnotiz“.
-Claiming and releasing are one tap; every other action has its form page (G21). Nothing here asks first – these
+Claiming, releasing and „Fortsetzen“ are one tap, each landing on the defect's page with its confirmation (G3);
+every other action has its form page (G21). *„Fortsetzen“ added 2026-10-17 (grooming, ST-029):* resuming has
+nothing to ask – the hold reason was given when pausing. Nothing here asks first – these
 are signals and recorded facts, not destructive actions (G10). The header says a hold in words („Pausiert – Wartet
 auf Ersatzteil“, G6).
 The order of the actions is the order of `defectActions` in `src/modules/repair/defect-actions.ts`; a story adds
@@ -166,9 +169,19 @@ on a rejection, a tick on a confirmation, from `lucide-react` – the icon libra
 ST-007, which builds the first form on shadcn's `Field` (`data-invalid` on the field, `aria-invalid` on the
 control); the four older forms follow in their own tech task.
 
+**G23 – A partial success says what worked and, line by line, what did not** (user, 2026-10-17, grooming).
+When one action covers several things and only some succeed, the landing page shows one confirmation for what
+worked („„Clean glass“ an 3 Geräten eingetragen.“) and below it one rejection line per thing that did not, naming
+the thing and its reason. Nothing that succeeded is rolled back to hide a failure, and nothing that failed is left
+out.
+*Source:* ST-045 (recording maintenance for several machines).
+*Why:* a single confirmation hides the machines that were not recorded – their task stays due and nobody knows why;
+a single rejection hides that most of them were.
+
 **G10 – A destructive or irreversible action asks once, and says in words what will happen to whom.**
-"Zugang für Anna Berger beenden? Anna wird sofort abgemeldet."
-The question names the thing by its own words **and the consequences nobody sees on this screen**: retiring a
+„Konto von Anna Berger deaktivieren? Anna wird sofort abgemeldet.“ (*corrected 2026-10-17, grooming, ST-081:* the
+access is the *Konto*, G12.)
+How the question is shown is G10b. The question names the thing by its own words **and the consequences nobody sees on this screen**: retiring a
 machine (ST-039) names the machine, how many defects will be closed and how many problem reports dismissed;
 removing a file (ST-038) names the file and says that it is gone for good.
 *Why:* "Deaktivieren" is one tap, it ends the person's sessions, and nothing in La Guardia undoes it. Retiring a
@@ -191,6 +204,16 @@ undo button. Deleted bytes we simply no longer have.
 same person – which splits their work history in two. Without the boundary written down, the same rule would be
 read as "everything has an undo", and the next story would promise one the domain cannot keep.
 
+**G10b – The question before an irreversible action is a page of its own** (user, 2026-10-17, grooming).
+Submitting the action leads to a page with nothing but the question of G10: it names the thing by its own words and
+the consequences nobody can see from where they are, and offers two buttons – the verb („Endgültig ausmustern“,
+„Endgültig entfernen“, „Endgültig verwerfen“) and „Zurück“. „Zurück“ returns to the form unchanged, with everything
+that was typed. Only the verb button carries the action out.
+*Sources:* the spam question (G10), ST-038, ST-039, ST-041, ST-081.
+*Why:* five stories ask before an irreversible action, and without JavaScript a question cannot pop up over the
+form. Without one shape, each would pick its own – and a „Zurück“ that loses the reason just typed punishes the
+person for checking.
+
 **G11 – Someone who may not do a thing does not see the control.**
 The page shows the rest; the command refuses it anyway (`allowedActors` – the UI never carries the rule alone).
 Where a whole page is not theirs, they do not reach it from the navigation.
@@ -212,13 +235,18 @@ domain-model skill.
 every button and every confirmation. Two words, one thing, and no glossary entry decides which.
 
 **G13 – German that a volunteer reads, not a database.**
-Team texts use the plain imperative ("Bitte einen Titel angeben."), visitor texts address the person informally
-("Bitte beschreibe das Problem."). Nobody is addressed as "Sie". No English in the UI, no technical terms
+Team instructions use the plain infinitive („Bitte einen Titel angeben.“, „Bitte die Seite neu laden.“), visitor
+texts address the person informally („Bitte beschreibe das Problem.“). Confirmations and dashboards in the team UI
+may address the person with *du* („neu seit deinem letzten Besuch“, „Gerade ist nichts für dich offen.“). Numbers
+are written the German way („2,5 Tage“). Nobody is addressed as "Sie". No English in the UI, no technical terms
 ("Validierungsfehler", "Datensatz", "ID").
+*Clarified 2026-10-17 (grooming):* the rule said "imperative" and meant the infinitive of its own example; the
+built `version-conflict` text („Bitte lade die Seite neu …“) shows the word was ambiguous. *Du* is allowed where a
+screen speaks to one person; German decimals are needed since ST-051 („2,5 Tage“).
 *Why:* the people using this are museum volunteers doing it in their spare time.
 
 **G14 – Buttons say what will happen, in the words of the thing.**
-"Modell anlegen", "Zugang beenden" – not "Speichern", "OK", "Absenden".
+"Modell anlegen", "Konto deaktivieren" – not "Speichern", "OK", "Absenden".
 *Why:* on a long page a lone "Speichern" does not say what it saves.
 
 **G20 – An enumeration a person picks from has its German option texts decided in the story that first offers it**
@@ -323,3 +351,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-10 | **G21a added** (creating a thing and deciding its outcome in one step: a choice page with one button per outcome, one form page each with the thing's fields, sent once and stored together; a person who may decide only one outcome and may leave it undecided keeps the plain form with that outcome as one button above the first field). **G8a narrowed**: no photo sentence after a rejection of the photo itself (ST-016's texts). | Story review of ST-023/ST-052 (`docs/reviews/2026-10-10-story-review.md`, Decision 3a; proposal `docs/reviews/ST-023-ux-form.md`, option B, and the helper path H2) |
 | 2026-10-12 | **G22 added**: the defect's page offers the work as buttons under the header (claim or release · work log entry · resolve · put on hold or resume) and the managing behind the fold „Verwalten“ for technicians (assign, release someone else's claim, priority, title and suitability); a resolved defect offers only „Wieder öffnen“. The order is the order of `defectActions`. | Backlog grooming of 2026-10-11 (`docs/reviews/2026-10-11-backlog-grooming.md`, section 6, decision 5): ST-026, ST-027, ST-029, ST-030 and ST-031 bring five more actions to a page that has three – eight or nine at 360 px, in an order no story decides |
 | 2026-10-12 | **G18 extended with the dashboards**: ST-048 owns the technician dashboard, ST-049 the helper dashboard, each with its sections in a fixed order; ST-050 marks entries and adds no section; neither dashboard repeats the due maintenance list – a maintenance task with a count and a link to „Wartung“. | Same grooming, section 6: four stories add to the dashboards (ST-048, 049, 050, 058), and G18 named the problem without naming the owners or the order |
+| 2026-10-17 | **G10b added** (the question before an irreversible action is a page of its own: the thing, the unseen consequences, „Endgültig …“ / „Zurück“, and „Zurück“ returns to the form unchanged). **G23 added** (partial success: one confirmation for what worked, one rejection line with its reason per thing that did not, on the landing page). **G13 clarified** (infinitive in team instructions, *du* allowed in confirmations and dashboards, German numbers). **G10's example corrected** to *Konto* (G12). **G21's condition** for „Mit Defekt verknüpfen“ extended to open or recently resolved defects (ST-053). **G22**: „Fortsetzen“ is one tap like claiming and releasing. | Backlog grooming of 2026-10-17 (`docs/reviews/2026-10-17-backlog-grooming.md`, section 6 last bullet, section 9 decisions 3 and 6): the spam question, ST-038, ST-039, ST-041 and ST-081 each ask before an irreversible action; ST-045 is the first partial success; ST-051 brings decimals; ST-053 lets linking reopen; the user decided „Fortsetzen“ is one tap (ST-029) |

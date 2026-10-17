@@ -5,9 +5,9 @@ type: story
 context: BC-Collection
 priority: should
 size: M
-risk: medium
+risk: high
 events: [EVT-MachineRetired, EVT-DefectClosedOnRetirement, EVT-ProblemReportDismissed]
-depends_on: [ST-012, ST-020, ST-024, ST-027, ST-030, ST-033]
+depends_on: [ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033]
 labels: [mvp, collection, ui]
 status: ready
 ---
@@ -27,6 +27,15 @@ Concurrency: a problem report, defect or maintenance record created at the same 
 How retired machines appear in the views follows in ST-055.
 Repair history (ST-033): a defect closed on retirement is shown there as *closed on retirement*, not as resolved – moved here from ST-033 by the backlog grooming of 2026-10-11 (user, 2026-10-12), so that ST-033 does not wait for this story.
 UI wording (de): Ausgemustert; Geschlossen (ausgemustert).
+That a retired machine cannot be moved is tested in ST-034 (backlog grooming 2026-10-11/2026-10-17), not here.
+
+Status display (user, 2026-10-17, backlog grooming section 9 item 3): the machine record of a retired machine shows „Ausgemustert“ in place of the machine status, under the retirement note of section 1 (ST-009). Retirement is not an entry of the status history; the status history stays as it was.
+
+Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G10, G18, G21):
+- Section 9 of the machine record (owner ST-009, G18) offers „Gerät ausmustern“ to technicians only (G11).
+- It leads to the page „LG-013 ausmustern“ with the field „Grund“; sending it does not retire the machine yet – it leads to the question page, which asks once (G10).
+- The question page says what will happen and what nobody sees on this screen: „LG-013 ausmustern? 1 offener Defekt wird geschlossen, 2 Meldungen werden verworfen. Das lässt sich nicht rückgängig machen.“ A part with zero is left out. Buttons „Endgültig ausmustern“ / „Zurück“; „Zurück“ retires nothing.
+- Afterwards the technician lands on the machine record with the confirmation „LG-013 ist ausgemustert.“
 
 ## Acceptance Criteria
 
@@ -61,8 +70,27 @@ Scenario: Defects closed on retirement are shown as such in the repair history
 
 Scenario: Actions on a retired machine are rejected
   Given "LG-013" is retired
-  When a team member tries to report a problem, change the machine status, move it or record maintenance for "LG-013"
+  When a team member tries to report a problem, change the machine status or record maintenance for "LG-013"
   Then the action is rejected
+
+Scenario: Retiring asks once and names what it closes
+  Given "LG-013" has 1 open defect and 2 untriaged problem reports
+  When a technician enters the reason "Sold to a collector" to retire "LG-013"
+  Then the technician is asked once whether to retire "LG-013"
+  And the question says that 1 open defect will be closed and 2 problem reports dismissed, and that this cannot be undone
+  And "LG-013" is not retired until the technician confirms
+
+Scenario: Going back from the question retires nothing
+  Given a technician is asked whether to retire "LG-013"
+  When the technician goes back
+  Then "LG-013" is not retired
+  And none of its defects or problem reports changes
+
+Scenario: The machine record of a retired machine shows "retired" in place of the status
+  Given "LG-013" was Out of order when it was retired
+  When a team member opens the machine record of "LG-013"
+  Then it shows retired in place of the machine status
+  And its status history still ends with the change to Out of order
 
 Scenario: Problem report at the moment of retirement
   Given a visitor submits a problem report for "LG-013" at the same moment as a technician retires "LG-013"
@@ -92,3 +120,6 @@ Scenario: Helpers cannot retire machines
 
 ## Open Questions
 - none
+
+## Notes
+- **Before implementation an ADR is needed** (lead dev, backlog grooming 2026-10-17, sections 4 and 6): (1) how a Collection event (`EVT-MachineRetired`) triggers Repair commands (`CMD-CloseDefectOnRetirement`, `CMD-DismissProblemReport`) in the same transaction without a module cycle – Repair already reads Collection; (2) how the machine is locked against a concurrent problem report, defect or maintenance record while it is being retired (the concurrency rule above). The ADR input is collected in `docs/stories/OPEN_QUESTIONS.md`. The story stays `ready`: the behaviour is decided, only the technical way is not.

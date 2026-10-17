@@ -4,12 +4,12 @@ title: Report forms say that the photo must be chosen again after a rejection
 type: story
 context: BC-Repair
 priority: could
-size: null
-risk: null
+size: XS
+risk: low
 events: [EVT-ProblemReported]
 depends_on: [ST-013, ST-015, ST-016]
 labels: [follow-up, triage, ui]
-status: draft
+status: review
 ---
 
 ## Story
@@ -41,7 +41,7 @@ Scenario: Visitor report form in English says the photo must be chosen again
   Given a visitor reports a problem for "LG-042" in English with a photo and without a description
   When they submit it
   Then the problem report is not stored
-  And the rejection ends with "Please choose the photo again."
+  And the rejection reads "Please describe the problem. Please choose the photo again."
 
 Scenario: No photo sentence without a photo
   When a helper reports a problem for "LG-042" without a photo and without a description
@@ -65,4 +65,4 @@ Scenario: A rejected photo gets no extra sentence about choosing it again
 - none (the sentence after a rejection of the photo itself was answered on 2026-10-10: not added)
 
 ## Notes
-Expected to be small (XS/S; lead-dev estimates): two message catalogs and the rejection on two forms.
+Expected to be small (XS/S; lead-dev estimates): two message catalogs and the rejection on two forms. Estimated XS, risk low in the backlog grooming of 2026-10-17 (`withPhotoToChooseAgain` exists); the English scenario checks the full text there (all reviewers).
