@@ -725,6 +725,33 @@ describe("a defect's own page", () => {
       expect(html).toContain("offen seit");
       expect(html).not.toContain("wieder-oeffnen");
     });
+
+    it("confirms the reopening to who did it – with the machine's new status when they changed it (as in ST-018)", async () => {
+      const defectId = await recorded(await reported(await registered("LG-042"), "Left flipper barely moves", NOW), NOW);
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+      const reopened = await executeCommand(
+        reopenDefectCommand,
+        { defectId, version: 1, reason: "Weak again", machineStatus: "limited", machineVersion: 0 },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!reopened.ok) throw new Error(reopened.error);
+
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer: asTom,
+        done: "reopen",
+        statusChanged: true,
+      });
+
+      expect(renderToStaticMarkup(createElement(DefectDetailsView, { details }))).toContain(
+        "„Left flipper weak“ ist wieder offen. LG-042 ist jetzt Eingeschränkt.",
+      );
+    });
   });
 
   describe("with the photo of its originating problem report (ST-016)", () => {

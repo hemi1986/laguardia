@@ -12,7 +12,7 @@ import { ManageDefect } from "./manage-defect";
 import type { DefectDetailsData } from "./defect-details-data";
 import { ProblemReportPhoto } from "../../problem-report-photo";
 
-const { defects: texts, recordDefect, terms } = teamMessages;
+const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
 
 /** The actions with a form page of their own (G21): where it is and what its button says (G14). */
 const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, { path: string; label: string }> = {
@@ -87,6 +87,8 @@ export function DefectDetailsView({
             holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
           })}
           {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
+          {details.confirmed.newMachineStatus &&
+            ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
         </Confirmation>
       )}
       <section className="flex flex-col gap-1">
