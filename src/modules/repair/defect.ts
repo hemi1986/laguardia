@@ -35,6 +35,12 @@ export type Hold = { reason: HoldReason; note: string | undefined; heldAt: Date 
 export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
 
 /**
+ * The Reopening entity of AGG-Defect (data model, ST-030): why a resolved defect is open again, who reopened it and
+ * when – one per reopen, stored after the resolution it follows and never changed (Q13). The reason is typed text.
+ */
+export type Reopening = { id: string; reason: string; reopenedBy: TeamMemberId; reopenedAt: Date };
+
+/**
  * A work log entry of AGG-Defect (data model, ST-024): what a team member did on the defect, and with which parts. Its
  * photos follow with ST-032.
  */
@@ -66,4 +72,6 @@ export type Defect = {
   workLog: WorkLogEntry[];
   /** One per resolve, the oldest first – only added to, never changed (Q13). */
   resolutions: Resolution[];
+  /** One per reopen, the oldest first – only added to, never changed (Q13, ST-030). */
+  reopenings: Reopening[];
 };

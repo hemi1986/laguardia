@@ -20,6 +20,7 @@ function aDefect(overrides: Partial<Defect> = {}): Defect {
     state: "open",
     workLog: [],
     resolutions: [],
+    reopenings: [],
     ...overrides,
   };
 }

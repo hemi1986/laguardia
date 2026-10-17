@@ -16,6 +16,8 @@ export { holdReasons, priorities, type Defect, type Hold, type HoldReason, type 
 export { putDefectOnHoldCommand } from "./put-defect-on-hold-command";
 export type { PutDefectOnHoldError, PutDefectOnHoldInput } from "./put-defect-on-hold";
 export { resumeDefectCommand } from "./resume-defect-command";
+export { reopenDefectCommand } from "./reopen-defect-command";
+export type { ReopenDefectError, ReopenDefectInput } from "./reopen-defect";
 export type { ResumeDefectError, ResumeDefectInput } from "./resume-defect";
 export {
   defectDetails,
