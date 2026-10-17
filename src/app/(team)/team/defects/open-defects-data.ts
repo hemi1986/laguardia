@@ -3,9 +3,8 @@ import { openDefects, priorities, type OpenDefect, type Priority } from "@/modul
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { teamMessages } from "@/platform/messages";
 import { calendarDate, daysBetween, today } from "@/platform/time";
-import { shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
+import { nameOf, shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
 
 /** What the open defects list is narrowed to (ST-021) – all optional, they combine. */
 export type OpenDefectsFilter = {
@@ -141,7 +140,7 @@ export async function shownOpenDefects(
     linkedProblemReports: defect.linkedProblemReports,
     claimant: shownClaimant(defect.claimedBy, names, viewer),
     lastWorkLogEntry: defect.lastWorkLogEntry && {
-      loggedBy: names.get(defect.lastWorkLogEntry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+      loggedBy: nameOf(names, defect.lastWorkLogEntry.loggedBy),
       loggedAt: defect.lastWorkLogEntry.loggedAt,
     },
   }));

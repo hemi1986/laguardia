@@ -19,6 +19,14 @@ export function shownClaimant(
   return claimedBy ? { name: names.get(claimedBy), you: claimedBy === viewer?.id } : undefined;
 }
 
+/**
+ * A team member's name from Team's `teamMemberNames` – or "unbekannt" for an account that is gone: one rule for every
+ * page that names who did something (architecture review 2026-10-17).
+ */
+export function nameOf(names: ReadonlyMap<string, string>, teamMemberId: string): string {
+  return names.get(teamMemberId) ?? teamMessages.machineRecord.unknownTeamMember;
+}
+
 /** A claimant's name – or "unbekannt" for an account that is gone. */
 export function claimantName(claimant: ShownClaimant): string {
   return claimant.name ?? teamMessages.machineRecord.unknownTeamMember;

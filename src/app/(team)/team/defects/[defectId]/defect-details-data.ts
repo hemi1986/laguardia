@@ -3,13 +3,12 @@ import { defectActions, defectDetails, lastDefectActionBy, type DefectAction, ty
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { teamMessages } from "@/platform/messages";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
 import { photoAt, type PhotoSource } from "../../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../../reporter";
-import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
+import { nameOf, shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
 
 /** A problem report on the defect's page, its reporter named. */
 export type ShownDefectProblemReport = {
@@ -125,20 +124,20 @@ export async function loadDefectDetails(
     offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),
     confirmed: confirmed && {
       action: confirmed.action,
-      takenOverFrom: previousClaimant && (names.get(previousClaimant) ?? teamMessages.machineRecord.unknownTeamMember),
+      takenOverFrom: previousClaimant && (nameOf(names, previousClaimant)),
       // Whom it was assigned to is its claimant: the assignment is the defect's latest event.
       assignedTo:
-        confirmed.assignedTo && (names.get(confirmed.assignedTo) ?? teamMessages.machineRecord.unknownTeamMember),
+        confirmed.assignedTo && (nameOf(names, confirmed.assignedTo)),
     },
     resolution: defect.resolution && {
       closingNote: defect.resolution.closingNote,
-      resolvedBy: names.get(defect.resolution.resolvedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+      resolvedBy: nameOf(names, defect.resolution.resolvedBy),
       resolvedAt: defect.resolution.resolvedAt,
     },
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,
-        loggedBy: names.get(entry.loggedBy) ?? teamMessages.machineRecord.unknownTeamMember,
+        loggedBy: nameOf(names, entry.loggedBy),
       }))
       .reverse(),
   };

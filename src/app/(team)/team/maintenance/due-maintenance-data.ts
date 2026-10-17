@@ -86,7 +86,7 @@ export async function loadDueMaintenance(
           recordOffered:
             !!viewer &&
             !!facts &&
-            recordRefusal(chosen, { ...facts, retired: false }, { role: viewer.role }) === undefined,
+            recordRefusal(chosen, facts, { role: viewer.role }) === undefined,
         };
       }),
     },

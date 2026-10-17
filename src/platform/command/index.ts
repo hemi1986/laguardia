@@ -44,6 +44,14 @@ export type Role = "helper" | "technician";
 /** The ID of a team member account – every "… by" of the domain (docs/architecture/data-model.md). */
 export type TeamMemberId = string;
 
+/**
+ * Whether a value can be an aggregate ID (ST-003's ID convention: `newId` gives UUIDs) – a read answers "no such
+ * thing" for an address that is none, instead of letting the database reject the comparison.
+ */
+export function isId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 export type AllowedActor = Role | "visitor" | "system";
 
 /**

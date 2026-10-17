@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { aggregateStore, history, type Database } from "@/platform/command";
+import { aggregateStore, isId, history, type Database } from "@/platform/command";
 import {
   priorities,
   type Claim,
@@ -322,6 +322,3 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
   return { defect: row };
 }
 
-function isId(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-}
