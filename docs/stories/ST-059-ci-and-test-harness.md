@@ -38,7 +38,7 @@ Agreed in the story review (`docs/reviews/2026-09-26-story-review.md`); the pipe
 - Every command writes its entry to the event journal.
 - German team UI texts come from the message catalog; visitor pages from the German and English catalogs.
 - No personal data in logs.
-- Critical security advisories for the framework are patched within 48 h (ST-063).
+- Critical Next.js / React security advisories are applied within 48 hours (ST-063, routine in `docs/operations/updates-and-security.md`).
 
 ## Out of Scope
 - Environments and monitoring (ST-061)

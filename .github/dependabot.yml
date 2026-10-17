@@ -1,4 +1,4 @@
-# ST-003: automated dependency update pull requests (the routine around them: ST-063).
+# ST-003: automated dependency update pull requests (the routine around them: docs/operations/updates-and-security.md, ST-063).
 # Each pull request runs CI (verify + e2e) like any other; the user reviews and merges.
 # Major versions are skipped: they are taken deliberately (ST-063), e.g. when Next.js supports a new ESLint.
 # Security updates are not affected by these rules. Every pull request gets a preview with its own Neon database

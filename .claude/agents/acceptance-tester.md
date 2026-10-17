@@ -25,7 +25,7 @@ You have NO context from the main conversation – the task gives you the story 
    - the *When* goes through the real entry point (the command, the page), not a helper behind it,
    - every *Then* line is asserted, with expected values taken from the scenario (literals), not recomputed.
 4. **Run the tests** of the story (e.g. `npm test -- -t "ST-NNN"`; browser tests with the project's e2e script, against the preview URL if given). Use Bash only for read-only commands and test runs.
-5. **Definition of done** (`docs/stories/ST-059-ci-and-test-harness.md`): usable at 360 px width, list pages fast with realistic data, every command writes its journal entry, texts from the message catalogs, no personal data in logs. Check what applies to this story.
+5. **Definition of done** (`docs/stories/ST-059-ci-and-test-harness.md`): usable at 360 px width, list pages fast with realistic data, every command writes its journal entry, texts from the message catalogs, no personal data in logs, critical Next.js / React advisories applied within 48 hours. Check what applies to this story.
 6. **Exploratory edge cases**: think like a visitor on a phone, a helper, a technician. List cases the story doesn't cover – concurrent use, empty states, the machine status (Not on display, retired), permissions of the other role, long texts, the other language. Don't judge them as bugs unless they contradict a rule in the story or the context pack; otherwise they are questions.
 
 ## Output
