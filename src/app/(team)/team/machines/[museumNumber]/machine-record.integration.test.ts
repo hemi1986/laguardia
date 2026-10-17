@@ -7,6 +7,7 @@ import { changeMachineStatusCommand, createMachineModelCommand, registerMachineC
 import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
+  putDefectOnHoldCommand,
   recordDefectCommand,
   reportProblemCommand,
   resolveDefectCommand,
@@ -215,6 +216,23 @@ describe("the machine record", () => {
       expect(entryOf("Rubber cracked")).not.toContain("bernommen");
       expect(openDefects).toMatch(new RegExp(`<a [^>]*href="/team/defects/${flipper}"[^>]*>Left flipper weak</a>`));
       expect(openDefects).toMatch(new RegExp(`<a [^>]*href="/team/defects/${rubber}"[^>]*>Rubber cracked</a>`));
+    });
+
+    it("ST-029: Machine record shows the on-hold reason of an open defect", async () => {
+      const lg042 = await registered("LG-042", "2026-01-15T09:00:00Z");
+      const rubber = await anOpenDefect(lg042, "Rubber cracked", "normal");
+      const held = await executeCommand(
+        putDefectOnHoldCommand,
+        { defectId: rubber, version: 0, reason: "waiting-for-part" },
+        { actor: eva, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!held.ok) throw new Error(held.error);
+
+      const openDefects = section(await page("LG-042"), "Offene Defekte");
+
+      expect(openDefects.slice(openDefects.indexOf("Rubber cracked")).split("</article>")[0]).toContain(
+        "Pausiert – Wartet auf Ersatzteil",
+      );
     });
 
     it("ST-033: A machine without open defects says so", async () => {
