@@ -5,6 +5,8 @@ import {
   type Claim,
   type Defect,
   type DefectState,
+  type Hold,
+  type HoldReason,
   type Priority,
   type Resolution,
   type WorkLogEntry,
@@ -62,6 +64,7 @@ export const defects = aggregateStore({
     recordedAt: row.recordedAt,
     state: row.state,
     ...claimOf(row),
+    ...holdOf(row),
     workLog: histories.workLog,
     resolutions: histories.resolutions,
   }),
@@ -79,6 +82,9 @@ export const defects = aggregateStore({
     claimedBy: state.claim?.claimedBy ?? null,
     claimedAt: state.claim?.claimedAt ?? null,
     assignedBy: state.claim?.assignedBy ?? null,
+    holdReason: state.hold?.reason ?? null,
+    holdNote: state.hold?.note ?? null,
+    heldAt: state.hold?.heldAt ?? null,
   }),
 });
 
@@ -92,6 +98,12 @@ function claimOf(row: Pick<typeof defect.$inferSelect, "claimedBy" | "claimedAt"
       ...(row.assignedBy ? { assignedBy: row.assignedBy } : {}),
     },
   };
+}
+
+/** The Hold value object of a stored defect – none while it is not on hold (ST-029). */
+function holdOf(row: Pick<typeof defect.$inferSelect, "holdReason" | "holdNote" | "heldAt">): { hold?: Hold } {
+  if (!row.holdReason || !row.heldAt) return {};
+  return { hold: { reason: row.holdReason, note: row.holdNote ?? undefined, heldAt: row.heldAt } };
 }
 
 /**
@@ -135,6 +147,8 @@ export type OpenDefect = {
   linkedProblemReports: number;
   /** Who last logged work on it, and when (ST-024) – by ID; none while nobody has. */
   lastWorkLogEntry: { loggedBy: string; loggedAt: Date } | undefined;
+  /** Why it waits, if it is on hold (ST-029) – the list says the reason, not the note. */
+  hold: { reason: HoldReason } | undefined;
 };
 
 /** What RM-OpenDefects is narrowed to (ST-021) – all optional, they combine. */
@@ -172,6 +186,7 @@ export async function openDefects(
       suitableForHelpers: defect.suitableForHelpers,
       openSince: defect.recordedAt,
       claimedBy: defect.claimedBy,
+      holdReason: defect.holdReason,
       linkedProblemReports: sql<number>`count(${problemReport.id})::int`,
       lastLoggedBy: sql<string | null>`(${lastWorkLogEntry(defectWorkLogEntry.loggedBy)})`,
       lastLoggedAt: sql`(${lastWorkLogEntry(defectWorkLogEntry.loggedAt)})`.mapWith(defectWorkLogEntry.loggedAt),
@@ -192,9 +207,10 @@ export async function openDefects(
     )
     .groupBy(defect.id)
     .orderBy(priorityRank, asc(defect.recordedAt), asc(defect.id));
-  return rows.map(({ lastLoggedBy, lastLoggedAt, ...row }) => ({
+  return rows.map(({ lastLoggedBy, lastLoggedAt, holdReason, ...row }) => ({
     ...row,
     claimedBy: row.claimedBy ?? undefined,
+    hold: holdReason ? { reason: holdReason } : undefined,
     lastWorkLogEntry: lastLoggedBy && lastLoggedAt ? { loggedBy: lastLoggedBy, loggedAt: lastLoggedAt } : undefined,
   }));
 }
@@ -233,6 +249,8 @@ export type DefectDetails = {
   version: number;
   /** Its claim, if any (ST-025). */
   claim: Claim | undefined;
+  /** Its hold, if it is on hold (ST-029). */
+  hold: Hold | undefined;
   /**
    * What the asking team member can do to it – per action the command's reason for refusing, or none (G11). Undefined
    * when nobody in particular asked.
@@ -268,6 +286,7 @@ export async function defectDetails(
     state: stored.state,
     version,
     claim: stored.claim,
+    hold: stored.hold,
     actions: teamMember && defectActionRefusals(stored, teamMember),
     workLog: stored.workLog,
     resolution: resolution && {

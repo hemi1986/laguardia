@@ -1,5 +1,5 @@
 import { bigserial, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { defectStates, priorities } from "./defect";
+import { defectStates, holdReasons, priorities } from "./defect";
 import { dismissalReasons, triageOutcomes } from "./report-problem";
 
 /** AGG-ProblemReport – current state (docs/architecture/data-model.md). Its triage: outcome, by whom, when (ST-017). */
@@ -63,6 +63,11 @@ export const defect = pgTable("defect", {
   claimedAt: timestamp("claimed_at", { withTimezone: true }),
   /** The technician who assigned the claim (ST-026) – only with a claim, and none when the claimant claimed it themselves. */
   assignedBy: uuid("assigned_by"),
+  /** The Hold value object (ST-029) – reason and since when together, or none (not on hold; CHECK in the migration). */
+  holdReason: text("hold_reason", { enum: holdReasons }),
+  /** Typed text – stays here, never in the journal (ST-003). */
+  holdNote: text("hold_note"),
+  heldAt: timestamp("held_at", { withTimezone: true }),
   /** Optimistic version check (HS-16). */
   version: integer("version").notNull().default(0),
 });
