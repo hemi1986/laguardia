@@ -372,6 +372,16 @@ export const teamMessages = {
     /** The filter "claimed by me" of the open defects list, and what it says when it matches nothing (G7). */
     onlyClaimedByMe: "Nur von mir übernommene",
     noneClaimedByYou: "Du hast keinen offenen Defekt übernommen.",
+    /** A defect on hold (ST-029, CONTEXT.md: On hold): the reasons in glossary order, and how a defect says it waits. */
+    holdReasons: {
+      "waiting-for-part": "Wartet auf Ersatzteil",
+      "waiting-for-technician": "Wartet auf Techniker:in",
+      other: "Anderer Grund",
+    },
+    onHold: (reason: string) => `Pausiert – ${reason}`,
+    /** The filter "on hold" of the open defects list, and what it says when it matches nothing (G7). */
+    onlyOnHold: "Nur pausierte",
+    noneOnHold: "Kein offener Defekt ist pausiert.",
     /**
      * Releasing a claim and assigning a defect (ST-026, G22; CONTEXT.md: Release = „Abgeben“ / „Übernahme aufheben“,
      * Assign = „Zuweisen“): „Abgeben“ stands where „Übernehmen“ stood; the rest is behind the fold „Verwalten“.

@@ -1,5 +1,5 @@
 import { machineIdOf, machineLabels } from "@/modules/collection";
-import { openDefects, priorities, type OpenDefect, type Priority } from "@/modules/repair";
+import { openDefects, priorities, type HoldReason, type OpenDefect, type Priority } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -13,6 +13,8 @@ export type OpenDefectsFilter = {
   suitableForHelpers?: boolean;
   /** Only the defects the team member looking at the list has claimed (ST-025). */
   claimedByMe?: boolean;
+  /** Only the defects on hold (ST-029). */
+  onHold?: boolean;
 };
 
 /** One entry of the open defects list as the page shows it (RM-OpenDefects, ST-021). */
@@ -32,6 +34,8 @@ export type OpenDefectsItem = {
   claimant: ShownClaimant | undefined;
   /** Who last logged work on it, by name, and when (ST-024) – none while nobody has. */
   lastWorkLogEntry: { loggedBy: string; loggedAt: Date } | undefined;
+  /** Why it waits, if it is on hold (ST-029). */
+  holdReason: HoldReason | undefined;
 };
 
 /** A machine the filter offers – one with open defects. */
@@ -56,6 +60,7 @@ export function openDefectsFilterOf(params: Record<string, string | string[] | u
     ...(priority ? { priority } : {}),
     ...(single(params.helpers) === "1" ? { suitableForHelpers: true } : {}),
     ...(single(params.mine) === "1" ? { claimedByMe: true } : {}),
+    ...(single(params.held) === "1" ? { onHold: true } : {}),
   };
 }
 
@@ -86,6 +91,7 @@ export async function loadOpenDefects(
           priority: filter.priority,
           suitableForHelpers: filter.suitableForHelpers,
           claimedBy: filter.claimedByMe ? viewer?.id : undefined,
+          onHold: filter.onHold,
         }),
   ]);
   const [entries, labels] = await Promise.all([
@@ -143,5 +149,6 @@ export async function shownOpenDefects(
       loggedBy: nameOf(names, defect.lastWorkLogEntry.loggedBy),
       loggedAt: defect.lastWorkLogEntry.loggedAt,
     },
+    holdReason: defect.hold?.reason,
   }));
 }

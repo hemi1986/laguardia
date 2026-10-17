@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
 import {
   priorities,
@@ -160,6 +160,8 @@ export type OpenDefectsQuery = {
   suitableForHelpers?: boolean;
   /** Only the defects this team member has claimed (ST-025, "claimed by me"). */
   claimedBy?: string;
+  /** Only the defects on hold (ST-029). */
+  onHold?: boolean;
 };
 
 /** In the order of `priorities` – high first, then normal, then low (ST-021). */
@@ -175,7 +177,7 @@ const priorityRank = sql`CASE ${defect.priority} ${sql.join(
  */
 export async function openDefects(
   db: Database,
-  { machineId, priority, suitableForHelpers, claimedBy }: OpenDefectsQuery = {},
+  { machineId, priority, suitableForHelpers, claimedBy, onHold }: OpenDefectsQuery = {},
 ): Promise<OpenDefect[]> {
   const rows = await db
     .select({
@@ -203,6 +205,7 @@ export async function openDefects(
         priority ? eq(defect.priority, priority) : undefined,
         suitableForHelpers ? eq(defect.suitableForHelpers, true) : undefined,
         claimedBy ? eq(defect.claimedBy, claimedBy) : undefined,
+        onHold ? isNotNull(defect.holdReason) : undefined,
       ),
     )
     .groupBy(defect.id)
