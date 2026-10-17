@@ -85,15 +85,25 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
         {defects.recordedAt(formatDateTime(entry.recordedAt))}
         {entry.state === "open" && ` · ${texts.defectOpen}`}
       </p>
-      {[...entry.resolutions].reverse().map((resolution) => (
-        <div key={resolution.id} className="flex flex-col gap-1">
-          <p className="font-medium">{terms["Closing note"]}</p>
-          <p className="whitespace-pre-line">{resolution.closingNote}</p>
-          <p className="text-muted-foreground">
-            {defects.resolvedBy(who(resolution.resolvedBy), formatDateTime(resolution.resolvedAt))}
-          </p>
-        </div>
-      ))}
+      {/* Every closing note, each followed by the reason it was reopened – in the order they happened (ST-030). */}
+      {endingsOf(entry).map((ending) =>
+        ending.kind === "resolution" ? (
+          <div key={ending.id} className="flex flex-col gap-1">
+            <p className="font-medium">{terms["Closing note"]}</p>
+            <p className="whitespace-pre-line">{ending.closingNote}</p>
+            <p className="text-muted-foreground">
+              {defects.resolvedBy(who(ending.resolvedBy), formatDateTime(ending.resolvedAt))}
+            </p>
+          </div>
+        ) : (
+          <div key={ending.id} className="flex flex-col gap-1">
+            <p className="font-medium">
+              {defects.reopenedBy(who(ending.reopenedBy), formatDateTime(ending.reopenedAt))}
+            </p>
+            <p className="whitespace-pre-line">{ending.reason}</p>
+          </div>
+        ),
+      )}
       {entry.workLog.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="font-medium">{defects.workLog}</p>
@@ -112,4 +122,18 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
       )}
     </article>
   );
+}
+
+type ShownDefectEntry = Extract<ShownRepairHistoryEntry, { kind: "defect" }>;
+
+/** A defect's resolutions and reopenings in the order they happened – they alternate (data model). */
+function endingsOf(entry: ShownDefectEntry) {
+  return [
+    ...entry.resolutions.map((resolution) => ({
+      kind: "resolution" as const,
+      at: resolution.resolvedAt,
+      ...resolution,
+    })),
+    ...entry.reopenings.map((reopening) => ({ kind: "reopening" as const, at: reopening.reopenedAt, ...reopening })),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime());
 }
