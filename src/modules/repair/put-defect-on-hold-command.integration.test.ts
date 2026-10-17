@@ -74,4 +74,44 @@ describe("CMD-PutDefectOnHold", () => {
     });
     expect((await journalOf(db, { aggregateId: defectId })).at(-1)?.data).not.toHaveProperty("note");
   });
+
+  it("ST-029: Technician puts an unclaimed defect on hold", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", false);
+
+    expect(await putOnHold(defectId, 0, "waiting-for-technician", tom)).toEqual({ ok: true, result: { defectId } });
+
+    expect(await defectDetails(db, defectId)).toMatchObject({
+      state: "open",
+      claim: undefined,
+      hold: { reason: "waiting-for-technician", note: undefined },
+    });
+  });
+
+  it("ST-029: Others cannot put a defect on hold", async () => {
+    const { defectId } = await aDefectClaimedBy(anna, "Display flickers");
+    const journalBefore = (await journalOf(db, { aggregateId: defectId })).length;
+
+    expect(await putOnHold(defectId, 1, "waiting-for-part", ben)).toEqual({ ok: false, error: "not-claimant" });
+
+    expect((await defectDetails(db, defectId))?.hold).toBeUndefined();
+    expect(await journalOf(db, { aggregateId: defectId })).toHaveLength(journalBefore);
+  });
+
+  it("ST-029: A reason is required", async () => {
+    const { defectId } = await anOpenDefect("Coin door sticks");
+
+    expect(await putOnHold(defectId, 0, undefined, tom, "Waiting")).toEqual({
+      ok: false,
+      error: "hold-reason-required",
+    });
+    expect((await defectDetails(db, defectId))?.hold).toBeUndefined();
+  });
+
+  it("ST-029: A defect on hold cannot be put on hold again", async () => {
+    const { defectId } = await anOpenDefect("Display flickers");
+    if (!(await putOnHold(defectId, 0, "waiting-for-part", tom)).ok) throw new Error("not on hold");
+
+    expect(await putOnHold(defectId, 1, "other", tom, "Again")).toEqual({ ok: false, error: "defect-on-hold" });
+    expect((await defectDetails(db, defectId))?.hold).toMatchObject({ reason: "waiting-for-part" });
+  });
 });
