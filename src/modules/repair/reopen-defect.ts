@@ -42,7 +42,7 @@ export type DefectReopened = {
 export type ReopenDefectError =
   | "defect-not-resolved"
   | "machine-retired"
-  | "reason-required"
+  | "reopen-reason-required"
   | "machine-status-not-stricter"
   | "not-authorized";
 
@@ -50,7 +50,7 @@ export type ReopenDefectError =
 export function reopenRefusal(
   defect: Pick<Defect, "state">,
   facts: ReopeningFacts | undefined,
-): Exclude<ReopenDefectError, "reason-required" | "machine-status-not-stricter" | "not-authorized"> | undefined {
+): Exclude<ReopenDefectError, "reopen-reason-required" | "machine-status-not-stricter" | "not-authorized"> | undefined {
   // Only a resolved defect can be reopened; one closed on retirement is final (AGG-Defect invariants).
   if (defect.state !== "resolved") return "defect-not-resolved";
   if (facts?.machine?.retired) return "machine-retired";
@@ -66,7 +66,7 @@ export function reopenDefect(
   const refusal = reopenRefusal(defect, facts);
   if (refusal) return { ok: false, error: refusal };
   const reason = input.reason.trim();
-  if (!reason) return { ok: false, error: "reason-required" };
+  if (!reason) return { ok: false, error: "reopen-reason-required" };
   if (input.machineStatus) {
     // Helpers cannot change the machine status while reopening (POL-DefectMayChangeMachineStatus).
     if (actor.role !== "technician") return { ok: false, error: "not-authorized" };

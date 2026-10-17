@@ -38,7 +38,7 @@ export function ReopenDefectForm({
   const rejectionId = useId();
   if (whyNot && !state) return <p>{commandErrorText(teamMessages, whyNot)}</p>;
   const kept = keptKey(state);
-  const reasonInvalid = state?.error === "reason-required";
+  const reasonInvalid = state?.error === "reopen-reason-required";
   const statusInvalid = state?.error === "machine-status-not-stricter";
 
   return (

@@ -118,7 +118,7 @@ describe("CMD-ReopenDefect", () => {
   it("ST-030: A reason is required", async () => {
     const { defectId } = await aResolvedDefect("Coin door sticks");
 
-    expect(await reopen(defectId, 2, "   ", anna)).toEqual({ ok: false, error: "reason-required" });
+    expect(await reopen(defectId, 2, "   ", anna)).toEqual({ ok: false, error: "reopen-reason-required" });
     expect((await defectDetails(db, defectId))?.state).toBe("resolved");
   });
 

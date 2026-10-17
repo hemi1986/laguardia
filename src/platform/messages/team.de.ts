@@ -581,6 +581,7 @@ export const teamMessages = {
     /** Putting a defect on hold and resuming it (ST-029). */
     /** Reopening a defect (ST-030). */
     "defect-not-resolved": "Nur ein behobener Defekt kann wieder geöffnet werden.",
+    "reopen-reason-required": "Bitte angeben, warum der Defekt wieder geöffnet wird.",
     "defect-on-hold": "Dieser Defekt ist schon pausiert.",
     "defect-not-on-hold": "Dieser Defekt ist nicht pausiert.",
     "not-claimant": "Das dürfen nur Techniker:innen und wer den Defekt übernommen hat.",
