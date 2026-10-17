@@ -4,15 +4,20 @@
 
 **Progress: 32 of 58 domain stories done** · scenarios 285 of 450
 
-**81 stories** · In Progress: 0 · Ready: 31 · In Review: 0 · Draft: 5 · Done: 45
+**81 stories** · In Progress: 1 · Ready: 30 · In Review: 0 · Draft: 5 · Done: 45
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | must | S | low | ST-004, ST-007, ST-078 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | must | S | low | ST-004, ST-007, ST-078 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
