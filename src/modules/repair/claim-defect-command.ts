@@ -1,5 +1,5 @@
 import { activeTeamMemberRole } from "@/modules/team";
-import { aggregateCommand, readJournal, type Database } from "@/platform/command";
+import { aggregateCommand, type Database } from "@/platform/command";
 import {
   claimDefect,
   claimingActors,
@@ -36,14 +36,3 @@ export const claimDefectCommand = aggregateCommand({
   result: (defect) => ({ defectId: defect.id }),
 });
 
-/**
- * Whom the defect's claimant took it over from, if anyone – what the latest EVT-DefectClaimed says, the event that made
- * the claim as it is now. For the confirmation after taking over (G3); the journal is read for this one reference,
- * never to rebuild state (ADR 0002).
- */
-export async function takenOverFrom(db: Database, defectId: string, claimedBy: string): Promise<string | undefined> {
-  const latest = (await readJournal(db, repairEvents, { types: ["EVT-DefectClaimed"], aggregateIds: [defectId] })).at(
-    -1,
-  )?.data;
-  return latest?.claimedBy === claimedBy ? latest.takenOverFrom : undefined;
-}

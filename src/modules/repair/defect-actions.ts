@@ -10,7 +10,7 @@ import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
 /**
  * What a team member can do to a defect – one entry per action on AGG-Defect, in the order its page offers them
  * (G22): the work first – claiming it or, in the same place, releasing its claim –, then what manages it (assigning,
- * ST-026; CMD-ClaimDefect for someone else) and changing its priority (ST-027). A new command on a defect adds its action here, its refusal below and its event to `actionOfEvent`; the
+ * ST-026; CMD-ClaimDefect for someone else) and changing its priority (ST-027). A new command on a defect adds its action here, its refusal below, its event to `actionOfEvent` and its journal projection to `repairEvents` (`./events.ts`); the
  * defect's page and the form pages read the answer and carry no rule of their own (G11).
  */
 export const defectActions = ["claim", "release", "log-work", "resolve", "assign", "prioritize"] as const;
@@ -71,7 +71,11 @@ export async function lastDefectActionBy(
   if (!latest || latest.actor.kind !== "team-member" || latest.actor.teamMemberId !== teamMemberId) return undefined;
   if (!types.some((type) => type === latest.type)) return undefined;
   if (latest.type !== "EVT-DefectClaimed") {
-    return { action: actionOfEvent[latest.type as keyof typeof actionOfEvent], takenOverFrom: undefined, assignedTo: undefined };
+    return {
+      action: actionOfEvent[latest.type as keyof typeof actionOfEvent],
+      takenOverFrom: undefined,
+      assignedTo: undefined,
+    };
   }
   const assigned = latest.data.assignedBy !== undefined;
   return {

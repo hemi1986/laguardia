@@ -42,7 +42,7 @@ export {
 export type { DismissalReason } from "./report-problem";
 export { linkProblemReportToDefectCommand } from "./link-problem-report-to-defect-command";
 export type { LinkProblemReportToDefectError, LinkProblemReportToDefectInput } from "./link-problem-report-to-defect";
-export { claimDefectCommand, takenOverFrom } from "./claim-defect-command";
+export { claimDefectCommand } from "./claim-defect-command";
 export { assigneeRefusal } from "./claim-defect";
 export type { ClaimDefectError, ClaimDefectInput } from "./claim-defect";
 export { releaseClaimCommand } from "./release-claim-command";
