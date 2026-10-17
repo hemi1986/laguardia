@@ -58,9 +58,19 @@ export type DefectDetailsData = {
   confirmed: { action: DefectAction; takenOverFrom: string | undefined; assignedTo: string | undefined } | undefined;
   /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
   resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date } | undefined;
+  /**
+   * How it ended each time and why it was reopened (ST-028, ST-030) – the oldest first, each reopening after the
+   * resolution it followed; team members by name. Empty while it was never resolved.
+   */
+  endings: ShownEnding[];
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
   workLog: ShownWorkLogEntry[];
 };
+
+/** A resolution or a reopening on the defect's page. */
+export type ShownEnding =
+  | { kind: "resolution"; closingNote: string; resolvedBy: string; resolvedAt: Date }
+  | { kind: "reopening"; reason: string; reopenedBy: string; reopenedAt: Date };
 
 /** A work log entry on the defect's page. */
 export type ShownWorkLogEntry = {
@@ -99,7 +109,8 @@ export async function loadDefectDetails(
       ...(defect.claim ? [defect.claim.claimedBy] : []),
       ...(assignedBy ? [assignedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
-      ...(defect.resolution ? [defect.resolution.resolvedBy] : []),
+      ...defect.resolutions.map((resolution) => resolution.resolvedBy),
+      ...defect.reopenings.map((reopening) => reopening.reopenedBy),
       ...defect.workLog.map((entry) => entry.loggedBy),
     ]),
     photoViewAddresses(
@@ -144,6 +155,24 @@ export async function loadDefectDetails(
       resolvedBy: nameOf(names, defect.resolution.resolvedBy),
       resolvedAt: defect.resolution.resolvedAt,
     },
+    endings: [
+      ...defect.resolutions.map((resolution): ShownEnding & { at: Date } => ({
+        kind: "resolution",
+        closingNote: resolution.closingNote,
+        resolvedBy: nameOf(names, resolution.resolvedBy),
+        resolvedAt: resolution.resolvedAt,
+        at: resolution.resolvedAt,
+      })),
+      ...defect.reopenings.map((reopening): ShownEnding & { at: Date } => ({
+        kind: "reopening",
+        reason: reopening.reason,
+        reopenedBy: nameOf(names, reopening.reopenedBy),
+        reopenedAt: reopening.reopenedAt,
+        at: reopening.reopenedAt,
+      })),
+    ]
+      .sort((a, b) => a.at.getTime() - b.at.getTime())
+      .map(({ at: _at, ...ending }) => ending as ShownEnding),
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,

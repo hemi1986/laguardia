@@ -13,6 +13,7 @@ import {
   putDefectOnHoldCommand,
   recordDefectCommand,
   releaseClaimCommand,
+  reopenDefectCommand,
   reportProblemCommand,
   resolveDefectCommand,
 } from "@/modules/repair";
@@ -596,7 +597,7 @@ describe("a defect's own page", () => {
       );
       if (!resolved.ok) throw new Error(resolved.error);
       const closed = await seenByAnna(defectId);
-      expect(closed.details?.offered).toEqual([]);
+      expect(closed.details?.offered).toEqual(["reopen"]);
       expect(closed.html).not.toContain("/arbeitsschritt");
       // What was done stays on the page.
       expect(closed.html).toContain("Cleaned the flipper mechanism");
@@ -656,7 +657,7 @@ describe("a defect's own page", () => {
       expect(annas.html).not.toContain("/beheben");
     });
 
-    it("shows how a resolved defect ended, tells who resolved it so, and offers resolving to nobody", async () => {
+    it("shows how a resolved defect ended, tells who resolved it so, and offers only reopening it (ST-030)", async () => {
       const defectId = await aDefect(true);
       const resolved = await executeCommand(
         resolveDefectCommand,
@@ -667,7 +668,7 @@ describe("a defect's own page", () => {
 
       const annas = await seenBy(defectId, asAnna);
       expect(annas.details).toMatchObject({
-        offered: [],
+        offered: ["reopen"],
         confirmed: { action: "resolve" },
         resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna" },
       });
@@ -678,9 +679,51 @@ describe("a defect's own page", () => {
       expect(annas.html).not.toContain("/beheben");
       expect(annas.html).not.toContain("offen seit");
       const toms = await seenBy(defectId, asTom);
-      expect(toms.details).toMatchObject({ offered: [], confirmed: undefined });
+      expect(toms.details).toMatchObject({ offered: ["reopen"], confirmed: undefined });
       expect(toms.html).toContain("Behoben von Anna am 04.10.2026, 11:30");
       expect(toms.html).not.toContain("Du hast");
+    });
+  });
+
+  describe("reopening it (ST-030, G22)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+
+    it("ST-030: The page of a reopened defect says why it is open again", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(await reported(await registered("LG-042"), "Left flipper barely moves", NOW), NOW);
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        { actor: tom, db, clock: fixedClock("2026-10-03T09:00:00Z"), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+      // A resolved defect offers only reopening, under its closing note (G22).
+      const before = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer: asTom });
+      expect(before?.offered).toEqual(["reopen"]);
+      expect(renderToStaticMarkup(createElement(DefectDetailsView, { details: before }))).toMatch(
+        new RegExp(`<a [^>]*href="/team/defects/${defectId}/wieder-oeffnen"[^>]*>Wieder öffnen</a>`),
+      );
+      const reopened = await executeCommand(
+        reopenDefectCommand,
+        { defectId, version: 1, reason: "Flipper weak again after an hour of play" },
+        { actor: anna, db, clock: fixedClock("2026-10-04T08:00:00Z"), newId: randomUUID },
+      );
+      if (!reopened.ok) throw new Error(reopened.error);
+
+      const html = renderToStaticMarkup(
+        createElement(DefectDetailsView, {
+          details: await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer: asTom }),
+        }),
+      );
+
+      expect(html).toContain("Wieder geöffnet von Anna am 04.10.2026, 10:00");
+      expect(html).toContain("Flipper weak again after an hour of play");
+      // The earlier closing note stays, before the reopening that followed it.
+      expect(html).toContain("Coil replaced");
+      expect(html.indexOf("Coil replaced")).toBeLessThan(html.indexOf("Flipper weak again after an hour of play"));
+      expect(html).toContain("offen seit");
+      expect(html).not.toContain("wieder-oeffnen");
     });
   });
 

@@ -414,6 +414,15 @@ export const teamMessages = {
      * Putting a defect on hold (ST-029, G22): „Pausieren“ in the work group leads to its form page; the confirmation
      * names the reason. „Fortsetzen“ stands in its place while the defect is on hold – one tap.
      */
+    /**
+     * Reopening a resolved defect (ST-030, G22): „Wieder öffnen“ under its closing note leads to its form page; the
+     * page of a reopened defect says who reopened it, when and why, after the closing note it followed.
+     */
+    reopen: "Wieder öffnen",
+    reopenTitle: (museumNumber: string) => `Defekt wieder öffnen · ${museumNumber}`,
+    reopenReason: "Warum wieder öffnen?",
+    reopened: (title: string) => `„${title}“ ist wieder offen.`,
+    reopenedBy: (name: string, dateTime: string) => `Wieder geöffnet von ${name} am ${dateTime}`,
     putOnHold: "Pausieren",
     putOnHoldTitle: (museumNumber: string) => `Defekt pausieren · ${museumNumber}`,
     holdReason: "Grund",
@@ -570,6 +579,8 @@ export const teamMessages = {
     /** Releasing a claim (ST-026). */
     "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
     /** Putting a defect on hold and resuming it (ST-029). */
+    /** Reopening a defect (ST-030). */
+    "defect-not-resolved": "Nur ein behobener Defekt kann wieder geöffnet werden.",
     "defect-on-hold": "Dieser Defekt ist schon pausiert.",
     "defect-not-on-hold": "Dieser Defekt ist nicht pausiert.",
     "not-claimant": "Das dürfen nur Techniker:innen und wer den Defekt übernommen hat.",

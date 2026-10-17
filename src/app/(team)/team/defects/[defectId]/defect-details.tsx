@@ -19,6 +19,7 @@ const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, {
   "log-work": { path: "arbeitsschritt", label: texts.logWork },
   "put-on-hold": { path: "pausieren", label: texts.putOnHold },
   resolve: { path: "beheben", label: texts.resolve },
+  reopen: { path: "wieder-oeffnen", label: texts.reopen },
   assign: { path: "zuweisen", label: texts.assign },
   prioritize: { path: "prioritaet", label: texts.prioritize },
 };
@@ -37,6 +38,7 @@ const confirmations: Record<
   "put-on-hold": (title, { holdReason }) => texts.putOnHoldDone(title, holdReason),
   resume: texts.resumed,
   resolve: texts.resolved,
+  reopen: texts.reopened,
   assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
   prioritize: (title, { priority }) => texts.prioritized(title, priority),
 };
@@ -184,14 +186,31 @@ export function DefectDetailsView({
           }
         />
       </section>
-      {details.resolution && (
-        <section className="flex flex-col gap-1">
-          <h2 className="font-semibold">{terms["Closing note"]}</h2>
-          <p className="whitespace-pre-line">{details.resolution.closingNote}</p>
-          <p className="text-muted-foreground text-sm">
-            {texts.resolvedBy(details.resolution.resolvedBy, formatDateTime(details.resolution.resolvedAt))}
-          </p>
-        </section>
+      {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
+      {details.endings.map((ending, index) =>
+        ending.kind === "resolution" ? (
+          <section key={index} className="flex flex-col gap-1">
+            <h2 className="font-semibold">{terms["Closing note"]}</h2>
+            <p className="whitespace-pre-line">{ending.closingNote}</p>
+            <p className="text-muted-foreground text-sm">
+              {texts.resolvedBy(ending.resolvedBy, formatDateTime(ending.resolvedAt))}
+            </p>
+          </section>
+        ) : (
+          <section key={index} className="flex flex-col gap-1">
+            <h2 className="font-semibold">{texts.reopenedBy(ending.reopenedBy, formatDateTime(ending.reopenedAt))}</h2>
+            <p className="whitespace-pre-line">{ending.reason}</p>
+          </section>
+        ),
+      )}
+      {/* A resolved defect offers only reopening, under its closing note (G22). */}
+      {details.offered.includes("reopen") && (
+        <Link
+          href={`/team/defects/${details.id}/${formPages.reopen.path}`}
+          className={buttonVariants({ variant: "outline", className: "self-start" })}
+        >
+          {formPages.reopen.label}
+        </Link>
       )}
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">{texts.workLog}</h2>
