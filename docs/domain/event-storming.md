@@ -278,6 +278,8 @@ flowchart LR
     EVT_ProblemReportLinkedToDefect -.-> RM_RepairTimes
     EVT_WorkLogged -.-> RM_RepairTimes
     EVT_DefectResolved -.-> RM_RepairTimes
+    EVT_DefectReopened -.-> RM_RepairTimes
+    EVT_DefectClosedOnRetirement -.-> RM_RepairTimes
     RM_RepairTimes -.-> ACT_Technician
     classDef evt fill:#a3391f,stroke:#e65100,color:#fff
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000

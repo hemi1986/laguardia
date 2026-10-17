@@ -83,6 +83,14 @@ Scenario: A rejection says what happened to the chosen file
   Then the rejection says "Bitte einen Titel angeben." followed by whether the file must be chosen again or is still attached
   And the chooser shows the file as attached only if it is still attached
 
+Scenario: Attaching after the uploaded content is gone
+  Given a team member chose the PDF "MM Operations Manual" for "LG-042" and it was uploaded
+  And the uploaded content was cleaned up as an abandoned upload before the form was sent (ST-085)
+  When the team member attaches it with the title "MM Operations Manual" and the file category Manual
+  Then the file is not attached
+  And the rejection says that the file must be chosen again
+  And the title and the file category are still filled in, and the chooser shows itself as empty
+
 Scenario: No files yet says so
   Given neither "LG-050" nor its machine model has a file
   When a team member opens the machine record of "LG-050"
@@ -100,4 +108,5 @@ Scenario: No files yet says so
 
 ## Notes
 - Order (user, 2026-10-17, section 9 item 2): ST-085 and this story come **after the defect lifecycle** – ST-029, ST-030, ST-053, ST-031. That is a planning order, not a dependency; start them by name.
+- The scenario "Attaching after the uploaded content is gone" was added from the story review of 2026-10-17 (`docs/reviews/2026-10-17-story-review.md`, ST-085 section): ST-085 cleans up abandoned uploads on a later request, so a form left open long enough can point at content that no longer exists.
 - Size L and risk high were estimated by the lead dev before the split; the upload and the abandoned-upload decision moved to ST-085, so the lead dev re-estimates both in the story review.

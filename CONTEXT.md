@@ -208,6 +208,21 @@ All defects of a machine with their work log entries, plus problem reports resol
 _Avoid_: Service history, log
 _UI (de)_: Reparaturhistorie
 
+**Repair times**:
+The technician's view of how long repairs take: per priority (the defect's current priority) and period (last 30 or last 90 days), the typical time to first work log entry and the typical time to resolved, each with its number of defects. "Typical" is the median; the word "median" is not used in UI texts.
+_Avoid_: Lead time, SLA, KPIs, repair statistics, median (in UI texts)
+_UI (de)_: Reparaturzeiten
+
+**Time to first work log entry**:
+The time from the earliest problem report of a defect (originating or linked) to its first work log entry.
+_Avoid_: Response time, reaction time, time to start, lead time
+_UI (de)_: Bis zum ersten Arbeitsschritt
+
+**Time to resolved**:
+The time from the earliest problem report of a defect (originating or linked) to its resolution – after a reopen, its latest resolution; a defect closed on retirement has none.
+_Avoid_: Resolution time, lead time, cycle time, turnaround time
+_UI (de)_: Bis behoben
+
 ### Maintenance
 
 **Maintenance task**:

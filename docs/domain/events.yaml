@@ -148,7 +148,8 @@ events:
   - id: EVT-DefectDetailsChanged
     name: Defect details changed
     aggregate: AGG-Defect
-    data: [Defect, Title, Suitable for helpers, Changed by]
+    data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Changed by]
+    description: Names which of the title and the suitable-for-helpers mark changed, so the journal can say so without repeating the title text (story review 2026-10-17).
   - id: EVT-DefectClaimed
     aggregate: AGG-Defect
     name: Defect claimed
@@ -157,8 +158,8 @@ events:
   - id: EVT-DefectClaimReleased
     aggregate: AGG-Defect
     name: Defect claim released
-    data: [Defect, Released by]
-    description: Released by the claimant or by a technician. Stale claims are only highlighted, never released automatically.
+    data: [Defect, Former claimant, Released by]
+    description: Released by the claimant or by a technician; the event names the former claimant (story review 2026-10-17). Stale claims are only highlighted, never released automatically.
   - id: EVT-WorkLogged
     aggregate: AGG-Defect
     name: Work logged
@@ -577,9 +578,9 @@ read_models:
   - id: RM-RepairTimes
     name: Repair times
     description: Measures the success criteria – a simple view (median times, last 30/90 days), no export. Report time of a defect = its earliest problem report.
-    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved]
+    fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement]
     used_by: [ACT-Technician]
-    fields: [Priority, Period, Time from problem report to first work log entry, Time from problem report to defect resolved, Number of defects]
+    fields: [Priority, Period, Time to first work log entry, Time to resolved, Number of defects]
 hotspots:
   # --- Flow: problem report to defect ---
   - id: HS-1
