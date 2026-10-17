@@ -1,6 +1,6 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G23, including G2a, G4a, G6a, G8a, G10a, G10b
+> **Status: accepted by the user on 2026-10-01.** Every rule below (G1–G25, including G2a, G4a, G6a, G8a, G10a, G10b
 > and G21a) is binding. The last open decision (O2, how much of a wide screen a list may use) was settled in ST-008 and is
 > now part of G16. One violation is known and accepted with an end date – it is named under G2a.
 
@@ -136,6 +136,23 @@ that singles the entry out.
 *Why:* ST-017, ST-043, ST-048, ST-050 and ST-058 all say only "highlighted" – five screens where five developers
 would each pick a different colour and nobody would learn what it means.
 
+**G24 – History on a record shows the latest five and links to the rest** (user, 2026-10-17, story review
+2026-10-17).
+A section of a record that shows history lists the 5 latest entries and below them a link „Alle … (n)“ to a page of
+its own, headed with what it is and the machine („… · LG-042“). That page groups its entries by year with a count per
+year once it can pass about 20 entries (G4, G4a), and has „Zurück zum Gerät“ (G17).
+*Sources:* the shape of the repair history; ST-047 (maintenance on the machine record), later ST-037.
+*Why:* a machine collects years of maintenance and repairs; on a phone the full history in the record buries every
+section below it, and without one shape each history would pick its own cut-off and its own way to the rest.
+
+**G25 – A change on a dashboard is one line that says who did what, and when, in words** (user, 2026-10-17, story
+review 2026-10-17).
+Each change is one line naming who and what, ending with when it happened in words („· vor 2 Tagen“), newest first.
+One's own changes are never listed.
+*Sources:* ST-086 (what changed on the helper's claimed defects), ST-058 (recent changes), ST-050.
+*Why:* three stories list changes on the dashboards; a date or a code makes the person work out how old it is (G6),
+and seeing what one did oneself is noise that hides what others did.
+
 ## 3. The states that must exist
 
 **G7 – Empty: say what to do about it.**
@@ -184,7 +201,7 @@ access is the *Konto*, G12.)
 How the question is shown is G10b. The question names the thing by its own words **and the consequences nobody sees on this screen**: retiring a
 machine (ST-039) names the machine, how many defects will be closed and how many problem reports dismissed;
 removing a file (ST-038) names the file and says that it is gone for good.
-*Why:* "Deaktivieren" is one tap, it ends the person's sessions, and nothing in La Guardia undoes it. Retiring a
+*Why:* "Deaktivieren" is one tap and ends the person's sessions at once – even though the account can be activated again (G10a, ST-081). Retiring a
 machine looks like one tap on one machine and quietly ends every open piece of work on it.
 *Triage outcomes* (user, 2026-10-03): a triage outcome is a recorded fact and asks nothing. Dismissing a problem
 report as spam deletes bytes – its description and photo – and so asks once, naming what is deleted: „Meldung zu
@@ -213,6 +230,11 @@ that was typed. Only the verb button carries the action out.
 *Why:* five stories ask before an irreversible action, and without JavaScript a question cannot pop up over the
 form. Without one shape, each would pick its own – and a „Zurück“ that loses the reason just typed punishes the
 person for checking.
+*Amended 2026-10-17 (story review 2026-10-17, ST-081):* a **reversible** action that ends someone's access –
+deactivating an account – uses the same question page, but its verb button names the action without „Endgültig“
+(„Konto deaktivieren“ / „Zurück“). „Endgültig …“ is said only for what cannot be undone.
+*Why:* deactivating can be undone (G10a); a button that says „Endgültig“ for it would be untrue, and the word would
+stop meaning anything on the pages where it is.
 
 **G11 – Someone who may not do a thing does not see the control.**
 The page shows the rest; the command refuses it anyway (`allowedActors` – the UI never carries the rule alone).
@@ -352,3 +374,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-12 | **G22 added**: the defect's page offers the work as buttons under the header (claim or release · work log entry · resolve · put on hold or resume) and the managing behind the fold „Verwalten“ for technicians (assign, release someone else's claim, priority, title and suitability); a resolved defect offers only „Wieder öffnen“. The order is the order of `defectActions`. | Backlog grooming of 2026-10-11 (`docs/reviews/2026-10-11-backlog-grooming.md`, section 6, decision 5): ST-026, ST-027, ST-029, ST-030 and ST-031 bring five more actions to a page that has three – eight or nine at 360 px, in an order no story decides |
 | 2026-10-12 | **G18 extended with the dashboards**: ST-048 owns the technician dashboard, ST-049 the helper dashboard, each with its sections in a fixed order; ST-050 marks entries and adds no section; neither dashboard repeats the due maintenance list – a maintenance task with a count and a link to „Wartung“. | Same grooming, section 6: four stories add to the dashboards (ST-048, 049, 050, 058), and G18 named the problem without naming the owners or the order |
 | 2026-10-17 | **G10b added** (the question before an irreversible action is a page of its own: the thing, the unseen consequences, „Endgültig …“ / „Zurück“, and „Zurück“ returns to the form unchanged). **G23 added** (partial success: one confirmation for what worked, one rejection line with its reason per thing that did not, on the landing page). **G13 clarified** (infinitive in team instructions, *du* allowed in confirmations and dashboards, German numbers). **G10's example corrected** to *Konto* (G12). **G21's condition** for „Mit Defekt verknüpfen“ extended to open or recently resolved defects (ST-053). **G22**: „Fortsetzen“ is one tap like claiming and releasing. | Backlog grooming of 2026-10-17 (`docs/reviews/2026-10-17-backlog-grooming.md`, section 6 last bullet, section 9 decisions 3 and 6): the spam question, ST-038, ST-039, ST-041 and ST-081 each ask before an irreversible action; ST-045 is the first partial success; ST-051 brings decimals; ST-053 lets linking reopen; the user decided „Fortsetzen“ is one tap (ST-029) |
+| 2026-10-17 | **G10b amended**: a reversible action that ends someone's access (deactivating an account, ST-081) uses the same question page, with a verb button without „Endgültig“ („Konto deaktivieren“ / „Zurück“). **G24 added** (history on a record: the 5 latest entries, „Alle … (n)“ to a page of its own grouped by year once it grows, „Zurück zum Gerät“). **G25 added** (change lines on a dashboard: who, what, when in words, newest first, never one's own). | Story review of 2026-10-17 (`docs/reviews/2026-10-17-story-review.md`, "Proposed guideline changes" and Decisions item 3): ST-081 is reversible, ST-047 brings the second history to the machine record, ST-086/ST-058/ST-050 list changes |
