@@ -12,10 +12,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | must | S | medium | ST-001 |
-| [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | must | S | medium | ST-061 |
-| [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | must | S | medium | ST-001 |
-| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | must | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-078 |
+| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | must | S | low | ST-004, ST-007, ST-078 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
@@ -40,8 +37,11 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
+| [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | wont | S | medium | ST-001 |
+| [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | wont | S | medium | ST-061 |
+| [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | wont | S | medium | ST-001 |
+| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | wont | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-078 |
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | wont | XS | low | ST-015, ST-044 |
-| [ST-066](ST-066-remove-spike-scaffolding.md) | Remove the spike configuration and data | tech-task | Repair | wont | S | low | ST-004, ST-007, ST-078 |
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | wont | XS | low | ST-003 |
 
 ## Draft

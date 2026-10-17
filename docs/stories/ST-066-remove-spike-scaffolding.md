@@ -3,7 +3,7 @@ id: ST-066
 title: Remove the spike configuration and data
 type: tech-task
 context: BC-Repair
-priority: wont
+priority: must
 size: S
 risk: low
 events: []
@@ -13,7 +13,7 @@ status: ready
 ---
 
 ## Task
-**Folded into ST-065 by the backlog grooming of 2026-10-11 (user decision of 2026-10-12) – not built as a story of its own.** Its code part was done with ST-078; what was left – deleting the spike environment variable, the `spike/` blobs and the spike rows on the old account – belongs to moving the hosting and is now section 5 and six checklist items of ST-065. The text below is kept for the record.
+**Split out of ST-065 again on 2026-10-17 (user decision).** The backlog grooming of 2026-10-11 had folded the spike's configuration and data into the hosting move (ST-065); with hosting deferred, the cleanup is done now on the current account. ST-065 no longer contains it.
 
 Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review.md` finding #2) and of the photo spike ST-002 (`docs/reviews/ST-002-code-review.md` finding #3). Split from ST-065 in the story review `docs/reviews/2026-09-27-story-review.md` (decisions 1 and 3); moving hosting to the museum's Pro team stays with ST-065. Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
@@ -49,6 +49,7 @@ Where practical, the checks are scripted (e.g. with the post-deploy smoke toolin
 - none
 
 ## Notes
+- 2026-10-17 (user decision): `must` again and next in line – hosting (ST-065) is deferred, the spike cleanup is not. The checks run against the current Hobby production and its preview branches.
 - Raised to `must` and made a go-live blocker in the story review of 2026-09-29 (user decision): the blobs under `spike/` may show identifiable people and sit on the Hobby account without a DPA (ADR 0006), so this is a compliance gap, not a cleanup. `ST-042` (go-live readiness) now depends on this story and on ST-078. Priority also carries the ordering: `BACKLOG.md` is generated in priority order, so at `should` the story would sort behind every `must`.
 - Lead dev in the story review of 2026-09-29: **S / low**, unchanged.
 - Back to `review` on 2026-09-29 because the story was split: the code removal moved to ST-078, and `depends_on` changed from `[ST-004, ST-007, ST-068]` to `[ST-004, ST-007, ST-078]` – ST-068 was only needed because the code removal took the spike browser test with it, which is now ST-078's concern.

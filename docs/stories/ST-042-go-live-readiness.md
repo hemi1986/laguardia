@@ -3,7 +3,7 @@ id: ST-042
 title: Go-live readiness checklist incl. the initial maintenance plan
 type: tech-task
 context: BC-Collection
-priority: must
+priority: wont
 size: M
 risk: low
 events: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MaintenancePlanChanged]
@@ -45,5 +45,6 @@ Get La Guardia ready for the first day in the museum (story review 2026-09-26: N
 - none
 
 ## Notes
+- **Deferred on 2026-10-17 (user decision): priority `wont` for now.** The domain stories are finished first; hosting, operations and go-live (ST-065, ST-061, ST-062, ST-042) are evaluated together at the end. Until then the application runs on the Hobby account with test data only – no real visitor data (ADR 0006).
 - Backlog grooming 2026-10-11 (user decision of 2026-10-12): this task no longer depends on ST-070. The full Content Security Policy is `should` now and follows after go-live; the first day in the museum runs with the basic security headers that exist. No checklist item of this task required the full policy, so none was reworded. This replaces the answer of 2026-09-27 in `OPEN_QUESTIONS.md` ("ST-070 done before production go-live").
 - Same grooming: ST-066 was folded into ST-065 and is no dependency any more; ST-065 was already one.
