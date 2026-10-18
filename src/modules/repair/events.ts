@@ -129,7 +129,11 @@ export const repairEvents = eventCatalogue({
     project: (event: DefectDetailsChanged) => ({
       aggregateId: event.defectId,
       machineId: event.machineId,
-      data: { changed: event.changed, suitableForHelpers: event.suitableForHelpers },
+      data: {
+        titleChanged: event.changed.includes("title"),
+        suitableForHelpersChanged: event.changed.includes("suitable-for-helpers"),
+        suitableForHelpers: event.suitableForHelpers,
+      },
     }),
   },
 });

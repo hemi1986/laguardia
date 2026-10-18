@@ -55,6 +55,21 @@ async function aResolvedDefect(title: string) {
   return defectId;
 }
 
+/** An open defect suitable for helpers, claimed by the given team member – at version 1. */
+async function aClaimedDefect(title: string, claimant: typeof tom | typeof anna) {
+  const defect = await anOpenDefect(title, true);
+  const claimed = await executeCommand(
+    claimDefectCommand,
+    { defectId: defect.defectId, version: 0 },
+    dependencies(claimant, "2026-10-18T09:00:00Z"),
+  );
+  if (!claimed.ok) throw new Error(claimed.error);
+  return defect;
+}
+
+const eventsSince = async (defectId: string, count: number) =>
+  (await journalOf(db, { aggregateId: defectId })).slice(count).map((entry) => [entry.type, entry.actor, entry.data]);
+
 beforeAll(async () => {
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, anna, "Anna");
@@ -142,5 +157,34 @@ describe("CMD-ChangeDefectDetails", () => {
       error: "details-unchanged",
     });
     expect(await journalLength(defectId)).toBe(journalBefore);
+  });
+
+  it("releases a helper's claim in the same step when the mark is removed, and journals both facts", async () => {
+    const { defectId } = await aClaimedDefect("Rubber cracked", anna);
+    const journalBefore = await journalLength(defectId);
+
+    expect(await change(defectId, 1, { title: "Rubber cracked", suitableForHelpers: false }, tom)).toMatchObject({
+      ok: true,
+    });
+
+    expect(await defectDetails(db, defectId)).toMatchObject({ suitableForHelpers: false, claim: undefined });
+    expect(await eventsSince(defectId, journalBefore)).toEqual([
+      ["EVT-DefectDetailsChanged", tom, { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false }],
+      ["EVT-DefectClaimReleased", tom, { formerClaimant: anna.teamMemberId }],
+    ]);
+  });
+
+  it("ST-031: Removing the mark keeps a technician's claim", async () => {
+    const { defectId } = await aClaimedDefect("Rubber cracked", tom);
+    const journalBefore = await journalLength(defectId);
+
+    expect(await change(defectId, 1, { title: "Rubber cracked", suitableForHelpers: false }, tom)).toMatchObject({
+      ok: true,
+    });
+
+    expect((await defectDetails(db, defectId))?.claim?.claimedBy).toBe(tom.teamMemberId);
+    expect(await eventsSince(defectId, journalBefore)).toEqual([
+      ["EVT-DefectDetailsChanged", tom, { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false }],
+    ]);
   });
 });

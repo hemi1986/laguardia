@@ -146,8 +146,8 @@ events:
     name: Defect prioritized
     data: [Defect, Priority, Prioritized by]
   - id: EVT-DefectDetailsChanged
-    name: Defect details changed
     aggregate: AGG-Defect
+    name: Defect details changed
     data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Changed by]
     description: Names which of the title and the suitable-for-helpers mark changed, so the journal can say so without repeating the title text (story review 2026-10-17).
   - id: EVT-DefectClaimed
@@ -327,9 +327,9 @@ commands:
       - The defect is open – not resolved and not closed on retirement
       - A priority is chosen, and it differs from the defect's current priority
   - id: CMD-ChangeDefectDetails
+    aggregate: AGG-Defect
     name: Change defect details
     actor: ACT-Technician
-    aggregate: AGG-Defect
     produces: [EVT-DefectDetailsChanged, EVT-DefectClaimReleased]
     rules:
       - Only an open defect – a resolved one can only be reopened, one closed on retirement is final

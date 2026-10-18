@@ -1,5 +1,6 @@
 import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
 import type { Defect } from "./defect";
+import type { DefectClaimReleased } from "./release-claim";
 
 /**
  * CMD-ChangeDefectDetails (AGG-Defect, ST-031): a technician changes the title or the suitable-for-helpers mark of an
@@ -35,6 +36,12 @@ export type DefectDetailsChanged = {
   changedBy: TeamMemberId;
 };
 
+/**
+ * What the decision reads besides the defect: the role of its claimant as Team knows it now – none when it is not
+ * claimed, or the claimant's account is no longer active.
+ */
+export type ChangingDetailsFacts = { claimantRole: Role | undefined };
+
 export type ChangeDefectDetailsError = "defect-not-open" | "title-required" | "details-unchanged";
 
 /**
@@ -56,7 +63,8 @@ export function changeDefectDetails(
   defect: Defect,
   input: ChangeDefectDetailsInput,
   { actor }: DecisionContext<ChangingDetailsPerson>,
-): Decision<Defect, DefectDetailsChanged, ChangeDefectDetailsError | "not-authorized"> {
+  facts: ChangingDetailsFacts,
+): Decision<Defect, DefectDetailsChanged | DefectClaimReleased, ChangeDefectDetailsError | "not-authorized"> {
   const refusal = changeDetailsRefusal(defect, actor);
   if (refusal) return { ok: false, error: refusal };
   const title = input.title.trim();
@@ -67,9 +75,18 @@ export function changeDefectDetails(
   ];
   // A change that changes nothing would record no fact (user, 2026-10-18, as CMD-PrioritizeDefect).
   if (changed.length === 0) return { ok: false, error: "details-unchanged" };
+  // Only defects suitable for helpers can be claimed by helpers: removing the mark releases a helper's claim in the
+  // same step (rule on CMD-ChangeDefectDetails); a technician's claim stays.
+  const released =
+    !input.suitableForHelpers && defect.claim && facts.claimantRole === "helper" ? defect.claim : undefined;
   return {
     ok: true,
-    state: { ...defect, title, suitableForHelpers: input.suitableForHelpers },
+    state: {
+      ...defect,
+      title,
+      suitableForHelpers: input.suitableForHelpers,
+      claim: released ? undefined : defect.claim,
+    },
     events: [
       {
         type: "EVT-DefectDetailsChanged",
@@ -80,6 +97,17 @@ export function changeDefectDetails(
         suitableForHelpers: input.suitableForHelpers,
         changedBy: actor.teamMemberId,
       },
+      ...(released
+        ? [
+            {
+              type: "EVT-DefectClaimReleased" as const,
+              defectId: defect.id,
+              machineId: defect.machineId,
+              formerClaimant: released.claimedBy,
+              releasedBy: actor.teamMemberId,
+            },
+          ]
+        : []),
     ],
   };
 }
