@@ -15,6 +15,26 @@ export const machineModel = pgTable("machine_model", {
 });
 
 /**
+ * The category history of a machine model (ST-036): the machine category and technology from creation on, and an
+ * entry for every correction that changes either – append-only, so Maintenance knows since when a task applies.
+ */
+export const machineModelCategoryChange = pgTable(
+  "machine_model_category_change",
+  {
+    /** The entry's ID from the command's ID generator – the history is saved insert-only by it (Q13). */
+    id: uuid("id").primaryKey(),
+    position: bigserial("position", { mode: "number" }).notNull(),
+    machineModelId: uuid("machine_model_id")
+      .notNull()
+      .references(() => machineModel.id),
+    machineCategory: text("machine_category", { enum: machineCategories }).notNull(),
+    technology: text("technology", { enum: technologies }),
+    holdsFrom: timestamp("holds_from", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("machine_model_category_change_machine_model_idx").on(t.machineModelId)],
+);
+
+/**
  * AGG-Machine – current state (ST-007). "… by" columns are TeamMemberIds; their foreign keys to team_member.id are
  * hand-written in the migration (a module's schema never imports another module's tables).
  */
