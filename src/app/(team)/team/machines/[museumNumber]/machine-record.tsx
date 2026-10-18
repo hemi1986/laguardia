@@ -7,24 +7,10 @@ import { formatDateTime } from "@/platform/time";
 import { fileCategories } from "@/modules/collection";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
-import type { TriagedWhenReporting } from "./triaged-when-reporting";
+import { triageConfirmationText } from "../../triage-confirmation";
+import type { MachineRecordConfirmation } from "./machine-confirmation";
 
-const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
-
-/** The confirmations of the triage forms (ST-018, ST-019, ST-022) – the same words, whichever page they follow. */
-function triagedText(triaged: TriagedWhenReporting, museumNumber: string): string {
-  switch (triaged.outcome) {
-    case "defect-recorded":
-      return (
-        recordDefect.recorded(triaged.title, museumNumber) +
-        (triaged.newStatus ? recordDefect.statusNow(museumNumber, machines.statuses[triaged.newStatus]) : "")
-      );
-    case "linked":
-      return teamMessages.link.linked(museumNumber, triaged.title);
-    case "resolved-on-the-spot":
-      return teamMessages.resolveOnTheSpot.resolved(museumNumber);
-  }
-}
+const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
 /**
  * The machine record (RM-MachineRecord, ST-009). ST-009 owns the page (G18) and fixed its sections, top to bottom:
@@ -36,26 +22,14 @@ export function MachineRecordView({
   record,
   museumNumber,
   canChangeStatus = false,
-  statusChanged = false,
-  moved = false,
-  problemReported = false,
-  triagedWhenReporting,
-  attached,
+  confirmation,
 }: {
-  /** Just back from attaching a file: the confirmation names it (G3, ST-037) – only a file this record shows. */
-  attached?: string;
   record: MachineRecordData | undefined;
   museumNumber: string;
   /** Whether the team member may change this machine's status at all (G11) – the page decides it (ST-012). */
   canChangeStatus?: boolean;
-  /** Just back from a status change: the confirmation names the machine and its new machine status (G3). */
-  statusChanged?: boolean;
-  /** Just back from a move: the confirmation names the machine and its new location (G3, ST-034). */
-  moved?: boolean;
-  /** Just back from a problem report: the confirmation names the machine and says it waits for triage (ST-015). */
-  problemReported?: boolean;
-  /** Just back from reporting a problem and triaging it in the same step (ST-023, ST-052): its confirmation (G3). */
-  triagedWhenReporting?: TriagedWhenReporting;
+  /** Just back from an action on this machine: what the team member did, as the journal says (G3). */
+  confirmation?: MachineRecordConfirmation;
 }) {
   if (!record) {
     return (
@@ -66,7 +40,6 @@ export function MachineRecordView({
     );
   }
   const { machineModel } = record;
-  const attachedFile = attached ? record.files.find((file) => file.id === attached) : undefined;
   const details: [string, string][] = [
     [terms["Serial number"], record.serialNumber ?? texts.noSerialNumber],
     [terms["Machine model"], machineModel.title],
@@ -82,13 +55,7 @@ export function MachineRecordView({
 
   return (
     <>
-      {statusChanged && (
-        <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
-      )}
-      {moved && <Confirmation>{texts.moved(record.museumNumber, record.location)}</Confirmation>}
-      {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
-      {triagedWhenReporting && <Confirmation>{triagedText(triagedWhenReporting, record.museumNumber)}</Confirmation>}
-      {attachedFile && <Confirmation>{texts.fileAttached(attachedFile.title)}</Confirmation>}
+      {confirmation && <Confirmation>{confirmationText(confirmation, record)}</Confirmation>}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(
@@ -245,6 +212,22 @@ export function MachineRecordView({
       <BackToMachines />
     </>
   );
+}
+
+/** The confirmation in words (G3): names the machine and what it is now. */
+function confirmationText(confirmation: MachineRecordConfirmation, record: MachineRecordData): string {
+  switch (confirmation.kind) {
+    case "status-changed":
+      return texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus]);
+    case "moved":
+      return texts.moved(record.museumNumber, record.location);
+    case "problem-reported":
+      return texts.problemReported(record.museumNumber);
+    case "file-attached":
+      return texts.fileAttached(confirmation.title);
+    case "triaged":
+      return triageConfirmationText(confirmation.triaged);
+  }
 }
 
 /** A repair that has ended: what it was, its closing note or note, who ended it and when. Texts are plain text. */

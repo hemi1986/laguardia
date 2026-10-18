@@ -838,7 +838,6 @@ describe("a defect's own page", () => {
         storage: memoryStorage(),
         viewer: asTom,
         done: "reopen",
-        statusChanged: true,
       });
 
       expect(renderToStaticMarkup(createElement(DefectDetailsView, { details }))).toContain(

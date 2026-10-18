@@ -19,10 +19,9 @@ export async function reportAndRecordDefectAction(
   previous: ReportAndRecordDefectState,
   formData: FormData,
 ): Promise<ReportAndRecordDefectState> {
-  const statusChanged = Boolean(formData.get("machineStatus"));
   return reportAndTriage(museumNumber, previous, formData, {
     fields: reportAndRecordDefectFields,
     input: reportAndRecordDefectInput,
-    confirms: ({ defectId }) => `defectRecorded=${defectId ?? ""}${statusChanged ? "&statusChanged=1" : ""}`,
+    confirms: ({ defectId }) => `defectRecorded=${defectId ?? ""}`,
   });
 }

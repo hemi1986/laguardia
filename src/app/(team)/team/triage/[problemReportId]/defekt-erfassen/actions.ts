@@ -26,13 +26,12 @@ export async function recordDefectAction(
   formData: FormData,
 ): Promise<RecordDefectState> {
   await requireTechnician(); // the page's access check; who may record a defect is the command's allowedActors
-  const statusChanged = Boolean(formData.get("machineStatus"));
   const state = await formAction(recordDefectCommand, {
     fields: recordDefectFields,
     input: (fields) => recordDefectInput(fields, problemReportId),
     onSuccess: async ({ defectId }) => {
       revalidatePath("/team/triage");
-      redirect(`/team/triage?defectRecorded=${defectId}${statusChanged ? "&statusChanged=1" : ""}`);
+      redirect(`/team/triage?defectRecorded=${defectId}`);
     },
   })(previous, formData);
   // Name who triaged it first – "Tom hat diese Meldung schon gesichtet." (story review 2026-10-03)

@@ -4,9 +4,9 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
+import { loadMachineConfirmation } from "./machine-confirmation";
 import { loadMachineRecord } from "./machine-record-data";
 import { MachineRecordView } from "./machine-record";
-import { loadTriagedWhenReporting } from "./triaged-when-reporting";
 
 /**
  * The machine record of one machine, addressed by its museum number (ST-009) – where the QR sticker leads team
@@ -19,8 +19,7 @@ export default async function MachineRecordPage({ params, searchParams }: PagePr
     loadMachineRecord(database(), museumNumber, { clock: systemClock, viewer: member }),
     searchParams,
   ]);
-  // Just back from reporting a problem and triaging it in the same step (ST-023, ST-052).
-  const triagedWhenReporting = record && (await loadTriagedWhenReporting(database(), systemClock, record, query));
+  const confirmation = record && (await loadMachineConfirmation(database(), systemClock, member.id, record, query));
 
   return (
     <Page title={record ? `${record.museumNumber} · ${record.machineModel.title}` : teamMessages.terms.Machine}>
@@ -34,11 +33,7 @@ export default async function MachineRecordPage({ params, searchParams }: PagePr
             retired: record.retirement !== undefined,
           }).length > 0
         }
-        statusChanged={query.statusChanged !== undefined && !triagedWhenReporting}
-        moved={query.moved !== undefined && !triagedWhenReporting}
-        triagedWhenReporting={triagedWhenReporting}
-        problemReported={query.problemReported !== undefined}
-        attached={typeof query.attached === "string" ? query.attached : undefined}
+        confirmation={confirmation}
       />
     </Page>
   );
