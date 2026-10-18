@@ -72,9 +72,10 @@ describe("CMD-RecordDefect", () => {
       recordedBy: tom.teamMemberId,
       recordedAt: new Date("2026-10-03T19:00:00Z"),
       state: "open",
-      // Nobody has worked on a recorded defect yet (ST-024), and it has not been resolved (ST-028).
+      // Nobody has worked on a recorded defect yet (ST-024), it has not been resolved (ST-028) or reopened (ST-030).
       workLog: [],
       resolutions: [],
+      reopenings: [],
     });
     expect((await storedProblemReport(db, problemReportId))?.triage).toEqual({
       outcome: "defect-recorded",
@@ -123,7 +124,11 @@ describe("CMD-RecordDefect", () => {
     await anExistingTeamMember(db, tom);
     const machineId = await aRegisteredMachine(db);
     const problemReportId = await anUntriagedProblemReport(machineId);
-    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, db, clock, newId: randomUUID });
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
     if (!retired.ok) throw new Error("not retired");
     const journalBefore = (await journalOf(db, { machineId })).length;
 
