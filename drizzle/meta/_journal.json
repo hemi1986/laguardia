@@ -183,6 +183,13 @@
       "when": 1792340091079,
       "tag": "0025_file",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792344046821,
+      "tag": "0026_journal_transaction",
+      "breakpoints": true
     }
   ]
 }
