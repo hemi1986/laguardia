@@ -7,7 +7,7 @@ export type { CorrectMachineModelError, CorrectMachineModelInput } from "./corre
 export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
-export { machineModelsToChooseFrom } from "./machine-models";
+export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTeam } from "./machine-models";
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";
