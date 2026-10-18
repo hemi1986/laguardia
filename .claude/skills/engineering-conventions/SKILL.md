@@ -221,6 +221,16 @@ event in `actionOfEvent` and its projection in `repairEvents`, a confirmation te
 only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
 never from the address alone, and without a state field per action.
 
+**A confirmation after an action (G3)** – one rule everywhere (architecture review 2026-10-18): the address only says
+*what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<id>`, `?recorded=<id>`); the page confirms it only
+when `lastCommandBy(db, { machineId } | { aggregateId }, viewer)` (command layer) says the latest command on that target
+was that action **and** the team member looking at the page ran it. One command is one transaction: the journal
+records its transaction (`event_journal.transaction_id`), so the answer holds every event the command wrote – a status
+change made in the same step is confirmed from there, never from a flag in the address. The triage outcomes share one
+module, `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
+`loadMachineConfirmation` and shows one `confirmation`. A new confirmation adds its case there – no page believes the
+address.
+
 **Where an action sits on the defect's page** (G22, first: ST-026): the work – `claim`, `release`, `log-work`,
 `resolve` – as buttons under the header; what manages the defect behind the fold „Verwalten“ (`manage-defect.tsx`, a
 native `<details>` that a rejection opens). One command can be two actions – CMD-ClaimDefect is `claim` and, with
