@@ -10,12 +10,13 @@ export function domainEventAggregates(): Map<string, Set<string>> {
   const aggregates = new Map<string, Set<string>>();
   const allow = (event: string, aggregate: string) =>
     aggregates.set(event, new Set([...(aggregates.get(event) ?? []), aggregate]));
-  for (const [, id, aggregate, rest] of text.matchAll(
-    /^ {2}- id: ((?:EVT|CMD)-\w+)\n {4}aggregate: (AGG-\w+)\n((?: {4}.*\n)*)/gm,
-  )) {
-    if (id!.startsWith("EVT-")) allow(id!, aggregate!);
+  // An entry is its id line and the indented lines below it; its aggregate may stand on any of them.
+  for (const [, id, rest] of text.matchAll(/^ {2}- id: ((?:EVT|CMD)-\w+)\n((?: {4}.*\n)*)/gm)) {
+    const aggregate = /^ {4}aggregate: (AGG-\w+)$/m.exec(rest!)?.[1];
+    if (!aggregate) continue;
+    if (id!.startsWith("EVT-")) allow(id!, aggregate);
     const produces = /^ {4}produces: \[([^\]]*)\]/m.exec(rest!)?.[1];
-    for (const event of produces?.split(",").map((name) => name.trim()) ?? []) allow(event, aggregate!);
+    for (const event of produces?.split(",").map((name) => name.trim()) ?? []) allow(event, aggregate);
   }
   return aggregates;
 }
