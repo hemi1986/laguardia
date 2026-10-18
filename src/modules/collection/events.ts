@@ -1,4 +1,5 @@
 import { eventCatalogue } from "@/platform/command";
+import type { FileAttached } from "./attach-file";
 import type { MachineStatusChanged } from "./change-machine-status";
 import type { MachineModelCorrected } from "./correct-machine-model";
 import type { MachineModelCreated } from "./create-machine-model";
@@ -49,5 +50,14 @@ export const collectionEvents = eventCatalogue({
     aggregate: "AGG-Machine",
     // The new location is typed text and stays in the aggregate; the journal names the machine and who moved it.
     project: (event: MachineMoved) => ({ aggregateId: event.machineId, machineId: event.machineId, data: {} }),
+  },
+  "EVT-FileAttached": {
+    aggregate: "AGG-File",
+    // The title is typed text and stays in the aggregate (ST-003). A file of a machine model belongs to no one machine.
+    project: (event: FileAttached) => ({
+      aggregateId: event.fileId,
+      machineId: event.machineId ?? null,
+      data: { fileCategory: event.fileCategory, machineModelId: event.machineModelId ?? null },
+    }),
   },
 });

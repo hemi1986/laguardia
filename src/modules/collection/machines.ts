@@ -1,6 +1,7 @@
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
+import { filesOfMachine, type FileOfMachine } from "./files";
 import { categoryHistory } from "./machine-models";
 import {
   machineStatuses,
@@ -224,6 +225,8 @@ export type MachineRecord = {
   /** Newest first. "… by" are TeamMemberIds – the page names them through the Team module (ST-009). */
   statusHistory: StatusChange[];
   retirement?: Retirement;
+  /** Its files and its machine model's, by file category (ST-037). */
+  files: FileOfMachine[];
 };
 
 /** RM-MachineRecord: everything about one machine, retired ones included – by its museum number (ST-009). */
@@ -250,6 +253,7 @@ export async function machineRecord(db: Database, museumNumber: string): Promise
     machineStatus: m.machineStatus,
     statusHistory: (await statusHistoryOf(db, m.id)).reverse(),
     retirement: retirementOf(m),
+    files: await filesOfMachine(db, { machineId: m.id, machineModelId: m.machineModelId }),
   };
 }
 

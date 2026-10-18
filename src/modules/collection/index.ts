@@ -1,4 +1,15 @@
 /** Public interface of the Collection module (BC-Collection: machines, machine models, files) – ADR 0002. */
+export { attachFileCommand } from "./attach-file-command";
+export { attachFileRefusal, attachTargets, fileCategories } from "./attach-file";
+export type {
+  AttachFileError,
+  AttachFileInput,
+  AttachFileInputError,
+  AttachTarget,
+  FileCategory,
+  FileContent,
+} from "./attach-file";
+export type { FileOfMachine } from "./files";
 export { changeMachineStatusCommand } from "./change-machine-status-command";
 export { machineStatusesToChangeTo } from "./change-machine-status";
 export type { ChangeMachineStatusError, ChangeMachineStatusInput } from "./change-machine-status";

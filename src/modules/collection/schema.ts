@@ -1,8 +1,9 @@
-import { bigserial, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { fileCategories } from "./attach-file";
 import { machineCategories, technologies } from "./create-machine-model";
 import { machineStatuses } from "./register-machine";
 
-/** AGG-MachineModel – current state (docs/architecture/data-model.md). Files follow with ST-037. */
+/** AGG-MachineModel – current state (docs/architecture/data-model.md). Its files are AGG-File (ST-037). */
 export const machineModel = pgTable("machine_model", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -84,4 +85,28 @@ export const machineStatusChange = pgTable(
     changedAt: timestamp("changed_at", { withTimezone: true }).notNull(),
   },
   (t) => [index("machine_status_change_machine_idx").on(t.machineId)],
+);
+
+/**
+ * AGG-File – current state (ST-037, docs/architecture/data-model.md): attached to exactly one machine or one machine
+ * model (check constraint in the migration). `content` is the content's name in the storage seam; size and media type
+ * are what the store said when the file was attached. `attached_by` refers to team_member.id (hand-written foreign key).
+ */
+export const file = pgTable(
+  "file",
+  {
+    id: uuid("id").primaryKey(),
+    machineId: uuid("machine_id").references(() => machine.id),
+    machineModelId: uuid("machine_model_id").references(() => machineModel.id),
+    title: text("title").notNull(),
+    fileCategory: text("file_category", { enum: fileCategories }).notNull(),
+    content: text("content").notNull().unique(),
+    size: bigint("size", { mode: "number" }).notNull(),
+    contentType: text("content_type").notNull(),
+    attachedBy: uuid("attached_by").notNull(),
+    attachedAt: timestamp("attached_at", { withTimezone: true }).notNull(),
+    /** Optimistic version check (HS-16) – removing a file (ST-038) saves at the version the team member saw. */
+    version: integer("version").notNull().default(0),
+  },
+  (t) => [index("file_machine_idx").on(t.machineId), index("file_machine_model_idx").on(t.machineModelId)],
 );
