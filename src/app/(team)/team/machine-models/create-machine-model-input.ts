@@ -10,7 +10,9 @@ import type { FormFields } from "@/app/_actions/form-action";
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const createMachineModelFields = ["title", "manufacturer", "year", "machineCategory", "technology"] as const;
 
-type Fields = FormFields<(typeof createMachineModelFields)[number]>;
+export type MachineModelField = (typeof createMachineModelFields)[number];
+
+type Fields = FormFields<MachineModelField>;
 
 /**
  * Reads and converts the fields of the machine model form (ST-073, Q19): no validation, no default. Free text
@@ -28,7 +30,6 @@ export function createMachineModelInput(fields: Fields): CreateMachineModelInput
     technology: oneOf(technologies, fields.technology),
   };
 }
-
 
 function oneOf<Value extends MachineCategory | Technology>(
   known: readonly Value[],

@@ -62,6 +62,22 @@ export const teamMessages = {
     noTechnology: "keine",
     create: "Modell anlegen",
     empty: "Noch keine Modelle angelegt.",
+    /** Back on the list after creating one on its own page (ST-036, G2a, G3). */
+    created: (title: string) => `Modell „${title}“ angelegt.`,
+    back: "Zurück zu den Modellen",
+    /** A machine model's own page and its correction (ST-036). */
+    unknown: "Dieses Modell gibt es nicht.",
+    noYear: "–",
+    correct: "Modell korrigieren",
+    correctTitle: (title: string) => `Modell „${title}“ korrigieren`,
+    appliesTo: (machineCount: number) =>
+      machineCount === 0
+        ? "Noch kein Gerät hat dieses Modell."
+        : machineCount === 1
+          ? "Gilt für das eine Gerät dieses Modells."
+          : `Gilt für alle ${machineCount} Geräte dieses Modells.`,
+    corrected: (title: string) => `Modell „${title}“ korrigiert.`,
+    backToModel: "Zurück zum Modell",
     /** The machine categories, in the German wording of their definition in CONTEXT.md. */
     categories: { pinball: "Flipper", arcade: "Arcade", other: "Sonstiges" },
     technologies: { em: "EM", "solid-state": "Solid-State", dmd: "DMD", lcd: "LCD", crt: "CRT" },
@@ -553,6 +569,8 @@ export const teamMessages = {
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
     "machine-category-required": "Bitte eine Kategorie wählen.",
     "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
+    /** Correcting a machine model (ST-036): no correction without a change. */
+    "machine-model-unchanged": "Am Modell hat sich nichts geändert. Bitte etwas ändern.",
     /** Recording maintenance (ST-044). */
     "maintenance-task-unknown": "Diese Wartungsaufgabe gibt es nicht mehr.",
     "machine-unknown": "Dieses Gerät gibt es nicht.",

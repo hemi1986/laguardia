@@ -15,7 +15,7 @@ test.beforeEach(() => {
 /** A machine that is not on display, registered by the e2e technician – team members may still report for it. */
 async function aMachineNotOnDisplay(page: Page): Promise<string> {
   const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

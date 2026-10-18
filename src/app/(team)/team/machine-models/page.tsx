@@ -1,42 +1,30 @@
+import Link from "next/link";
 import { Page } from "@/components/page";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  machineCategories,
-  machineModelsToChooseFrom,
-  technologies,
-  technologiesOf,
-  type MachineModel,
-} from "@/modules/collection";
+import { Confirmation } from "@/components/ui/message";
+import { machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
-import { CreateMachineModelForm, type Choices } from "./create-machine-model-form";
 
 const { machineModels: texts } = teamMessages;
 
-/** The choices of the form, with the German wording – the form itself knows no domain and no catalogue key. */
-const choices: Choices = {
-  categories: machineCategories.map((category) => ({ value: category, label: texts.categories[category] })),
-  technologies: technologies.map((technology) => ({
-    value: technology,
-    // "LCD (Flipper, Arcade)" – the categories a technology fits, so the technician sees it without JavaScript.
-    label: `${texts.technologies[technology]} (${machineCategories
-      .filter((category) => technologiesOf(category).includes(technology))
-      .map((category) => texts.categories[category])
-      .join(", ")})`,
-  })),
-};
-
 /**
- * The machine models (ST-006): a technician creates one here, and sees the ones a machine can be registered for
- * (ST-007). Correcting one follows with ST-036, its manuals and schematics with ST-037.
+ * The machine models (ST-006): the ones a machine can be registered for (ST-007), each leading to its own page
+ * (ST-036). „Neues Modell“ leads to the creation's own page (G2a); back from it, the new model is named (G3).
  */
-export default async function MachineModelsPage() {
+export default async function MachineModelsPage({ searchParams }: PageProps<"/team/machine-models">) {
   await requireTechnician();
-  const models = await machineModelsToChooseFrom(database());
+  const [models, { created }] = await Promise.all([machineModelsToChooseFrom(database()), searchParams]);
+  const createdModel = models.find((model) => model.id === created);
 
   return (
     <Page title={texts.title}>
+      <Link href="/team/machine-models/new" className={buttonVariants({ className: "self-start" })}>
+        {texts.newMachineModel}
+      </Link>
+      {createdModel && <Confirmation>{texts.created(createdModel.title)}</Confirmation>}
       {models.length === 0 ? (
         <p>{texts.empty}</p>
       ) : (
@@ -48,11 +36,6 @@ export default async function MachineModelsPage() {
           ))}
         </ul>
       )}
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-base font-medium">{texts.newMachineModel}</h2>
-        <CreateMachineModelForm {...choices} />
-      </section>
     </Page>
   );
 }
@@ -69,7 +52,11 @@ function MachineModelCard({ model }: { model: MachineModel }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{model.title}</CardTitle>
+        <CardTitle>
+          <Link href={`/team/machine-models/${model.id}`} className="underline underline-offset-4">
+            {model.title}
+          </Link>
+        </CardTitle>
         <CardDescription>{details.join(" · ")}</CardDescription>
       </CardHeader>
     </Card>

@@ -12,7 +12,7 @@ const password = process.env.E2E_TEAM_PASSWORD;
 /** A registered machine, so the overview is a list to search in and not its empty state. */
 async function aRegisteredMachine(page: Page) {
   const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

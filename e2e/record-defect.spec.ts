@@ -19,7 +19,7 @@ test.beforeEach(() => {
  */
 async function openRecordDefect(page: Page, machineStatus: "playable" | "limited" | "out-of-order" = "playable") {
   const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");
