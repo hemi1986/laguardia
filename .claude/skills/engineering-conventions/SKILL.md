@@ -109,9 +109,11 @@ Until the migration is finished **both patterns exist, and that is the one thing
 form on the new pattern is ST-007 (`src/app/(team)/team/machines/new/register-machine-form.tsx` – `Field` with
 `data-invalid`, `FieldLabel htmlFor`, the control with `aria-invalid` and `aria-describedby` pointing at the
 rejection, `FieldDescription` for a hint). Of the four forms that predate it, the login and the own-password page were
-moved directly (backlog grooming 2026-10-11); the team members page follows with ST-081 and the machine models page with
-ST-036. The hand-rolled field is renamed `LabelledField` (`src/components/ui/labelled-field.tsx`) until then. Write no
-new form on `LabelledField`.
+moved directly (backlog grooming 2026-10-11), the machine models form with ST-036 (`MachineModelFields`, shared by
+creating and correcting – `src/app/(team)/team/machine-models/machine-model-fields.tsx`); the team members page
+follows with ST-081. The hand-rolled field is renamed `LabelledField` (`src/components/ui/labelled-field.tsx`) until
+then. Write no new form on `LabelledField`. Put a field's `key` before a spread of its props – after a spread, React's
+JSX transform falls back to `createElement` and warns about the select's option list (ST-036).
 **A form whose action is not a command** (the login – `logIn` of the Team module, backed by Better Auth) cannot use
 `formAction`; its Server Action mirrors the contract by hand: `(previous, formData) => { error, values } | null`, used
 with `useActionState`, and `values` never holds a password (`src/app/login/actions.ts`, `log-in-form.tsx`).

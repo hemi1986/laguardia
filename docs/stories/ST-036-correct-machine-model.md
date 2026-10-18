@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachineModelCorrected]
 depends_on: [ST-009, ST-010, ST-043, ST-044]
 labels: [mvp, collection, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -30,6 +30,11 @@ Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-groomin
 - This story ends the known G2a exception of `/team/machine-models`: creating a machine model moves to its own page, reached by the button „Neues Modell“ directly under the list's heading; on success the technician lands back on the list with „Modell „Medieval Madness“ angelegt.“ (ST-006's rules and texts otherwise unchanged).
 - A machine model gets its own page, reached from its entry in the list; it shows the model's details and offers „Modell korrigieren“ to technicians.
 - The correction form says how many machines it affects: „Gilt für alle 3 Geräte dieses Modells.“ After the correction the technician lands on the machine model's page with a confirmation naming the model.
+
+Decisions at the test plan (user, 2026-10-18):
+- Collection keeps a **category history** on the machine model (like the machine status history): an entry at creation and at every correction that changes the machine category or the technology; existing machine models get their creation entry from the journal by migration (`docs/architecture/data-model.md`).
+- The count includes retired machines – the correction applies to their machine records too. One machine: „Gilt für das eine Gerät dieses Modells.“; none: „Noch kein Gerät hat dieses Modell.“
+- A correction that changes nothing is rejected: „Am Modell hat sich nichts geändert. Bitte etwas ändern.“ (as in ST-031).
 
 ## Acceptance Criteria
 

@@ -24,7 +24,7 @@ async function aPlayableMachine(
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/team$/);
   const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

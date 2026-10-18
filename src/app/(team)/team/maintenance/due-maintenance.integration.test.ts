@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   changeMachineStatusCommand,
+  correctMachineModelCommand,
   createMachineModelCommand,
   registerMachineCommand,
   type MachineCategory,
@@ -644,5 +645,107 @@ describe("the due maintenance list", () => {
       expect(await listedOn("2026-04-02", cleanGlass)).toEqual([]);
       expect((await page("2026-04-02")).data.tasks).toEqual([]);
     });
+  });
+});
+
+describe("a machine model correction (ST-036)", () => {
+  /** A machine model of its own – the one the scenario corrects –, with one machine registered on 1 June 2025. */
+  async function aMachineOfItsOwnModel(
+    museumNumber: string,
+    title: string,
+    machineCategory: MachineCategory,
+    technology: Technology,
+  ) {
+    const details = { title, manufacturer: "Bally", machineCategory, technology };
+    const { machineModelId } = await run(
+      executeCommand(createMachineModelCommand, details, { actor: tom, db, newId: randomUUID }),
+    );
+    const { machineId } = await run(
+      executeCommand(
+        registerMachineCommand,
+        { machineModelId, museumNumber, serialNumber: undefined, location: "Hall 1", machineStatus: "playable" },
+        { actor: tom, db, clock: fixedClock("2025-06-01T09:00:00Z"), newId: randomUUID },
+      ),
+    );
+    let version = 0;
+    /** Tom corrects the technology on that day, at the version the model has. */
+    const technologyCorrected = (newTechnology: Technology, on: string) =>
+      run(
+        executeCommand(
+          correctMachineModelCommand,
+          { machineModelId, version: version++, ...details, technology: newTechnology },
+          { actor: tom, db, clock: fixedClock(`${on}T08:00:00Z`), newId: randomUUID },
+        ),
+      );
+    return { machineId, technologyCorrected };
+  }
+
+  it("ST-036: Correcting the technology changes the applicable maintenance tasks", async () => {
+    const lg005 = await aMachineOfItsOwnModel("LG-005", "Fireball", "pinball", "solid-state");
+    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
+      intervalMonths: 3,
+      machineCategory: "pinball",
+      technology: "em",
+    });
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", { intervalMonths: 3 });
+    await recorded(fuses, lg005.machineId, "2026-03-02");
+    await recorded(fuses, lg005.machineId, "2026-05-04", { outcome: "partially-done", note: "one fuse ordered" });
+    const before = await maintenanceRecords(db, { machineId: lg005.machineId });
+
+    await lg005.technologyCorrected("em", "2026-06-01");
+
+    // Newly applying: last done on the correction date (HS-20, D5) – not due since April, as its start date would say.
+    expect(await listedOn("2026-08-31", scoreReels)).toEqual([]);
+    expect((await page("2026-09-01", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-005", lastDone: "2026-06-01", dueSince: "2026-09-01" }),
+    ]);
+    expect(await maintenanceRecords(db, { machineId: lg005.machineId })).toEqual(before);
+    expect(before).toHaveLength(2);
+  });
+
+  it("ST-036: A task that no longer applies leaves the due list", async () => {
+    const lg020 = await aMachineOfItsOwnModel("LG-020", "Galaxian", "arcade", "crt");
+    const monitor = await aMaintenanceTask("Check monitor geometry, convergence, capacitors", {
+      intervalMonths: 3,
+      machineCategory: "arcade",
+      technology: "crt",
+    });
+    await recorded(monitor, lg020.machineId, "2026-03-02", { outcome: "partially-done", note: "convergence pending" });
+    expect(await listedOn("2026-05-02", monitor)).toEqual(["LG-020"]);
+
+    await lg020.technologyCorrected("lcd", "2026-05-02");
+
+    expect(await listedOn("2026-05-02", monitor)).toEqual([]);
+    expect(await maintenanceRecords(db, { machineId: lg020.machineId })).toEqual([
+      expect.objectContaining({ maintenanceTaskId: monitor, outcome: "partially-done" }),
+    ]);
+  });
+
+  it("a task that applies again after a second correction counts from that one (ST-036 code review)", async () => {
+    const lg007 = await aMachineOfItsOwnModel("LG-007", "Gorgar", "pinball", "em");
+    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
+      intervalMonths: 3,
+      machineCategory: "pinball",
+      technology: "em",
+    });
+
+    await lg007.technologyCorrected("solid-state", "2026-02-01");
+    await lg007.technologyCorrected("em", "2026-05-04");
+
+    expect(await listedOn("2026-08-03", scoreReels)).toEqual([]);
+    expect((await page("2026-08-04", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-007", lastDone: "2026-05-04", dueSince: "2026-08-04" }),
+    ]);
+  });
+
+  it("a task that applied before and after a correction keeps its last done", async () => {
+    const lg006 = await aMachineOfItsOwnModel("LG-006", "Eight Ball", "pinball", "solid-state");
+    const rubbers = await aMaintenanceTask("Replace rubbers", { intervalMonths: 3, machineCategory: "pinball" });
+
+    await lg006.technologyCorrected("em", "2026-03-15");
+
+    expect((await page("2026-04-02", { maintenanceTaskId: rubbers })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-006", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
+    ]);
   });
 });

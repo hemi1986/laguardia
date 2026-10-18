@@ -17,7 +17,7 @@ test.beforeEach(() => {
 
 /** A machine with a problem report, recorded as a defect the way a technician does it. Returns the museum number. */
 async function aRecordedDefect(page: Page, modelTitle: string, defectTitle: string) {
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(modelTitle);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

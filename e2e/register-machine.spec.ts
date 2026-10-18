@@ -14,7 +14,7 @@ const password = process.env.E2E_TEAM_PASSWORD;
 /** A machine model of this test's own, so the registration has one to choose. */
 async function aMachineModel(page: Page): Promise<string> {
   const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Baujahr").fill("1997");

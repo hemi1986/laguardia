@@ -26,12 +26,12 @@ export function technologiesOf(machineCategory: MachineCategory): readonly Techn
   return technologiesPerCategory[machineCategory];
 }
 
-/** Who may create a machine model – the allowed actors of CMD-CreateMachineModel. */
+/** Who may create or correct a machine model – the allowed actors of CMD-CreateMachineModel and CMD-CorrectMachineModel. */
 export const machineModelActors = ["technician"] as const;
 
 type CreatingPerson = ActorOf<(typeof machineModelActors)[number]>;
 
-/** AGG-MachineModel – current state (docs/architecture/data-model.md). */
+/** The details of a machine model, as every machine of that model shows them (data model). */
 export type MachineModel = {
   id: string;
   title: string;
@@ -40,6 +40,21 @@ export type MachineModel = {
   machineCategory: MachineCategory;
   technology?: Technology;
 };
+
+/**
+ * One entry of a machine model's category history (ST-036): the machine category and technology from `holdsFrom` on.
+ * The first entry is the creation; a correction that changes either appends one.
+ */
+export type CategoryChange = {
+  /** From the command's ID generator – the history is saved by inserting the entries not stored yet (Q13). */
+  id: string;
+  machineCategory: MachineCategory;
+  technology?: Technology;
+  holdsFrom: Date;
+};
+
+/** AGG-MachineModel – current state (docs/architecture/data-model.md): its details and its category history. */
+export type MachineModelState = MachineModel & { categoryHistory: CategoryChange[] };
 
 export type MachineModelCreated = {
   type: "EVT-MachineModelCreated";
@@ -71,11 +86,13 @@ export type CreateMachineModelError =
   | "machine-category-required"
   | "technology-does-not-fit-machine-category";
 
-export function createMachineModel(
-  _nothingYet: undefined,
+/**
+ * The invariants of AGG-MachineModel on what a technician gave – for creating and correcting alike (ST-036): title,
+ * manufacturer and machine category required, a given year four digits, the technology fitting the machine category.
+ */
+export function machineModelDetails(
   input: CreateMachineModelInput,
-  { newId }: DecisionContext<CreatingPerson>,
-): Decision<MachineModel, MachineModelCreated, CreateMachineModelError> {
+): { ok: true; details: Omit<MachineModel, "id"> } | { ok: false; error: CreateMachineModelError } {
   const title = input.title.trim();
   if (!title) return { ok: false, error: "title-required" };
   const manufacturer = input.manufacturer.trim();
@@ -90,15 +107,30 @@ export function createMachineModel(
   if (technology && !technologiesOf(machineCategory).includes(technology)) {
     return { ok: false, error: "technology-does-not-fit-machine-category" };
   }
-
-  const model: MachineModel = {
-    id: newId(),
-    title,
-    manufacturer,
-    year: typedYear ? Number(typedYear) : undefined,
-    machineCategory,
-    technology,
+  return {
+    ok: true,
+    details: { title, manufacturer, year: typedYear ? Number(typedYear) : undefined, machineCategory, technology },
   };
-  const { id: machineModelId, ...created } = model;
-  return { ok: true, state: model, events: [{ type: "EVT-MachineModelCreated", machineModelId, ...created }] };
+}
+
+export function createMachineModel(
+  _nothingYet: undefined,
+  input: CreateMachineModelInput,
+  { clock, newId }: DecisionContext<CreatingPerson>,
+): Decision<MachineModelState, MachineModelCreated, CreateMachineModelError> {
+  const checked = machineModelDetails(input);
+  if (!checked.ok) return checked;
+  const { details } = checked;
+  const model: MachineModelState = {
+    id: newId(),
+    ...details,
+    categoryHistory: [
+      { id: newId(), machineCategory: details.machineCategory, technology: details.technology, holdsFrom: clock.now() },
+    ],
+  };
+  return {
+    ok: true,
+    state: model,
+    events: [{ type: "EVT-MachineModelCreated", machineModelId: model.id, ...details }],
+  };
 }

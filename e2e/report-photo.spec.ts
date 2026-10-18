@@ -18,7 +18,7 @@ const needsBlob = () => test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "needs the
 async function aPlayableMachine(page: Page): Promise<string> {
   await logIn(page);
   const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

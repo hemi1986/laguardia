@@ -12,7 +12,7 @@ const needsTeam = () => test.skip(!username || !password || !!process.env.BASE_U
 /** A machine and a problem report for it, both through the pages; the e2e technician stays logged in. */
 async function aProblemReport(page: Page, description: string): Promise<string> {
   const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

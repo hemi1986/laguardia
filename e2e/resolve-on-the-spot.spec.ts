@@ -35,7 +35,7 @@ async function logOut(page: Page) {
 async function aProblemReportAndAHelper(page: Page) {
   await logIn(page, technician());
   const title = unique("Medieval Madness");
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Kategorie").selectOption("pinball");

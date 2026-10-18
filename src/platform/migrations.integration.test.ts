@@ -41,3 +41,40 @@ describe("migration 0005_machine", () => {
     });
   });
 });
+
+describe("migration 0023_machine_model_category_history", () => {
+  it("every machine model gets its creation as the first entry of its category history (ST-036)", async () => {
+    const db = await isolated.reset("0022_defect_reopening");
+    const fireball = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${fireball}, 'Fireball', 'Bally', 'pinball', 'solid-state')`);
+    await db.execute(sql`
+      INSERT INTO event_journal (type, occurred_at, actor_kind, aggregate_type, aggregate_id, data)
+      VALUES ('EVT-MachineModelCreated', '2026-02-01T10:00:00Z', 'team-member', 'AGG-MachineModel', ${fireball},
+        '{"machineCategory": "pinball", "technology": "solid-state"}')`);
+
+    await isolated.migrate();
+
+    const { rows } = await db.execute(sql`
+      SELECT machine_category, technology, holds_from = '2026-02-01T10:00:00Z' AS from_creation FROM machine_model_category_change
+      WHERE machine_model_id = ${fireball}`);
+    expect(rows).toEqual([
+      { machine_category: "pinball", technology: "solid-state", from_creation: true },
+    ]);
+  });
+
+  it("a machine model the journal knows no creation of still gets its first entry (ST-036 code review)", async () => {
+    const db = await isolated.reset("0022_defect_reopening");
+    const galaxian = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${galaxian}, 'Galaxian', 'Namco', 'arcade', 'crt')`);
+
+    await isolated.migrate();
+
+    const { rows } = await db.execute(sql`
+      SELECT machine_category, technology FROM machine_model_category_change WHERE machine_model_id = ${galaxian}`);
+    expect(rows).toEqual([{ machine_category: "arcade", technology: "crt" }]);
+  });
+});

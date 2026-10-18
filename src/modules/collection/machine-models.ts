@@ -1,14 +1,36 @@
-import { asc } from "drizzle-orm";
-import { aggregateStore, type Database } from "@/platform/command";
-import type { MachineModel } from "./create-machine-model";
-import { machineModel } from "./schema";
+import { asc, eq } from "drizzle-orm";
+import { aggregateStore, history, isId, type Database } from "@/platform/command";
+import type { CategoryChange, MachineModel, MachineModelState } from "./create-machine-model";
+import { machine, machineModel, machineModelCategoryChange } from "./schema";
 
-/** How AGG-MachineModel is stored: one row per machine model, versioned (HS-16). */
+/** The category history of a machine model – append-only (Q13): only the entries not stored yet are inserted. */
+export const categoryHistory = history({
+  table: machineModelCategoryChange,
+  owner: "machineModelId",
+  toEntry: (row): CategoryChange => ({
+    id: row.id,
+    machineCategory: row.machineCategory,
+    technology: row.technology ?? undefined,
+    holdsFrom: row.holdsFrom,
+  }),
+  toRow: (change) => ({
+    id: change.id,
+    machineCategory: change.machineCategory,
+    technology: change.technology ?? null,
+    holdsFrom: change.holdsFrom,
+  }),
+});
+
+/** How AGG-MachineModel is stored: one row per machine model, versioned (HS-16), with its category history (ST-036). */
 export const machineModels = aggregateStore({
   type: "AGG-MachineModel",
   table: machineModel,
-  toState: toMachineModel,
-  toRow: (model: MachineModel) => ({
+  histories: { categoryHistory },
+  toState: (row, histories): MachineModelState => ({
+    ...toMachineModel(row),
+    categoryHistory: histories.categoryHistory,
+  }),
+  toRow: (model: MachineModelState) => ({
     id: model.id,
     title: model.title,
     manufacturer: model.manufacturer,
@@ -48,4 +70,33 @@ export async function machineModelsToChooseFrom(db: Database): Promise<MachineMo
     .from(machineModel)
     .orderBy(asc(machineModel.title), asc(machineModel.manufacturer));
   return rows.map(toMachineModel);
+}
+
+/** One machine model as its page and its correction form show it (ST-036), with the version the technician saw. */
+export type MachineModelForTeam = {
+  model: MachineModel;
+  version: number;
+  /** All machines of this model, retired ones included – a correction applies to their machine records too. */
+  machineCount: number;
+};
+
+/** The machine model by its ID, with its machine count (ST-036). Undefined for an unknown one or an address that is no ID. */
+export async function machineModelForTeam(db: Database, machineModelId: string): Promise<MachineModelForTeam | undefined> {
+  if (!isId(machineModelId)) return undefined;
+  const [row] = await db
+    .select({
+      id: machineModel.id,
+      title: machineModel.title,
+      manufacturer: machineModel.manufacturer,
+      year: machineModel.year,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
+      version: machineModel.version,
+    })
+    .from(machineModel)
+    .where(eq(machineModel.id, machineModelId));
+  if (!row) return undefined;
+  const { version, ...model } = row;
+  const machineCount = await db.$count(machine, eq(machine.machineModelId, machineModelId));
+  return { model: toMachineModel(model), version, machineCount };
 }

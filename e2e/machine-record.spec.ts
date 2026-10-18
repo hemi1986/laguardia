@@ -16,7 +16,7 @@ test.beforeEach(() => {
 /** A machine model and a machine registered through the pages – returns the title and the assigned museum number. */
 async function aRegisteredMachine(page: Page, location = "Hall 2, row 3") {
   const title = `Medieval Madness ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await page.goto("/team/machine-models");
+  await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
   await page.getByLabel("Baujahr").fill("1997");
