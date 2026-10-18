@@ -107,6 +107,7 @@ flowchart LR
     CMD_PrioritizeDefect --> EVT_DefectPrioritized
     ACT_Technician --> CMD_ChangeDefectDetails
     CMD_ChangeDefectDetails --> EVT_DefectDetailsChanged
+    CMD_ChangeDefectDetails --> EVT_DefectClaimReleased
     ACT_TeamMember --> CMD_ClaimDefect
     CMD_ClaimDefect --> EVT_DefectClaimed
     ACT_TeamMember --> CMD_ReleaseClaim

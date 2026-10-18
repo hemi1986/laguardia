@@ -64,6 +64,8 @@ export type { ClaimDefectError, ClaimDefectInput } from "./claim-defect";
 export { releaseClaimCommand } from "./release-claim-command";
 export type { ReleaseClaimError, ReleaseClaimInput } from "./release-claim";
 export { prioritizeDefectCommand } from "./prioritize-defect-command";
+export { changeDefectDetailsCommand } from "./change-defect-details-command";
+export type { ChangeDefectDetailsError, ChangeDefectDetailsInput, DefectDetail } from "./change-defect-details";
 export { priorityRefusal } from "./prioritize-defect";
 export type { PrioritizeDefectError, PrioritizeDefectInput } from "./prioritize-defect";
 export { resolveDefectCommand } from "./resolve-defect-command";

@@ -1,4 +1,5 @@
 import { eventCatalogue } from "@/platform/command";
+import type { DefectDetailsChanged } from "./change-defect-details";
 import type { DefectClaimed } from "./claim-defect";
 import type { ProblemReportDismissed } from "./dismiss-problem-report";
 import type { ProblemReportLinkedToDefect } from "./link-problem-report-to-defect";
@@ -120,6 +121,15 @@ export const repairEvents = eventCatalogue({
       aggregateId: event.defectId,
       machineId: event.machineId,
       data: { priority: event.priority },
+    }),
+  },
+  "EVT-DefectDetailsChanged": {
+    aggregate: "AGG-Defect",
+    // Which details changed and the mark; the title is typed text and stays in the defect (story review 2026-10-17).
+    project: (event: DefectDetailsChanged) => ({
+      aggregateId: event.defectId,
+      machineId: event.machineId,
+      data: { changed: event.changed, suitableForHelpers: event.suitableForHelpers },
     }),
   },
 });
