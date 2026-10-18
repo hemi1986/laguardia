@@ -318,6 +318,20 @@ describe("the machine record", () => {
   });
 
   describe("its files (ST-037)", () => {
+    it("offers attaching a file on a retired machine too – its manuals stay useful (user, 2026-10-18)", async () => {
+      const machineId = await registered("LG-013", "2026-01-15T09:00:00Z");
+      const retired = await executeCommand(
+        retireMachineForTest,
+        { machineId, version: 0 },
+        { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
+      );
+      if (!retired.ok) throw new Error("not retired");
+
+      expect(section(await page("LG-013"), "Dateien")).toMatch(
+        /<a [^>]*href="\/team\/machines\/LG-013\/datei-anhaengen"[^>]*>Datei anhängen<\/a>/,
+      );
+    });
+
     it("ST-037: No files yet says so", async () => {
       await registered("LG-050", "2026-10-01T09:00:00Z");
 
