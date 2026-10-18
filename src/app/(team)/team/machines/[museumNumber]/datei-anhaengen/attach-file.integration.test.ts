@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { attachFileCommand, machineRecord } from "@/modules/collection";
 import { uploadFormRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
+import { teamMessages } from "@/platform/messages";
 import { journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
@@ -11,6 +12,7 @@ import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { recordPendingUpload, uploadAddressOf } from "@/upload";
 import { attachFileForm } from "./attach-file-form";
+import { rejectionWithFile } from "./attach-file-form-view";
 
 /**
  * The form that attaches a file (ST-037): the runner for uploaded content (`uploadFormRunner`) with the form's
@@ -124,6 +126,10 @@ describe("the form that attaches a file", () => {
       error: "content-gone",
       values: { machineId, attachTo: "machine", title: "Too late", fileCategory: "manual", content: "", fileName: "" },
     });
+    // The form says the file must be chosen again; its chooser starts empty, as no content is named any more.
+    expect(rejectionWithFile(state!, teamMessages.attachFile.form)).toBe(
+      "Die hochgeladene Datei ist nicht mehr da. Die Datei muss erneut ausgewählt werden.",
+    );
     expect(await titles()).not.toContain("Too late");
   });
 
