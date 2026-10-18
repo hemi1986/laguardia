@@ -18,3 +18,14 @@ Holds: CMD-AttachFile goes through `aggregateCommand` (one transaction, `attachi
 
 Verdict: **ready to merge** (0 blockers, 0 major, 8 minor). None of the findings passes the follow-up hurdle; each is under an hour of work in this story.
 Most important finding: #1 – the aggregate's own enforcement of title, file category and target is untested, because every rejection test goes through the form's early check.
+
+## Resolution (main session, 2026-10-18)
+- **#1** fixed – a command test sends CMD-AttachFile without title, file category and owner, and for an unknown machine.
+- **#2** fixed – the "Title is required" test checks that the first send attached nothing, and the rejection text.
+- **#3** fixed – „Die Datei muss erneut ausgewählt werden.“ only when a file was handed over; a rejection of the form's own fields without a chosen file says nothing about a file (new test).
+- **#4** fixed – the machine is bound by the page (`attachFileAction.bind(null, { id, museumNumber })`) and set into the form data by the action; no hidden machine field is posted.
+- **#5** fixed – `attachFileInput` without content for `refusal`.
+- **#6** fixed – the aggregate's state type is `FileState`.
+- **#7** fixed – `upload.clearedWith`.
+- **#8** fixed – `teamMessages.fileCategories`, shared by the machine record and the form.
+- Security review: no findings. Side note kept for ST-070 (script policy) / later hardening: Blob's `download=1` is not part of the signature – whoever holds an address may drop it; that only affects the Blob origin, never the app.

@@ -22,13 +22,13 @@ export default async function AttachFilePage({ params }: PageProps<"/team/machin
     <Page title={texts.title(museumNumber)}>
       {record ? (
         <AttachFileForm
-          action={attachFileAction.bind(null, record.museumNumber)}
+          action={attachFileAction.bind(null, { id: record.id, museumNumber: record.museumNumber })}
           machineId={record.id}
           museumNumber={record.museumNumber}
           machineModel={record.machineModel.title}
           fileCategories={fileCategories}
           attachTargets={attachTargets}
-          texts={texts.form}
+          texts={{ ...texts.form, fileCategories: teamMessages.fileCategories }}
         />
       ) : (
         <p>{recordTexts.unknown(museumNumber)}</p>

@@ -9,7 +9,7 @@ import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
 import type { TriagedWhenReporting } from "./triaged-when-reporting";
 
-const { machineRecord: texts, machines, machineModels, recordDefect, terms, attachFile } = teamMessages;
+const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
 
 /** The confirmations of the triage forms (ST-018, ST-019, ST-022) – the same words, whichever page they follow. */
 function triagedText(triaged: TriagedWhenReporting, museumNumber: string): string {
@@ -218,7 +218,7 @@ export function MachineRecordView({
                 if (ofCategory.length === 0) return null;
                 return (
                   <div key={category} className="flex flex-col gap-1">
-                    <h3 className="text-sm font-medium">{attachFile.form.fileCategories[category]}</h3>
+                    <h3 className="text-sm font-medium">{teamMessages.fileCategories[category]}</h3>
                     <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
                       {ofCategory.map((file) => (
                         <li key={file.id}>

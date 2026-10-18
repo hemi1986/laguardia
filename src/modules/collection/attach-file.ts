@@ -31,7 +31,7 @@ export type AttachFileInput = {
 };
 
 /** AGG-File – current state (`docs/architecture/data-model.md`): attached to exactly one machine or machine model. */
-export type File = {
+export type FileState = {
   id: string;
   owner: { machineId: string } | { machineModelId: string };
   title: string;
@@ -75,13 +75,13 @@ export function attachFile(
   facts: AttachingFacts,
   input: AttachFileInput,
   { actor, clock, newId }: DecisionContext<ActorOf<(typeof attachingActors)[number]>>,
-): Decision<File, FileAttached, AttachFileError> {
+): Decision<FileState, FileAttached, AttachFileError> {
   const refusal = attachFileRefusal(input);
   if (refusal) return { ok: false, error: refusal };
   if (!facts) return { ok: false, error: "unknown-machine" };
   const owner =
     input.attachTo === "machine-model" ? { machineModelId: facts.machineModelId } : { machineId: input.machineId };
-  const file: File = {
+  const file: FileState = {
     id: newId(),
     owner,
     title: input.title.trim(),

@@ -158,6 +158,8 @@ export const teamMessages = {
     ofMachineModel: "Modell",
     fileAttached: (title: string) => `„${title}“ angehängt.`,
   },
+  /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
+  fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
   /** Attaching a file (ST-037) – its own page, reached from the machine record's files section. */
   attachFile: {
     title: (museumNumber: string) => `Datei an ${museumNumber} anhängen`,
@@ -170,8 +172,6 @@ export const teamMessages = {
       title: "Titel",
       fileCategory: "Dateikategorie",
       choose: "Bitte wählen",
-      /** In glossary order (CONTEXT.md, File category). */
-      fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
       attachTo: "Anhängen an",
       onlyMachine: "nur {museumNumber}",
       allMachinesOfModel: "alle Geräte des Modells {machineModel}",

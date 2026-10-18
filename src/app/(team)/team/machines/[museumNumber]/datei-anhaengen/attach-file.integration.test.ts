@@ -63,6 +63,7 @@ function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}
   };
 }
 
+const texts = { ...teamMessages.attachFile.form, fileCategories: teamMessages.fileCategories };
 const complete = { attachTo: "machine", title: "MM Operations Manual", fileCategory: "manual" };
 const titles = async () => (await machineRecord(db, museumNumber))!.files.map((file) => file.title);
 
@@ -97,6 +98,10 @@ describe("the form that attaches a file", () => {
     const state = await form.send({ ...complete, title: "  ", content });
 
     expect(state).toMatchObject({ error: "title-required", values: { content, fileName: "manual.pdf" } });
+    expect(form.attached).toEqual([]);
+    expect(rejectionWithFile(state!, texts)).toBe(
+      "Bitte einen Titel angeben. Die gewählte Datei ist noch angehängt: manual.pdf",
+    );
     // The chosen file is still attached: sent again with a title, the same uploaded content is attached.
     expect(await form.send({ ...complete, title: "Titled the second time", content })).toBeNull();
     expect(await titles()).toContain("Titled the second time");
@@ -127,7 +132,7 @@ describe("the form that attaches a file", () => {
       values: { machineId, attachTo: "machine", title: "Too late", fileCategory: "manual", content: "", fileName: "" },
     });
     // The form says the file must be chosen again; its chooser starts empty, as no content is named any more.
-    expect(rejectionWithFile(state!, teamMessages.attachFile.form)).toBe(
+    expect(rejectionWithFile(state!, texts)).toBe(
       "Die hochgeladene Datei ist nicht mehr da. Die Datei muss erneut ausgewählt werden.",
     );
     expect(await titles()).not.toContain("Too late");
@@ -150,6 +155,12 @@ describe("the form that attaches a file", () => {
     const state = await sendForm(storage).send({ ...complete, title: "Forged", content, machineId: "not-an-id" });
 
     expect(state).toMatchObject({ error: "content-gone" });
+  });
+
+  it("says nothing about a file when none was chosen and the form's own fields are rejected", async () => {
+    const state = await sendForm(memoryStorage()).send({ ...complete, title: "", content: "", fileName: "" });
+
+    expect(rejectionWithFile(state!, texts)).toBe("Bitte einen Titel angeben.");
   });
 
   it("asks for a file when none was chosen", async () => {

@@ -386,7 +386,7 @@ the only way:
   to a fresh 5-minute address, so a link on a page never expires. Only PDF and JPEG/PNG/WebP/GIF open in the browser
   (`opensInBrowser`, by the media type the store kept); everything else gets Blob's `download=1`.
 - **A form that attaches uploaded content** (first: ST-037, `…/[museumNumber]/datei-anhaengen/`) uses
-  `uploadFormAction(command, { fields, upload: { field, describedBy, owner }, refusal, input, onSuccess })`: the
+  `uploadFormAction(command, { fields, upload: { field, clearedWith, owner }, refusal, input, onSuccess })`: the
   chosen file is uploaded when it is chosen (`uploadFile`), the form posts its name in a hidden field. `refusal` – the
   command's rules that need only the fields (`attachFileRefusal`) – is asked first and keeps the uploaded content: the
   form says the chosen file is still attached (user, 2026-10-18). Every later rejection (`content-gone`, `too-large`,

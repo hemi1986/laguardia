@@ -1,6 +1,6 @@
 import { asc, eq, or } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
-import { fileCategories, type AttachFileInput, type AttachingFacts, type File, type FileCategory } from "./attach-file";
+import { fileCategories, type AttachFileInput, type AttachingFacts, type FileCategory, type FileState } from "./attach-file";
 import { opensInBrowser } from "./open-file";
 import { file, machine } from "./schema";
 
@@ -8,7 +8,7 @@ import { file, machine } from "./schema";
 export const files = aggregateStore({
   type: "AGG-File",
   table: file,
-  toState: (row): File => ({
+  toState: (row): FileState => ({
     id: row.id,
     owner: row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! },
     title: row.title,
@@ -17,7 +17,7 @@ export const files = aggregateStore({
     attachedBy: row.attachedBy,
     attachedAt: row.attachedAt,
   }),
-  toRow: (state: File) => ({
+  toRow: (state: FileState) => ({
     id: state.id,
     machineId: "machineId" in state.owner ? state.owner.machineId : null,
     machineModelId: "machineModelId" in state.owner ? state.owner.machineModelId : null,

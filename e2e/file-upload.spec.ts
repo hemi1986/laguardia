@@ -78,7 +78,7 @@ test("a file above the size limit is refused by the upload permission itself", a
   needsBlob();
   await theAttachForm(page);
   const origin = new URL(page.url()).origin;
-  const machineId = await page.locator('input[name="machineId"]').inputValue();
+  const machineId = (await page.locator("form[data-machine-id]").getAttribute("data-machine-id"))!;
   const cookie = (await context.cookies(origin)).map(({ name, value }) => `${name}=${value}`).join("; ");
 
   // A limit of 1 KB, which only the permission the server signs knows – no form between the file and the store.

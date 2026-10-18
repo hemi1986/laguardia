@@ -44,6 +44,9 @@ const fieldOf: Partial<Record<ErrorCode, AttachFileField>> = {
   "too-large": "content",
 };
 
+/** The rejections of the form's own fields – asked before a file is handed over, so they never touch it. */
+const formOwn: readonly ErrorCode[] = ["title-required", "file-category-required", "attach-to-required"];
+
 /** The chosen file: uploading, uploaded (its content's name to send), or refused before it was attached. */
 type Chosen =
   | { state: "uploading"; percent: number }
@@ -85,8 +88,7 @@ export function AttachFileForm({
   };
 
   return (
-    <form action={action} className="flex flex-col gap-5">
-      <input type="hidden" name="machineId" value={machineId} />
+    <form action={action} className="flex flex-col gap-5" data-machine-id={machineId}>
       <ChosenFile
         key={`content-${kept}`}
         machineId={machineId}
@@ -157,7 +159,9 @@ export function rejectionWithFile(state: NonNullable<AttachFileState>, texts: Te
   const reason = rejectionText(state.error, { "too-large": texts.tooLarge });
   if (state.error === "file-required" || state.error === "too-large") return reason;
   if (state.values.content) return `${reason} ${texts.stillAttached.replace("{fileName}", state.values.fileName)}`;
-  return `${reason} ${texts.chooseAgain}`;
+  // No file named: either none was chosen (a rejection of the form's own fields – nothing to say about a file), or the
+  // one handed over is gone with the rejection.
+  return formOwn.includes(state.error) ? reason : `${reason} ${texts.chooseAgain}`;
 }
 
 function ChosenFile({

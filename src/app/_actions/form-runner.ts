@@ -89,9 +89,10 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
   "input" | "removesPhoto"
 > & {
   upload: {
-    /** The field with the uploaded content's name – and the fields that only describe the chosen file to the person. */
+    /** The field with the uploaded content's name. */
     field: Field;
-    describedBy?: readonly Field[];
+    /** Fields emptied together with it when the content is gone – those that only describe the chosen file. */
+    clearedWith?: readonly Field[];
     owner: (fields: FormFields<Field>) => UploadOwner;
   };
   /** The command's rejections that need nothing but the fields – asked before the content is handed over. */
@@ -129,7 +130,7 @@ export function uploadFormRunner({ currentPerson, storage, ...dependencies }: Ru
         (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
       );
       if (!outcome.ok) {
-        const gone = [definition.upload.field, ...(definition.upload.describedBy ?? [])];
+        const gone = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
         const values = Object.fromEntries(
           Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field as Field) ? "" : value]),
         ) as { readonly [F in Field]: string };

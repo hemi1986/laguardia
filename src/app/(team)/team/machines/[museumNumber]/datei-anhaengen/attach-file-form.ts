@@ -15,7 +15,9 @@ export const attachFileFields = ["machineId", "attachTo", "title", "fileCategory
 export type AttachFileField = (typeof attachFileFields)[number];
 
 /** Reads the fields (ST-073, Q19): no validation, no default – an unknown choice is "no value given". */
-function attachFileInput(fields: FormFields<AttachFileField>, content: FileContent): AttachFileInput {
+function attachFileInput(fields: FormFields<AttachFileField>): Omit<AttachFileInput, "content">;
+function attachFileInput(fields: FormFields<AttachFileField>, content: FileContent): AttachFileInput;
+function attachFileInput(fields: FormFields<AttachFileField>, content?: FileContent) {
   return {
     machineId: fields.machineId ?? "",
     attachTo: attachTargets.find((target) => target === fields.attachTo),
@@ -35,8 +37,8 @@ export function attachFileForm(
 ): UploadFormDefinition<AttachFileInput, { fileId: string }, AttachFileField, NonNullable<ReturnType<typeof attachFileRefusal>>> {
   return {
     fields: attachFileFields,
-    upload: { field: "content", describedBy: ["fileName"], owner: (fields) => ({ machineId: fields.machineId ?? "" }) },
-    refusal: (fields) => attachFileRefusal(attachFileInput(fields, { name: "", size: 0, contentType: "" })),
+    upload: { field: "content", clearedWith: ["fileName"], owner: (fields) => ({ machineId: fields.machineId ?? "" }) },
+    refusal: (fields) => attachFileRefusal(attachFileInput(fields)),
     input: attachFileInput,
     onSuccess,
   };

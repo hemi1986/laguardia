@@ -89,6 +89,22 @@ describe("CMD-AttachFile", () => {
     expect(await filesOf(lg043.museumNumber)).toEqual([]);
   });
 
+  it("rejects a file without title, file category or owner itself – whatever form sends it – and one for an unknown machine", async () => {
+    const [lg042] = await machinesOfOneModel(1);
+
+    expect(await attach({ machineId: lg042.machineId, title: " " })).toEqual({ ok: false, error: "title-required" });
+    expect(await attach({ machineId: lg042.machineId, fileCategory: undefined })).toEqual({
+      ok: false,
+      error: "file-category-required",
+    });
+    expect(await attach({ machineId: lg042.machineId, attachTo: undefined })).toEqual({
+      ok: false,
+      error: "attach-to-required",
+    });
+    expect(await attach({ machineId: randomUUID() })).toEqual({ ok: false, error: "unknown-machine" });
+    expect(await filesOf(lg042.museumNumber)).toEqual([]);
+  });
+
   it("journals the file, its owner and its file category – never the title", async () => {
     const [lg042] = await machinesOfOneModel(1);
 

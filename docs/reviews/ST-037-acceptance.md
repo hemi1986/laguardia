@@ -53,3 +53,8 @@ All titles match exactly. Not checked in a browser at the DOM level: that the ch
 accepted with remarks
 
 Remarks (none blocks, none passes the follow-up hurdle): no test for attaching on a retired machine (decision 3a); the 360 px layout of very long titles is only covered by CSS, not by an assertion; the open questions above (zero-byte file, duplicate titles, mislabelled media type) can go to OPEN_QUESTIONS.md if the user wants a rule.
+
+## Resolution (main session, 2026-10-18)
+- **1** fixed – `machine-record.integration.test.ts` pins „Datei anhängen“ on a retired machine (decision 3a).
+- **2** skipped – very long titles break with `overflow-wrap:anywhere` like every other list on the machine record; checked on the phone at acceptance.
+- **3** stays open, no rule in the story: zero-byte files and duplicate titles are allowed; a file whose stored media type is wrong opens as that type – team-only, from the Blob origin.
