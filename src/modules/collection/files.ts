@@ -1,6 +1,7 @@
 import { asc, eq, or } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
 import { fileCategories, type AttachFileInput, type AttachingFacts, type File, type FileCategory } from "./attach-file";
+import { opensInBrowser } from "./open-file";
 import { file, machine } from "./schema";
 
 /** How AGG-File is stored: one row per file, its owner in exactly one of two columns (check constraint). */
@@ -64,4 +65,19 @@ export async function filesOfMachine(
   return rows
     .map((row) => ({ id: row.id, title: row.title, fileCategory: row.fileCategory, ofMachineModel: !row.machineId }))
     .sort((a, b) => fileCategories.indexOf(a.fileCategory) - fileCategories.indexOf(b.fileCategory));
+}
+
+/**
+ * What opening a file needs (ST-037): its content's name in the storage seam, and whether the browser saves it instead
+ * of opening it – none for an unknown file. Only after the team page's access check (files are team-only).
+ */
+export async function fileToOpen(
+  db: Database,
+  fileId: string,
+): Promise<{ content: string; download: boolean } | undefined> {
+  const [row] = await db
+    .select({ content: file.content, contentType: file.contentType })
+    .from(file)
+    .where(eq(file.id, fileId));
+  return row && { content: row.content, download: !opensInBrowser(row.contentType) };
 }

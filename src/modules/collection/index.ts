@@ -9,7 +9,7 @@ export type {
   FileCategory,
   FileContent,
 } from "./attach-file";
-export type { FileOfMachine } from "./files";
+export { fileToOpen, type FileOfMachine } from "./files";
 export { changeMachineStatusCommand } from "./change-machine-status-command";
 export { machineStatusesToChangeTo } from "./change-machine-status";
 export type { ChangeMachineStatusError, ChangeMachineStatusInput } from "./change-machine-status";

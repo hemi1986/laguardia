@@ -9,10 +9,15 @@ const VIEW_MINUTES = 5;
 /**
  * An address to open uploaded content, valid for 5 minutes from the injected clock's time (ADR 0006) – only after the
  * page's access check; the content's plain store address does not deliver it. Nothing for a name that is not one the
- * upload module gives.
+ * upload module gives. With `download`, the browser saves it instead of opening it (ST-037).
  */
-export async function viewAddressOf(storage: ContentStorage, clock: Clock, name: string): Promise<string | undefined> {
+export async function viewAddressOf(
+  storage: ContentStorage,
+  clock: Clock,
+  name: string,
+  { download = false }: { download?: boolean } = {},
+): Promise<string | undefined> {
   if (!isContentName(name)) return undefined;
   const validUntil = new Date(clock.now().getTime() + VIEW_MINUTES * 60 * 1000);
-  return (await storage.viewAddresses([name], validUntil)).get(name);
+  return (await storage.viewAddresses([name], validUntil, { download })).get(name);
 }

@@ -15,6 +15,14 @@ describe("the address to open uploaded content", () => {
     );
   });
 
+  it("saves the content instead of opening it when asked to", async () => {
+    const name = "files/0b6f3c1e-8f7a-4c55-9d2e-1a2b3c4d5e6f";
+
+    expect(await viewAddressOf(memoryStorage(), clock, name, { download: true })).toBe(
+      `memory://${name}?valid-until=2026-10-18T10:05:00.000Z&download=1`,
+    );
+  });
+
   it("is not issued for a name the server does not give to uploaded content", async () => {
     expect(await viewAddressOf(memoryStorage(), clock, "problem-reports/a.jpg")).toBeUndefined();
     expect(await viewAddressOf(memoryStorage(), clock, "files/../problem-reports/a.jpg")).toBeUndefined();

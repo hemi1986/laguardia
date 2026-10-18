@@ -11,9 +11,13 @@ export type ContentStorage = {
   delete(name: string): Promise<void>;
   /**
    * Addresses to show content, valid until the given time – one call per page, however many it shows. Only issued
-   * after the page's access check.
+   * after the page's access check. With `download`, the browser saves the content instead of opening it (ST-037).
    */
-  viewAddresses(names: readonly string[], validUntil: Date): Promise<Map<string, string>>;
+  viewAddresses(
+    names: readonly string[],
+    validUntil: Date,
+    options?: { download?: boolean },
+  ): Promise<Map<string, string>>;
   /**
    * A permission for the browser to upload content of at most `maximumSize` bytes under exactly this name, until the
    * given time (ST-085, ADR 0009) – the content then goes straight to the store, never through a function. Only issued
