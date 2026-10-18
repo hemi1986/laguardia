@@ -1,5 +1,5 @@
 import { claimReleasedByRemovingTheMark, defectForAction } from "@/modules/repair";
-import { activeTeamMemberRole, teamMemberNames } from "@/modules/team";
+import { teamMemberRole, teamMemberNames } from "@/modules/team";
 import { machineLabels } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { nameOf, type Viewer } from "../../../claimant";
@@ -27,7 +27,7 @@ export async function loadDefectForChangingDetails(
   const claimant = defect.claim?.claimedBy;
   const [machines, claimantRole] = await Promise.all([
     machineLabels(db, [defect.machineId]),
-    claimant ? activeTeamMemberRole(db, claimant) : undefined,
+    claimant ? teamMemberRole(db, claimant) : undefined,
   ]);
   const released = claimReleasedByRemovingTheMark(defect, claimantRole);
   return {

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { activeTeamMemberRole, activeTeamMembers, deactivateAccount } from ".";
+import { activeTeamMemberRole, activeTeamMembers, deactivateAccount, teamMemberRole } from ".";
 
 /** Whom work can be given to (ST-026): the team members with an active account, and the role of one of them. */
 const db = testDatabase();
@@ -39,5 +39,12 @@ describe("active team members", () => {
     expect(await activeTeamMemberRole(db, anna.teamMemberId.toUpperCase())).toBeUndefined();
     expect(await activeTeamMemberRole(db, "not an ID")).toBeUndefined();
     expect(await activeTeamMemberRole(db, "")).toBeUndefined();
+  });
+
+  it("knows the role of a team member whose account is deactivated, too – but not of an unknown one", async () => {
+    expect(await teamMemberRole(db, gone.teamMemberId)).toBe("helper");
+    expect(await teamMemberRole(db, tom.teamMemberId)).toBe("technician");
+    expect(await teamMemberRole(db, randomUUID())).toBeUndefined();
+    expect(await teamMemberRole(db, "not an ID")).toBeUndefined();
   });
 });

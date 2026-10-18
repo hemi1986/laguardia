@@ -39,8 +39,8 @@ export type DefectDetailsChanged = {
 };
 
 /**
- * What the decision reads besides the defect: the role of its claimant as Team knows it now – none when it is not
- * claimed, or the claimant's account is no longer active.
+ * What the decision reads besides the defect: the role of its claimant as Team knows it now, whether or not their
+ * account is still active – none when it is not claimed.
  */
 export type ChangingDetailsFacts = { claimantRole: Role | undefined };
 

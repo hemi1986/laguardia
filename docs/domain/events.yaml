@@ -148,7 +148,7 @@ events:
   - id: EVT-DefectDetailsChanged
     aggregate: AGG-Defect
     name: Defect details changed
-    data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Changed by]
+    data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Released claim of (optional), Changed by]
     description: Names which of the title and the suitable-for-helpers mark changed, so the journal can say so without repeating the title text (story review 2026-10-17).
   - id: EVT-DefectClaimed
     aggregate: AGG-Defect

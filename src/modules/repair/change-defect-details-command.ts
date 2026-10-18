@@ -1,4 +1,4 @@
-import { activeTeamMemberRole } from "@/modules/team";
+import { teamMemberRole } from "@/modules/team";
 import { aggregateCommand } from "@/platform/command";
 import { changeDefectDetails, changingDetailsActors } from "./change-defect-details";
 import { defects } from "./defects";
@@ -16,7 +16,7 @@ export const changeDefectDetailsCommand = aggregateCommand({
   store: defects,
   target: (input) => ({ id: input.defectId, version: input.version }),
   facts: async (tx, _input, defect) => ({
-    claimantRole: defect.claim ? await activeTeamMemberRole(tx, defect.claim.claimedBy) : undefined,
+    claimantRole: defect.claim ? await teamMemberRole(tx, defect.claim.claimedBy) : undefined,
   }),
   decide: changeDefectDetails,
   journal: repairEvents.journal,

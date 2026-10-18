@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import type { Database, Role } from "@/platform/command";
 import { teamMember } from "./schema";
 
@@ -28,10 +28,23 @@ export async function activeTeamMembers(db: Database): Promise<ActiveTeamMember[
  * stored now, as for the acting person.
  */
 export async function activeTeamMemberRole(db: Database, teamMemberId: string): Promise<Role | undefined> {
+  return roleOf(db, teamMemberId, active);
+}
+
+/**
+ * The role of one team member, whether or not their account is still active – undefined for an unknown one, spelled
+ * as for `activeTeamMemberRole`. For a rule about what someone is rather than whether they can be given work: removing
+ * the suitable-for-helpers mark releases a helper's claim, a deactivated helper's too (ST-031).
+ */
+export async function teamMemberRole(db: Database, teamMemberId: string): Promise<Role | undefined> {
+  return roleOf(db, teamMemberId);
+}
+
+async function roleOf(db: Database, teamMemberId: string, condition?: SQL): Promise<Role | undefined> {
   const [row] = await db
     .select({ role: teamMember.role })
     .from(teamMember)
-    .where(and(eq(sql`${teamMember.id}::text`, teamMemberId), active));
+    .where(and(eq(sql`${teamMember.id}::text`, teamMemberId), condition));
   return row && isRole(row.role) ? row.role : undefined;
 }
 

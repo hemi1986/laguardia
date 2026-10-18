@@ -5,6 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { anOpenDefectIn } from "@/test-support/defects";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { deactivateAccount } from "@/modules/team";
 import {
   changeDefectDetailsCommand,
   claimDefectCommand,
@@ -56,7 +57,7 @@ async function aResolvedDefect(title: string) {
 }
 
 /** An open defect suitable for helpers, claimed by the given team member – at version 1. */
-async function aClaimedDefect(title: string, claimant: typeof tom | typeof anna) {
+async function aClaimedDefect(title: string, claimant: Extract<Actor, { kind: "team-member" }>) {
   const defect = await anOpenDefect(title, true);
   const claimed = await executeCommand(
     claimDefectCommand,
@@ -199,5 +200,19 @@ describe("CMD-ChangeDefectDetails", () => {
         { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false },
       ],
     ]);
+  });
+
+  it("releases the claim of a helper whose account was deactivated meanwhile – the role decides, not the account", async () => {
+    const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    await anExistingTeamMember(db, ben, "Ben");
+    const { defectId } = await aClaimedDefect("Rubber cracked", ben);
+    const deactivated = await deactivateAccount({ teamMemberId: ben.teamMemberId }, { db, actor: tom });
+    if (!deactivated.ok) throw new Error(deactivated.error);
+
+    expect(await change(defectId, 1, { title: "Rubber cracked", suitableForHelpers: false }, tom)).toMatchObject({
+      ok: true,
+    });
+
+    expect(await defectDetails(db, defectId)).toMatchObject({ suitableForHelpers: false, claim: undefined });
   });
 });

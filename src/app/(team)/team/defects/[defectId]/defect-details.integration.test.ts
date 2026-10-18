@@ -509,7 +509,8 @@ describe("a defect's own page", () => {
       if (!removed.ok) throw new Error(removed.error);
 
       const after = await seenBy(defectId, asTom, "change-details");
-      expect(after.details).toMatchObject({ suitableForHelpers: false, claimant: undefined });
+      // Released in the same step: one change of the defect after the claim (version 1 → 2).
+      expect(after.details).toMatchObject({ suitableForHelpers: false, claimant: undefined, version: 2 });
       expect(after.html).toContain("Nicht für Helfer:innen geeignet");
       expect(after.html).toContain(
         "„Rubber cracked“ ist nicht mehr für Helfer:innen geeignet. Die Übernahme von Anna ist aufgehoben.",
