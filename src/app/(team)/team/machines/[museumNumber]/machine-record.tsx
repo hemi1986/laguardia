@@ -36,6 +36,7 @@ export function MachineRecordView({
   museumNumber,
   canChangeStatus = false,
   statusChanged = false,
+  moved = false,
   problemReported = false,
   triagedWhenReporting,
 }: {
@@ -45,6 +46,8 @@ export function MachineRecordView({
   canChangeStatus?: boolean;
   /** Just back from a status change: the confirmation names the machine and its new machine status (G3). */
   statusChanged?: boolean;
+  /** Just back from a move: the confirmation names the machine and its new location (G3, ST-034). */
+  moved?: boolean;
   /** Just back from a problem report: the confirmation names the machine and says it waits for triage (ST-015). */
   problemReported?: boolean;
   /** Just back from reporting a problem and triaging it in the same step (ST-023, ST-052): its confirmation (G3). */
@@ -77,6 +80,7 @@ export function MachineRecordView({
       {statusChanged && (
         <Confirmation>{texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus])}</Confirmation>
       )}
+      {moved && <Confirmation>{texts.moved(record.museumNumber, record.location)}</Confirmation>}
       {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
       {triagedWhenReporting && <Confirmation>{triagedText(triagedWhenReporting, record.museumNumber)}</Confirmation>}
       {record.retirement && (
@@ -105,13 +109,25 @@ export function MachineRecordView({
           </div>
         ))}
       </dl>
-      {canChangeStatus && (
-        <Link
-          href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status`}
-          className={buttonVariants({ variant: "outline", className: "self-start" })}
-        >
-          {texts.changeStatus}
-        </Link>
+      {!record.retirement && (
+        // The actions of section 3, none for a retired machine (G11): moving (ST-034) is for every team member,
+        // changing the status (ST-012) only where the team member has a status to set.
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/standort`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {texts.changeLocation}
+          </Link>
+          {canChangeStatus && (
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {texts.changeStatus}
+            </Link>
+          )}
+        </div>
       )}
       {/* Section 4 (ST-033): the open defects, with the same facts and words as the open defects list. */}
       <section>

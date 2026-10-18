@@ -268,11 +268,12 @@ export function machineStatusHistory(db: Database, machineId: string): Promise<S
   return statusHistoryOf(db, machineId);
 }
 
-/** What a team form on a machine shows of it – the status change (ST-012), the problem report (ST-015) – with the version the team member saw (HS-16). */
+/** What a team form on a machine shows of it – the status change (ST-012), the problem report (ST-015), the move (ST-034) – with the version the team member saw (HS-16). */
 export type MachineForTeamForm = {
   id: string;
   museumNumber: string;
   machineStatus: MachineStatus;
+  location: string;
   version: number;
   retired: boolean;
 };
@@ -284,6 +285,7 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
       id: machine.id,
       museumNumber: machine.museumNumber,
       machineStatus: machine.machineStatus,
+      location: machine.location,
       version: machine.version,
       retiredAt: machine.retiredAt,
     })
@@ -294,6 +296,7 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
       id: row.id,
       museumNumber: row.museumNumber,
       machineStatus: row.machineStatus,
+      location: row.location,
       version: row.version,
       retired: row.retiredAt !== null,
     }
