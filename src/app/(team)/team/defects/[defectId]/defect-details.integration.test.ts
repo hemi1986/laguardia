@@ -17,6 +17,7 @@ import {
   reopenDefectCommand,
   reportProblemCommand,
   resolveDefectCommand,
+  type DefectAction,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
@@ -315,7 +316,7 @@ describe("a defect's own page", () => {
     const asBen = { id: ben.teamMemberId, role: ben.role };
 
     /** The page as that team member sees it, just back from the given action. */
-    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: DefectAction) {
       const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
         storage: memoryStorage(),
         viewer,
@@ -409,7 +410,7 @@ describe("a defect's own page", () => {
     const asAnna = { id: anna.teamMemberId, role: anna.role };
 
     /** The page as that team member sees it, just back from the given action. */
-    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: DefectAction) {
       const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
         storage: memoryStorage(),
         viewer,
@@ -449,7 +450,7 @@ describe("a defect's own page", () => {
     const asAnna = { id: anna.teamMemberId, role: anna.role };
 
     /** The page as that team member sees it, just back from the given action. */
-    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: DefectAction) {
       const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
         storage: memoryStorage(),
         viewer,
@@ -524,7 +525,7 @@ describe("a defect's own page", () => {
     const asAnna = { id: anna.teamMemberId, role: anna.role };
 
     /** The page as that team member sees it, just back from the given action – with the one-tap form of resuming. */
-    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: DefectAction) {
       const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
         storage: memoryStorage(),
         viewer,

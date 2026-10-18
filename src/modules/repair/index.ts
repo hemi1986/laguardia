@@ -79,5 +79,7 @@ export {
   type DefectAction,
   type DefectActionRefusals,
   type DefectTeamMember,
+  type LastDefectAction,
 } from "./defect-actions";
+export { defectActionCommands } from "./defect-action-commands";
 export { problemReportedIn, triageOutcomeIn, type TriagedInCommand } from "./in-command";

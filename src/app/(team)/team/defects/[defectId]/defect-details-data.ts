@@ -105,7 +105,7 @@ export async function loadDefectDetails(
     storage = blobStorage(),
     viewer,
     done,
-  }: PhotoSource & { viewer?: Viewer; done?: string } = {},
+  }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
