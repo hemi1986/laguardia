@@ -133,6 +133,7 @@ export const repairEvents = eventCatalogue({
         titleChanged: event.changed.includes("title"),
         suitableForHelpersChanged: event.changed.includes("suitable-for-helpers"),
         suitableForHelpers: event.suitableForHelpers,
+        ...(event.releasedClaimOf ? { releasedClaimOf: event.releasedClaimOf } : {}),
       },
     }),
   },

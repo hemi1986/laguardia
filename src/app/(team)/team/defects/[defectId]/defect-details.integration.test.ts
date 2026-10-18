@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
+  changeDefectDetailsCommand,
   claimDefectCommand,
   linkProblemReportToDefectCommand,
   logWorkCommand,
@@ -78,13 +79,13 @@ async function reported(machineId: string, description: string, at: string, acto
   return outcome.result.problemReportId;
 }
 
-async function recorded(problemReportId: string, at: string) {
+async function recorded(problemReportId: string, at: string, title = "Left flipper weak") {
   const outcome = await executeCommand(
     recordDefectCommand,
     {
       problemReportId,
       version: 0,
-      title: "Left flipper weak",
+      title,
       priority: "high",
       suitableForHelpers: true,
       machineStatus: undefined,
@@ -333,7 +334,7 @@ describe("a defect's own page", () => {
       const defectId = await aDefect();
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.offered).toEqual(["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize"]);
+      expect(toms.offered).toEqual(["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize", "change-details"]);
       expect(toms.html).toMatch(/<details[^>]*><summary[^>]*>Verwalten/);
       expect(toms.html).toContain(`href="/team/defects/${defectId}/zuweisen"`);
       const annas = await seenBy(defectId, asAnna);
@@ -356,7 +357,7 @@ describe("a defect's own page", () => {
       expect(toms.html).toContain("Übernommen von Anna");
       expect(toms.html).toContain("Von dir zugewiesen");
       // A technician may take it over, assign it to someone else, or release Anna's claim.
-      expect(toms.offered).toEqual(["claim", "release", "log-work", "put-on-hold", "resolve", "assign", "prioritize"]);
+      expect(toms.offered).toEqual(["claim", "release", "log-work", "put-on-hold", "resolve", "assign", "prioritize", "change-details"]);
       const annas = await seenBy(defectId, asAnna, "assign");
       expect(annas.html).toContain("Von dir übernommen");
       expect(annas.html).toContain("Zugewiesen von Tom");
@@ -409,7 +410,11 @@ describe("a defect's own page", () => {
 
     /** The page as that team member sees it, just back from the given action. */
     async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
-      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer, done });
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        done,
+      });
       return { offered: details?.offered, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
     }
 
@@ -438,6 +443,80 @@ describe("a defect's own page", () => {
     });
   });
 
+  describe("changing its title or suitability (ST-031, G22)", () => {
+    const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+    const asTom = { id: tom.teamMemberId, role: tom.role };
+    const asAnna = { id: anna.teamMemberId, role: anna.role };
+
+    /** The page as that team member sees it, just back from the given action. */
+    async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        done,
+      });
+      return { details, html: renderToStaticMarkup(createElement(DefectDetailsView, { details })) };
+    }
+
+    const change = (defectId: string, version: number, title: string, suitableForHelpers: boolean) =>
+      executeCommand(
+        changeDefectDetailsCommand,
+        { defectId, version, title, suitableForHelpers },
+        { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+
+    it("offers „Titel und Eignung ändern“ behind „Verwalten“ to technicians only, and confirms the new title", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Flipper weak", NOW),
+        NOW,
+        "EOS sw. L fl.",
+      );
+
+      const toms = await seenBy(defectId, asTom);
+      expect(toms.details?.offered).toContain("change-details");
+      const fold = toms.html.slice(toms.html.indexOf("<details"));
+      expect(fold).toMatch(
+        new RegExp(`<a [^>]*href="/team/defects/${defectId}/titel-und-eignung"[^>]*>Titel und Eignung ändern</a>`),
+      );
+      const annas = await seenBy(defectId, asAnna);
+      expect(annas.details?.offered).not.toContain("change-details");
+      expect(annas.html).not.toContain("titel-und-eignung");
+
+      const changed = await change(defectId, 0, "Left flipper weak", true);
+      if (!changed.ok) throw new Error(changed.error);
+      const after = await seenBy(defectId, asTom, "change-details");
+      expect(after.html).toContain("Der Titel ist jetzt „Left flipper weak“.");
+      expect(after.html).not.toContain("geeignet.");
+      expect((await seenBy(defectId, asAnna, "change-details")).html).not.toContain("Der Titel ist jetzt");
+    });
+
+    it("ST-031: Removing the mark releases a helper's claim", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Rubber cracked", NOW),
+        NOW,
+        "Rubber cracked",
+      );
+      const claimed = await executeCommand(
+        claimDefectCommand,
+        { defectId, version: 0 },
+        { actor: anna, db, clock: fixedClock(NOW), newId: randomUUID },
+      );
+      if (!claimed.ok) throw new Error(claimed.error);
+
+      const removed = await change(defectId, 1, "Rubber cracked", false);
+      if (!removed.ok) throw new Error(removed.error);
+
+      const after = await seenBy(defectId, asTom, "change-details");
+      expect(after.details).toMatchObject({ suitableForHelpers: false, claimant: undefined });
+      expect(after.html).toContain("Nicht für Helfer:innen geeignet");
+      expect(after.html).toContain(
+        "„Rubber cracked“ ist nicht mehr für Helfer:innen geeignet. Die Übernahme von Anna ist aufgehoben.",
+      );
+    });
+  });
+
   describe("its hold (ST-029, G22)", () => {
     const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     const asTom = { id: tom.teamMemberId, role: tom.role };
@@ -445,10 +524,12 @@ describe("a defect's own page", () => {
 
     /** The page as that team member sees it, just back from the given action – with the one-tap form of resuming. */
     async function seenBy(defectId: string, viewer: typeof asTom | typeof asAnna, done?: string) {
-      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer, done });
-      const html = renderToStaticMarkup(
-        createElement(DefectDetailsView, { details, resumeAction: async () => null }),
-      );
+      const details = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer,
+        done,
+      });
+      const html = renderToStaticMarkup(createElement(DefectDetailsView, { details, resumeAction: async () => null }));
       return { offered: details?.offered, html };
     }
 
@@ -472,7 +553,7 @@ describe("a defect's own page", () => {
       const after = await seenBy(defectId, asTom, "put-on-hold");
       expect(after.html).toContain("„Left flipper weak“ ist pausiert – Wartet auf Ersatzteil.");
       expect(after.html).toContain("Pausiert – Wartet auf Ersatzteil · Ordered new flyback");
-      expect(after.html).not.toContain("pausieren\"");
+      expect(after.html).not.toContain('pausieren"');
       expect(after.offered).toContain("resume");
       expect(after.html).toContain(">Fortsetzen</button>");
       // Only who just did it is told so (G3).
@@ -644,9 +725,9 @@ describe("a defect's own page", () => {
       const defectId = await aDefect(false);
 
       const toms = await seenBy(defectId, asTom);
-      // A technician is also offered assigning it (ST-026) and changing its priority (ST-027), and putting it on hold (ST-029).
+      // A technician is also offered assigning it (ST-026), changing its priority (ST-027) and its details (ST-031), and putting it on hold (ST-029).
       expect(toms.details).toMatchObject({
-        offered: ["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize"],
+        offered: ["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize", "change-details"],
         resolutionsAndReopenings: [],
       });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
@@ -693,7 +774,10 @@ describe("a defect's own page", () => {
 
     it("ST-030: The page of a reopened defect says why it is open again", async () => {
       await anExistingTeamMember(db, anna, "Anna");
-      const defectId = await recorded(await reported(await registered("LG-042"), "Left flipper barely moves", NOW), NOW);
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
       const resolved = await executeCommand(
         resolveDefectCommand,
         { defectId, version: 0, closingNote: "Coil replaced" },
@@ -701,7 +785,10 @@ describe("a defect's own page", () => {
       );
       if (!resolved.ok) throw new Error(resolved.error);
       // A resolved defect offers only reopening, under its closing note (G22).
-      const before = await loadDefectDetails(db, fixedClock(NOW), defectId, { storage: memoryStorage(), viewer: asTom });
+      const before = await loadDefectDetails(db, fixedClock(NOW), defectId, {
+        storage: memoryStorage(),
+        viewer: asTom,
+      });
       expect(before?.offered).toEqual(["reopen"]);
       expect(renderToStaticMarkup(createElement(DefectDetailsView, { details: before }))).toMatch(
         new RegExp(`<a [^>]*href="/team/defects/${defectId}/wieder-oeffnen"[^>]*>Wieder öffnen</a>`),
@@ -729,7 +816,10 @@ describe("a defect's own page", () => {
     });
 
     it("confirms the reopening to who did it – with the machine's new status when they changed it (as in ST-018)", async () => {
-      const defectId = await recorded(await reported(await registered("LG-042"), "Left flipper barely moves", NOW), NOW);
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", NOW),
+        NOW,
+      );
       const resolved = await executeCommand(
         resolveDefectCommand,
         { defectId, version: 0, closingNote: "Coil replaced" },

@@ -33,6 +33,8 @@ export type DefectDetailsChanged = {
   /** Typed text: in the aggregate, never in the journal (ST-003). */
   title: string;
   suitableForHelpers: boolean;
+  /** Whose claim removing the mark released in the same step, if anyone's – what the confirmation names (ST-031). */
+  releasedClaimOf: TeamMemberId | undefined;
   changedBy: TeamMemberId;
 };
 
@@ -87,16 +89,8 @@ export function changeDefectDetails(
       suitableForHelpers: input.suitableForHelpers,
       claim: released ? undefined : defect.claim,
     },
+    // The release first: the change is the step's last fact, the one its confirmation reads (ST-031).
     events: [
-      {
-        type: "EVT-DefectDetailsChanged",
-        defectId: defect.id,
-        machineId: defect.machineId,
-        changed,
-        title,
-        suitableForHelpers: input.suitableForHelpers,
-        changedBy: actor.teamMemberId,
-      },
       ...(released
         ? [
             {
@@ -108,6 +102,16 @@ export function changeDefectDetails(
             },
           ]
         : []),
+      {
+        type: "EVT-DefectDetailsChanged",
+        defectId: defect.id,
+        machineId: defect.machineId,
+        changed,
+        title,
+        suitableForHelpers: input.suitableForHelpers,
+        releasedClaimOf: released?.claimedBy,
+        changedBy: actor.teamMemberId,
+      },
     ],
   };
 }

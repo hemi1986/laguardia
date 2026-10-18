@@ -21,6 +21,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
       {
         "anna": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": undefined,
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -32,6 +33,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "ben": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": undefined,
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -43,6 +45,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "tom": {
           "assign": undefined,
+          "change-details": undefined,
           "claim": undefined,
           "log-work": undefined,
           "prioritize": undefined,
@@ -61,6 +64,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
       {
         "anna": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "already-claimed-by-you",
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -72,6 +76,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "ben": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": undefined,
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -83,6 +88,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "tom": {
           "assign": undefined,
+          "change-details": undefined,
           "claim": undefined,
           "log-work": undefined,
           "prioritize": undefined,
@@ -101,6 +107,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
       {
         "anna": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "not-suitable-for-helpers",
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -112,6 +119,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "ben": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "not-suitable-for-helpers",
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -123,6 +131,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "tom": {
           "assign": undefined,
+          "change-details": undefined,
           "claim": "already-claimed-by-you",
           "log-work": undefined,
           "prioritize": undefined,
@@ -141,6 +150,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
       {
         "anna": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "defect-not-open",
           "log-work": "defect-not-open",
           "prioritize": "not-authorized",
@@ -152,6 +162,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "ben": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "defect-not-open",
           "log-work": "defect-not-open",
           "prioritize": "not-authorized",
@@ -163,6 +174,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "tom": {
           "assign": "defect-not-open",
+          "change-details": "defect-not-open",
           "claim": "defect-not-open",
           "log-work": "defect-not-open",
           "prioritize": "defect-not-open",
@@ -182,6 +194,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
       {
         "anna": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": "already-claimed-by-you",
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -193,6 +206,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "ben": {
           "assign": "not-authorized",
+          "change-details": "not-authorized",
           "claim": undefined,
           "log-work": undefined,
           "prioritize": "not-authorized",
@@ -204,6 +218,7 @@ describe("defectActionRefusals – the refusal matrix of the defect's actions (a
         },
         "tom": {
           "assign": undefined,
+          "change-details": undefined,
           "claim": undefined,
           "log-work": undefined,
           "prioritize": undefined,

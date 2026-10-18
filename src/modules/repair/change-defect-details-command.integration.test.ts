@@ -169,8 +169,17 @@ describe("CMD-ChangeDefectDetails", () => {
 
     expect(await defectDetails(db, defectId)).toMatchObject({ suitableForHelpers: false, claim: undefined });
     expect(await eventsSince(defectId, journalBefore)).toEqual([
-      ["EVT-DefectDetailsChanged", tom, { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false }],
       ["EVT-DefectClaimReleased", tom, { formerClaimant: anna.teamMemberId }],
+      [
+        "EVT-DefectDetailsChanged",
+        tom,
+        {
+          titleChanged: false,
+          suitableForHelpersChanged: true,
+          suitableForHelpers: false,
+          releasedClaimOf: anna.teamMemberId,
+        },
+      ],
     ]);
   });
 
@@ -184,7 +193,11 @@ describe("CMD-ChangeDefectDetails", () => {
 
     expect((await defectDetails(db, defectId))?.claim?.claimedBy).toBe(tom.teamMemberId);
     expect(await eventsSince(defectId, journalBefore)).toEqual([
-      ["EVT-DefectDetailsChanged", tom, { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false }],
+      [
+        "EVT-DefectDetailsChanged",
+        tom,
+        { titleChanged: false, suitableForHelpersChanged: true, suitableForHelpers: false },
+      ],
     ]);
   });
 });
