@@ -109,17 +109,16 @@ export function MachineRecordView({
           </div>
         ))}
       </dl>
-      {(canChangeStatus || !record.retirement) && (
-        // The actions of section 3: moving (ST-034) any team member, not for a retired machine (G11).
+      {!record.retirement && (
+        // The actions of section 3, none for a retired machine (G11): moving (ST-034) is for every team member,
+        // changing the status (ST-012) only where the team member has a status to set.
         <div className="flex flex-wrap gap-2">
-          {!record.retirement && (
-            <Link
-              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/standort`}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              {texts.changeLocation}
-            </Link>
-          )}
+          <Link
+            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/standort`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {texts.changeLocation}
+          </Link>
           {canChangeStatus && (
             <Link
               href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status`}

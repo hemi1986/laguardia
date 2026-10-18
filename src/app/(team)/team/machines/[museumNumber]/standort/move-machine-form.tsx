@@ -29,7 +29,8 @@ export function MoveMachineForm({
 }) {
   const [state, action, pending] = useActionState(moveMachineAction, null);
   const rejectionId = useId();
-  const invalid = state && state.error !== "version-conflict" && state.error !== "machine-retired";
+  // Only the location's own rejections mark the field (G8); a conflict or a retired machine is not its fault.
+  const invalid = state?.error === "location-required" || state?.error === "location-unchanged";
   const typed = state?.values.location ?? location;
 
   return (
