@@ -16,7 +16,7 @@ const noAction: ReleaseAction = async () => null;
 /**
  * „Verwalten“ on a defect's page (G22): what manages the defect rather than works on it, for technicians, behind one
  * fold – a native `<details>`, so it opens without JavaScript, in G22's order. „Zuweisen“ and „Priorität ändern“ lead
- * to their form pages (G21, ST-026, ST-027); „Übernahme von Tom aufheben“ is one tap and posts the version the page
+ * to their form pages (G21, ST-026, ST-027), as does „Titel und Eignung ändern“ (ST-031); „Übernahme von Tom aufheben“ is one tap and posts the version the page
  * showed (ST-026). A rejection of that tap opens the fold, so
  * it is never hidden (G8).
  */
@@ -24,6 +24,7 @@ export function ManageDefect({
   assignHref,
   release,
   prioritizeHref,
+  changeDetailsHref,
 }: {
   /** The form page of assigning the defect – none when it cannot be assigned. */
   assignHref: string | undefined;
@@ -34,10 +35,12 @@ export function ManageDefect({
   release: { action: ReleaseAction; version: number; label: string; offered: boolean } | undefined;
   /** The form page of changing the defect's priority – none when it cannot be prioritized. */
   prioritizeHref: string | undefined;
+  /** The form page of changing the defect's title or suitable-for-helpers mark – none when they cannot be changed. */
+  changeDetailsHref: string | undefined;
 }) {
   const { defects: texts } = teamMessages;
   const [state, action, pending] = useActionState(release?.action ?? noAction, null);
-  if (!assignHref && !release?.offered && !prioritizeHref && !state) return null;
+  if (!assignHref && !release?.offered && !prioritizeHref && !changeDetailsHref && !state) return null;
 
   return (
     <details open={state ? true : undefined} className="mt-2">
@@ -64,6 +67,11 @@ export function ManageDefect({
         {prioritizeHref && (
           <Link href={prioritizeHref} className={buttonVariants({ variant: "outline" })}>
             {texts.prioritize}
+          </Link>
+        )}
+        {changeDetailsHref && (
+          <Link href={changeDetailsHref} className={buttonVariants({ variant: "outline" })}>
+            {texts.changeDetails}
           </Link>
         )}
       </div>

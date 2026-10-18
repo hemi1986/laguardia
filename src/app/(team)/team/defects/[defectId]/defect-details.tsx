@@ -22,16 +22,30 @@ const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, {
   reopen: { path: "wieder-oeffnen", label: texts.reopen },
   assign: { path: "zuweisen", label: texts.assign },
   prioritize: { path: "prioritaet", label: texts.prioritize },
+  "change-details": { path: "titel-und-eignung", label: texts.changeDetails },
 };
 
 /** The work on a defect, offered as buttons under its header – the rest is behind „Verwalten“ (G22). */
-const work = ["claim", "release", "log-work", "put-on-hold", "resume", "resolve"] as const satisfies readonly DefectAction[];
+const work = [
+  "claim",
+  "release",
+  "log-work",
+  "put-on-hold",
+  "resume",
+  "resolve",
+] as const satisfies readonly DefectAction[];
+
+/** What a confirmation can name besides the title. */
+type Confirmed = {
+  assignedTo: string;
+  priority: string;
+  holdReason: string;
+  suitableForHelpers: boolean;
+  changedDetails: NonNullable<DefectDetailsData["confirmed"]>["changedDetails"];
+};
 
 /** What the page says to who just did it (G3) – about the defect as it is now. */
-const confirmations: Record<
-  DefectAction,
-  (title: string, { assignedTo, priority, holdReason }: { assignedTo: string; priority: string; holdReason: string }) => string
-> = {
+const confirmations: Record<DefectAction, (title: string, about: Confirmed) => string> = {
   claim: texts.claimed,
   release: texts.released,
   "log-work": texts.workLogged,
@@ -41,6 +55,16 @@ const confirmations: Record<
   reopen: texts.reopened,
   assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
   prioritize: (title, { priority }) => texts.prioritized(title, priority),
+  // One sentence per change, then the claim it released (ST-031).
+  "change-details": (title, { changedDetails, suitableForHelpers }) =>
+    [
+      changedDetails?.title && texts.titleChanged(title),
+      changedDetails?.suitableForHelpers &&
+        (suitableForHelpers ? texts.nowSuitableForHelpers(title) : texts.noLongerSuitableForHelpers(title)),
+      changedDetails?.releasedClaimOf && texts.claimOfReleased(changedDetails.releasedClaimOf),
+    ]
+      .filter(Boolean)
+      .join(" "),
 };
 
 /**
@@ -85,6 +109,8 @@ export function DefectDetailsView({
             assignedTo: details.confirmed.assignedTo ?? "",
             priority: recordDefect.priorities[details.priority],
             holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
+            suitableForHelpers: details.suitableForHelpers,
+            changedDetails: details.confirmed.changedDetails,
           })}
           {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
           {details.confirmed.newMachineStatus &&
@@ -159,15 +185,15 @@ export function DefectDetailsView({
                       />
                     )
                   : work.some((workAction) => workAction === action) &&
-                  details.offered.includes(action) && (
-                    <Link
-                      key={action}
-                      href={`/team/defects/${details.id}/${formPages[action].path}`}
-                      className={buttonVariants({ variant: "outline", className: "self-start" })}
-                    >
-                      {formPages[action].label}
-                    </Link>
-                  ),
+                    details.offered.includes(action) && (
+                      <Link
+                        key={action}
+                        href={`/team/defects/${details.id}/${formPages[action].path}`}
+                        className={buttonVariants({ variant: "outline", className: "self-start" })}
+                      >
+                        {formPages[action].label}
+                      </Link>
+                    ),
           )}
         <ManageDefect
           assignHref={
@@ -176,6 +202,11 @@ export function DefectDetailsView({
           prioritizeHref={
             details.offered.includes("prioritize")
               ? `/team/defects/${details.id}/${formPages.prioritize.path}`
+              : undefined
+          }
+          changeDetailsHref={
+            details.offered.includes("change-details")
+              ? `/team/defects/${details.id}/${formPages["change-details"].path}`
               : undefined
           }
           release={

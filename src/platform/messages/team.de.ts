@@ -405,6 +405,18 @@ export const teamMessages = {
     prioritizeTo: "Neue Priorität",
     prioritizeChoose: "Bitte wählen",
     prioritized: (title: string, priority: string) => `„${title}“ hat jetzt die Priorität ${priority}.`,
+    /**
+     * Changing a defect's title or suitable-for-helpers mark (ST-031, G22): „Titel und Eignung ändern“ behind „Verwalten“
+     * leads to its form page; the confirmation names each change and a claim it released.
+     */
+    changeDetails: "Titel und Eignung ändern",
+    changeDetailsTitle: (museumNumber: string) => `Titel und Eignung ändern · ${museumNumber}`,
+    changeDetailsSubmit: "Defekt ändern",
+    removingMarkReleases: (name: string) => `Ohne diese Markierung wird die Übernahme von ${name} aufgehoben.`,
+    titleChanged: (title: string) => `Der Titel ist jetzt „${title}“.`,
+    nowSuitableForHelpers: (title: string) => `„${title}“ ist jetzt für Helfer:innen geeignet.`,
+    noLongerSuitableForHelpers: (title: string) => `„${title}“ ist nicht mehr für Helfer:innen geeignet.`,
+    claimOfReleased: (name: string) => `Die Übernahme von ${name} ist aufgehoben.`,
     /** Resolving a defect (ST-028): the button on its page (G14, G21), which leads to the form's own page. */
     resolve: "Beheben",
     resolveTitle: (museumNumber: string) => `Defekt beheben · ${museumNumber}`,
@@ -576,6 +588,8 @@ export const teamMessages = {
     /** Changing a defect's priority (ST-027). */
     "priority-required": "Bitte eine Priorität auswählen.",
     "priority-unchanged": "Der Defekt hat diese Priorität schon. Bitte eine andere wählen.",
+    /** Changing a defect's details (ST-031). */
+    "details-unchanged": "Titel und Eignung sind unverändert. Bitte etwas ändern.",
     /** Releasing a claim (ST-026). */
     "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
     /** Reopening a defect (ST-030). */

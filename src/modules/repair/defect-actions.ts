@@ -1,4 +1,5 @@
 import { readJournal, type Database, type Role, type TeamMemberId } from "@/platform/command";
+import { changeDetailsRefusal } from "./change-defect-details";
 import { assignRefusal, claimRefusal } from "./claim-defect";
 import type { Defect } from "./defect";
 import { repairEvents } from "./events";
@@ -13,7 +14,8 @@ import { resumeRefusal } from "./resume-defect";
 /**
  * What a team member can do to a defect – one entry per action on AGG-Defect, in the order its page offers them
  * (G22): the work first – claiming it or, in the same place, releasing its claim –, then what manages it (assigning,
- * ST-026; CMD-ClaimDefect for someone else) and changing its priority (ST-027). A new command on a defect adds its action here, its refusal below, its event to `actionOfEvent` and its journal projection to `repairEvents` (`./events.ts`); the
+ * ST-026; CMD-ClaimDefect for someone else), changing its priority (ST-027) and its title or suitable-for-helpers
+ * mark (ST-031). A new command on a defect adds its action here, its refusal below, its event to `actionOfEvent` and its journal projection to `repairEvents` (`./events.ts`); the
  * defect's page and the form pages read the answer and carry no rule of their own (G11).
  */
 export const defectActions = [
@@ -26,6 +28,7 @@ export const defectActions = [
   "reopen",
   "assign",
   "prioritize",
+  "change-details",
 ] as const;
 export type DefectAction = (typeof defectActions)[number];
 
@@ -44,6 +47,8 @@ export type DefectActionRefusals = {
   assign: ReturnType<typeof assignRefusal>;
   /** Whether they may change its priority at all – to which one is the form's choice. */
   prioritize: ReturnType<typeof prioritizeRefusal>;
+  /** Whether they may change its title or mark at all – to what is the form's. */
+  "change-details": ReturnType<typeof changeDetailsRefusal>;
 };
 
 /** The team member a page asks for – the acting person of the commands, without the session. */
@@ -65,6 +70,7 @@ export function defectActionRefusals(
     reopen: reopenRefusal(defect, reopening),
     assign: assignRefusal(defect, teamMember),
     prioritize: prioritizeRefusal(defect, teamMember),
+    "change-details": changeDetailsRefusal(defect, teamMember),
   };
 }
 
@@ -77,6 +83,7 @@ const actionOfEvent = {
   "EVT-DefectResolved": "resolve",
   "EVT-DefectReopened": "reopen",
   "EVT-DefectPrioritized": "prioritize",
+  "EVT-DefectDetailsChanged": "change-details",
 } as const satisfies Partial<Record<keyof typeof repairEvents.entries, DefectAction>>;
 
 /**
@@ -84,17 +91,38 @@ const actionOfEvent = {
  * when someone else acted last, or nobody did. For the confirmation after an action (G3): the address alone cannot make
  * a page confirm anything. The journal is read for this one answer, never to rebuild state (ADR 0002). After a claim it
  * names whom the defect was taken over from, if anyone; a claim made for someone else is an assignment, and names whom
- * the defect was assigned to (ST-026).
+ * the defect was assigned to (ST-026). After a change of its details it names which changed and whose claim that
+ * released, if anyone's (ST-031).
  */
+export type LastDefectAction = {
+  action: DefectAction;
+  takenOverFrom: string | undefined;
+  assignedTo: string | undefined;
+  /** Only after a change of its details: which changed, and whose claim it released (ST-031). */
+  changedDetails?: { title: boolean; suitableForHelpers: boolean; releasedClaimOf: string | undefined };
+};
+
 export async function lastDefectActionBy(
   db: Database,
   defectId: string,
   teamMemberId: string,
-): Promise<{ action: DefectAction; takenOverFrom: string | undefined; assignedTo: string | undefined } | undefined> {
+): Promise<LastDefectAction | undefined> {
   const types = Object.keys(actionOfEvent) as (keyof typeof actionOfEvent)[];
   const latest = (await readJournal(db, repairEvents, { aggregateIds: [defectId] })).at(-1);
   if (!latest || latest.actor.kind !== "team-member" || latest.actor.teamMemberId !== teamMemberId) return undefined;
   if (!types.some((type) => type === latest.type)) return undefined;
+  if (latest.type === "EVT-DefectDetailsChanged") {
+    return {
+      action: "change-details",
+      takenOverFrom: undefined,
+      assignedTo: undefined,
+      changedDetails: {
+        title: latest.data.titleChanged === true,
+        suitableForHelpers: latest.data.suitableForHelpersChanged === true,
+        releasedClaimOf: latest.data.releasedClaimOf,
+      },
+    };
+  }
   if (latest.type !== "EVT-DefectClaimed") {
     return {
       action: actionOfEvent[latest.type as keyof typeof actionOfEvent],

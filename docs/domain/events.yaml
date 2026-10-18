@@ -146,9 +146,9 @@ events:
     name: Defect prioritized
     data: [Defect, Priority, Prioritized by]
   - id: EVT-DefectDetailsChanged
-    name: Defect details changed
     aggregate: AGG-Defect
-    data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Changed by]
+    name: Defect details changed
+    data: [Defect, Changed details (title, suitable for helpers or both), Title, Suitable for helpers, Released claim of (optional), Changed by]
     description: Names which of the title and the suitable-for-helpers mark changed, so the journal can say so without repeating the title text (story review 2026-10-17).
   - id: EVT-DefectClaimed
     aggregate: AGG-Defect
@@ -327,12 +327,14 @@ commands:
       - The defect is open – not resolved and not closed on retirement
       - A priority is chosen, and it differs from the defect's current priority
   - id: CMD-ChangeDefectDetails
+    aggregate: AGG-Defect
     name: Change defect details
     actor: ACT-Technician
-    aggregate: AGG-Defect
-    produces: [EVT-DefectDetailsChanged]
+    produces: [EVT-DefectDetailsChanged, EVT-DefectClaimReleased]
     rules:
-      - The title stays understandable for visitors
+      - Only an open defect – a resolved one can only be reopened, one closed on retirement is final
+      - The title is required and stays understandable for visitors
+      - "At least one of the title and the suitable-for-helpers mark changes; a change that changes nothing is rejected (user, 2026-10-18, as CMD-PrioritizeDefect)"
       - Removing the suitable-for-helpers mark while a helper holds the claim releases that claim in the same step
   - id: CMD-ClaimDefect
     aggregate: AGG-Defect

@@ -63,6 +63,9 @@ export type DefectDetailsData = {
         assignedTo: string | undefined;
         /** The machine's status after reopening with a status change in the same step (ST-030, as in ST-018). */
         newMachineStatus: MachineStatus | undefined;
+        /** After a change of its details: which changed, and whose claim that released, by name (ST-031). */
+        changedDetails:
+          { title: boolean; suitableForHelpers: boolean; releasedClaimOf: string | undefined } | undefined;
       }
     | undefined;
   /**
@@ -111,6 +114,7 @@ export async function loadDefectDetails(
   const last = done && viewer ? await lastDefectActionBy(db, defect.id, viewer.id) : undefined;
   const confirmed = last?.action === done ? last : undefined;
   const previousClaimant = confirmed?.takenOverFrom;
+  const releasedClaimOf = confirmed?.changedDetails?.releasedClaimOf;
   const assignedBy = defect.claim?.assignedBy;
   const [machines, names, photos] = await Promise.all([
     machineLabels(db, [defect.machineId]),
@@ -121,6 +125,7 @@ export async function loadDefectDetails(
       ...(defect.claim ? [defect.claim.claimedBy] : []),
       ...(assignedBy ? [assignedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
+      ...(releasedClaimOf ? [releasedClaimOf] : []),
       ...defect.resolutions.map((resolution) => resolution.resolvedBy),
       ...defect.reopenings.map((reopening) => reopening.reopenedBy),
       ...defect.workLog.map((entry) => entry.loggedBy),
@@ -162,11 +167,14 @@ export async function loadDefectDetails(
     offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),
     confirmed: confirmed && {
       action: confirmed.action,
-      takenOverFrom: previousClaimant && (nameOf(names, previousClaimant)),
+      takenOverFrom: previousClaimant && nameOf(names, previousClaimant),
       // Whom it was assigned to is its claimant: the assignment is the defect's latest event.
-      assignedTo:
-        confirmed.assignedTo && (nameOf(names, confirmed.assignedTo)),
+      assignedTo: confirmed.assignedTo && nameOf(names, confirmed.assignedTo),
       newMachineStatus,
+      changedDetails: confirmed.changedDetails && {
+        ...confirmed.changedDetails,
+        releasedClaimOf: releasedClaimOf && nameOf(names, releasedClaimOf),
+      },
     },
     resolutionsAndReopenings: resolutionsAndReopenings(defect).map((step) =>
       step.kind === "resolution"

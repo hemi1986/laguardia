@@ -14,4 +14,4 @@ export { currentPerson, DeactivatedAccount, loggedInTeamMember, logIn, logOut, t
 export { setUpFirstTechnician, type FirstTechnicianOutcome } from "./first-technician";
 export { renewedSessionCookie } from "./session-cookie";
 export { teamMemberNames } from "./names";
-export { activeTeamMemberRole, activeTeamMembers, type ActiveTeamMember } from "./active-team-members";
+export { activeTeamMemberRole, activeTeamMembers, teamMemberRole, type ActiveTeamMember } from "./active-team-members";
