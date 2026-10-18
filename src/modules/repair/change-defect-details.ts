@@ -61,6 +61,18 @@ export function changeDetailsRefusal(
   return undefined;
 }
 
+/**
+ * Whose claim removing the suitable-for-helpers mark releases – a helper's, in the same step (rule on
+ * CMD-ChangeDefectDetails); none for a technician's claim, or when nobody holds one. The decision applies it, and the
+ * form page asks it to say so beside the mark (ST-031). `claimantRole` is the claimant's role as Team knows it now.
+ */
+export function claimReleasedByRemovingTheMark(
+  defect: Pick<Defect, "claim">,
+  claimantRole: Role | undefined,
+): TeamMemberId | undefined {
+  return defect.claim && claimantRole === "helper" ? defect.claim.claimedBy : undefined;
+}
+
 export function changeDefectDetails(
   defect: Defect,
   input: ChangeDefectDetailsInput,
@@ -77,10 +89,8 @@ export function changeDefectDetails(
   ];
   // A change that changes nothing would record no fact (user, 2026-10-18, as CMD-PrioritizeDefect).
   if (changed.length === 0) return { ok: false, error: "details-unchanged" };
-  // Only defects suitable for helpers can be claimed by helpers: removing the mark releases a helper's claim in the
-  // same step (rule on CMD-ChangeDefectDetails); a technician's claim stays.
-  const released =
-    !input.suitableForHelpers && defect.claim && facts.claimantRole === "helper" ? defect.claim : undefined;
+  // Only defects suitable for helpers can be claimed by helpers.
+  const released = input.suitableForHelpers ? undefined : claimReleasedByRemovingTheMark(defect, facts.claimantRole);
   return {
     ok: true,
     state: {
@@ -97,7 +107,7 @@ export function changeDefectDetails(
               type: "EVT-DefectClaimReleased" as const,
               defectId: defect.id,
               machineId: defect.machineId,
-              formerClaimant: released.claimedBy,
+              formerClaimant: released,
               releasedBy: actor.teamMemberId,
             },
           ]
@@ -109,7 +119,7 @@ export function changeDefectDetails(
         changed,
         title,
         suitableForHelpers: input.suitableForHelpers,
-        releasedClaimOf: released?.claimedBy,
+        releasedClaimOf: released,
         changedBy: actor.teamMemberId,
       },
     ],
