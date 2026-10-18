@@ -1,10 +1,19 @@
 import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
-import { aggregateStore, isId, type Database } from "@/platform/command";
-import type { CalendarDate } from "@/platform/time";
+import type { Clock } from "@/platform/clock";
+import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
+import { addDays, today, type CalendarDate } from "@/platform/time";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
-import { maintenancePlans } from "./maintenance-plans";
-import type { MaintenanceFacts, MaintenanceRecord, RecordMaintenanceInput } from "./record-maintenance";
+import { activeMaintenanceTasks, maintenancePlans } from "./maintenance-plans";
+import {
+  LONGEST_BACK_DATING_DAYS,
+  recordRefusal,
+  type MachineForRecording,
+  type MaintenanceFacts,
+  type MaintenanceRecord,
+  type RecordMaintenanceError,
+  type RecordMaintenanceInput,
+} from "./record-maintenance";
 import { maintenanceRecord } from "./schema";
 
 function toRecord(row: typeof maintenanceRecord.$inferSelect): MaintenanceRecord {
@@ -92,4 +101,35 @@ export async function maintenanceRecordById(
   if (!isId(maintenanceRecordId)) return undefined;
   const [row] = await db.select().from(maintenanceRecord).where(eq(maintenanceRecord.id, maintenanceRecordId));
   return row && toRecord(row);
+}
+
+/**
+ * A maintenance task as the form page „Wartung erfassen“ needs it on one machine (ST-044, like `defectForAction`): the
+ * task from the plan, why CMD-RecordMaintenance would refuse the team member who asks – none if it would not (G11) –
+ * and the dates it accepts: today, preselected, back to the earliest one (D6). The machine is Collection's, as the page
+ * passes it (context map). Undefined for a maintenance task not in the plan, or no machine.
+ */
+export type MaintenanceForRecording = {
+  maintenanceTask: { id: string; name: string; instruction: string };
+  whyNot: RecordMaintenanceError | undefined;
+  today: CalendarDate;
+  earliest: CalendarDate;
+};
+
+export async function maintenanceForRecording(
+  db: Database,
+  clock: Clock,
+  maintenanceTaskId: string,
+  machine: Omit<MachineForRecording, "id"> | undefined,
+  teamMember: { role: Role },
+): Promise<MaintenanceForRecording | undefined> {
+  const task = (await activeMaintenanceTasks(db)).find((candidate) => candidate.id === maintenanceTaskId);
+  if (!task || !machine) return undefined;
+  const now = today(clock);
+  return {
+    maintenanceTask: { id: task.id, name: task.name, instruction: task.instruction },
+    whyNot: recordRefusal(task, machine, teamMember),
+    today: now,
+    earliest: addDays(now, -LONGEST_BACK_DATING_DAYS),
+  };
 }

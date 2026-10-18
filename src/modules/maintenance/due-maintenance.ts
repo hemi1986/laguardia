@@ -1,10 +1,11 @@
 import type { MachineCategory, MachineForMaintenance, Technology } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
-import type { Database } from "@/platform/command";
+import type { Database, Role } from "@/platform/command";
 import { addDays, calendarDate, graceDays, maintenanceDates, today, type CalendarDate } from "@/platform/time";
 import type { MaintenanceTask } from "./maintenance-plan";
 import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 import { lastDoneByRecord, lastDoneKey } from "./maintenance-records";
+import { recordRefusal } from "./record-maintenance";
 
 /** A machine on which a maintenance task is due (EVT-MaintenanceTaskDue, computed on read – ADR 0002). */
 export type DueMachine = {
@@ -16,6 +17,11 @@ export type DueMachine = {
   dueSince: CalendarDate;
   /** Due for more than 25 % of the interval (EVT-MaintenanceTaskOverdue, ST-003). */
   overdue: boolean;
+  /**
+   * Whether CMD-RecordMaintenance would accept the team member who asks recording the task here, so a page offers
+   * „Wartung erfassen“ only where it will be accepted (ST-044, G11) – never when nobody asks.
+   */
+  recordOffered: boolean;
 };
 
 /** A maintenance task that is due on at least one machine, with those machines – sorted by location. */
@@ -42,11 +48,14 @@ export type DueMaintenanceTask = {
  * to apply after a machine model correction (ST-036, D5) and its latest maintenance record *done* (ST-044) – a record
  * *partially done* restarts nothing. A machine *Not on display* is never due; after
  * its return a task that was already due counts from the return (ST-056).
+ *
+ * `teamMember` is who looks at it: each due machine says whether they may record the task there (ST-044, G11).
  */
 export async function dueMaintenance(
   db: Database,
   clock: Clock,
   machines: readonly MachineForMaintenance[],
+  teamMember?: { role: Role },
 ): Promise<DueMaintenanceTask[]> {
   const now = today(clock);
   const [tasks, recorded] = await Promise.all([
@@ -84,6 +93,7 @@ export async function dueMaintenance(
           lastDone,
           dueSince: dueDate,
           overdue: now >= overdueFrom,
+          recordOffered: !!teamMember && recordRefusal(task, machine, teamMember) === undefined,
         },
       ];
     });

@@ -4,6 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   changeMachineStatusCommand,
   createMachineModelCommand,
+  machineForMaintenance,
   machinesForMaintenance,
   registerMachineCommand,
   type MachineStatus,
@@ -16,6 +17,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   changeMaintenancePlanCommand,
   dueMaintenance,
+  maintenanceForRecording,
   maintenancePlanVersion,
   maintenanceRecords,
   recordMaintenanceCommand,
@@ -35,7 +37,7 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
 
 /** A maintenance task of its own, applying to every machine, started on 1 January 2026. */
-async function aMaintenanceTask(name: string, intervalMonths = 1) {
+async function aMaintenanceTask(name: string, intervalMonths = 1, suitableForHelpers = true) {
   const added = await executeCommand(
     changeMaintenancePlanCommand,
     {
@@ -45,7 +47,7 @@ async function aMaintenanceTask(name: string, intervalMonths = 1) {
         name: `${name} ${randomUUID()}`,
         instruction: "As usual.",
         intervalMonths,
-        suitableForHelpers: true,
+        suitableForHelpers,
         machineCategory: undefined,
         technology: undefined,
         startDate: "2026-01-01",
@@ -201,5 +203,39 @@ describe("CMD-RecordMaintenance", () => {
 
     expect(await record(cleanGlass, lg013, undefined)).toEqual({ ok: false, error: "machine-retired" });
     expect(await maintenanceRecords(db, { machineId: lg013 })).toEqual([]);
+  });
+});
+
+describe("what Maintenance offers the team member who asks (G11)", () => {
+  const anna = { role: "helper" } as const;
+
+  it("says on each due machine whether they may record the task there – never when nobody asks", async () => {
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
+    const lg042 = await aMachine();
+    const machines = (await machinesForMaintenance(db)).filter((machine) => machine.id === lg042);
+    const offered = async (teamMember?: { role: "helper" | "technician" }) =>
+      (await dueMaintenance(db, tenthOfJune, machines, teamMember)).find((task) => task.id === fuses)?.machines[0]
+        ?.recordOffered;
+
+    expect(await offered(tom)).toBe(true);
+    expect(await offered(anna)).toBe(false);
+    expect(await offered()).toBe(false);
+  });
+
+  it("answers for one machine: the task, why it would refuse them, and the dates it accepts", async () => {
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
+    const machine = await machineForMaintenance(db, await aMachine());
+
+    expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine, tom)).toEqual({
+      maintenanceTask: { id: fuses, name: expect.stringContaining("Check fuses"), instruction: "As usual." },
+      whyNot: undefined,
+      today: "2026-06-10",
+      earliest: "2026-06-03",
+    });
+    expect((await maintenanceForRecording(db, tenthOfJune, fuses, machine, anna))?.whyNot).toBe(
+      "maintenance-not-suitable-for-helpers",
+    );
+    expect(await maintenanceForRecording(db, tenthOfJune, randomUUID(), machine, tom)).toBeUndefined();
+    expect(await maintenanceForRecording(db, tenthOfJune, fuses, undefined, tom)).toBeUndefined();
   });
 });

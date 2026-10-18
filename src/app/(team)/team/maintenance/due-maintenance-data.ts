@@ -3,8 +3,6 @@ import {
   dueMaintenance,
   maintenanceRecordById,
   maintenanceRecordedIn,
-  recordRefusal,
-  type DueMachine,
   type DueMaintenanceTask,
 } from "@/modules/maintenance";
 import type { Clock } from "@/platform/clock";
@@ -26,8 +24,7 @@ export type DueMaintenanceEntry = { id: string; name: string; machineCount: numb
 export type DueMaintenanceData = {
   tasks: DueMaintenanceEntry[];
   /** The chosen task with its machines – only one that is due and matches the filter. */
-  chosen:
-    (Omit<DueMaintenanceTask, "machines"> & { machines: (DueMachine & { recordOffered: boolean })[] }) | undefined;
+  chosen: DueMaintenanceTask | undefined;
   /** The machine the team member just recorded maintenance on – only when the record is theirs (G3). */
   confirmed: { museumNumber: string } | undefined;
   filter: DueMaintenanceFilter;
@@ -56,8 +53,8 @@ export function dueMaintenanceFilterOf(params: Record<string, string | string[] 
 
 /**
  * The due maintenance list's data (ST-043): Collection's machines and Maintenance's due maintenance tasks on them – the
- * page composes (ST-009) –, computed for today. `viewer` is the team member looking at the list: „Wartung erfassen“ is
- * offered only where CMD-RecordMaintenance would accept them (ST-044, G11), and only their own record is confirmed.
+ * page composes (ST-009) –, computed for today. `viewer` is the team member looking at the list: Maintenance says on
+ * which due machines they may record maintenance (ST-044, G11), and only their own record is confirmed.
  */
 export async function loadDueMaintenance(
   db: Database,
@@ -66,11 +63,9 @@ export async function loadDueMaintenance(
   viewer?: Viewer,
 ): Promise<DueMaintenanceData> {
   const machines = await machinesForMaintenance(db);
-  const due = (await dueMaintenance(db, clock, machines)).filter(
+  const due = (await dueMaintenance(db, clock, machines, viewer)).filter(
     (task) => !filter.suitableForHelpers || task.suitableForHelpers,
   );
-  const chosen = due.find((task) => task.id === filter.maintenanceTaskId);
-  const byId = new Map(machines.map((machine) => [machine.id, machine]));
   return {
     tasks: due.map((task) => ({
       id: task.id,
@@ -78,19 +73,7 @@ export async function loadDueMaintenance(
       machineCount: task.machines.length,
       overdueCount: task.overdueCount,
     })),
-    chosen: chosen && {
-      ...chosen,
-      machines: chosen.machines.map((machine) => {
-        const facts = byId.get(machine.machineId);
-        return {
-          ...machine,
-          recordOffered:
-            !!viewer &&
-            !!facts &&
-            recordRefusal(chosen, facts, { role: viewer.role }) === undefined,
-        };
-      }),
-    },
+    chosen: due.find((task) => task.id === filter.maintenanceTaskId),
     confirmed: await confirmedRecord(db, filter.recorded, viewer),
     filter,
   };
