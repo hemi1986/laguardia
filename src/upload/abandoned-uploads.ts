@@ -1,6 +1,6 @@
 import "server-only";
 import { and, asc, eq, lte } from "drizzle-orm";
-import { ABANDONED_AFTER_HOURS } from "./limits";
+import { abandonedUntil } from "./limits";
 import type { UploadDependencies } from "./pending-uploads";
 import { pendingUpload } from "./schema";
 
@@ -14,7 +14,7 @@ export async function cleanUpAbandonedUploads(
   { db, storage, clock }: UploadDependencies,
   { atMost = 20 }: { atMost?: number } = {},
 ): Promise<void> {
-  const abandonedBefore = new Date(clock.now().getTime() - ABANDONED_AFTER_HOURS * 60 * 60 * 1000);
+  const abandonedBefore = abandonedUntil(clock.now());
   const abandoned = await db
     .select({ name: pendingUpload.name })
     .from(pendingUpload)

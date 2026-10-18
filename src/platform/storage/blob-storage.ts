@@ -49,12 +49,20 @@ export function blobStorage(): ContentStorage {
       // browser expects. Only its issuing branch runs here: no completion callback is registered or accepted, so the
       // webhook key it insists on is never used.
       const issued = await handleUploadPresigned({
-        body: { type: "blob.generate-presigned-url", payload: { pathname: name, multipart: true, clientPayload: null } },
+        body: {
+          type: "blob.generate-presigned-url",
+          payload: { pathname: name, multipart: true, clientPayload: null },
+        },
         request: new Request("https://upload-address.invalid/"),
         webhookPublicKey: "unused – no upload completion callbacks",
         getSignedToken: async () => ({
           token,
-          urlOptions: { maximumSizeInBytes: maximumSize, validUntil: until, allowOverwrite: false, addRandomSuffix: false },
+          urlOptions: {
+            maximumSizeInBytes: maximumSize,
+            validUntil: until,
+            allowOverwrite: false,
+            addRandomSuffix: false,
+          },
         }),
       });
       if (issued.type !== "blob.generate-presigned-url") throw new Error("Blob issued no upload address");

@@ -17,7 +17,8 @@ export type ContentStorage = {
   /**
    * A permission for the browser to upload content of at most `maximumSize` bytes under exactly this name, until the
    * given time (ST-085, ADR 0009) – the content then goes straight to the store, never through a function. Only issued
-   * after the server's own access check; the size limit is the caller's and the permission itself refuses more.
+   * after the server's own access check; the size limit is the caller's. Blob refuses more only for an upload in one
+   * piece – an upload in parts (above 20 MB) is not held to it (found in ST-085), so whoever attaches checks `size`.
    */
   uploadAddress(name: string, limits: UploadLimits): Promise<UploadAddress>;
   /**

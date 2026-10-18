@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, gt } from "drizzle-orm";
 import type { CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
-import { ABANDONED_AFTER_HOURS } from "./limits";
+import { abandonedUntil } from "./limits";
 import type { UploadDependencies, UploadOwner } from "./pending-uploads";
 import { pendingUpload } from "./schema";
 
@@ -23,7 +23,7 @@ export async function withUploadedContent<Result, Error extends string>(
   uploaded: { name: string; owner: UploadOwner },
   run: (content: string) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
-  const youngest = new Date(clock.now().getTime() - ABANDONED_AFTER_HOURS * 60 * 60 * 1000);
+  const youngest = abandonedUntil(clock.now());
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
   // is either attached or cleaned up, never both (ADR 0009).
   const taken = await db
@@ -40,18 +40,15 @@ export async function withUploadedContent<Result, Error extends string>(
     .returning({ maximumSize: pendingUpload.maximumSize });
   if (taken.length === 0) return { ok: false, error: "content-gone" };
 
-  // Blob holds an upload in one piece to the upload address's size limit, but not an upload in parts (above 20 MB,
-  // found in ST-085) – so the size is checked here too, before the command runs.
-  const size = await storage.size(uploaded.name);
-  if (size === undefined) return { ok: false, error: "content-gone" };
-  if (size > taken[0].maximumSize) {
-    await deleteQuietly(storage, uploaded.name);
-    return { ok: false, error: "too-large" };
-  }
-
-  let outcome: CommandResult<Result, Error>;
+  // From here on the record is gone, so nothing but this function deletes the content: every way out that does not
+  // attach it deletes it (ADR 0009).
+  let outcome: CommandResult<Result, Error> | { ok: false; error: UploadedContentError };
   try {
-    outcome = await run(uploaded.name);
+    // Blob holds an upload in one piece to the upload address's size limit, but not an upload in parts (above 20 MB,
+    // found in ST-085) – so the size is checked here too, before the command runs.
+    const size = await storage.size(uploaded.name);
+    if (size === undefined) return { ok: false, error: "content-gone" };
+    outcome = size > taken[0].maximumSize ? { ok: false, error: "too-large" } : await run(uploaded.name);
   } catch (error) {
     await deleteQuietly(storage, uploaded.name);
     throw error;

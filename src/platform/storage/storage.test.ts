@@ -65,6 +65,17 @@ describe("an upload address", () => {
     expect(storage.names()).toEqual([]);
   });
 
+  it("does not hold an upload in parts to the size limit – like Blob", async () => {
+    const storage = memoryStorage();
+    const address = await storage.uploadAddress("files/e", { maximumSize: 4, validUntil: until });
+
+    await storage.upload(address, new Uint8Array(5), "application/pdf", new Date("2026-10-18T10:00:00Z"), {
+      multipart: true,
+    });
+
+    expect(await storage.size("files/e")).toBe(5);
+  });
+
   it("refuses an upload after the address is no longer valid", async () => {
     const storage = memoryStorage();
     const address = await storage.uploadAddress("files/c", { maximumSize: 4, validUntil: until });

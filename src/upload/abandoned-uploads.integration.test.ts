@@ -17,7 +17,11 @@ import { cleanUpAbandonedUploads, recordPendingUpload, uploadAddressOf, withUplo
  */
 const isolated = isolatedTestDatabase("abandoned_uploads");
 let db: NodePgDatabase;
-const anna: Extract<Actor, { kind: "team-member" }> = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" };
+const anna: Extract<Actor, { kind: "team-member" }> = {
+  kind: "team-member",
+  teamMemberId: randomUUID(),
+  role: "helper",
+};
 let machineId: string;
 
 beforeAll(async () => {
@@ -30,11 +34,19 @@ beforeEach(async () => {
   await db.execute(sql`DELETE FROM pending_upload`);
 });
 
-const at = (instant: string, storage: MemoryStorage) => ({ db, storage, clock: fixedClock(instant), newId: randomUUID });
+const at = (instant: string, storage: MemoryStorage) => ({
+  db,
+  storage,
+  clock: fixedClock(instant),
+  newId: randomUUID,
+});
 
 /** A file Anna uploaded at the given time and never attached. */
 async function uploadedAt(instant: string, storage: MemoryStorage): Promise<string> {
-  const pending = await recordPendingUpload(at(instant, storage), { issuedTo: anna.teamMemberId, owner: { machineId } });
+  const pending = await recordPendingUpload(at(instant, storage), {
+    issuedTo: anna.teamMemberId,
+    owner: { machineId },
+  });
   if (!pending.ok) throw new Error(pending.error);
   const address = await uploadAddressOf(at(instant, storage), { issuedTo: anna.teamMemberId, name: pending.name });
   await storage.upload(address!, new Uint8Array([7]), "application/pdf", new Date(instant));
@@ -53,10 +65,14 @@ describe("cleaning up abandoned uploads", () => {
 
     expect(storage.read(abandoned)).toBeUndefined();
     expect(storage.read(young)).toBeDefined();
-    const attached = await withUploadedContent(at(now, storage), { name: young, owner: { machineId } }, async (content) => ({
-      ok: true as const,
-      result: content,
-    }));
+    const attached = await withUploadedContent(
+      at(now, storage),
+      { name: young, owner: { machineId } },
+      async (content) => ({
+        ok: true as const,
+        result: content,
+      }),
+    );
     expect(attached).toEqual({ ok: true, result: young });
   });
 

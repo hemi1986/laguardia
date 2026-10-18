@@ -17,7 +17,11 @@ import { attachForTest, type AttachInput } from "./attach-stand-in.test-support"
  */
 const db = testDatabase();
 const uploadedAt = "2026-10-18T10:00:00Z";
-const anna: Extract<Actor, { kind: "team-member" }> = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" };
+const anna: Extract<Actor, { kind: "team-member" }> = {
+  kind: "team-member",
+  teamMemberId: randomUUID(),
+  role: "helper",
+};
 let machineId: string;
 let otherMachineId: string;
 
@@ -27,7 +31,12 @@ beforeAll(async () => {
   otherMachineId = await aRegisteredMachine(db);
 });
 
-const at = (instant: string, storage: MemoryStorage) => ({ db, storage, clock: fixedClock(instant), newId: randomUUID });
+const at = (instant: string, storage: MemoryStorage) => ({
+  db,
+  storage,
+  clock: fixedClock(instant),
+  newId: randomUUID,
+});
 
 /** A file Anna uploaded for the machine with the upload address she was given. */
 async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Promise<string> {
@@ -42,10 +51,18 @@ async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Pro
   return pending.name;
 }
 
-function attach(storage: MemoryStorage, outcome: AttachInput["outcome"], { when = "2026-10-18T10:10:00Z", owner = { machineId } as UploadOwner } = {}) {
+function attach(
+  storage: MemoryStorage,
+  outcome: AttachInput["outcome"],
+  { when = "2026-10-18T10:10:00Z", owner = { machineId } as UploadOwner } = {},
+) {
   return (name: string) =>
     withUploadedContent(at(when, storage), { name, owner }, (content) =>
-      executeCommand(attachForTest, { content, outcome }, { actor: anna, db, clock: fixedClock(when), newId: randomUUID }),
+      executeCommand(
+        attachForTest,
+        { content, outcome },
+        { actor: anna, db, clock: fixedClock(when), newId: randomUUID },
+      ),
     );
 }
 
@@ -114,8 +131,9 @@ describe("attaching uploaded content", () => {
   it("refuses content larger than the pending upload allowed and deletes it – Blob does not hold a multipart upload to the limit", async () => {
     const storage = memoryStorage();
     const name = await anUploadedFile(storage, 3);
-    // What a multipart upload can leave behind: Blob checks the size limit only for an upload in one piece (ST-085).
-    await storage.write(name, new Uint8Array(4), "application/pdf");
+    // An upload in parts: Blob checks the size limit only for an upload in one piece (ST-085).
+    const address = await uploadAddressOf(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, name });
+    await storage.upload(address!, new Uint8Array(4), "application/pdf", new Date(uploadedAt), { multipart: true });
 
     expect(await attach(storage, "throw")(name)).toEqual({ ok: false, error: "too-large" });
     expect(storage.read(name)).toBeUndefined();
@@ -123,9 +141,29 @@ describe("attaching uploaded content", () => {
 
   it("does not run the command when nothing was uploaded under the name", async () => {
     const storage = memoryStorage();
-    const pending = await recordPendingUpload(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, owner: { machineId } });
+    const pending = await recordPendingUpload(at(uploadedAt, storage), {
+      issuedTo: anna.teamMemberId,
+      owner: { machineId },
+    });
     if (!pending.ok) throw new Error(pending.error);
 
     expect(await attach(storage, "throw")(pending.name)).toEqual({ ok: false, error: "content-gone" });
+  });
+
+  it("deletes the uploaded content when its size cannot be read, and the error still reaches the caller", async () => {
+    const storage = memoryStorage();
+    const name = await anUploadedFile(storage);
+    const failing = { ...storage, size: () => Promise.reject(new Error("Blob is down")) };
+
+    await expect(
+      withUploadedContent(
+        { ...at("2026-10-18T10:10:00Z", storage), storage: failing },
+        { name, owner: { machineId } },
+        () => {
+          throw new Error("the command must not run");
+        },
+      ),
+    ).rejects.toThrow("Blob is down");
+    expect(storage.read(name)).toBeUndefined();
   });
 });

@@ -7,9 +7,16 @@ export type MemoryStorage = ContentStorage & {
   names(): string[];
   /**
    * What the browser does with an upload address (ST-085): stores the content under the address's name – refused, like
-   * Blob refuses it, when the content is larger than the address allows or the address is no longer valid at `at`.
+   * Blob refuses it, when the address is no longer valid at `at`, or when content uploaded in one piece is larger than
+   * the address allows. Like Blob, an upload in parts (`multipart`, above 20 MB) is not held to the size limit.
    */
-  upload(address: UploadAddress, bytes: Uint8Array, contentType: string, at: Date): Promise<void>;
+  upload(
+    address: UploadAddress,
+    bytes: Uint8Array,
+    contentType: string,
+    at: Date,
+    options?: { multipart?: boolean },
+  ): Promise<void>;
 };
 
 /**
@@ -31,10 +38,10 @@ export function memoryStorage(): MemoryStorage {
     async uploadAddress(name, { maximumSize, validUntil }) {
       return { name, maximumSize, validUntil: validUntil.toISOString() };
     },
-    async upload(address, bytes, contentType, at) {
+    async upload(address, bytes, contentType, at, { multipart = false } = {}) {
       const { name, maximumSize, validUntil } = address as { name: string; maximumSize: number; validUntil: string };
       if (at.getTime() > new Date(validUntil).getTime()) throw new Error("upload address expired");
-      if (bytes.length > maximumSize) throw new Error("content too large for the upload address");
+      if (!multipart && bytes.length > maximumSize) throw new Error("content too large for the upload address");
       stored.set(name, { bytes, contentType });
     },
     async size(name) {

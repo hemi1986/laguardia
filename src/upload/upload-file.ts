@@ -20,7 +20,11 @@ export type UploadError = "too-large" | "not-uploaded";
  */
 export async function uploadFile(
   file: File,
-  { owner, maximumSize, onProgress }: { owner: UploadOwner; maximumSize?: number; onProgress?: (percent: number) => void },
+  {
+    owner,
+    maximumSize,
+    onProgress,
+  }: { owner: UploadOwner; maximumSize?: number; onProgress?: (percent: number) => void },
 ): Promise<{ ok: true; name: string; storeAddress: string } | { ok: false; error: UploadError }> {
   if (file.size > FILE_SIZE_LIMIT) return { ok: false, error: "too-large" };
   try {

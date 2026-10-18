@@ -3,7 +3,7 @@ import { and, eq, gt } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import type { ContentStorage, UploadAddress } from "@/platform/storage";
-import { FILE_SIZE_LIMIT } from "./limits";
+import { contentName, FILE_SIZE_LIMIT } from "./limits";
 import { pendingUpload } from "./schema";
 
 /** Who uploaded content belongs to – a machine or a machine model (`AGG-File`: exactly one of them). */
@@ -23,7 +23,7 @@ export async function recordPendingUpload(
   { db, clock, newId }: UploadDependencies,
   request: { issuedTo: string; owner: UploadOwner; maximumSize?: number },
 ): Promise<{ ok: true; name: string } | { ok: false; error: "unknown-owner" }> {
-  const name = `files/${newId()}`;
+  const name = contentName(newId());
   try {
     await db.insert(pendingUpload).values({
       name,

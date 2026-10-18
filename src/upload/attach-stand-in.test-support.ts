@@ -25,6 +25,11 @@ export const attachForTest = aggregateCommand({
     const state = { id: newId(), content: input.content };
     return { ok: true as const, state, events: [{ type: "EVT-TestAttached" as const, id: state.id }] };
   },
-  journal: (event) => ({ type: event.type, aggregate: { type: "AGG-TestAttached", id: event.id }, machineId: null, data: {} }),
+  journal: (event) => ({
+    type: event.type,
+    aggregate: { type: "AGG-TestAttached", id: event.id },
+    machineId: null,
+    data: {},
+  }),
   result: (state) => ({ content: state.content }),
 });
