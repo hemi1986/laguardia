@@ -23,6 +23,8 @@ src/
   platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs,
                     storage seam (`storage/`, ST-016)
   photo/            photo module (ST-002, ST-016): `index.ts` (server) and `browser.ts` (client) are its public interface
+  upload/           direct uploads from the browser (ST-085, ADR 0009): pending uploads, attaching, cleanup – `index.ts`
+                    (server) and `browser.ts` (client) are its public interface
   test-support/     test data builders, test database – only for tests (ST-067 enforces it)
   proxy.ts          CSRF check for every POST to a page; renews the session cookie on every page request
 scripts/            one-off command-line scripts (e.g. `npm run setup:first-technician`), run with tsx
@@ -344,14 +346,44 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   attached and the rejection is not one of the photo errors, whose texts already say what to do – and the form's
   rejection text adds the catalogue sentence. The two older report forms follow in ST-084.
 
-## Photos and stored content (ST-016, ADR 0007)
+## Photos and stored content (ST-016, ADR 0009 – superseding ADR 0007)
 
 - **A photo is stored only through the photo module's `withStoredPhoto`** (store → run the command with the reference → delete if it fails) – in a Server Action via `photoFormAction`. Nobody calls the storage seam's `write` for a photo directly.
-- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page) is injected like the clock and the ID generator: `blobStorage()` in production (the only file that may import `@vercel/blob` – lint), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `blobStorage()` as its default (`PhotoSource`); a runner takes `storage`.
+- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `size`) is injected like the clock and the ID generator: `blobStorage()` in production (the only file that may import `@vercel/blob` – lint), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `blobStorage()` as its default (`PhotoSource`); a runner takes `storage`.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when Blob cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto` (`src/app/(team)/team/problem-report-photo.tsx`).
 - **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020) or a failed command – never as a compensation after a committed one.
+### Files uploaded from the browser (ST-085, ADR 0009)
+
+Files (up to 100 MB, `FILE_SIZE_LIMIT`) never pass through a function: the browser uploads them straight to the private
+store before the attaching form is sent. The upload module (`src/upload/`, below the modules like the photo module) is
+the only way:
+- **Two steps, one route** (`src/app/api/uploads/`): the browser half `uploadFile(file, { owner, onProgress })`
+  (`src/upload/browser.ts`) first asks the route for a name (`recordPendingUpload`: the server names the content
+  `files/<newId()>` and records a **pending upload** – owner, team member, time, size limit), then the Blob client
+  library's `uploadPresigned` asks the same route for the upload address of that name (`uploadAddressOf`: only for
+  the team member it was recorded for, valid 30 minutes). It resolves with the name – what the attaching form sends –
+  or `too-large` / `not-uploaded`, which the form shows instead of attaching nothing. A request may ask for a
+  **stricter** limit than 100 MB (the browser tests do), never a larger one.
+- **The route is not behind the page proxy** (`/api/` is not matched): it checks the Origin (`isSameOrigin` from
+  `src/platform/same-origin.ts`, shared with `src/proxy.ts`) and the team session itself, before anything else. It
+  is written as `uploadRoute(dependencies)` so its tests can pass real requests and the in-memory storage.
+- **Attaching** (CMD-AttachFile, ST-037) goes through `withUploadedContent(dependencies, { name, owner }, run)`: it
+  takes the pending upload (same owner, younger than 24 hours – a row-level delete), checks the stored size, runs the
+  command with the name and deletes the content if the command is rejected or throws. Its own rejections are
+  `uploadedContentErrors`: `content-gone` (no such pending upload, or nothing uploaded – the form says to choose the
+  file again) and `too-large`.
+- **Blob holds only an upload in one piece to the size limit.** An upload in parts (above 20 MB, multipart) is not
+  checked against `maximumSizeInBytes` – found in ST-085 with a 25 MB file under a 21 MB limit. So the size is
+  checked when attaching (`storage.size`), and content above the limit is deleted and refused.
+- **Abandoned uploads** – a form never sent – are cleaned up by `cleanUpAbandonedUploads`: after the response of every
+  name the route gives (`after()`), at most 20 pending uploads older than 24 hours, the oldest first, each deleted with
+  its content in one transaction (a failed content deletion keeps the record for the next time). No scheduler (ADR 0002).
+- **Opening uploaded content**: `viewAddressOf(storage, clock, name)` – 5 minutes, only after the page's access
+  check; the plain store address answers 403.
+- Until ST-037 the technicians' check page `/team/machines/<museum number>/upload-pruefen` (not linked) is the only
+  page that uploads; ST-037's form replaces it.
 - Locally the dev server and the browser tests use a separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`); without it the photo browser tests skip.
 
 ## The event journal
@@ -418,7 +450,7 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 
 ## Security
 
-- Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` must verify their own signature (e.g. Vercel Blob callbacks).
+- Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts Blob upload-completion callbacks.
 - Authorization lives in the command layer, never only in the proxy or a page (ADR 0001).
 - React escapes output; `dangerouslySetInnerHTML` is not used. Security headers: `next.config.ts` (a script CSP follows with ST-070).
 - No personal data in logs or in the journal.
@@ -486,7 +518,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Test infrastructure itself (the reset guard, preparing the browser-test database, ST-083) | the function in `src/test-support/` – a pure check as a unit test, anything touching PostgreSQL against a database of its own (never `laguardia_e2e_test`, which a browser test may be using) | unit / integration | `src/test-support/reset-test-database.test.ts`, `e2e-database.integration.test.ts` |
 | Load time of a page with realistic data (ST-033: the machine record with 5 years of repair history in under 2 s, user 2026-10-14) | the page data function and its view's `renderToStaticMarkup` against an **isolated** database filled through the commands by a test-support builder (`fiveYearsOfRepairHistory`, `src/test-support/repair-history.ts`), timed with `performance.now()` – the slower of two runs. The browser test of the same page checks what it shows, never how long it takes: the dev server compiles on the first request | integration | `src/app/(team)/team/machines/[museumNumber]/machine-record-load.integration.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
-| Code that stores content (ST-016, user 2026-10-04): the photo module's store-run-delete, a form with a photo, a page that shows a photo | `withStoredPhoto` / `photoFormRunner({ …, storage: memoryStorage() })` / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. The Blob adapter itself only in the photo browser test (Development Blob store) | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts` |
+| Code that stores content (ST-016, user 2026-10-04; uploads ST-085): the photo module's store-run-delete, a form with a photo, a page that shows a photo; the upload address, attaching uploaded content, the cleanup of abandoned uploads | `withStoredPhoto` / `photoFormRunner({ …, storage: memoryStorage() })` / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. Uploads: `recordPendingUpload`/`uploadAddressOf` with `memoryStorage().upload(address, …)` playing the browser, `withUploadedContent` with the stand-in `src/upload/attach-stand-in.test-support.ts`, `cleanUpAbandonedUploads` with `fixedClock` in an isolated database; the route as `uploadRoute({ … })` with real requests and a real login. The Blob adapter itself only in the browser tests (Development Blob store): the photo, and the browser-side upload function `uploadFile` on the check page | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts`, `src/upload/*.integration.test.ts`, `src/app/api/uploads/upload-route.integration.test.ts`, `e2e/file-upload.spec.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
 | Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the browser tests' own dev server (port 3100, `laguardia_e2e_test`) and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |

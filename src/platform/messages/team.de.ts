@@ -518,6 +518,25 @@ export const teamMessages = {
     retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",
     back: "Zurück zum Gerät",
   },
+  /** Checking the direct file upload (ST-085) – a technicians' page, not linked; ST-037's form replaces it. */
+  uploadCheck: {
+    title: (museumNumber: string) => `Datei-Upload prüfen: ${museumNumber}`,
+    back: "Zurück zum Gerät",
+    /** Strings only – the form is a client component. */
+    form: {
+      file: "Datei",
+      maximumSize: "Höchstgröße in Byte (optional)",
+      maximumSizeHint: "Leer lassen für die übliche Grenze von 100 MB.",
+      progress: "Wird hochgeladen … {percent} %",
+      uploaded: "Hochgeladen.",
+      storedSize: "Gespeichert: {size} Byte",
+      open: "Datei öffnen",
+      errors: {
+        "too-large": "Die Datei ist zu groß.",
+        "not-uploaded": "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal versuchen.",
+      },
+    },
+  },
   accounts: {
     title: "Teammitglieder",
     newAccount: "Neues Konto",

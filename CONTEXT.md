@@ -111,6 +111,10 @@ A document or image attached to one machine or one machine model – manual, sch
 _Avoid_: Attachment, upload (as a noun)
 _UI (de)_: Datei
 
+**Pending upload**:
+Technical, not a domain term (ST-085, ADR 0009): content a team member uploaded from the browser for a machine or machine model that no file refers to yet. Attaching it as a file ends it; one older than 24 hours is abandoned and cleaned up. It is not a *File* – the noun "upload" alone still means nothing here.
+_Avoid_: Upload (alone), temporary file
+
 **File category**:
 The fixed kind of a file: *Manual*, *Schematic*, *Photo* or *Other*.
 _Avoid_: File type, format, tag
