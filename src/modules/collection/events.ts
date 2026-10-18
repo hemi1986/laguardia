@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { MachineStatusChanged } from "./change-machine-status";
+import type { MachineModelCorrected } from "./correct-machine-model";
 import type { MachineModelCreated } from "./create-machine-model";
 import type { MachineMoved } from "./move-machine";
 import type { MachineRegistered } from "./register-machine";
@@ -14,6 +15,15 @@ export const collectionEvents = eventCatalogue({
     aggregate: "AGG-MachineModel",
     // A machine model belongs to no machine; its machines refer to it (ST-007).
     project: (event: MachineModelCreated) => ({
+      aggregateId: event.machineModelId,
+      machineId: null,
+      data: { machineCategory: event.machineCategory, technology: event.technology ?? null },
+    }),
+  },
+  "EVT-MachineModelCorrected": {
+    aggregate: "AGG-MachineModel",
+    // Title and manufacturer are typed text and stay in the aggregate (ST-036).
+    project: (event: MachineModelCorrected) => ({
       aggregateId: event.machineModelId,
       machineId: null,
       data: { machineCategory: event.machineCategory, technology: event.technology ?? null },

@@ -1,14 +1,36 @@
 import { asc } from "drizzle-orm";
-import { aggregateStore, type Database } from "@/platform/command";
-import type { MachineModel } from "./create-machine-model";
-import { machineModel } from "./schema";
+import { aggregateStore, history, type Database } from "@/platform/command";
+import type { CategoryChange, MachineModel, MachineModelState } from "./create-machine-model";
+import { machineModel, machineModelCategoryChange } from "./schema";
 
-/** How AGG-MachineModel is stored: one row per machine model, versioned (HS-16). */
+/** The category history of a machine model – append-only (Q13): only the entries not stored yet are inserted. */
+export const categoryHistory = history({
+  table: machineModelCategoryChange,
+  owner: "machineModelId",
+  toEntry: (row): CategoryChange => ({
+    id: row.id,
+    machineCategory: row.machineCategory,
+    technology: row.technology ?? undefined,
+    holdsFrom: row.holdsFrom,
+  }),
+  toRow: (change) => ({
+    id: change.id,
+    machineCategory: change.machineCategory,
+    technology: change.technology ?? null,
+    holdsFrom: change.holdsFrom,
+  }),
+});
+
+/** How AGG-MachineModel is stored: one row per machine model, versioned (HS-16), with its category history (ST-036). */
 export const machineModels = aggregateStore({
   type: "AGG-MachineModel",
   table: machineModel,
-  toState: toMachineModel,
-  toRow: (model: MachineModel) => ({
+  histories: { categoryHistory },
+  toState: (row, histories): MachineModelState => ({
+    ...toMachineModel(row),
+    categoryHistory: histories.categoryHistory,
+  }),
+  toRow: (model: MachineModelState) => ({
     id: model.id,
     title: model.title,
     manufacturer: model.manufacturer,
