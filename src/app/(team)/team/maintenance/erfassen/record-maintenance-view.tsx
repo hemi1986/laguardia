@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { teamMessages } from "@/platform/messages";
 import type { RecordMaintenanceState } from "./actions";
-import type { MaintenanceForRecording } from "./record-maintenance-data";
+import type { RecordMaintenancePageData } from "./record-maintenance-data";
 import { RecordMaintenanceForm } from "./record-maintenance-form";
 
 const { recordMaintenance: texts } = teamMessages;
@@ -14,7 +14,7 @@ export function RecordMaintenancePage({
   data,
   action,
 }: {
-  data: MaintenanceForRecording;
+  data: RecordMaintenancePageData;
   /** The Server Action – none where the page is only looked at (a test of its data). */
   action?: (previous: RecordMaintenanceState, formData: FormData) => Promise<RecordMaintenanceState>;
 }) {

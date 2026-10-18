@@ -12,6 +12,7 @@ import {
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { removeMaintenanceTaskForTest } from "./maintenance.test-support";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
@@ -226,16 +227,23 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
     const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
     const machine = await machineForMaintenance(db, await aMachine());
 
-    expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine, tom)).toEqual({
+    expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine!, tom)).toEqual({
       maintenanceTask: { id: fuses, name: expect.stringContaining("Check fuses"), instruction: "As usual." },
       whyNot: undefined,
       today: "2026-06-10",
       earliest: "2026-06-03",
     });
-    expect((await maintenanceForRecording(db, tenthOfJune, fuses, machine, anna))?.whyNot).toBe(
+    expect((await maintenanceForRecording(db, tenthOfJune, fuses, machine!, anna))?.whyNot).toBe(
       "maintenance-not-suitable-for-helpers",
     );
-    expect(await maintenanceForRecording(db, tenthOfJune, randomUUID(), machine, tom)).toBeUndefined();
-    expect(await maintenanceForRecording(db, tenthOfJune, fuses, undefined, tom)).toBeUndefined();
+    expect(await maintenanceForRecording(db, tenthOfJune, randomUUID(), machine!, tom)).toBeUndefined();
+
+    const removed = await executeCommand(
+      removeMaintenanceTaskForTest,
+      { maintenanceTaskId: fuses, version: await maintenancePlanVersion(db) },
+      { actor: tom, db, clock: tenthOfJune, newId: randomUUID },
+    );
+    if (!removed.ok) throw new Error(removed.error);
+    expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine!, tom)).toBeUndefined();
   });
 });

@@ -107,7 +107,7 @@ export async function maintenanceRecordById(
  * A maintenance task as the form page „Wartung erfassen“ needs it on one machine (ST-044, like `defectForAction`): the
  * task from the plan, why CMD-RecordMaintenance would refuse the team member who asks – none if it would not (G11) –
  * and the dates it accepts: today, preselected, back to the earliest one (D6). The machine is Collection's, as the page
- * passes it (context map). Undefined for a maintenance task not in the plan, or no machine.
+ * passes it (context map). Undefined for a maintenance task not in the plan – removed ones included.
  */
 export type MaintenanceForRecording = {
   maintenanceTask: { id: string; name: string; instruction: string };
@@ -120,11 +120,11 @@ export async function maintenanceForRecording(
   db: Database,
   clock: Clock,
   maintenanceTaskId: string,
-  machine: Omit<MachineForRecording, "id"> | undefined,
+  machine: Omit<MachineForRecording, "id">,
   teamMember: { role: Role },
 ): Promise<MaintenanceForRecording | undefined> {
   const task = (await activeMaintenanceTasks(db)).find((candidate) => candidate.id === maintenanceTaskId);
-  if (!task || !machine) return undefined;
+  if (!task) return undefined;
   const now = today(clock);
   return {
     maintenanceTask: { id: task.id, name: task.name, instruction: task.instruction },

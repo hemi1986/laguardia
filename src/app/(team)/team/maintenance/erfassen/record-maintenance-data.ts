@@ -1,11 +1,11 @@
 import { machineForMaintenance, machineIdOf, machineLabels } from "@/modules/collection";
-import { maintenanceForRecording, type MaintenanceForRecording as Recording } from "@/modules/maintenance";
+import { maintenanceForRecording, type MaintenanceForRecording } from "@/modules/maintenance";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import type { Viewer } from "../../claimant";
 
 /** What the form page „Wartung erfassen“ shows (ST-044): the maintenance task, the machine and the dates allowed. */
-export type MaintenanceForRecording = Recording & {
+export type RecordMaintenancePageData = MaintenanceForRecording & {
   machine: { id: string; museumNumber: string; machineModelTitle: string; location: string };
 };
 
@@ -19,7 +19,7 @@ export async function loadMaintenanceForRecording(
   maintenanceTaskId: string,
   museumNumber: string,
   viewer: Viewer,
-): Promise<MaintenanceForRecording | undefined> {
+): Promise<RecordMaintenancePageData | undefined> {
   const machineId = await machineIdOf(db, museumNumber);
   if (!machineId) return undefined;
   const [facts, labels] = await Promise.all([machineForMaintenance(db, machineId), machineLabels(db, [machineId])]);
