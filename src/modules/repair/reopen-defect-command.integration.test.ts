@@ -5,7 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { anOpenDefectIn } from "@/test-support/defects";
-import { machineRecord } from "@/modules/collection";
+import { changeMachineStatusCommand, machineRecord } from "@/modules/collection";
 import { retireMachineForTest } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
@@ -150,5 +150,22 @@ describe("CMD-ReopenDefect", () => {
       await reopen(defectId, 2, "Cracked again", anna, { machineStatus: "out-of-order", machineVersion: 0 }),
     ).toEqual({ ok: false, error: "not-authorized" });
     expect((await machineRecord(db, await museumNumberOf(machineId)))?.machineStatus).toBe("playable");
+  });
+
+  it("refuses a machine status that is not stricter – an Out of order machine keeps its status while reopening", async () => {
+    const { machineId, defectId } = await aResolvedDefect("Coil burnt");
+    const outOfOrder = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "Power supply" },
+      dependencies(tom, "2026-10-12T11:00:00Z"),
+    );
+    if (!outOfOrder.ok) throw new Error(outOfOrder.error);
+
+    expect(await reopen(defectId, 2, "Burnt again", tom, { machineStatus: "limited", machineVersion: 1 })).toEqual({
+      ok: false,
+      error: "machine-status-not-stricter",
+    });
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+    expect((await machineRecord(db, await museumNumberOf(machineId)))?.machineStatus).toBe("out-of-order");
   });
 });

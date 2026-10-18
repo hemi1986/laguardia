@@ -387,6 +387,7 @@ commands:
     rules:
       - The defect is resolved and its machine is not retired
       - A reason is required
+      - "Only a technician may change the machine status in the same step, and only to a stricter one – as when recording a defect: Playable → Limited or Out of order; Limited → Out of order; a machine that is Out of order or Not on display keeps its status (user, 2026-10-18, ST-030 code review #1)"
 
   # --- Machines ---
   - id: CMD-CreateMachineModel
@@ -504,8 +505,9 @@ policies:
     then: [CMD-ChangeMachineStatus]
     description: >-
       Manual – the technician decides in the same step whether the machine becomes Limited or Out of order.
-      When recording a defect – in triage or in the same step as reporting (CMD-ReportProblem) – the status can only
-      become stricter (rule on CMD-RecordDefect); a machine that is Out of order or Not on display keeps its status.
+      When recording a defect – in triage or in the same step as reporting (CMD-ReportProblem) – or reopening one, the
+      status can only become stricter (rules on CMD-RecordDefect and CMD-ReopenDefect); a machine that is Out of order or
+      Not on display keeps its status.
   - id: POL-ResolvedDefectsReturnMachineToPlay
     name: Machines without open defects return to play
     when: [EVT-DefectResolved]
