@@ -365,7 +365,8 @@ export type MachineForMaintenance = {
   technology: Technology | undefined;
   /**
    * Its machine model's category history, the oldest first (ST-036): the machine category and technology from each
-   * point in time on – a task that newly applies after a correction counts as last done on the correction date.
+   * point in time on – a task that newly applies after a correction counts as last done on the correction date. The
+   * first entry is always the machine model's creation (the migration gave every older model one).
    */
   categoryHistory: { machineCategory: MachineCategory; technology: Technology | undefined; holdsFrom: Date }[];
   registeredAt: Date;

@@ -22,11 +22,11 @@ export const collectionEvents = eventCatalogue({
   },
   "EVT-MachineModelCorrected": {
     aggregate: "AGG-MachineModel",
-    // Title and manufacturer are typed text and stay in the aggregate (ST-036).
+    // Title and manufacturer are typed text and stay in the aggregate; the year is a number, a fact (ST-036).
     project: (event: MachineModelCorrected) => ({
       aggregateId: event.machineModelId,
       machineId: null,
-      data: { machineCategory: event.machineCategory, technology: event.technology ?? null },
+      data: { year: event.year ?? null, machineCategory: event.machineCategory, technology: event.technology ?? null },
     }),
   },
   "EVT-MachineRegistered": {

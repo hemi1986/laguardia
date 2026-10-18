@@ -667,12 +667,13 @@ describe("a machine model correction (ST-036)", () => {
         { actor: tom, db, clock: fixedClock("2025-06-01T09:00:00Z"), newId: randomUUID },
       ),
     );
-    /** Tom corrects the technology on that day – the model's first correction (version 0). */
+    let version = 0;
+    /** Tom corrects the technology on that day, at the version the model has. */
     const technologyCorrected = (newTechnology: Technology, on: string) =>
       run(
         executeCommand(
           correctMachineModelCommand,
-          { machineModelId, version: 0, ...details, technology: newTechnology },
+          { machineModelId, version: version++, ...details, technology: newTechnology },
           { actor: tom, db, clock: fixedClock(`${on}T08:00:00Z`), newId: randomUUID },
         ),
       );
@@ -717,6 +718,23 @@ describe("a machine model correction (ST-036)", () => {
     expect(await listedOn("2026-05-02", monitor)).toEqual([]);
     expect(await maintenanceRecords(db, { machineId: lg020.machineId })).toEqual([
       expect.objectContaining({ maintenanceTaskId: monitor, outcome: "partially-done" }),
+    ]);
+  });
+
+  it("a task that applies again after a second correction counts from that one (ST-036 code review)", async () => {
+    const lg007 = await aMachineOfItsOwnModel("LG-007", "Gorgar", "pinball", "em");
+    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
+      intervalMonths: 3,
+      machineCategory: "pinball",
+      technology: "em",
+    });
+
+    await lg007.technologyCorrected("solid-state", "2026-02-01");
+    await lg007.technologyCorrected("em", "2026-05-04");
+
+    expect(await listedOn("2026-08-03", scoreReels)).toEqual([]);
+    expect((await page("2026-08-04", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-007", lastDone: "2026-05-04", dueSince: "2026-08-04" }),
     ]);
   });
 

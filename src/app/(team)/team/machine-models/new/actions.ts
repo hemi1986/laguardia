@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createMachineModelCommand } from "@/modules/collection";
 import { formAction } from "@/app/_actions/form-action";
 import { requireTechnician } from "../../../../team-session";
-import { createMachineModelFields, createMachineModelInput } from "../create-machine-model-input";
+import { machineModelFields, machineModelInput } from "../machine-model-input";
 
 const MACHINE_MODELS = "/team/machine-models";
 
@@ -14,8 +14,8 @@ const MACHINE_MODELS = "/team/machine-models";
  * technician is back on the list, which names the new machine model (G3).
  */
 const createMachineModel = formAction(createMachineModelCommand, {
-  fields: createMachineModelFields,
-  input: createMachineModelInput,
+  fields: machineModelFields,
+  input: machineModelInput,
   onSuccess: async ({ machineModelId }) => {
     revalidatePath(MACHINE_MODELS);
     redirect(`${MACHINE_MODELS}?created=${encodeURIComponent(machineModelId)}`);

@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { CorrectMachineModelError, MachineCategory, MachineModel, Technology } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import type { MachineModelField } from "./create-machine-model-input";
+import type { MachineModelField } from "./machine-model-input";
 
 const { machineModels: texts, terms } = teamMessages;
 

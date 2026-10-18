@@ -88,7 +88,7 @@ describe("CMD-CorrectMachineModel", () => {
       actor: eva,
       aggregate: { type: "AGG-MachineModel", id: machineModelId },
     });
-    expect(corrected.data).toEqual({ machineCategory: "pinball", technology: "lcd" });
+    expect(corrected.data).toEqual({ year: 1979, machineCategory: "pinball", technology: "lcd" });
   });
 
   it("ST-036: Technology must fit the machine category", async () => {

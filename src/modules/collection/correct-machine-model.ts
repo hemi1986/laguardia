@@ -23,6 +23,7 @@ export type CorrectMachineModelInput = CreateMachineModelInput & { machineModelI
 export type MachineModelCorrected = {
   type: "EVT-MachineModelCorrected";
   machineModelId: string;
+  year?: number;
   machineCategory: MachineCategory;
   technology?: Technology;
 };
@@ -51,6 +52,8 @@ export function correctMachineModel(
         ? [...model.categoryHistory, { id: newId(), machineCategory, technology, holdsFrom: clock.now() }]
         : model.categoryHistory,
     },
-    events: [{ type: "EVT-MachineModelCorrected", machineModelId: model.id, machineCategory, technology }],
+    events: [
+      { type: "EVT-MachineModelCorrected", machineModelId: model.id, year: details.year, machineCategory, technology },
+    ],
   };
 }

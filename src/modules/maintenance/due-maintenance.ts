@@ -2,6 +2,7 @@ import type { MachineCategory, MachineForMaintenance, Technology } from "@/modul
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { addDays, calendarDate, graceDays, maintenanceDates, today, type CalendarDate } from "@/platform/time";
+import type { MaintenanceTask } from "./maintenance-plan";
 import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 import { lastDoneByRecord, lastDoneKey } from "./maintenance-records";
 
@@ -112,7 +113,7 @@ export async function dueMaintenance(
  * creation (or the history is empty), where the registration and the start date already count.
  */
 function appliesSinceCorrection(
-  task: Parameters<typeof maintenanceTaskAppliesTo>[0],
+  task: Pick<MaintenanceTask, "machineCategory" | "technology">,
   history: MachineForMaintenance["categoryHistory"],
 ): Date | undefined {
   let runStart: number | undefined;

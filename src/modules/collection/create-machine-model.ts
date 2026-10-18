@@ -26,7 +26,6 @@ export function technologiesOf(machineCategory: MachineCategory): readonly Techn
   return technologiesPerCategory[machineCategory];
 }
 
-/** Who may create a machine model – the allowed actors of CMD-CreateMachineModel. */
 /** Who may create or correct a machine model – the allowed actors of CMD-CreateMachineModel and CMD-CorrectMachineModel. */
 export const machineModelActors = ["technician"] as const;
 

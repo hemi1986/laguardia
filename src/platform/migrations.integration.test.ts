@@ -63,4 +63,18 @@ describe("migration 0023_machine_model_category_history", () => {
       { machine_category: "pinball", technology: "solid-state", from_creation: true },
     ]);
   });
+
+  it("a machine model the journal knows no creation of still gets its first entry (ST-036 code review)", async () => {
+    const db = await isolated.reset("0022_defect_reopening");
+    const galaxian = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${galaxian}, 'Galaxian', 'Namco', 'arcade', 'crt')`);
+
+    await isolated.migrate();
+
+    const { rows } = await db.execute(sql`
+      SELECT machine_category, technology FROM machine_model_category_change WHERE machine_model_id = ${galaxian}`);
+    expect(rows).toEqual([{ machine_category: "arcade", technology: "crt" }]);
+  });
 });
