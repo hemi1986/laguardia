@@ -150,6 +150,39 @@ export const teamMessages = {
     defectResolved: "Defekt behoben",
     wholeRepairHistory: (count: number) => `Ganze Reparaturhistorie (${count})`,
     whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
+    /** Section 8 (ST-037): the files of the machine and its machine model, by file category (G18). */
+    files: "Dateien",
+    noFiles: "Noch keine Dateien zu diesem Gerät oder seinem Modell.",
+    attachFile: "Datei anhängen",
+    /** Next to a file of the machine model – every machine of that model shows it. */
+    ofMachineModel: "Modell",
+    fileAttached: (title: string) => `„${title}“ angehängt.`,
+  },
+  /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
+  fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
+  /** Attaching a file (ST-037) – its own page, reached from the machine record's files section. */
+  attachFile: {
+    title: (museumNumber: string) => `Datei an ${museumNumber} anhängen`,
+    /** Strings only below – the form is a client component. */
+    form: {
+      file: "Datei",
+      fileHint: "Höchstens 100 MB, jedes Format. PDFs und Bilder lassen sich im Browser öffnen.",
+      uploading: "Wird hochgeladen … {percent} %",
+      uploaded: "Hochgeladen: {fileName}",
+      title: "Titel",
+      fileCategory: "Dateikategorie",
+      choose: "Bitte wählen",
+      attachTo: "Anhängen an",
+      onlyMachine: "nur {museumNumber}",
+      allMachinesOfModel: "alle Geräte des Modells {machineModel}",
+      submit: "Datei anhängen",
+      /** After a rejection of the form: whether the chosen file is still attached (G8a, user 2026-10-18). */
+      stillAttached: "Die gewählte Datei ist noch angehängt: {fileName}",
+      chooseAgain: "Die Datei muss erneut ausgewählt werden.",
+      tooLarge: "Dateien dürfen höchstens 100 MB groß sein.",
+      notUploaded: "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal auswählen.",
+    },
+    back: "Zurück zum Gerät",
   },
   /** The technician dashboard (ST-048): what needs a technician right now, in words (G6, G6a, G7). */
   technicianDashboard: {
@@ -518,25 +551,6 @@ export const teamMessages = {
     retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",
     back: "Zurück zum Gerät",
   },
-  /** Checking the direct file upload (ST-085) – a technicians' page, not linked; ST-037's form replaces it. */
-  uploadCheck: {
-    title: (museumNumber: string) => `Datei-Upload prüfen: ${museumNumber}`,
-    back: "Zurück zum Gerät",
-    /** Strings only – the form is a client component. */
-    form: {
-      file: "Datei",
-      maximumSize: "Höchstgröße in Byte (optional)",
-      maximumSizeHint: "Leer lassen für die übliche Grenze von 100 MB.",
-      progress: "Wird hochgeladen … {percent} %",
-      uploaded: "Hochgeladen.",
-      storedSize: "Gespeichert: {size} Byte",
-      open: "Datei öffnen",
-      errors: {
-        "too-large": "Die Datei ist zu groß.",
-        "not-uploaded": "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal versuchen.",
-      },
-    },
-  },
   accounts: {
     title: "Teammitglieder",
     newAccount: "Neues Konto",
@@ -584,6 +598,12 @@ export const teamMessages = {
       "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
     "not-stored": "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden.",
     "title-required": "Bitte einen Titel angeben.",
+    /** Attaching a file (ST-037). */
+    "file-category-required": "Bitte eine Dateikategorie wählen.",
+    "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
+    "file-required": "Bitte eine Datei auswählen.",
+    "content-gone": "Die hochgeladene Datei ist nicht mehr da.",
+    "unknown-machine": "Dieses Gerät gibt es nicht.",
     "manufacturer-required": "Bitte einen Hersteller angeben.",
     "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
     "machine-category-required": "Bitte eine Kategorie wählen.",

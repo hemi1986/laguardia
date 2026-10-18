@@ -5,6 +5,11 @@
  */
 export { FILE_SIZE_LIMIT } from "./limits";
 export { recordPendingUpload, uploadAddressOf, type UploadDependencies, type UploadOwner } from "./pending-uploads";
-export { uploadedContentErrors, withUploadedContent, type UploadedContentError } from "./uploaded-content";
+export {
+  uploadedContentErrors,
+  withUploadedContent,
+  type UploadedContent,
+  type UploadedContentError,
+} from "./uploaded-content";
 export { cleanUpAbandonedUploads } from "./abandoned-uploads";
 export { viewAddressOf } from "./view-address";

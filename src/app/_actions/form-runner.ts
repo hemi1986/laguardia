@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { systemClock } from "@/platform/clock";
+import { database } from "@/platform/database";
 import {
   executeCommand,
   type Actor,
@@ -8,6 +10,7 @@ import {
 } from "@/platform/command";
 import { removePhoto, withStoredPhoto, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
+import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 
 /**
  * The Server Action runner (ST-073, architecture review 2026-09-27 Q9/Q10/Q19) – the one way from a form to a
@@ -71,6 +74,68 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
       if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
       const removed = definition.removesPhoto?.(outcome.result);
       if (removed) await removePhoto(storage ?? blobStorage(), removed);
+      await definition.onSuccess(outcome.result);
+      return null;
+    };
+  };
+}
+
+/**
+ * A form that attaches content uploaded from the browser (ST-037): the field that carries the content's name, whom the
+ * pending upload belongs to, the form's own rejections (checked first), and the input with the uploaded content.
+ */
+export type UploadFormDefinition<Input, Result, Field extends string, Refusal extends string> = Omit<
+  FormDefinition<Input, Result, Field>,
+  "input" | "removesPhoto"
+> & {
+  upload: {
+    /** The field with the uploaded content's name. */
+    field: Field;
+    /** Fields emptied together with it when the content is gone – those that only describe the chosen file. */
+    clearedWith?: readonly Field[];
+    owner: (fields: FormFields<Field>) => UploadOwner;
+  };
+  /** The command's rejections that need nothing but the fields – asked before the content is handed over. */
+  refusal: (fields: FormFields<Field>) => Refusal | undefined;
+  input: (fields: FormFields<Field>, content: UploadedContent) => Input;
+};
+
+/**
+ * The runner of a form that attaches uploaded content (ST-037, ADR 0009): the form's own rejections come first and keep
+ * the uploaded content – the chosen file is still attached for the next send (user, 2026-10-18). Then the command runs
+ * through the upload module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no
+ * content behind, and the form state no longer names it – the file must be chosen again.
+ */
+export function uploadFormRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
+  return function uploadFormAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition: UploadFormDefinition<Input, Result, Field, Refusal>,
+  ) {
+    type State = FormState<CommandError<typeof command> | UploadedContentError | "file-required", Field>;
+    return async (_previous: State, formData: FormData): Promise<State> => {
+      const fields = fieldsOf(formData, definition.fields);
+      const name = fields[definition.upload.field];
+      const refusal = definition.refusal(fields);
+      if (refusal) return { error: refusal, values: valuesOf(fields) };
+      if (!name) return { error: "file-required", values: valuesOf(fields) };
+      const actor = await currentPerson();
+      const outcome = await withUploadedContent(
+        {
+          db: dependencies.db ?? database(),
+          storage: storage ?? blobStorage(),
+          clock: dependencies.clock ?? systemClock,
+          newId: dependencies.newId ?? randomUUID,
+        },
+        { name, owner: definition.upload.owner(fields) },
+        (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
+      );
+      if (!outcome.ok) {
+        const gone = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
+        const values = Object.fromEntries(
+          Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field as Field) ? "" : value]),
+        ) as { readonly [F in Field]: string };
+        return { error: outcome.error, values };
+      }
       await definition.onSuccess(outcome.result);
       return null;
     };

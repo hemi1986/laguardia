@@ -32,8 +32,11 @@ export function memoryStorage(): MemoryStorage {
     async delete(name) {
       stored.delete(name);
     },
-    async viewAddresses(names, validUntil) {
-      return new Map(names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}`]));
+    async viewAddresses(names, validUntil, { download = false } = {}) {
+      const suffix = download ? "&download=1" : "";
+      return new Map(
+        names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}${suffix}`]),
+      );
     },
     async uploadAddress(name, { maximumSize, validUntil }) {
       return { name, maximumSize, validUntil: validUntil.toISOString() };
@@ -44,8 +47,9 @@ export function memoryStorage(): MemoryStorage {
       if (!multipart && bytes.length > maximumSize) throw new Error("content too large for the upload address");
       stored.set(name, { bytes, contentType });
     },
-    async size(name) {
-      return stored.get(name)?.bytes.length;
+    async details(name) {
+      const content = stored.get(name);
+      return content && { size: content.bytes.length, contentType: content.contentType };
     },
     read: (name) => stored.get(name),
     names: () => [...stored.keys()],

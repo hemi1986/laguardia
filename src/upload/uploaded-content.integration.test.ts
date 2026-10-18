@@ -60,7 +60,7 @@ function attach(
     withUploadedContent(at(when, storage), { name, owner }, (content) =>
       executeCommand(
         attachForTest,
-        { content, outcome },
+        { content: content.name, outcome },
         { actor: anna, db, clock: fixedClock(when), newId: randomUUID },
       ),
     );
@@ -153,7 +153,7 @@ describe("attaching uploaded content", () => {
   it("deletes the uploaded content when its size cannot be read, and the error still reaches the caller", async () => {
     const storage = memoryStorage();
     const name = await anUploadedFile(storage);
-    const failing = { ...storage, size: () => Promise.reject(new Error("Blob is down")) };
+    const failing = { ...storage, details: () => Promise.reject(new Error("Blob is down")) };
 
     await expect(
       withUploadedContent(

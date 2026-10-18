@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileAttached]
 depends_on: [ST-001, ST-009, ST-016, ST-085]
 labels: [mvp, files, ui]
-status: ready
+status: done
 ---
 
 ## Story

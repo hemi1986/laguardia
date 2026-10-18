@@ -16,7 +16,7 @@ export function blobStorage(): ContentStorage {
     async delete(name) {
       await del(name);
     },
-    async viewAddresses(names, validUntil) {
+    async viewAddresses(names, validUntil, { download = false } = {}) {
       if (names.length === 0) return new Map();
       const until = validUntil.getTime();
       // One request for a read token per page; every address is then signed here. The signing key stays on the
@@ -30,7 +30,9 @@ export function blobStorage(): ContentStorage {
             access: "private",
             validUntil: until,
           });
-          return [name, presignedUrl] as const;
+          // Blob's `download=1` (as in its `getDownloadUrl`) is not part of the signature: the content comes as an
+          // attachment, never opened in the browser (ST-037).
+          return [name, download ? withDownload(presignedUrl) : presignedUrl] as const;
         }),
       );
       return new Map(signed);
@@ -68,13 +70,20 @@ export function blobStorage(): ContentStorage {
       if (issued.type !== "blob.generate-presigned-url") throw new Error("Blob issued no upload address");
       return issued.presignedUrlPayload;
     },
-    async size(name) {
+    async details(name) {
       try {
-        return (await head(name)).size;
+        const { size, contentType } = await head(name);
+        return { size, contentType };
       } catch (error) {
         if (error instanceof BlobNotFoundError) return undefined;
         throw error;
       }
     },
   };
+}
+
+function withDownload(address: string): string {
+  const url = new URL(address);
+  url.searchParams.set("download", "1");
+  return url.toString();
 }

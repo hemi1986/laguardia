@@ -11,9 +11,13 @@ export type ContentStorage = {
   delete(name: string): Promise<void>;
   /**
    * Addresses to show content, valid until the given time – one call per page, however many it shows. Only issued
-   * after the page's access check.
+   * after the page's access check. With `download`, the browser saves the content instead of opening it (ST-037).
    */
-  viewAddresses(names: readonly string[], validUntil: Date): Promise<Map<string, string>>;
+  viewAddresses(
+    names: readonly string[],
+    validUntil: Date,
+    options?: { download?: boolean },
+  ): Promise<Map<string, string>>;
   /**
    * A permission for the browser to upload content of at most `maximumSize` bytes under exactly this name, until the
    * given time (ST-085, ADR 0009) – the content then goes straight to the store, never through a function. Only issued
@@ -22,11 +26,14 @@ export type ContentStorage = {
    */
   uploadAddress(name: string, limits: UploadLimits): Promise<UploadAddress>;
   /**
-   * The size in bytes of the content stored under a name – undefined when nothing is. Blob holds an upload in parts to
-   * no size limit (ST-085), so whoever attaches uploaded content checks its size here.
+   * What the store says about the content under a name – its size in bytes and its media type – or undefined when
+   * nothing is stored there. Blob holds an upload in parts to no size limit (ST-085), so whoever attaches uploaded
+   * content checks its size here; the media type is the one the store keeps, not what a form claims (ST-037).
    */
-  size(name: string): Promise<number | undefined>;
+  details(name: string): Promise<ContentDetails | undefined>;
 };
+
+export type ContentDetails = { size: number; contentType: string };
 
 export type UploadLimits = { maximumSize: number; validUntil: Date };
 

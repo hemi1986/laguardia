@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt } from "drizzle-orm";
-import type { CommandResult } from "@/platform/command";
+import { isId, type CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
 import { abandonedUntil } from "./limits";
 import type { UploadDependencies, UploadOwner } from "./pending-uploads";
@@ -9,6 +9,9 @@ import { pendingUpload } from "./schema";
 /** Why uploaded content cannot be attached – each needs a text in the attaching form (ST-037). */
 export const uploadedContentErrors = ["content-gone", "too-large"] as const;
 export type UploadedContentError = (typeof uploadedContentErrors)[number];
+
+/** Uploaded content as the attaching command keeps it: its name, and its size and media type as the store has them. */
+export type UploadedContent = { name: string; size: number; contentType: string };
 
 /**
  * The one way to attach content uploaded from the browser (ST-085, ADR 0009, for CMD-AttachFile in ST-037): take the
@@ -21,8 +24,11 @@ export type UploadedContentError = (typeof uploadedContentErrors)[number];
 export async function withUploadedContent<Result, Error extends string>(
   { db, storage, clock }: UploadDependencies,
   uploaded: { name: string; owner: UploadOwner },
-  run: (content: string) => Promise<CommandResult<Result, Error>>,
+  run: (content: UploadedContent) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
+  // An owner that is no ID names no pending upload – a forged form field, not a database error.
+  const ownerId = "machineId" in uploaded.owner ? uploaded.owner.machineId : uploaded.owner.machineModelId;
+  if (!isId(ownerId)) return { ok: false, error: "content-gone" };
   const youngest = abandonedUntil(clock.now());
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
   // is either attached or cleaned up, never both (ADR 0009).
@@ -46,9 +52,12 @@ export async function withUploadedContent<Result, Error extends string>(
   try {
     // Blob holds an upload in one piece to the upload address's size limit, but not an upload in parts (above 20 MB,
     // found in ST-085) – so the size is checked here too, before the command runs.
-    const size = await storage.size(uploaded.name);
-    if (size === undefined) return { ok: false, error: "content-gone" };
-    outcome = size > taken[0].maximumSize ? { ok: false, error: "too-large" } : await run(uploaded.name);
+    const details = await storage.details(uploaded.name);
+    if (details === undefined) return { ok: false, error: "content-gone" };
+    outcome =
+      details.size > taken[0].maximumSize
+        ? { ok: false, error: "too-large" }
+        : await run({ name: uploaded.name, ...details });
   } catch (error) {
     await deleteQuietly(storage, uploaded.name);
     throw error;

@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 37 of 59 domain stories done** · scenarios 327 of 505
+**Progress: 38 of 59 domain stories done** · scenarios 339 of 505
 
-**84 stories** · In Progress: 0 · Ready: 29 · In Review: 0 · Draft: 3 · Done: 52
+**84 stories** · In Progress: 0 · Ready: 28 · In Review: 0 · Draft: 3 · Done: 53
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
 | [ST-039](ST-039-retire-machine.md) | Retire a machine, closing its open defects and problem reports | story | Collection | should | M | high | ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | should | M | medium | ST-044 |
@@ -104,5 +103,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
 | [ST-034](ST-034-move-machine.md) | Move a machine to a new location | story | Collection | should | XS | low | ST-009 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | should | M | medium | ST-009, ST-010, ST-043, ST-044 |
-| [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 | [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
+| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
+| [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
