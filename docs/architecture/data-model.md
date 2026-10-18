@@ -263,6 +263,11 @@ Corrections: EVT-MachineModelCorrected (HS-18).
 | | | Year | `Year` | no | EVT-MachineModelCreated, EVT-MachineModelCorrected |
 | | | Machine category | `MachineCategory` | yes | EVT-MachineModelCreated, EVT-MachineModelCorrected |
 | | | Technology | `Technology` | no | EVT-MachineModelCreated, EVT-MachineModelCorrected |
+| Category change | Entity | Machine category | `MachineCategory` | yes | EVT-MachineModelCreated, EVT-MachineModelCorrected |
+| | | Technology | `Technology` | no | EVT-MachineModelCreated, EVT-MachineModelCorrected |
+| | | Holds from | `Timestamp` | yes | EVT-MachineModelCreated, EVT-MachineModelCorrected (occurrence) |
+
+The **category history** is append-only, like the machine status history: its first entry holds the machine category and technology given at creation, and every correction that changes either appends one with the correction's point in time (ST-036, user 2026-10-18). Collection publishes it for Maintenance, which needs to know since when a maintenance task applies to a machine – a task that newly applies counts as last done on the correction date (HS-20, D5). A correction of title, manufacturer or year appends nothing. Machine models created before ST-036 got their first entry from the journal's EVT-MachineModelCreated.
 
 ---
 
