@@ -11,3 +11,4 @@ export {
   type UploadOwner,
 } from "./pending-uploads";
 export { withUploadedContent } from "./uploaded-content";
+export { cleanUpAbandonedUploads } from "./abandoned-uploads";
