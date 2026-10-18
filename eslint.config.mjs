@@ -24,6 +24,7 @@ const eslintConfig = defineConfig([
         { type: "app", pattern: "src/app" },
         { type: "ui", pattern: "src/(components|lib)" },
         { type: "photo", pattern: "src/photo" },
+        { type: "upload", pattern: "src/upload" },
         { type: "shared", pattern: "src/test-support" },
       ],
     },
@@ -60,6 +61,24 @@ const eslintConfig = defineConfig([
               message: "The photo module must not depend on modules or the app – ST-016",
             },
             {
+              // The upload module (ST-085) sits below the modules and the app, like the platform. Its tests may create
+              // a real owner through a module command.
+              from: { element: { type: "upload", fileInternalPath: "!**/*.test.ts" } },
+              disallow: { to: { element: { type: ["module", "app"] } } },
+              message: "The upload module must not depend on modules or the app – ST-085",
+            },
+            {
+              // Pending uploads are taken and cleaned up only through the upload module's public interface (ADR 0009).
+              from: { element: { type: ["app", "module", "platform", "ui", "shared", "photo"], fileInternalPath: "!**/*.test.ts" } },
+              disallow: { to: { element: { type: "upload", fileInternalPath: "!{index,browser}.ts" } } },
+              message: "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
+            },
+            {
+              from: { element: { type: ["app", "module", "platform", "ui", "shared", "photo"], fileInternalPath: "**/*.test.ts" } },
+              disallow: { to: { element: { type: "upload", fileInternalPath: "!{index,browser,*.test-support}.ts" } } },
+              message: "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
+            },
+            {
               from: { element: { type: "module" } },
               disallow: { to: { element: { type: "app" } } },
               message: "A module must not depend on the app – ADR 0002",
@@ -81,7 +100,7 @@ const eslintConfig = defineConfig([
               // their test support only – production code never imports it (ST-067, backlog grooming 2026-10-11).
               from: {
                 element: {
-                  type: ["app", "module", "platform", "ui", "photo"],
+                  type: ["app", "module", "platform", "ui", "photo", "upload"],
                   fileInternalPath: "!**/*.{test,test-support}.ts",
                 },
               },
@@ -125,7 +144,8 @@ const eslintConfig = defineConfig([
     // ST-016 (architecture review Q8): Vercel Blob is reached only through the storage seam's Blob adapter.
     files: ["src/**/*.{ts,tsx}"],
     // src/app/ outside the runner and its tests gets the same pattern from the next block (one rule, one list per file).
-    ignores: ["src/platform/storage/blob-storage.ts"],
+    // The upload module's browser half (ST-085) is the client counterpart: it uploads with the address the adapter issued.
+    ignores: ["src/platform/storage/blob-storage.ts", "src/upload/upload-file.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [blobOnlyInTheAdapter] }],
     },

@@ -169,6 +169,13 @@
       "when": 1792329286685,
       "tag": "0023_machine_model_category_history",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792337179113,
+      "tag": "0024_pending_upload",
+      "breakpoints": true
     }
   ]
 }
