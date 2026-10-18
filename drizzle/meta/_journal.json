@@ -155,6 +155,13 @@
       "when": 1792272124241,
       "tag": "0021_defect_hold",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792275861606,
+      "tag": "0022_defect_reopening",
+      "breakpoints": true
     }
   ]
 }

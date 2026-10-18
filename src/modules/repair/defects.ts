@@ -8,9 +8,12 @@ import {
   type Hold,
   type HoldReason,
   type Priority,
+  type Reopening,
   type Resolution,
   type WorkLogEntry,
 } from "./defect";
+import { machineForReporting } from "@/modules/collection";
+import type { ReopeningFacts } from "./reopen-defect";
 import {
   defectActionRefusals,
   type DefectAction,
@@ -19,7 +22,7 @@ import {
 } from "./defect-actions";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
-import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
+import { defect, defectReopening, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
 
 /** The work log of a defect (ST-024) – append-only (Q13). */
 export const workLog = history({
@@ -48,11 +51,24 @@ export const resolutions = history({
   toRow: (resolution) => resolution,
 });
 
+/** The reopenings of a defect (ST-030) – append-only (Q13). */
+export const reopenings = history({
+  table: defectReopening,
+  owner: "defectId",
+  toEntry: (row): Reopening => ({
+    id: row.id,
+    reason: row.reason,
+    reopenedBy: row.reopenedBy,
+    reopenedAt: row.reopenedAt,
+  }),
+  toRow: (reopening) => reopening,
+});
+
 /** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), with its work log and its resolutions. */
 export const defects = aggregateStore({
   type: "AGG-Defect",
   table: defect,
-  histories: { workLog, resolutions },
+  histories: { workLog, resolutions, reopenings },
   toState: (row, histories): Defect => ({
     id: row.id,
     machineId: row.machineId,
@@ -67,6 +83,7 @@ export const defects = aggregateStore({
     ...holdOf(row),
     workLog: histories.workLog,
     resolutions: histories.resolutions,
+    reopenings: histories.reopenings,
   }),
   // null, not undefined: an update leaves out undefined columns, and a claim must be removable (ST-026).
   toRow: (state: Defect) => ({
@@ -263,6 +280,9 @@ export type DefectDetails = {
   workLog: WorkLogEntry[];
   /** How it ended – the resolution that made it resolved (ST-028); none while it is open. */
   resolution: Omit<Resolution, "id"> | undefined;
+  /** Every resolution and every reopening, the oldest first (ST-030) – a reopened defect keeps them all. */
+  resolutions: Resolution[];
+  reopenings: Reopening[];
   problemReports: DefectProblemReport[];
 };
 
@@ -290,13 +310,15 @@ export async function defectDetails(
     version,
     claim: stored.claim,
     hold: stored.hold,
-    actions: teamMember && defectActionRefusals(stored, teamMember),
+    actions: teamMember && defectActionRefusals(stored, teamMember, await reopeningFacts(db, stored)),
     workLog: stored.workLog,
     resolution: resolution && {
       closingNote: resolution.closingNote,
       resolvedBy: resolution.resolvedBy,
       resolvedAt: resolution.resolvedAt,
     },
+    resolutions: stored.resolutions,
+    reopenings: stored.reopenings,
     problemReports: await problemReportsOfDefect(db, stored),
   };
 }
@@ -320,7 +342,16 @@ export async function defectForAction<Action extends DefectAction>(
 ): Promise<DefectForAction<Action> | undefined> {
   const loaded = await loadDefect(db, defectId);
   if (!loaded) return undefined;
-  return { ...loaded.state, version: loaded.version, whyNot: defectActionRefusals(loaded.state, teamMember)[action] };
+  const whyNot = defectActionRefusals(loaded.state, teamMember, await reopeningFacts(db, loaded.state))[action];
+  return { ...loaded.state, version: loaded.version, whyNot };
+}
+
+/**
+ * What CMD-ReopenDefect reads besides the defect – its machine as Collection knows it now (context map), so no page
+ * offers reopening a defect of a retired machine (G11). Read only for a resolved defect, the one that can be reopened.
+ */
+async function reopeningFacts(db: Database, defect: Defect): Promise<ReopeningFacts | undefined> {
+  return defect.state === "resolved" ? { machine: await machineForReporting(db, defect.machineId) } : undefined;
 }
 
 /** The defect through its store – the one mapping from its rows to its state (ST-018). */

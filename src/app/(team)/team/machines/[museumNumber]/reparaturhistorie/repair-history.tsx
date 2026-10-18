@@ -85,15 +85,25 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
         {defects.recordedAt(formatDateTime(entry.recordedAt))}
         {entry.state === "open" && ` · ${texts.defectOpen}`}
       </p>
-      {[...entry.resolutions].reverse().map((resolution) => (
-        <div key={resolution.id} className="flex flex-col gap-1">
-          <p className="font-medium">{terms["Closing note"]}</p>
-          <p className="whitespace-pre-line">{resolution.closingNote}</p>
-          <p className="text-muted-foreground">
-            {defects.resolvedBy(who(resolution.resolvedBy), formatDateTime(resolution.resolvedAt))}
-          </p>
-        </div>
-      ))}
+      {/* Every closing note, each followed by the reason it was reopened – in the order they happened (ST-030). */}
+      {entry.resolutionsAndReopenings.map((step) =>
+        step.kind === "resolution" ? (
+          <div key={step.id} className="flex flex-col gap-1">
+            <p className="font-medium">{terms["Closing note"]}</p>
+            <p className="whitespace-pre-line">{step.closingNote}</p>
+            <p className="text-muted-foreground">
+              {defects.resolvedBy(who(step.resolvedBy), formatDateTime(step.resolvedAt))}
+            </p>
+          </div>
+        ) : (
+          <div key={step.id} className="flex flex-col gap-1">
+            <p className="font-medium">
+              {defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}
+            </p>
+            <p className="whitespace-pre-line">{step.reason}</p>
+          </div>
+        ),
+      )}
       {entry.workLog.length > 0 && (
         <div className="flex flex-col gap-1">
           <p className="font-medium">{defects.workLog}</p>
@@ -113,3 +123,4 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
     </article>
   );
 }
+

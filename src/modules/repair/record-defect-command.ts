@@ -1,7 +1,7 @@
-import { changeMachineStatusCommand } from "@/modules/collection";
+import { changeMachineStatusCommand, type MachineStatus } from "@/modules/collection";
 import { aggregateCommand, run } from "@/platform/command";
 import { problemReports, reportingFacts } from "./problem-reports";
-import { recordDefect, recordingActors, type DefectRecorded, type RecordDefectInput } from "./record-defect";
+import { recordDefect, recordingActors, type DefectRecorded } from "./record-defect";
 import { repairEvents } from "./events";
 
 /**
@@ -13,14 +13,14 @@ import { repairEvents } from "./events";
 const NO_VERSION_SEEN = -1;
 
 /**
- * The stricter machine status chosen in the same step as recording a defect (HS-3): Collection's
+ * The stricter machine status chosen in the same step as recording or reopening a defect (HS-3, ST-030): Collection's
  * CMD-ChangeMachineStatus, run as the same technician in the same transaction – none when the status stays. The
  * status history's reason is the defect's title. Without the version the technician saw, a chosen status ends as a
  * conflict – it is never skipped.
  */
 export function statusChangeWithDefect(
-  event: DefectRecorded,
-  chosen: Pick<RecordDefectInput, "machineStatus" | "machineVersion">,
+  event: Pick<DefectRecorded, "machineId" | "title">,
+  chosen: { machineStatus?: MachineStatus; machineVersion?: number },
 ) {
   if (!chosen.machineStatus) return [];
   return [

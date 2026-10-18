@@ -9,7 +9,7 @@ risk: low
 events: [EVT-DefectReopened, EVT-MachineStatusChanged]
 depends_on: [ST-012, ST-018, ST-028, ST-033]
 labels: [mvp, defect-work, ui]
-status: ready
+status: done
 ---
 
 ## Story

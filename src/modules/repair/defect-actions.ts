@@ -6,6 +6,7 @@ import { logWorkRefusal, type LogWorkError } from "./log-work";
 import { prioritizeRefusal } from "./prioritize-defect";
 import { putOnHoldRefusal } from "./put-defect-on-hold";
 import { releaseRefusal, type ReleaseClaimError } from "./release-claim";
+import { reopenRefusal, type ReopeningFacts } from "./reopen-defect";
 import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
 import { resumeRefusal } from "./resume-defect";
 
@@ -22,6 +23,7 @@ export const defectActions = [
   "put-on-hold",
   "resume",
   "resolve",
+  "reopen",
   "assign",
   "prioritize",
 ] as const;
@@ -36,6 +38,8 @@ export type DefectActionRefusals = {
   "put-on-hold": ReturnType<typeof putOnHoldRefusal>;
   resume: ReturnType<typeof resumeRefusal>;
   resolve: Exclude<ResolveDefectError, "closing-note-required"> | undefined;
+  /** Whether it can be reopened – its machine being retired included, when the asker knows the machine. */
+  reopen: ReturnType<typeof reopenRefusal>;
   /** Whether they may assign it at all – whom to is asked per team member (`assigneeRefusal`). */
   assign: ReturnType<typeof assignRefusal>;
   /** Whether they may change its priority at all – to which one is the form's choice. */
@@ -49,6 +53,7 @@ export type DefectTeamMember = { teamMemberId: TeamMemberId; role: Role };
 export function defectActionRefusals(
   defect: Pick<Defect, "state" | "suitableForHelpers" | "claim" | "hold">,
   teamMember: DefectTeamMember,
+  reopening?: ReopeningFacts,
 ): DefectActionRefusals {
   return {
     claim: claimRefusal(defect, teamMember),
@@ -57,6 +62,7 @@ export function defectActionRefusals(
     "put-on-hold": putOnHoldRefusal(defect, teamMember),
     resume: resumeRefusal(defect, teamMember),
     resolve: resolveRefusal(defect, teamMember),
+    reopen: reopenRefusal(defect, reopening),
     assign: assignRefusal(defect, teamMember),
     prioritize: prioritizeRefusal(defect, teamMember),
   };
@@ -69,6 +75,7 @@ const actionOfEvent = {
   "EVT-DefectPutOnHold": "put-on-hold",
   "EVT-DefectResumed": "resume",
   "EVT-DefectResolved": "resolve",
+  "EVT-DefectReopened": "reopen",
   "EVT-DefectPrioritized": "prioritize",
 } as const satisfies Partial<Record<keyof typeof repairEvents.entries, DefectAction>>;
 

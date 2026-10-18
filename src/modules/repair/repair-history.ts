@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Database, TeamMemberId } from "@/platform/command";
-import type { DefectState, Resolution, WorkLogEntry } from "./defect";
-import { resolutions, workLog } from "./defects";
+import type { DefectState, Reopening, Resolution, WorkLogEntry } from "./defect";
+import { reopenings, resolutions, workLog } from "./defects";
 import { defect, defectResolution, problemReport } from "./schema";
 
 /**
@@ -19,6 +19,8 @@ export type RepairHistoryEntry =
       workLog: WorkLogEntry[];
       /** One per resolve, the oldest first – none while it was never resolved. */
       resolutions: Resolution[];
+      /** One per reopen, the oldest first (ST-030) – each follows the resolution before it. */
+      reopenings: Reopening[];
     }
   | {
       kind: "resolved-on-the-spot";
@@ -57,13 +59,18 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
       .where(resolvedOnTheSpotOf(machineId)),
   ]);
   const ids = defects.map((row) => row.id);
-  const [workLogs, resolutionsByDefect] = await Promise.all([workLog.load(db, ids), resolutions.load(db, ids)]);
+  const [workLogs, resolutionsByDefect, reopeningsByDefect] = await Promise.all([
+    workLog.load(db, ids),
+    resolutions.load(db, ids),
+    reopenings.load(db, ids),
+  ]);
   const entries: RepairHistoryEntry[] = [
     ...defects.map((row) => ({
       kind: "defect" as const,
       ...row,
       workLog: workLogs.get(row.id) ?? [],
       resolutions: resolutionsByDefect.get(row.id) ?? [],
+      reopenings: reopeningsByDefect.get(row.id) ?? [],
     })),
     // Resolved on the spot: triaged, with its note – all three set together (ST-019).
     ...resolvedOnTheSpot.flatMap(({ note, resolvedBy, resolvedAt, description, ...row }) =>

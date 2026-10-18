@@ -1,8 +1,9 @@
-import { machineLabels } from "@/modules/collection";
+import { machineForTeamForm, machineLabels, type MachineStatus } from "@/modules/collection";
 import {
   defectActions,
   defectDetails,
   lastDefectActionBy,
+  resolutionsAndReopenings,
   type DefectAction,
   type HoldReason,
   type Priority,
@@ -55,12 +56,28 @@ export type DefectDetailsData = {
    * after an assignment also with whom it was assigned to, by name. Undefined unless they are just back from doing it
    * and nobody acted since.
    */
-  confirmed: { action: DefectAction; takenOverFrom: string | undefined; assignedTo: string | undefined } | undefined;
-  /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
-  resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date } | undefined;
+  confirmed:
+    | {
+        action: DefectAction;
+        takenOverFrom: string | undefined;
+        assignedTo: string | undefined;
+        /** The machine's status after reopening with a status change in the same step (ST-030, as in ST-018). */
+        newMachineStatus: MachineStatus | undefined;
+      }
+    | undefined;
+  /**
+   * How it ended each time and why it was reopened (ST-028, ST-030) – the oldest first, each reopening after the
+   * resolution it followed; team members by name. Empty while it was never resolved.
+   */
+  resolutionsAndReopenings: ShownResolutionOrReopening[];
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
   workLog: ShownWorkLogEntry[];
 };
+
+/** A resolution or a reopening on the defect's page. */
+export type ShownResolutionOrReopening =
+  | { kind: "resolution"; id: string; closingNote: string; resolvedBy: string; resolvedAt: Date }
+  | { kind: "reopening"; id: string; reason: string; reopenedBy: string; reopenedAt: Date };
 
 /** A work log entry on the defect's page. */
 export type ShownWorkLogEntry = {
@@ -81,7 +98,12 @@ export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  { storage = blobStorage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: string } = {},
+  {
+    storage = blobStorage(),
+    viewer,
+    done,
+    statusChanged = false,
+  }: PhotoSource & { viewer?: Viewer; done?: string; statusChanged?: boolean } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
@@ -99,7 +121,8 @@ export async function loadDefectDetails(
       ...(defect.claim ? [defect.claim.claimedBy] : []),
       ...(assignedBy ? [assignedBy] : []),
       ...(previousClaimant ? [previousClaimant] : []),
-      ...(defect.resolution ? [defect.resolution.resolvedBy] : []),
+      ...defect.resolutions.map((resolution) => resolution.resolvedBy),
+      ...defect.reopenings.map((reopening) => reopening.reopenedBy),
       ...defect.workLog.map((entry) => entry.loggedBy),
     ]),
     photoViewAddresses(
@@ -109,6 +132,11 @@ export async function loadDefectDetails(
     ),
   ]);
   const machine = machines.get(defect.machineId);
+  // The machine's status is read only to confirm a status change made while reopening (ST-030).
+  const newMachineStatus =
+    confirmed?.action === "reopen" && statusChanged && machine
+      ? (await machineForTeamForm(db, machine.museumNumber))?.machineStatus
+      : undefined;
   return {
     title: defect.title,
     museumNumber: machine?.museumNumber ?? "",
@@ -138,12 +166,13 @@ export async function loadDefectDetails(
       // Whom it was assigned to is its claimant: the assignment is the defect's latest event.
       assignedTo:
         confirmed.assignedTo && (nameOf(names, confirmed.assignedTo)),
+      newMachineStatus,
     },
-    resolution: defect.resolution && {
-      closingNote: defect.resolution.closingNote,
-      resolvedBy: nameOf(names, defect.resolution.resolvedBy),
-      resolvedAt: defect.resolution.resolvedAt,
-    },
+    resolutionsAndReopenings: resolutionsAndReopenings(defect).map((step) =>
+      step.kind === "resolution"
+        ? { ...step, resolvedBy: nameOf(names, step.resolvedBy) }
+        : { ...step, reopenedBy: nameOf(names, step.reopenedBy) },
+    ),
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,

@@ -411,6 +411,15 @@ export const teamMessages = {
     resolveSubmit: "Als behoben eintragen",
     backToDefect: "Zurück zum Defekt",
     /**
+     * Reopening a resolved defect (ST-030, G22): „Wieder öffnen“ under its closing note leads to its form page; the
+     * page of a reopened defect says who reopened it, when and why, after the closing note it followed.
+     */
+    reopen: "Wieder öffnen",
+    reopenTitle: (museumNumber: string) => `Defekt wieder öffnen · ${museumNumber}`,
+    reopenReason: "Warum wieder öffnen?",
+    reopened: (title: string) => `„${title}“ ist wieder offen.`,
+    reopenedBy: (name: string, dateTime: string) => `Wieder geöffnet von ${name} am ${dateTime}`,
+    /**
      * Putting a defect on hold (ST-029, G22): „Pausieren“ in the work group leads to its form page; the confirmation
      * names the reason. „Fortsetzen“ stands in its place while the defect is on hold – one tap.
      */
@@ -569,6 +578,9 @@ export const teamMessages = {
     "priority-unchanged": "Der Defekt hat diese Priorität schon. Bitte eine andere wählen.",
     /** Releasing a claim (ST-026). */
     "not-claimed": "Diesen Defekt hat gerade niemand übernommen.",
+    /** Reopening a defect (ST-030). */
+    "defect-not-resolved": "Nur ein behobener Defekt kann wieder geöffnet werden.",
+    "reopen-reason-required": "Bitte angeben, warum der Defekt wieder geöffnet wird.",
     /** Putting a defect on hold and resuming it (ST-029). */
     "defect-on-hold": "Dieser Defekt ist schon pausiert.",
     "defect-not-on-hold": "Dieser Defekt ist nicht pausiert.",

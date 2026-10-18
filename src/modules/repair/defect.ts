@@ -35,6 +35,27 @@ export type Hold = { reason: HoldReason; note: string | undefined; heldAt: Date 
 export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
 
 /**
+ * The Reopening entity of AGG-Defect (data model, ST-030): why a resolved defect is open again, who reopened it and
+ * when – one per reopen, stored after the resolution it follows and never changed (Q13). The reason is typed text.
+ */
+export type Reopening = { id: string; reason: string; reopenedBy: TeamMemberId; reopenedAt: Date };
+
+/** A resolution or a reopening of a defect, tagged – one step of how it ended and came back (ST-030). */
+export type ResolutionOrReopening = ({ kind: "resolution" } & Resolution) | ({ kind: "reopening" } & Reopening);
+
+/**
+ * A defect's resolutions and reopenings in the order they happened, the oldest first – they alternate, each reopening
+ * after the resolution it followed (data model, ST-030).
+ */
+export function resolutionsAndReopenings(defect: Pick<Defect, "resolutions" | "reopenings">): ResolutionOrReopening[] {
+  const at = (step: ResolutionOrReopening) => (step.kind === "resolution" ? step.resolvedAt : step.reopenedAt);
+  return [
+    ...defect.resolutions.map((resolution) => ({ kind: "resolution" as const, ...resolution })),
+    ...defect.reopenings.map((reopening) => ({ kind: "reopening" as const, ...reopening })),
+  ].sort((a, b) => at(a).getTime() - at(b).getTime());
+}
+
+/**
  * A work log entry of AGG-Defect (data model, ST-024): what a team member did on the defect, and with which parts. Its
  * photos follow with ST-032.
  */
@@ -66,4 +87,6 @@ export type Defect = {
   workLog: WorkLogEntry[];
   /** One per resolve, the oldest first – only added to, never changed (Q13). */
   resolutions: Resolution[];
+  /** One per reopen, the oldest first – only added to, never changed (Q13, ST-030). */
+  reopenings: Reopening[];
 };

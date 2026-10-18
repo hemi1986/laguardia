@@ -23,6 +23,7 @@ function aDefectClaimedBy(teamMemberId?: string): Defect {
       : {}),
     workLog: [],
     resolutions: [],
+    reopenings: [],
   };
 }
 

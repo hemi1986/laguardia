@@ -96,6 +96,27 @@ export const defectResolution = pgTable(
 );
 
 /**
+ * The reopenings of a defect (data model: Reopening entity, ST-030) – one per reopen, so the repair history shows each
+ * closing note followed by the reason it was reopened. Insert-only (Q13); the reason is typed text.
+ */
+export const defectReopening = pgTable(
+  "defect_reopening",
+  {
+    /** The entry's ID from the command's ID generator – the history is saved insert-only by it (Q13). */
+    id: uuid("id").primaryKey(),
+    /** The order the reopenings were stored in. */
+    position: bigserial("position", { mode: "number" }).notNull(),
+    defectId: uuid("defect_id")
+      .notNull()
+      .references(() => defect.id),
+    reason: text("reason").notNull(),
+    reopenedBy: uuid("reopened_by").notNull(),
+    reopenedAt: timestamp("reopened_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("defect_reopening_defect_idx").on(t.defectId)],
+);
+
+/**
  * The work log of a defect (data model: Work log entry entity, ST-024) – entries are only added, never changed or
  * removed. logged_by is a TeamMemberId; its foreign key to team_member.id is added in the migration. Photos follow with
  * ST-032.

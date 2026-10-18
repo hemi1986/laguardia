@@ -12,13 +12,14 @@ import { ManageDefect } from "./manage-defect";
 import type { DefectDetailsData } from "./defect-details-data";
 import { ProblemReportPhoto } from "../../problem-report-photo";
 
-const { defects: texts, recordDefect, terms } = teamMessages;
+const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
 
 /** The actions with a form page of their own (G21): where it is and what its button says (G14). */
 const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, { path: string; label: string }> = {
   "log-work": { path: "arbeitsschritt", label: texts.logWork },
   "put-on-hold": { path: "pausieren", label: texts.putOnHold },
   resolve: { path: "beheben", label: texts.resolve },
+  reopen: { path: "wieder-oeffnen", label: texts.reopen },
   assign: { path: "zuweisen", label: texts.assign },
   prioritize: { path: "prioritaet", label: texts.prioritize },
 };
@@ -37,6 +38,7 @@ const confirmations: Record<
   "put-on-hold": (title, { holdReason }) => texts.putOnHoldDone(title, holdReason),
   resume: texts.resumed,
   resolve: texts.resolved,
+  reopen: texts.reopened,
   assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
   prioritize: (title, { priority }) => texts.prioritized(title, priority),
 };
@@ -85,6 +87,8 @@ export function DefectDetailsView({
             holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
           })}
           {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
+          {details.confirmed.newMachineStatus &&
+            ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
         </Confirmation>
       )}
       <section className="flex flex-col gap-1">
@@ -184,14 +188,31 @@ export function DefectDetailsView({
           }
         />
       </section>
-      {details.resolution && (
-        <section className="flex flex-col gap-1">
-          <h2 className="font-semibold">{terms["Closing note"]}</h2>
-          <p className="whitespace-pre-line">{details.resolution.closingNote}</p>
-          <p className="text-muted-foreground text-sm">
-            {texts.resolvedBy(details.resolution.resolvedBy, formatDateTime(details.resolution.resolvedAt))}
-          </p>
-        </section>
+      {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
+      {details.resolutionsAndReopenings.map((step) =>
+        step.kind === "resolution" ? (
+          <section key={step.id} className="flex flex-col gap-1">
+            <h2 className="font-semibold">{terms["Closing note"]}</h2>
+            <p className="whitespace-pre-line">{step.closingNote}</p>
+            <p className="text-muted-foreground text-sm">
+              {texts.resolvedBy(step.resolvedBy, formatDateTime(step.resolvedAt))}
+            </p>
+          </section>
+        ) : (
+          <section key={step.id} className="flex flex-col gap-1">
+            <h2 className="font-semibold">{texts.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}</h2>
+            <p className="whitespace-pre-line">{step.reason}</p>
+          </section>
+        ),
+      )}
+      {/* A resolved defect offers only reopening, under its closing note (G22). */}
+      {details.offered.includes("reopen") && (
+        <Link
+          href={`/team/defects/${details.id}/${formPages.reopen.path}`}
+          className={buttonVariants({ variant: "outline", className: "self-start" })}
+        >
+          {formPages.reopen.label}
+        </Link>
       )}
       <section className="flex flex-col gap-3">
         <h2 className="font-semibold">{texts.workLog}</h2>

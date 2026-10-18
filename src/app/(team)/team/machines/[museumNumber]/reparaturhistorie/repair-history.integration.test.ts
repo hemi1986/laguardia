@@ -9,6 +9,7 @@ import {
   logWorkCommand,
   recordDefectCommand,
   reportProblemCommand,
+  reopenDefectCommand,
   resolveDefectCommand,
   resolveProblemOnTheSpotCommand,
 } from "@/modules/repair";
@@ -143,6 +144,73 @@ describe("the repair history's own page", () => {
     expect(entry).toContain("Lock replaced");
     expect(entry).toContain("Behoben von Eva am 04.09.2026, 12:00");
     expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${coinDoor}"[^>]*>Coin door jammed</a>`));
+  });
+
+  it("ST-030: Repair history shows every resolution of a reopened defect and the reopen reason", async () => {
+    const flipper = await aDefect("Left flipper weak", "2026-09-01T08:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId: flipper, version: 0, closingNote: "Coil replaced" },
+        as(eva, "2026-09-02T10:00:00Z"),
+      ),
+    );
+    await run(
+      executeCommand(
+        reopenDefectCommand,
+        { defectId: flipper, version: 1, reason: "Weak again" },
+        as(anna, "2026-09-05T10:00:00Z"),
+      ),
+    );
+
+    const html = await page("2026");
+
+    const entry = html.slice(html.indexOf("Left flipper weak")).split("</article>")[0];
+    expect(entry).toContain("Coil replaced");
+    expect(entry).toContain("Wieder geöffnet von Anna am 05.09.2026, 12:00");
+    expect(entry).toContain("Weak again");
+    expect(entry.indexOf("Coil replaced")).toBeLessThan(entry.indexOf("Weak again"));
+  });
+
+  it("ST-030: Repair history keeps the order of several resolutions and reopenings", async () => {
+    const flipper = await aDefect("Left flipper weak", "2026-09-01T08:00:00Z");
+    const step = (command: Promise<unknown>) => run(command as Promise<{ ok: true; result: unknown }>);
+    await step(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId: flipper, version: 0, closingNote: "Coil replaced" },
+        as(eva, "2026-09-02T10:00:00Z"),
+      ),
+    );
+    await step(
+      executeCommand(
+        reopenDefectCommand,
+        { defectId: flipper, version: 1, reason: "Weak again" },
+        as(anna, "2026-09-05T10:00:00Z"),
+      ),
+    );
+    await step(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId: flipper, version: 2, closingNote: "Flipper rebuilt" },
+        as(eva, "2026-09-08T10:00:00Z"),
+      ),
+    );
+    await step(
+      executeCommand(
+        reopenDefectCommand,
+        { defectId: flipper, version: 3, reason: "Sticks when warm" },
+        as(anna, "2026-09-12T10:00:00Z"),
+      ),
+    );
+
+    const entry = (await page("2026")).split("Left flipper weak")[1].split("</article>")[0];
+
+    const order = ["Coil replaced", "Weak again", "Flipper rebuilt", "Sticks when warm"].map((text) =>
+      entry.indexOf(text),
+    );
+    expect(order.every((position) => position >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
   it("shows the years first, each with its number of entries – the newest first", async () => {

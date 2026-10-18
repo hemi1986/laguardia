@@ -77,6 +77,7 @@ export function recordDefect(
     state: "open",
     workLog: [],
     resolutions: [],
+    reopenings: [],
   };
   return {
     ok: true,

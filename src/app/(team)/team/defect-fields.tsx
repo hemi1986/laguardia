@@ -80,31 +80,61 @@ export function DefectFields({
         />
         {texts.suitableForHelpers}
       </label>
-      {machine.stricter.length === 0 ? (
-        <p className="text-sm">{texts.statusStays(museumNumber, machines.statuses[machine.status])}</p>
-      ) : (
-        <Field data-invalid={invalid === "machineStatus"}>
-          <FieldLabel htmlFor="machineStatus">{texts.status}</FieldLabel>
-          <FieldDescription id="machineStatus-hint">
-            {texts.currentStatus(museumNumber, machines.statuses[machine.status])}
-          </FieldDescription>
-          <VersionField name="machineVersion" version={machine.version} />
-          <NativeSelect
-            id="machineStatus"
-            name="machineStatus"
-            defaultValue={values?.machineStatus ?? ""}
-            key={`machineStatus-${kept}`}
-            {...marked("machineStatus", "machineStatus-hint")}
-          >
-            <option value="">{texts.keepStatus}</option>
-            {machine.stricter.map((status) => (
-              <option key={status} value={status}>
-                {machines.statuses[status]}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
-      )}
+      <MachineStatusChoice
+        museumNumber={museumNumber}
+        machine={machine}
+        value={values?.machineStatus}
+        kept={kept}
+        aria={marked("machineStatus", "machineStatus-hint")}
+        invalid={invalid === "machineStatus"}
+      />
     </>
+  );
+}
+
+/**
+ * The machine status chosen in the same step as a defect is recorded (ST-018) or reopened (ST-030) – only when there
+ * is a stricter status, „Status nicht ändern“ preselected; otherwise a sentence that the status stays. Posts the
+ * machine's version beside it (HS-16).
+ */
+export function MachineStatusChoice({
+  museumNumber,
+  machine,
+  value,
+  kept,
+  aria,
+  invalid,
+}: {
+  museumNumber: string;
+  machine: { status: MachineStatus; version: number; stricter: MachineStatus[] };
+  value: string | undefined;
+  kept: string;
+  aria: { "aria-invalid"?: true; "aria-describedby"?: string };
+  invalid: boolean;
+}) {
+  if (machine.stricter.length === 0)
+    return <p className="text-sm">{texts.statusStays(museumNumber, machines.statuses[machine.status])}</p>;
+  return (
+    <Field data-invalid={invalid}>
+      <FieldLabel htmlFor="machineStatus">{texts.status}</FieldLabel>
+      <FieldDescription id="machineStatus-hint">
+        {texts.currentStatus(museumNumber, machines.statuses[machine.status])}
+      </FieldDescription>
+      <VersionField name="machineVersion" version={machine.version} />
+      <NativeSelect
+        id="machineStatus"
+        name="machineStatus"
+        defaultValue={value ?? ""}
+        key={`machineStatus-${kept}`}
+        {...aria}
+      >
+        <option value="">{texts.keepStatus}</option>
+        {machine.stricter.map((status) => (
+          <option key={status} value={status}>
+            {machines.statuses[status]}
+          </option>
+        ))}
+      </NativeSelect>
+    </Field>
   );
 }

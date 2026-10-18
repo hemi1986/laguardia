@@ -69,9 +69,15 @@ function isUniqueViolation(error: unknown): boolean {
   return false;
 }
 
-/** Better Auth's own duplicate check – the e-mail it rejects is `<username>@users.invalid` (ADR 0006). */
+/**
+ * Better Auth's own duplicate checks – the e-mail it rejects is `<username>@users.invalid` (ADR 0006), and its username
+ * plugin checks the username itself when the other account was stored between our check and its insert.
+ */
 function isAlreadyTaken(error: unknown): boolean {
-  return error instanceof APIError && error.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL";
+  return (
+    error instanceof APIError &&
+    (error.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" || error.body?.code === "USERNAME_IS_ALREADY_TAKEN")
+  );
 }
 
 /** Sets a team member's role. The role is read again on every request (ST-004), so it applies to the next action. */

@@ -1,5 +1,10 @@
 import { machineIdOf, machineLabels } from "@/modules/collection";
-import { repairHistory, type RepairHistoryEntry } from "@/modules/repair";
+import {
+  repairHistory,
+  resolutionsAndReopenings,
+  type RepairHistoryEntry,
+  type ResolutionOrReopening,
+} from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { calendarDate } from "@/platform/time";
@@ -11,9 +16,13 @@ type DefectEntry = Extract<RepairHistoryEntry, { kind: "defect" }>;
 
 /** An entry of the repair history as its page shows it – who did what by name. */
 export type ShownRepairHistoryEntry =
-  | (Omit<DefectEntry, "workLog" | "resolutions"> & {
+  | (Omit<DefectEntry, "workLog" | "resolutions" | "reopenings"> & {
       workLog: Named<DefectEntry["workLog"][number], "loggedBy">[];
-      resolutions: Named<DefectEntry["resolutions"][number], "resolvedBy">[];
+      /** How it ended each time and why it was reopened, the oldest first (ST-030). */
+      resolutionsAndReopenings: (
+        | Named<Extract<ResolutionOrReopening, { kind: "resolution" }>, "resolvedBy">
+        | Named<Extract<ResolutionOrReopening, { kind: "reopening" }>, "reopenedBy">
+      )[];
     })
   | Named<Extract<RepairHistoryEntry, { kind: "resolved-on-the-spot" }>, "resolvedBy">;
 
@@ -48,7 +57,11 @@ export async function loadRepairHistory(
     db,
     chosen.flatMap((entry) =>
       entry.kind === "defect"
-        ? [...entry.workLog.map((logged) => logged.loggedBy), ...entry.resolutions.map((ended) => ended.resolvedBy)]
+        ? [
+            ...entry.workLog.map((logged) => logged.loggedBy),
+            ...entry.resolutions.map((ended) => ended.resolvedBy),
+            ...entry.reopenings.map((reopened) => reopened.reopenedBy),
+          ]
         : [entry.resolvedBy],
     ),
   );
@@ -62,7 +75,11 @@ export async function loadRepairHistory(
         ? {
             ...entry,
             workLog: entry.workLog.map((logged) => ({ ...logged, loggedBy: names.get(logged.loggedBy) })),
-            resolutions: entry.resolutions.map((ended) => ({ ...ended, resolvedBy: names.get(ended.resolvedBy) })),
+            resolutionsAndReopenings: resolutionsAndReopenings(entry).map((step) =>
+              step.kind === "resolution"
+                ? { ...step, resolvedBy: names.get(step.resolvedBy) }
+                : { ...step, reopenedBy: names.get(step.reopenedBy) },
+            ),
           }
         : { ...entry, resolvedBy: names.get(entry.resolvedBy) },
     ),

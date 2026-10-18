@@ -12,10 +12,22 @@ export { recordDefectCommand } from "./record-defect-command";
 export { stricterMachineStatuses, type RecordDefectError, type RecordDefectInput } from "./record-defect";
 export { resolveProblemOnTheSpotCommand } from "./resolve-problem-on-the-spot-command";
 export type { ResolveProblemOnTheSpotError, ResolveProblemOnTheSpotInput } from "./resolve-problem-on-the-spot";
-export { holdReasons, priorities, type Defect, type Hold, type HoldReason, type Priority, type WorkLogEntry } from "./defect";
+export {
+  holdReasons,
+  priorities,
+  resolutionsAndReopenings,
+  type Defect,
+  type Hold,
+  type HoldReason,
+  type Priority,
+  type ResolutionOrReopening,
+  type WorkLogEntry,
+} from "./defect";
 export { putDefectOnHoldCommand } from "./put-defect-on-hold-command";
 export type { PutDefectOnHoldError, PutDefectOnHoldInput } from "./put-defect-on-hold";
 export { resumeDefectCommand } from "./resume-defect-command";
+export { reopenDefectCommand } from "./reopen-defect-command";
+export type { ReopenDefectError, ReopenDefectInput } from "./reopen-defect";
 export type { ResumeDefectError, ResumeDefectInput } from "./resume-defect";
 export {
   defectDetails,
