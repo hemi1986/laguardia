@@ -647,7 +647,7 @@ describe("a defect's own page", () => {
       // A technician is also offered assigning it (ST-026) and changing its priority (ST-027), and putting it on hold (ST-029).
       expect(toms.details).toMatchObject({
         offered: ["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize"],
-        resolution: undefined,
+        resolutionsAndReopenings: [],
       });
       expect(toms.html).toContain(`href="/team/defects/${defectId}/beheben"`);
       // The address alone (`?done=resolve`) makes the page say nothing.
@@ -670,7 +670,9 @@ describe("a defect's own page", () => {
       expect(annas.details).toMatchObject({
         offered: ["reopen"],
         confirmed: { action: "resolve" },
-        resolution: { closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna" },
+        resolutionsAndReopenings: [
+          { kind: "resolution", closingNote: "Coil stop replaced, flipper tested for 20 minutes", resolvedBy: "Anna" },
+        ],
       });
       expect(annas.html).toContain("Du hast „Left flipper weak“ behoben.");
       expect(annas.html).toContain("Behoben von Anna am 04.10.2026, 11:30");

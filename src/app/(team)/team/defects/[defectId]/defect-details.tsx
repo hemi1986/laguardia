@@ -189,19 +189,19 @@ export function DefectDetailsView({
         />
       </section>
       {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
-      {details.endings.map((ending, index) =>
-        ending.kind === "resolution" ? (
-          <section key={index} className="flex flex-col gap-1">
+      {details.resolutionsAndReopenings.map((step) =>
+        step.kind === "resolution" ? (
+          <section key={step.id} className="flex flex-col gap-1">
             <h2 className="font-semibold">{terms["Closing note"]}</h2>
-            <p className="whitespace-pre-line">{ending.closingNote}</p>
+            <p className="whitespace-pre-line">{step.closingNote}</p>
             <p className="text-muted-foreground text-sm">
-              {texts.resolvedBy(ending.resolvedBy, formatDateTime(ending.resolvedAt))}
+              {texts.resolvedBy(step.resolvedBy, formatDateTime(step.resolvedAt))}
             </p>
           </section>
         ) : (
-          <section key={index} className="flex flex-col gap-1">
-            <h2 className="font-semibold">{texts.reopenedBy(ending.reopenedBy, formatDateTime(ending.reopenedAt))}</h2>
-            <p className="whitespace-pre-line">{ending.reason}</p>
+          <section key={step.id} className="flex flex-col gap-1">
+            <h2 className="font-semibold">{texts.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}</h2>
+            <p className="whitespace-pre-line">{step.reason}</p>
           </section>
         ),
       )}

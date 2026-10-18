@@ -3,6 +3,7 @@ import {
   defectActions,
   defectDetails,
   lastDefectActionBy,
+  resolutionsAndReopenings,
   type DefectAction,
   type HoldReason,
   type Priority,
@@ -64,21 +65,19 @@ export type DefectDetailsData = {
         newMachineStatus: MachineStatus | undefined;
       }
     | undefined;
-  /** How it ended (ST-028) – only for a resolved defect: the closing note, who resolved it, by name, and when. */
-  resolution: { closingNote: string; resolvedBy: string; resolvedAt: Date } | undefined;
   /**
    * How it ended each time and why it was reopened (ST-028, ST-030) – the oldest first, each reopening after the
    * resolution it followed; team members by name. Empty while it was never resolved.
    */
-  endings: ShownEnding[];
+  resolutionsAndReopenings: ShownResolutionOrReopening[];
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
   workLog: ShownWorkLogEntry[];
 };
 
 /** A resolution or a reopening on the defect's page. */
-export type ShownEnding =
-  | { kind: "resolution"; closingNote: string; resolvedBy: string; resolvedAt: Date }
-  | { kind: "reopening"; reason: string; reopenedBy: string; reopenedAt: Date };
+export type ShownResolutionOrReopening =
+  | { kind: "resolution"; id: string; closingNote: string; resolvedBy: string; resolvedAt: Date }
+  | { kind: "reopening"; id: string; reason: string; reopenedBy: string; reopenedAt: Date };
 
 /** A work log entry on the defect's page. */
 export type ShownWorkLogEntry = {
@@ -169,29 +168,11 @@ export async function loadDefectDetails(
         confirmed.assignedTo && (nameOf(names, confirmed.assignedTo)),
       newMachineStatus,
     },
-    resolution: defect.resolution && {
-      closingNote: defect.resolution.closingNote,
-      resolvedBy: nameOf(names, defect.resolution.resolvedBy),
-      resolvedAt: defect.resolution.resolvedAt,
-    },
-    endings: [
-      ...defect.resolutions.map((resolution): ShownEnding & { at: Date } => ({
-        kind: "resolution",
-        closingNote: resolution.closingNote,
-        resolvedBy: nameOf(names, resolution.resolvedBy),
-        resolvedAt: resolution.resolvedAt,
-        at: resolution.resolvedAt,
-      })),
-      ...defect.reopenings.map((reopening): ShownEnding & { at: Date } => ({
-        kind: "reopening",
-        reason: reopening.reason,
-        reopenedBy: nameOf(names, reopening.reopenedBy),
-        reopenedAt: reopening.reopenedAt,
-        at: reopening.reopenedAt,
-      })),
-    ]
-      .sort((a, b) => a.at.getTime() - b.at.getTime())
-      .map(({ at: _at, ...ending }) => ending as ShownEnding),
+    resolutionsAndReopenings: resolutionsAndReopenings(defect).map((step) =>
+      step.kind === "resolution"
+        ? { ...step, resolvedBy: nameOf(names, step.resolvedBy) }
+        : { ...step, reopenedBy: nameOf(names, step.reopenedBy) },
+    ),
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,

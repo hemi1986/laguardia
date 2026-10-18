@@ -86,21 +86,21 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
         {entry.state === "open" && ` · ${texts.defectOpen}`}
       </p>
       {/* Every closing note, each followed by the reason it was reopened – in the order they happened (ST-030). */}
-      {endingsOf(entry).map((ending) =>
-        ending.kind === "resolution" ? (
-          <div key={ending.id} className="flex flex-col gap-1">
+      {entry.resolutionsAndReopenings.map((step) =>
+        step.kind === "resolution" ? (
+          <div key={step.id} className="flex flex-col gap-1">
             <p className="font-medium">{terms["Closing note"]}</p>
-            <p className="whitespace-pre-line">{ending.closingNote}</p>
+            <p className="whitespace-pre-line">{step.closingNote}</p>
             <p className="text-muted-foreground">
-              {defects.resolvedBy(who(ending.resolvedBy), formatDateTime(ending.resolvedAt))}
+              {defects.resolvedBy(who(step.resolvedBy), formatDateTime(step.resolvedAt))}
             </p>
           </div>
         ) : (
-          <div key={ending.id} className="flex flex-col gap-1">
+          <div key={step.id} className="flex flex-col gap-1">
             <p className="font-medium">
-              {defects.reopenedBy(who(ending.reopenedBy), formatDateTime(ending.reopenedAt))}
+              {defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}
             </p>
-            <p className="whitespace-pre-line">{ending.reason}</p>
+            <p className="whitespace-pre-line">{step.reason}</p>
           </div>
         ),
       )}
@@ -124,16 +124,3 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
   );
 }
 
-type ShownDefectEntry = Extract<ShownRepairHistoryEntry, { kind: "defect" }>;
-
-/** A defect's resolutions and reopenings in the order they happened – they alternate (data model). */
-function endingsOf(entry: ShownDefectEntry) {
-  return [
-    ...entry.resolutions.map((resolution) => ({
-      kind: "resolution" as const,
-      at: resolution.resolvedAt,
-      ...resolution,
-    })),
-    ...entry.reopenings.map((reopening) => ({ kind: "reopening" as const, at: reopening.reopenedAt, ...reopening })),
-  ].sort((a, b) => a.at.getTime() - b.at.getTime());
-}

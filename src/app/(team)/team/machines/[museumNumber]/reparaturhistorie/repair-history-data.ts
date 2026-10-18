@@ -1,5 +1,10 @@
 import { machineIdOf, machineLabels } from "@/modules/collection";
-import { repairHistory, type RepairHistoryEntry } from "@/modules/repair";
+import {
+  repairHistory,
+  resolutionsAndReopenings,
+  type RepairHistoryEntry,
+  type ResolutionOrReopening,
+} from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { calendarDate } from "@/platform/time";
@@ -13,8 +18,11 @@ type DefectEntry = Extract<RepairHistoryEntry, { kind: "defect" }>;
 export type ShownRepairHistoryEntry =
   | (Omit<DefectEntry, "workLog" | "resolutions" | "reopenings"> & {
       workLog: Named<DefectEntry["workLog"][number], "loggedBy">[];
-      resolutions: Named<DefectEntry["resolutions"][number], "resolvedBy">[];
-      reopenings: Named<DefectEntry["reopenings"][number], "reopenedBy">[];
+      /** How it ended each time and why it was reopened, the oldest first (ST-030). */
+      resolutionsAndReopenings: (
+        | Named<Extract<ResolutionOrReopening, { kind: "resolution" }>, "resolvedBy">
+        | Named<Extract<ResolutionOrReopening, { kind: "reopening" }>, "reopenedBy">
+      )[];
     })
   | Named<Extract<RepairHistoryEntry, { kind: "resolved-on-the-spot" }>, "resolvedBy">;
 
@@ -67,11 +75,11 @@ export async function loadRepairHistory(
         ? {
             ...entry,
             workLog: entry.workLog.map((logged) => ({ ...logged, loggedBy: names.get(logged.loggedBy) })),
-            resolutions: entry.resolutions.map((ended) => ({ ...ended, resolvedBy: names.get(ended.resolvedBy) })),
-            reopenings: entry.reopenings.map((reopened) => ({
-              ...reopened,
-              reopenedBy: names.get(reopened.reopenedBy),
-            })),
+            resolutionsAndReopenings: resolutionsAndReopenings(entry).map((step) =>
+              step.kind === "resolution"
+                ? { ...step, resolvedBy: names.get(step.resolvedBy) }
+                : { ...step, reopenedBy: names.get(step.reopenedBy) },
+            ),
           }
         : { ...entry, resolvedBy: names.get(entry.resolvedBy) },
     ),

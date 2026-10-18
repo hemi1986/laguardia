@@ -40,6 +40,21 @@ export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemb
  */
 export type Reopening = { id: string; reason: string; reopenedBy: TeamMemberId; reopenedAt: Date };
 
+/** A resolution or a reopening of a defect, tagged – one step of how it ended and came back (ST-030). */
+export type ResolutionOrReopening = ({ kind: "resolution" } & Resolution) | ({ kind: "reopening" } & Reopening);
+
+/**
+ * A defect's resolutions and reopenings in the order they happened, the oldest first – they alternate, each reopening
+ * after the resolution it followed (data model, ST-030).
+ */
+export function resolutionsAndReopenings(defect: Pick<Defect, "resolutions" | "reopenings">): ResolutionOrReopening[] {
+  const at = (step: ResolutionOrReopening) => (step.kind === "resolution" ? step.resolvedAt : step.reopenedAt);
+  return [
+    ...defect.resolutions.map((resolution) => ({ kind: "resolution" as const, ...resolution })),
+    ...defect.reopenings.map((reopening) => ({ kind: "reopening" as const, ...reopening })),
+  ].sort((a, b) => at(a).getTime() - at(b).getTime());
+}
+
 /**
  * A work log entry of AGG-Defect (data model, ST-024): what a team member did on the defect, and with which parts. Its
  * photos follow with ST-032.
