@@ -123,6 +123,9 @@ export const teamMessages = {
     reportProblem: "Problem melden",
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,
     statusChanged: (museumNumber: string, status: string) => `${museumNumber} ist jetzt ${status}.`,
+    /** Section 3 (ST-034): next to the location, for every team member – not for a retired machine. */
+    changeLocation: "Standort ändern",
+    moved: (museumNumber: string, location: string) => `${museumNumber} steht jetzt in „${location}“.`,
     /** Section 4 (ST-033): the machine's open defects – the same entries as the open defects list. */
     openDefects: "Offene Defekte",
     noOpenDefects: "Keine offenen Defekte.",
@@ -491,6 +494,14 @@ export const teamMessages = {
       `Das Gerät ist bereits ${status}. Einen anderen Status können nur Techniker:innen setzen.`,
     back: "Zurück zum Gerät",
   },
+  /** Moving a machine (ST-034) – its own page, reached from the machine record. */
+  machineMove: {
+    title: (museumNumber: string) => `Standort von ${museumNumber} ändern`,
+    submit: "Standort ändern",
+    unchanged: (museumNumber: string, location: string) => `${museumNumber} steht schon in „${location}“.`,
+    retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",
+    back: "Zurück zum Gerät",
+  },
   accounts: {
     title: "Teammitglieder",
     newAccount: "Neues Konto",
@@ -561,6 +572,8 @@ export const teamMessages = {
     "technology-without-machine-category": "Eine Technik geht nur zusammen mit einer Kategorie.",
     "machine-model-required": "Bitte ein Modell wählen.",
     "location-required": "Bitte einen Standort angeben.",
+    /** Moving a machine (ST-034): no change without a change. */
+    "location-unchanged": "Das Gerät steht schon dort. Bitte einen anderen Standort angeben.",
     "machine-status-required": "Bitte einen Status wählen.",
     "museum-number-format":
       "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042 – oder das Feld leer lassen.",

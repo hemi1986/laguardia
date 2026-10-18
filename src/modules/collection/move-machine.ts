@@ -1,4 +1,4 @@
-import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
+import type { Decision } from "@/platform/command";
 import type { Machine } from "./register-machine";
 
 /**
@@ -8,8 +8,6 @@ import type { Machine } from "./register-machine";
 
 /** Who may move a machine – the allowed actors of CMD-MoveMachine. */
 export const movingActors = ["helper", "technician"] as const;
-
-type MovingPerson = ActorOf<(typeof movingActors)[number]>;
 
 /** What the acting person gave (ST-073, Q19): the location as it was typed. */
 export type MoveMachineInput = {
@@ -30,7 +28,6 @@ export type MoveMachineError = "machine-retired" | "location-required" | "locati
 export function moveMachine(
   machine: Machine,
   input: MoveMachineInput,
-  _context: DecisionContext<MovingPerson>,
 ): Decision<Machine, MachineMoved, MoveMachineError> {
   // A retired machine is final (AGG-Machine).
   if (machine.retirement) return { ok: false, error: "machine-retired" };

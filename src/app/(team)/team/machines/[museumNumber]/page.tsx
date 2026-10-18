@@ -35,6 +35,7 @@ export default async function MachineRecordPage({ params, searchParams }: PagePr
           }).length > 0
         }
         statusChanged={query.statusChanged !== undefined && !triagedWhenReporting}
+        moved={query.moved !== undefined && !triagedWhenReporting}
         triagedWhenReporting={triagedWhenReporting}
         problemReported={query.problemReported !== undefined}
       />

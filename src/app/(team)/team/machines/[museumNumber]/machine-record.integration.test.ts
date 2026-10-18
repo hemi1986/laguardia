@@ -179,6 +179,20 @@ describe("the machine record", () => {
     }
   });
 
+  it("offers „Standort ändern“ for an active machine and not for a retired one (ST-034, G11)", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+    const retiredId = await registered("LG-013", "2026-01-15T09:00:00Z");
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId: retiredId, version: 0 },
+      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error("not retired");
+
+    expect(await page("LG-042")).toContain('href="/team/machines/LG-042/standort"');
+    expect(await page("LG-013")).not.toContain("/standort");
+  });
+
   it("offers „Problem melden“ for an active machine and not for a retired one (ST-015, G11)", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
     const retiredId = await registered("LG-013", "2026-01-15T09:00:00Z");
