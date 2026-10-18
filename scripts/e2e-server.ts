@@ -1,12 +1,13 @@
 /**
  * The dev server of the local browser tests (ST-083), started by Playwright (`playwright.config.ts`, webServer):
- * prepares `laguardia_e2e_test` – created if missing, reset, migrated, the e2e technician from E2E_TEAM_USERNAME /
- * E2E_TEAM_PASSWORD –, and only then starts `next dev` on port 3100 with its own distDir `.next-e2e`, so it runs beside
+ * prepares `laguardia_e2e_test` – the previous run's uploads deleted from the Blob store, created if missing, reset,
+ * migrated, the e2e technician from E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD –, and only then starts `next dev` on port 3100 with its own distDir `.next-e2e`, so it runs beside
  * the developer's dev server on 3000 (Next.js allows one per distDir). DATABASE_URL and BETTER_AUTH_URL are set for it
  * explicitly – they override `.env.development.local`, so the development database is never touched.
  */
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { blobStorage } from "@/platform/storage";
 import { e2eDatabaseUrl, prepareE2eDatabase } from "@/test-support/e2e-database";
 
 const E2E_PORT = 3100; // playwright.config.ts waits for this port
@@ -16,9 +17,13 @@ async function main() {
   const username = process.env.E2E_TEAM_USERNAME;
   const password = process.env.E2E_TEAM_PASSWORD;
   if (Boolean(username) !== Boolean(password)) {
-    console.warn("Only one of E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD is set – no e2e technician, the team-page tests skip.");
+    console.warn(
+      "Only one of E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD is set – no e2e technician, the team-page tests skip.",
+    );
   }
-  await prepareE2eDatabase(database, username && password ? { username, password } : undefined);
+  // Without a Blob token the uploads cannot have reached the store – nothing to delete.
+  const storage = process.env.BLOB_READ_WRITE_TOKEN ? blobStorage() : undefined;
+  await prepareE2eDatabase(database, username && password ? { username, password } : undefined, storage);
 
   // `next` through Node itself – no `npx` layer, and it works without a shell on Windows too.
   const next = join(process.cwd(), "node_modules", "next", "dist", "bin", "next"); // Playwright starts us in the root
