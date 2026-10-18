@@ -19,6 +19,7 @@ As a team member, I want to update a machine's location when it is moved, so tha
 Command `CMD-MoveMachine` (any team member – the location is informational, HS-18). Rules:
 - The machine is not retired.
 - The location is free text (e.g. "Hall 2, row 3") and required (`docs/architecture/data-model.md`).
+- The location changes: saving the location the machine already has is rejected, as with the machine status – no change without a change (user, test plan of 2026-10-18).
 - A retired machine cannot be moved (`AGG-Machine`; this scenario belongs here, not in ST-039 – wanted in the backlog grooming of 2026-10-11, applied 2026-10-17).
 UI wording (de): Standort.
 

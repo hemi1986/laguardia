@@ -6,6 +6,8 @@ export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
 export { machineModelsToChooseFrom } from "./machine-models";
+export { moveMachineCommand } from "./move-machine-command";
+export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";
 export { machineStatuses } from "./register-machine";
 export type {
