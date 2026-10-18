@@ -134,7 +134,7 @@ const descriptions = {
 export type DefectAction = keyof typeof descriptions;
 
 /** The actions in the order the defect's page offers them. */
-export const defectActions = Object.keys(descriptions) as DefectAction[];
+export const defectActions = Object.keys(descriptions) as readonly DefectAction[];
 
 /** Per action: why the command would refuse this team member on the defect as it is – undefined when it would not. */
 export type DefectActionRefusals = { [A in DefectAction]: ReturnType<(typeof descriptions)[A]["refusal"]> };

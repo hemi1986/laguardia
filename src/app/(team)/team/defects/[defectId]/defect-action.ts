@@ -11,6 +11,10 @@ type CommandOf<A extends DefectAction> = (typeof defectActionCommands)[A];
 type InputOf<A extends DefectAction> = CommandOf<A> extends Command<infer Input, unknown, string> ? Input : never;
 type ErrorOf<A extends DefectAction> = CommandOf<A> extends Command<never, unknown, infer Error> ? Error : never;
 
+/** Repair's commands per action, typed per action – indexed by `A`, the compiler knows the command is `A`'s own. */
+const commands: { readonly [A in DefectAction]: Command<InputOf<A>, { defectId: string }, ErrorOf<A>> } =
+  defectActionCommands;
+
 /** What `useActionState` holds for a form of the action – the command's error and the form's own fields. */
 export type DefectActionState<A extends DefectAction, Field extends string> = FormState<
   CommandError<Command<never, unknown, ErrorOf<A>>>,
@@ -27,8 +31,7 @@ export function defectFormAction<A extends DefectAction, const Field extends str
   action: A,
   definition: { fields: readonly Field[]; input: (fields: FormFields<Field>) => InputOf<A> },
 ) {
-  // Repair names each action's command; indexed by a type parameter it is one of them – this one.
-  const command = defectActionCommands[action] as unknown as Command<InputOf<A>, { defectId: string }, ErrorOf<A>>;
+  const command = commands[action];
   return async (previous: DefectActionState<A, Field>, formData: FormData): Promise<DefectActionState<A, Field>> => {
     await requireTeamMember(); // the page's access check
     return formAction(command, {

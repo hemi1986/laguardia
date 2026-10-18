@@ -1,4 +1,4 @@
-import { defectActions, type DefectAction } from "@/modules/repair";
+import { defectActions, type DefectAction, type LastDefectAction } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 
 const { defects: texts } = teamMessages;
@@ -9,7 +9,8 @@ export type ConfirmationAbout = {
   priority: string;
   holdReason: string;
   suitableForHelpers: boolean;
-  changedDetails: { title: boolean; suitableForHelpers: boolean; releasedClaimOf: string | undefined } | undefined;
+  /** Repair's answer, with the name of whose claim it released. */
+  changedDetails: LastDefectAction["changedDetails"];
 };
 
 type ActionPage = {
@@ -58,12 +59,12 @@ export const defectActionPages = {
 } as const satisfies { readonly [A in DefectAction]: ActionPage };
 
 /** The actions with a form page of their own. */
-export type FormAction = {
+export type ActionWithFormPage = {
   [A in DefectAction]: (typeof defectActionPages)[A] extends { form: object } ? A : never;
 }[DefectAction];
 
 /** The address of an action's form page on a defect. */
-export function defectFormAddress(defectId: string, action: FormAction): string {
+export function defectFormAddress(defectId: string, action: ActionWithFormPage): string {
   return `/team/defects/${defectId}/${defectActionPages[action].form.path}`;
 }
 
