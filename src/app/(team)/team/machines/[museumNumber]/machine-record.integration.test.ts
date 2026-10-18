@@ -3,7 +3,13 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import {
+  attachFileCommand,
+  changeMachineStatusCommand,
+  createMachineModelCommand,
+  registerMachineCommand,
+  type FileCategory,
+} from "@/modules/collection";
 import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   claimDefectCommand,
@@ -310,4 +316,50 @@ describe("the machine record", () => {
       );
     });
   });
+
+  describe("its files (ST-037)", () => {
+    it("ST-037: No files yet says so", async () => {
+      await registered("LG-050", "2026-10-01T09:00:00Z");
+
+      const files = section(await page("LG-050"), "Dateien");
+
+      expect(files).toContain("Noch keine Dateien zu diesem Gerät oder seinem Modell.");
+      expect(files).toMatch(/<a [^>]*href="\/team\/machines\/LG-050\/datei-anhaengen"[^>]*>Datei anhängen<\/a>/);
+    });
+
+    it("lists the files by file category, those of the machine model marked, each opened through its own address", async () => {
+      const machineId = await registered("LG-042", "2026-10-01T09:00:00Z");
+      const manual = await attached(machineId, "machine-model", "MM Operations Manual", "manual");
+      await attached(machineId, "machine", "LG-042 wiring notes", "other");
+
+      const files = section(await page("LG-042"), "Dateien");
+
+      expect(files.indexOf("Handbuch")).toBeLessThan(files.indexOf("Sonstiges"));
+      expect(files).toMatch(new RegExp(`<a [^>]*href="/team/dateien/${manual}"[^>]*>MM Operations Manual</a><span[^>]*> · Modell</span>`));
+      expect(files).toContain("LG-042 wiring notes");
+      expect(files).not.toContain("Noch keine Dateien");
+    });
+  });
 });
+
+/** A file attached through CMD-AttachFile – its content as the upload module hands it over (ST-085). */
+async function attached(
+  machineId: string,
+  attachTo: "machine" | "machine-model",
+  title: string,
+  fileCategory: FileCategory,
+) {
+  const outcome = await executeCommand(
+    attachFileCommand,
+    {
+      machineId,
+      attachTo,
+      title,
+      fileCategory,
+      content: { name: `files/${randomUUID()}`, size: 1000, contentType: "application/pdf" },
+    },
+    { actor: eva, db, clock: fixedClock(NOW), newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+  return outcome.result.fileId;
+}

@@ -11,7 +11,7 @@ export async function withoutMachines(db: Database): Promise<void> {
   if (!/^laguardia_.+_test$/.test(rows[0].name) || rows[0].name === "laguardia_test") {
     throw new Error(`withoutMachines only empties an isolated test database, not "${rows[0].name}"`);
   }
-  await db.execute(sql`TRUNCATE machine, museum_number, machine_status_change, problem_report CASCADE`);
+  await db.execute(sql`TRUNCATE machine, museum_number, machine_status_change, problem_report, file CASCADE`);
 }
 
 /** Test stand-in for CMD-RetireMachine (ST-039): the machine is retired and leaves the active lists. */

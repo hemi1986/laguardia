@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import { fileCategories } from "@/modules/collection";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
 import type { TriagedWhenReporting } from "./triaged-when-reporting";
 
-const { machineRecord: texts, machines, machineModels, recordDefect, terms } = teamMessages;
+const { machineRecord: texts, machines, machineModels, recordDefect, terms, attachFile } = teamMessages;
 
 /** The confirmations of the triage forms (ST-018, ST-019, ST-022) – the same words, whichever page they follow. */
 function triagedText(triaged: TriagedWhenReporting, museumNumber: string): string {
@@ -39,7 +40,10 @@ export function MachineRecordView({
   moved = false,
   problemReported = false,
   triagedWhenReporting,
+  attached,
 }: {
+  /** Just back from attaching a file: the confirmation names it (G3, ST-037) – only a file this record shows. */
+  attached?: string;
   record: MachineRecordData | undefined;
   museumNumber: string;
   /** Whether the team member may change this machine's status at all (G11) – the page decides it (ST-012). */
@@ -62,6 +66,7 @@ export function MachineRecordView({
     );
   }
   const { machineModel } = record;
+  const attachedFile = attached ? record.files.find((file) => file.id === attached) : undefined;
   const details: [string, string][] = [
     [terms["Serial number"], record.serialNumber ?? texts.noSerialNumber],
     [terms["Machine model"], machineModel.title],
@@ -83,6 +88,7 @@ export function MachineRecordView({
       {moved && <Confirmation>{texts.moved(record.museumNumber, record.location)}</Confirmation>}
       {problemReported && <Confirmation>{texts.problemReported(record.museumNumber)}</Confirmation>}
       {triagedWhenReporting && <Confirmation>{triagedText(triagedWhenReporting, record.museumNumber)}</Confirmation>}
+      {attachedFile && <Confirmation>{texts.fileAttached(attachedFile.title)}</Confirmation>}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(
@@ -194,6 +200,45 @@ export function MachineRecordView({
                 </Link>
               </>
             )}
+          </CardContent>
+        </Card>
+      </section>
+      {/* Section 8 (ST-037): the files of the machine and its machine model, by file category in glossary order. */}
+      <section>
+        <Card>
+          <CardHeader>
+            <CardTitle>{texts.files}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {record.files.length === 0 ? (
+              <p className="text-sm">{texts.noFiles}</p>
+            ) : (
+              fileCategories.map((category) => {
+                const ofCategory = record.files.filter((file) => file.fileCategory === category);
+                if (ofCategory.length === 0) return null;
+                return (
+                  <div key={category} className="flex flex-col gap-1">
+                    <h3 className="text-sm font-medium">{attachFile.form.fileCategories[category]}</h3>
+                    <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
+                      {ofCategory.map((file) => (
+                        <li key={file.id}>
+                          <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
+                            {file.title}
+                          </a>
+                          {file.ofMachineModel && <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })
+            )}
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
+              className={buttonVariants({ variant: "outline", className: "self-start" })}
+            >
+              {texts.attachFile}
+            </Link>
           </CardContent>
         </Card>
       </section>

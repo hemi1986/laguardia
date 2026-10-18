@@ -38,6 +38,7 @@ export default async function MachineRecordPage({ params, searchParams }: PagePr
         moved={query.moved !== undefined && !triagedWhenReporting}
         triagedWhenReporting={triagedWhenReporting}
         problemReported={query.problemReported !== undefined}
+        attached={typeof query.attached === "string" ? query.attached : undefined}
       />
     </Page>
   );
