@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { changeMachineStatusCommand, moveMachineCommand } from "@/modules/collection";
+import { attachFileCommand, changeMachineStatusCommand, moveMachineCommand } from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -40,6 +40,39 @@ describe("the machine record's confirmation", () => {
 
     await executeCommand(reportProblemCommand, { machineId, description: "Display dark" }, { actor: anna, ...at });
     expect(await confirmationOf(machineId, { problemReported: "1" })).toEqual({ kind: "problem-reported" });
+  });
+
+  it("confirms a file the team member just attached, naming it", async () => {
+    await anExistingTeamMember(db, anna);
+    const machineId = await aRegisteredMachine(db);
+    const attached = await executeCommand(
+      attachFileCommand,
+      {
+        machineId,
+        attachTo: "machine",
+        title: "Wiring notes",
+        fileCategory: "other",
+        content: { name: `files/${randomUUID()}`, size: 10, contentType: "application/pdf" },
+      },
+      { actor: anna, db, clock, newId: randomUUID },
+    );
+    if (!attached.ok) throw new Error(attached.error);
+    const record = {
+      id: machineId,
+      files: [
+        { id: attached.result.fileId, title: "Wiring notes", fileCategory: "other" as const, ofMachineModel: false },
+      ],
+    };
+
+    expect(
+      await loadMachineConfirmation(db, clock, anna.teamMemberId, record, { attached: attached.result.fileId }),
+    ).toEqual({
+      kind: "file-attached",
+      title: "Wiring notes",
+    });
+    expect(
+      await loadMachineConfirmation(db, clock, tom.teamMemberId, record, { attached: attached.result.fileId }),
+    ).toBeUndefined();
   });
 
   it("confirms nothing the address only claims – to someone else, or for another action", async () => {

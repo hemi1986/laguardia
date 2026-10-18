@@ -1,7 +1,7 @@
-import { machineLabels, type MachineStatus } from "@/modules/collection";
-import { defectTitle, problemReportForTriage } from "@/modules/repair";
+import { collectionChangesIn, machineLabels, type MachineStatus } from "@/modules/collection";
+import { defectTitle, problemReportForTriage, triageOutcomeIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database } from "@/platform/command";
+import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 
 /**
@@ -15,60 +15,54 @@ export type TriageConfirmation =
   | { outcome: "resolved-on-the-spot"; museumNumber: string }
   | { outcome: "dismissed"; museumNumber: string };
 
-type Query = { [name: string]: string | string[] | undefined };
+/** A page's query as Next.js hands it over – what the address asks a page to confirm. */
+export type AddressQuery = { [name: string]: string | string[] | undefined };
 
-const one = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
+/** One value of the query – none when the address gives it twice. */
+export const oneOf = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
+
+/** Which outcome each address parameter asks for; each names the problem report. */
+const asked = [
+  ["defectRecorded", "defect-recorded"],
+  ["linked", "linked"],
+  ["resolvedOnTheSpot", "resolved-on-the-spot"],
+  ["dismissed", "dismissed"],
+] as const;
 
 /**
- * The confirmation the address asks for (`defectRecorded=<defect>`, `linked=`, `resolvedOnTheSpot=`, `dismissed=<problem
- * report>`) – only when the latest command on it was that outcome and the team member looking at the page ran it
- * (architecture review 2026-10-18). Everything it names is read now; `onMachine` keeps a machine record to its own.
+ * The confirmation the address asks for (`defectRecorded=`, `linked=`, `resolvedOnTheSpot=`, `dismissed=<problem
+ * report>`) – only when the latest command on that problem report gave it that outcome and the team member looking at
+ * the page ran it (architecture review 2026-10-18). Everything it names is read now; `onMachine` keeps a machine record
+ * to its own machine.
  */
 export async function loadTriageConfirmation(
   db: Database,
   clock: Clock,
-  viewer: string,
-  query: Query,
+  viewer: TeamMemberId,
+  query: AddressQuery,
   onMachine?: string,
 ): Promise<TriageConfirmation | undefined> {
-  const defectId = one(query.defectRecorded);
-  if (defectId) {
-    const recorded = await defectTitle(db, defectId);
-    if (!recorded || (onMachine && recorded.machineId !== onMachine)) return undefined;
-    const command = await lastCommandBy(db, { machineId: recorded.machineId }, viewer);
-    const recording = command?.find((entry) => entry.type === "EVT-DefectRecorded" && entry.data.defectId === defectId);
-    if (!recording) return undefined;
-    const statusChange = command!.find(
-      (entry) => entry.type === "EVT-MachineStatusChanged" && entry.aggregate.id === recorded.machineId,
-    );
-    return {
-      outcome: "defect-recorded",
-      museumNumber: await museumNumberOf(db, recorded.machineId),
-      title: recorded.title,
-      newStatus: statusChange?.data.newStatus as MachineStatus | undefined,
-    };
+  const [parameter, outcome] = asked.find(([name]) => oneOf(query[name])) ?? [];
+  const problemReportId = parameter && oneOf(query[parameter]);
+  if (!outcome || !problemReportId) return undefined;
+  const command = await lastCommandBy(db, { aggregateId: problemReportId }, viewer);
+  const triaged = command && triageOutcomeIn(command, problemReportId);
+  if (triaged?.outcome !== outcome) return undefined;
+  const report = await problemReportForTriage(db, clock, problemReportId);
+  if (!report || (onMachine && report.machineId !== onMachine)) return undefined;
+  const museumNumber = (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "";
+  if (triaged.outcome === "resolved-on-the-spot" || triaged.outcome === "dismissed") {
+    return { outcome: triaged.outcome, museumNumber };
   }
-  for (const [parameter, outcome, type] of [
-    ["linked", "linked", "EVT-ProblemReportLinkedToDefect"],
-    ["resolvedOnTheSpot", "resolved-on-the-spot", "EVT-ProblemResolvedOnTheSpot"],
-    ["dismissed", "dismissed", "EVT-ProblemReportDismissed"],
-  ] as const) {
-    const problemReportId = one(query[parameter]);
-    if (!problemReportId) continue;
-    const command = await lastCommandBy(db, { aggregateId: problemReportId }, viewer);
-    if (!command?.some((entry) => entry.type === type)) return undefined;
-    const report = await problemReportForTriage(db, clock, problemReportId);
-    if (!report || report.triageOutcome !== outcome || (onMachine && report.machineId !== onMachine)) return undefined;
-    const museumNumber = await museumNumberOf(db, report.machineId);
-    if (outcome !== "linked") return { outcome, museumNumber };
-    const linkedTo = report.triageDefectId ? await defectTitle(db, report.triageDefectId) : undefined;
-    return linkedTo && { outcome, museumNumber, title: linkedTo.title };
-  }
-  return undefined;
-}
-
-async function museumNumberOf(db: Database, machineId: string): Promise<string> {
-  return (await machineLabels(db, [machineId])).get(machineId)?.museumNumber ?? "";
+  const defect = await defectTitle(db, triaged.defectId);
+  if (!defect) return undefined;
+  if (triaged.outcome === "linked") return { outcome: "linked", museumNumber, title: defect.title };
+  return {
+    outcome: "defect-recorded",
+    museumNumber,
+    title: defect.title,
+    newStatus: collectionChangesIn(command!, report.machineId).statusChangedTo,
+  };
 }
 
 const { recordDefect, resolveOnTheSpot, dismiss, link, machines } = teamMessages;

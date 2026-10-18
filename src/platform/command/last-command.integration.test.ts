@@ -6,6 +6,7 @@ import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { eventJournal } from "../schema";
 import { executeCommand, lastCommandBy } from ".";
 
 /**
@@ -79,5 +80,25 @@ describe("the latest command on a target, if the team member ran it", () => {
     expect(types(await lastCommandBy(db, { aggregateId: reported.result.problemReportId }, anna.teamMemberId))).toEqual(
       ["EVT-ProblemReported", "EVT-DefectRecorded", "EVT-MachineStatusChanged"],
     );
+  });
+
+  it("counts an entry written before the journal knew its command as a command of its own", async () => {
+    await anExistingTeamMember(db, anna);
+    const machineId = await aRegisteredMachine(db);
+    await changeStatus(anna, machineId, 0, "2026-10-18T12:00:00Z");
+    // As the journal held it before: no command ID.
+    await db.insert(eventJournal).values({
+      type: "EVT-MachineMoved",
+      occurredAt: new Date("2026-10-18T12:01:00Z"),
+      actorKind: "team-member",
+      actorTeamMemberId: anna.teamMemberId,
+      actorRole: "technician",
+      aggregateType: "AGG-Machine",
+      aggregateId: machineId,
+      machineId,
+      data: {},
+    });
+
+    expect(types(await lastCommandBy(db, { machineId }, anna.teamMemberId))).toEqual(["EVT-MachineMoved"]);
   });
 });

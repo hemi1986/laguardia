@@ -48,7 +48,10 @@ export function prioritizeRefusal(
  * Why the defect cannot be changed to this priority – undefined when it can. Choosing the priority it has would record
  * no fact (every successful command records one); a page asks it for every priority it offers as a choice (G11).
  */
-export function priorityRefusal(defect: Pick<Defect, "priority">, priority: Priority): "priority-unchanged" | undefined {
+export function priorityRefusal(
+  defect: Pick<Defect, "priority">,
+  priority: Priority,
+): "priority-unchanged" | undefined {
   return priority === defect.priority ? "priority-unchanged" : undefined;
 }
 

@@ -117,7 +117,6 @@ export async function registrationFacts(tx: Database, input: { machineModelId: s
   } satisfies RegistrationFacts;
 }
 
-
 /** One entry of the machine overview (RM-MachineOverview): what tells a machine apart from its neighbours (G5). */
 export type MachineOverviewEntry = {
   id: string;

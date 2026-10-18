@@ -1,4 +1,4 @@
-import { readJournal, type Database, type Role, type TeamMemberId } from "@/platform/command";
+import { entriesOf, lastCommandBy, type Database, type Role, type TeamMemberId } from "@/platform/command";
 import { changeDetailsRefusal } from "./change-defect-details";
 import { assignRefusal, claimRefusal } from "./claim-defect";
 import type { Defect } from "./defect";
@@ -107,10 +107,15 @@ export async function lastDefectActionBy(
   defectId: string,
   teamMemberId: string,
 ): Promise<LastDefectAction | undefined> {
+  // The same rule as every confirmation (G3): the latest command on the defect, run by this team member.
+  const command = await lastCommandBy(db, { aggregateId: defectId }, teamMemberId);
   const types = Object.keys(actionOfEvent) as (keyof typeof actionOfEvent)[];
-  const latest = (await readJournal(db, repairEvents, { aggregateIds: [defectId] })).at(-1);
-  if (!latest || latest.actor.kind !== "team-member" || latest.actor.teamMemberId !== teamMemberId) return undefined;
-  if (!types.some((type) => type === latest.type)) return undefined;
+  const latest =
+    command &&
+    entriesOf(repairEvents, command)
+      .filter((entry) => entry.aggregate.id === defectId && types.some((type) => type === entry.type))
+      .at(-1);
+  if (!latest) return undefined;
   if (latest.type === "EVT-DefectDetailsChanged") {
     return {
       action: "change-details",

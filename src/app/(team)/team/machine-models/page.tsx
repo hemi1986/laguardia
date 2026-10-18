@@ -3,7 +3,8 @@ import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
-import { machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
+import { machineModelChangeIn, machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
+import { lastCommandBy } from "@/platform/command";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
@@ -15,9 +16,15 @@ const { machineModels: texts } = teamMessages;
  * (ST-036). „Neues Modell“ leads to the creation's own page (G2a); back from it, the new model is named (G3).
  */
 export default async function MachineModelsPage({ searchParams }: PageProps<"/team/machine-models">) {
-  await requireTechnician();
+  const member = await requireTechnician();
   const [models, { created }] = await Promise.all([machineModelsToChooseFrom(database()), searchParams]);
-  const createdModel = models.find((model) => model.id === created);
+  // Confirmed only when creating it was the latest command on it and this technician ran it (G3).
+  const creating =
+    typeof created === "string" ? await lastCommandBy(database(), { aggregateId: created }, member.id) : undefined;
+  const createdModel =
+    creating && machineModelChangeIn(creating, created as string).created
+      ? models.find((model) => model.id === created)
+      : undefined;
 
   return (
     <Page title={texts.title}>

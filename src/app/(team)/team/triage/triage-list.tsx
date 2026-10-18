@@ -17,25 +17,25 @@ const { triage: texts } = teamMessages;
  */
 export function TriageListView({
   data,
-  confirmation: triaged,
+  confirmation,
 }: {
   data: { entries: TriageListItem[] };
   /** Just back from a triage outcome (ST-018 – ST-022): what the team member did, as the journal says (G3). */
   confirmation?: TriageConfirmation;
 }) {
   const { entries } = data;
-  const confirmation = triaged && <Confirmation>{triageConfirmationText(triaged)}</Confirmation>;
+  const confirmed = confirmation && <Confirmation>{triageConfirmationText(confirmation)}</Confirmation>;
   if (entries.length === 0) {
     return (
       <>
-        {confirmation}
+        {confirmed}
         <p>{texts.nothing}</p>
       </>
     );
   }
   return (
     <>
-      {confirmation}
+      {confirmed}
       <p>{texts.waiting(entries.length)}</p>
       <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
         {entries.map((entry) => (

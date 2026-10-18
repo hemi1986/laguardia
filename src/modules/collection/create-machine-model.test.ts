@@ -62,8 +62,7 @@ describe("CMD-CreateMachineModel – the decision", () => {
   });
 
   it("takes a four-digit year as a number and no year at all when the field was empty", () => {
-    const withYear = (year: string | undefined) =>
-      createMachineModel(undefined, { ...medievalMadness, year }, context);
+    const withYear = (year: string | undefined) => createMachineModel(undefined, { ...medievalMadness, year }, context);
 
     expect(withYear(" 1997 ").ok && withYear(" 1997 ")).toMatchObject({ state: { year: 1997 } });
     expect(withYear("").ok && withYear("")).toMatchObject({ state: { year: undefined } });

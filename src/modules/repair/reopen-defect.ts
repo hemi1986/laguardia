@@ -81,7 +81,10 @@ export function reopenDefect(
       state: "open",
       claim: undefined,
       hold: undefined,
-      reopenings: [...defect.reopenings, { id: newId(), reason, reopenedBy: actor.teamMemberId, reopenedAt: clock.now() }],
+      reopenings: [
+        ...defect.reopenings,
+        { id: newId(), reason, reopenedBy: actor.teamMemberId, reopenedAt: clock.now() },
+      ],
     },
     events: [
       {

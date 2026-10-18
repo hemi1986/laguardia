@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm";
-import { bigint, bigserial, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigserial, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * The append-only event journal (ADR 0002): every command appends its domain events in its own transaction.
@@ -19,15 +18,15 @@ export const eventJournal = pgTable(
     machineId: text("machine_id"),
     data: jsonb("data").$type<Record<string, unknown>>().notNull(),
     /**
-     * The transaction that wrote the entry – one command, its runs and its policies are one transaction (ADR 0002), so
-     * this tells which entries one command wrote (architecture review 2026-10-18). Set by the database; empty before.
+     * The command that wrote the entry – the same for a command's own events, those of the commands it runs and of its
+     * policies (architecture review 2026-10-18). Given by the command layer; empty for entries written before.
      */
-    transactionId: bigint("transaction_id", { mode: "number" }).default(sql`(pg_current_xact_id()::text)::bigint`),
+    commandId: uuid("command_id"),
   },
   (t) => [
     index("event_journal_aggregate_idx").on(t.aggregateId),
     index("event_journal_machine_idx").on(t.machineId),
     index("event_journal_occurred_at_idx").on(t.occurredAt),
-    index("event_journal_transaction_idx").on(t.transactionId),
+    index("event_journal_command_idx").on(t.commandId),
   ],
 );

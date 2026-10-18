@@ -32,7 +32,8 @@ async function dropDatabase() {
   await client.end();
 }
 
-afterAll(dropDatabase);
+// DROP DATABASE forces a checkpoint – under the load of the whole test run it can take longer than the 10 s default.
+afterAll(dropDatabase, 60_000);
 
 describe("the browser-test database", () => {
   it("is laguardia_e2e_test on the server of the test database – never taken from DATABASE_URL", () => {

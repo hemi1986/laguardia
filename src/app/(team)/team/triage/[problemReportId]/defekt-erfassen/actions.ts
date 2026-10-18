@@ -29,9 +29,9 @@ export async function recordDefectAction(
   const state = await formAction(recordDefectCommand, {
     fields: recordDefectFields,
     input: (fields) => recordDefectInput(fields, problemReportId),
-    onSuccess: async ({ defectId }) => {
+    onSuccess: async () => {
       revalidatePath("/team/triage");
-      redirect(`/team/triage?defectRecorded=${defectId}`);
+      redirect(`/team/triage?defectRecorded=${problemReportId}`);
     },
   })(previous, formData);
   // Name who triaged it first – "Tom hat diese Meldung schon gesichtet." (story review 2026-10-03)

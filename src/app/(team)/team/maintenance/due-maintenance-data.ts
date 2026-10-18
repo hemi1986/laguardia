@@ -2,6 +2,7 @@ import { machineLabels, machinesForMaintenance } from "@/modules/collection";
 import {
   dueMaintenance,
   maintenanceRecordById,
+  maintenanceRecordedIn,
   recordRefusal,
   type DueMachine,
   type DueMaintenanceTask,
@@ -102,7 +103,7 @@ export async function loadDueMaintenance(
 async function confirmedRecord(db: Database, recordId: string | undefined, viewer: Viewer | undefined) {
   if (!recordId || !viewer || !isId(recordId)) return undefined;
   const command = await lastCommandBy(db, { aggregateId: recordId }, viewer.id);
-  if (!command?.some((entry) => entry.type === "EVT-MaintenanceRecorded")) return undefined;
+  if (!command || !maintenanceRecordedIn(command, recordId)) return undefined;
   const record = await maintenanceRecordById(db, recordId);
   if (!record) return undefined;
   const label = (await machineLabels(db, [record.machineId])).get(record.machineId);

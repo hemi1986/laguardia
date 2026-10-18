@@ -80,3 +80,4 @@ export {
   type DefectActionRefusals,
   type DefectTeamMember,
 } from "./defect-actions";
+export { problemReportedIn, triageOutcomeIn, type TriagedInCommand } from "./in-command";

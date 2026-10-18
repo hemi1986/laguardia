@@ -1,9 +1,6 @@
 import { aggregateCommand } from "@/platform/command";
 import { linkingFacts } from "./defects";
-import {
-  linkingActors,
-  linkProblemReportToDefect,
-} from "./link-problem-report-to-defect";
+import { linkingActors, linkProblemReportToDefect } from "./link-problem-report-to-defect";
 import { problemReports } from "./problem-reports";
 import { repairEvents } from "./events";
 

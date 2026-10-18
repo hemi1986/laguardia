@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { reportProblemAndTriageCommand, type ReportProblemAndTriageInput } from "@/modules/repair";
+import {
+  dismissProblemReportCommand,
+  reportProblemCommand,
+  reportProblemAndTriageCommand,
+  type ReportProblemAndTriageInput,
+} from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -45,14 +50,14 @@ const confirm = (query: Record<string, string | string[] | undefined>, viewer = 
 describe("the confirmation after a triage outcome", () => {
   it("names the recorded defect – and the machine's new status only when the same step changed it", async () => {
     const plain = await aRegisteredMachine(db);
-    const { defectId } = await reported(plain, aDefect("Left flipper weak"));
+    const { problemReportId } = await reported(plain, aDefect("Left flipper weak"));
     const changed = await aRegisteredMachine(db);
     const withStatus = await reported(changed, aDefect("Right flipper dead", "out-of-order"));
 
     // The address saying `statusChanged` no longer counts – the journal does.
-    const recorded = await confirm({ defectRecorded: defectId, statusChanged: "1" });
+    const recorded = await confirm({ defectRecorded: problemReportId, statusChanged: "1" });
     expect(recorded).toMatchObject({ outcome: "defect-recorded", title: "Left flipper weak", newStatus: undefined });
-    const recordedWithStatus = await confirm({ defectRecorded: withStatus.defectId! });
+    const recordedWithStatus = await confirm({ defectRecorded: withStatus.problemReportId });
     expect(recordedWithStatus).toMatchObject({ outcome: "defect-recorded", newStatus: "out-of-order" });
     expect(triageConfirmationText(recordedWithStatus!)).toContain("Außer Betrieb");
   });
@@ -72,19 +77,41 @@ describe("the confirmation after a triage outcome", () => {
     });
   });
 
+  it("names the machine of a dismissed problem report", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const visitorReport = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Buy cheap watches" },
+      { actor: { kind: "visitor" }, db, clock, newId: randomUUID },
+    );
+    if (!visitorReport.ok) throw new Error(visitorReport.error);
+    const problemReportId = visitorReport.result.problemReportId;
+    const dismissed = await executeCommand(
+      dismissProblemReportCommand,
+      { problemReportId, version: 0, reason: "spam", reasonText: "" },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!dismissed.ok) throw new Error(dismissed.error);
+
+    expect(await confirm({ dismissed: problemReportId })).toMatchObject({ outcome: "dismissed" });
+    expect(await confirm({ dismissed: problemReportId }, eva.teamMemberId)).toBeUndefined();
+  });
+
   it("confirms nothing to another team member than the one who triaged", async () => {
     const machineId = await aRegisteredMachine(db);
-    const { defectId } = await reported(machineId, aDefect("Left flipper weak"));
+    const recorded = await reported(machineId, aDefect("Left flipper weak"));
     const resolved = await reported(machineId, { outcome: "resolved-on-the-spot", note: "Ball freed" });
 
-    expect(await confirm({ defectRecorded: defectId! }, eva.teamMemberId)).toBeUndefined();
+    expect(await confirm({ defectRecorded: recorded.problemReportId }, eva.teamMemberId)).toBeUndefined();
     expect(await confirm({ resolvedOnTheSpot: resolved.problemReportId }, eva.teamMemberId)).toBeUndefined();
   });
 
   it("confirms nothing the address only claims", async () => {
     const machineId = await aRegisteredMachine(db);
     const elsewhere = await aRegisteredMachine(db);
-    const { defectId } = await reported(elsewhere, aDefect("Tilt bob missing"));
+    const recordedElsewhere = await reported(elsewhere, aDefect("Tilt bob missing"));
+    const defectId = recordedElsewhere.defectId;
     const linkedElsewhere = await reported(elsewhere, { outcome: "linked", defectId: defectId! });
     const resolvedHere = await reported(machineId, { outcome: "resolved-on-the-spot", note: "Ball freed" });
     const defectHere = await reported(machineId, aDefect("Left flipper weak"));
@@ -93,9 +120,11 @@ describe("the confirmation after a triage outcome", () => {
     for (const query of [
       {},
       // of another machine, on this machine's record
-      { defectRecorded: defectId! },
+      { defectRecorded: recordedElsewhere.problemReportId },
       { linked: linkedElsewhere.problemReportId },
+      { resolvedOnTheSpot: linkedElsewhere.problemReportId },
       // of this machine, with another outcome
+      { defectRecorded: linkedHere.problemReportId },
       { resolvedOnTheSpot: linkedHere.problemReportId },
       { linked: resolvedHere.problemReportId },
       // unknown, malformed, or given twice

@@ -117,7 +117,11 @@ describe("CMD-ChangeMachineStatus", () => {
 
   it("ST-012: Retired machines cannot change status", async () => {
     const machineId = await registered("LG-013");
-    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: tom, ...at("2026-03-01T11:00:00Z") });
+    const retired = await executeCommand(
+      retireMachineForTest,
+      { machineId, version: 0 },
+      { actor: tom, ...at("2026-03-01T11:00:00Z") },
+    );
     if (!retired.ok) throw new Error("not retired");
 
     const outcome = await executeCommand(
@@ -159,7 +163,11 @@ describe("CMD-ChangeMachineStatus", () => {
         FOR EACH ROW EXECUTE FUNCTION test_refuse_update();
     `);
     const change = (version: number, machineStatus: MachineStatus, reason: string, instant: string) =>
-      executeCommand(changeMachineStatusCommand, { machineId, version, machineStatus, reason }, { actor: tom, ...at(instant) });
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId, version, machineStatus, reason },
+        { actor: tom, ...at(instant) },
+      );
 
     expect((await change(0, "limited", "left flipper weak", "2026-03-02T14:00:00Z")).ok).toBe(true);
     const [first] = (await machineRecord(db, "LG-042"))!.statusHistory;

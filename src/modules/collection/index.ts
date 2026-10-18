@@ -48,3 +48,4 @@ export {
   type VisitorMachine,
   type MachineOverviewQuery,
 } from "./machines";
+export { collectionChangesIn, fileAttachedIn, machineModelChangeIn, machineRegisteredIn } from "./in-command";

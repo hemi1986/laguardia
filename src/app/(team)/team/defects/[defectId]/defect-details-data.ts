@@ -1,4 +1,4 @@
-import { machineLabels, type MachineStatus } from "@/modules/collection";
+import { collectionChangesIn, machineLabels, type MachineStatus } from "@/modules/collection";
 import {
   defectActions,
   defectDetails,
@@ -138,10 +138,9 @@ export async function loadDefectDetails(
   const machine = machines.get(defect.machineId);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
   // not the address (architecture review 2026-10-18).
-  const reopening = confirmed?.action === "reopen" ? await lastCommandBy(db, { aggregateId: defect.id }, viewer!.id) : undefined;
-  const newMachineStatus = reopening?.find(
-    (entry) => entry.type === "EVT-MachineStatusChanged" && entry.aggregate.id === defect.machineId,
-  )?.data.newStatus as MachineStatus | undefined;
+  const reopening =
+    confirmed?.action === "reopen" && viewer ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id) : undefined;
+  const newMachineStatus = reopening && collectionChangesIn(reopening, defect.machineId).statusChangedTo;
   return {
     title: defect.title,
     museumNumber: machine?.museumNumber ?? "",

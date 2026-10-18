@@ -22,6 +22,6 @@ export async function reportAndRecordDefectAction(
   return reportAndTriage(museumNumber, previous, formData, {
     fields: reportAndRecordDefectFields,
     input: reportAndRecordDefectInput,
-    confirms: ({ defectId }) => `defectRecorded=${defectId ?? ""}`,
+    confirms: ({ problemReportId }) => `defectRecorded=${problemReportId}`,
   });
 }

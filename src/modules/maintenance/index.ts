@@ -23,3 +23,4 @@ export {
   type RecordMaintenanceInput,
 } from "./record-maintenance";
 export { maintenanceRecordById, maintenanceRecords } from "./maintenance-records";
+export { maintenanceRecordedIn, maintenanceTaskAddedBy } from "./in-command";

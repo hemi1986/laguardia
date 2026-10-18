@@ -101,7 +101,11 @@ export function reportProblem(
     ...(input.photo ? { photo: input.photo } : {}),
   };
   const { id: problemReportId, ...reported } = report;
-  return { ok: true, state: report, events: [{ type: "EVT-ProblemReported", problemReportId, ...reported, description }] };
+  return {
+    ok: true,
+    state: report,
+    events: [{ type: "EVT-ProblemReported", problemReportId, ...reported, description }],
+  };
 }
 
 /** The one place a reporter is derived from the acting person (Q5/Q20). */

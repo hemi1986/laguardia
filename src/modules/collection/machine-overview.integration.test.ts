@@ -42,7 +42,12 @@ beforeAll(async () => {
     machineCategory: "pinball",
     technology: "dmd",
   });
-  galaxian = await machineModel({ title: "Galaxian", manufacturer: "Namco", machineCategory: "arcade", technology: "crt" });
+  galaxian = await machineModel({
+    title: "Galaxian",
+    manufacturer: "Namco",
+    machineCategory: "arcade",
+    technology: "crt",
+  });
 });
 
 afterAll(() => isolated.close());
@@ -63,12 +68,32 @@ async function registered(
 
 describe("RM-MachineOverview", () => {
   it("ST-007: The machine overview lists the registered machines", async () => {
-    const second = await registered({ museumNumber: "LG-002", location: "Hall 2, row 1", machineStatus: "out-of-order" });
+    const second = await registered({
+      museumNumber: "LG-002",
+      location: "Hall 2, row 1",
+      machineStatus: "out-of-order",
+    });
     const first = await registered({ museumNumber: "LG-001", location: "Hall 1, row 3", machineStatus: "playable" });
 
     expect(await machineOverview(db)).toEqual([
-      { id: first, museumNumber: "LG-001", machineModelTitle: "Medieval Madness", machineCategory: "pinball", technology: "dmd", location: "Hall 1, row 3", machineStatus: "playable" },
-      { id: second, museumNumber: "LG-002", machineModelTitle: "Medieval Madness", machineCategory: "pinball", technology: "dmd", location: "Hall 2, row 1", machineStatus: "out-of-order" },
+      {
+        id: first,
+        museumNumber: "LG-001",
+        machineModelTitle: "Medieval Madness",
+        machineCategory: "pinball",
+        technology: "dmd",
+        location: "Hall 1, row 3",
+        machineStatus: "playable",
+      },
+      {
+        id: second,
+        museumNumber: "LG-002",
+        machineModelTitle: "Medieval Madness",
+        machineCategory: "pinball",
+        technology: "dmd",
+        location: "Hall 2, row 1",
+        machineStatus: "out-of-order",
+      },
     ]);
   });
 
@@ -142,7 +167,12 @@ describe("RM-MachineOverview", () => {
 
   it("ST-008: Search by museum number", async () => {
     await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
-    await registered({ museumNumber: "LG-142", machineModelId: galaxian, location: "Hall 1", machineStatus: "playable" });
+    await registered({
+      museumNumber: "LG-142",
+      machineModelId: galaxian,
+      location: "Hall 1",
+      machineStatus: "playable",
+    });
     await registered({ museumNumber: "LG-001", location: "Hall 1", machineStatus: "playable" });
 
     expect(museumNumbers(await machineOverview(db, { search: "042" }))).toEqual(["LG-042"]);
@@ -150,7 +180,12 @@ describe("RM-MachineOverview", () => {
 
   it("ST-008: Search by title", async () => {
     await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
-    await registered({ museumNumber: "LG-043", machineModelId: galaxian, location: "Hall 1", machineStatus: "playable" });
+    await registered({
+      museumNumber: "LG-043",
+      machineModelId: galaxian,
+      location: "Hall 1",
+      machineStatus: "playable",
+    });
 
     expect(museumNumbers(await machineOverview(db, { search: "medieval" }))).toEqual(["LG-042"]);
   });
@@ -158,7 +193,12 @@ describe("RM-MachineOverview", () => {
   it("combines the search with the machine status filter", async () => {
     await registered({ museumNumber: "LG-042", location: "Hall 2", machineStatus: "playable" });
     await registered({ museumNumber: "LG-043", location: "Hall 2", machineStatus: "out-of-order" });
-    await registered({ museumNumber: "LG-044", machineModelId: galaxian, location: "Hall 1", machineStatus: "out-of-order" });
+    await registered({
+      museumNumber: "LG-044",
+      machineModelId: galaxian,
+      location: "Hall 1",
+      machineStatus: "out-of-order",
+    });
 
     const found = await machineOverview(db, { search: "Medieval", machineStatus: "out-of-order" });
 
@@ -187,7 +227,11 @@ describe("RM-MachineOverview", () => {
 
 describe("RM-MachineRecord", () => {
   it("has every detail of the machine and its machine model, by museum number", async () => {
-    const machineId = await registered({ museumNumber: "LG-042", location: "Hall 2, row 3", machineStatus: "playable" });
+    const machineId = await registered({
+      museumNumber: "LG-042",
+      location: "Hall 2, row 3",
+      machineStatus: "playable",
+    });
 
     expect(await machineRecord(db, "LG-042")).toEqual({
       id: machineId,

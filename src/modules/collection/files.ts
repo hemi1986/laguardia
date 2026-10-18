@@ -1,6 +1,12 @@
 import { asc, eq, or } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
-import { fileCategories, type AttachFileInput, type AttachingFacts, type FileCategory, type FileState } from "./attach-file";
+import {
+  fileCategories,
+  type AttachFileInput,
+  type AttachingFacts,
+  type FileCategory,
+  type FileState,
+} from "./attach-file";
 import { opensInBrowser } from "./open-file";
 import { file, machine } from "./schema";
 

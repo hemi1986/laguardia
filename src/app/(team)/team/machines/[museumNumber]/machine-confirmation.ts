@@ -1,6 +1,8 @@
+import { collectionChangesIn, fileAttachedIn } from "@/modules/collection";
+import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database } from "@/platform/command";
-import { loadTriageConfirmation, type TriageConfirmation } from "../../triage-confirmation";
+import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
+import { loadTriageConfirmation, oneOf, type AddressQuery, type TriageConfirmation } from "../../triage-confirmation";
 import type { MachineRecordData } from "./machine-record-data";
 
 /**
@@ -14,8 +16,6 @@ export type MachineRecordConfirmation =
   | { kind: "file-attached"; title: string }
   | { kind: "triaged"; triaged: TriageConfirmation };
 
-type Query = { [name: string]: string | string[] | undefined };
-
 /**
  * The confirmation the address asks for – only when the latest command on the machine (or the file) was that action
  * and the team member looking at the page ran it (architecture review 2026-10-18: never from the address alone).
@@ -23,24 +23,25 @@ type Query = { [name: string]: string | string[] | undefined };
 export async function loadMachineConfirmation(
   db: Database,
   clock: Clock,
-  viewer: string,
+  viewer: TeamMemberId,
   record: Pick<MachineRecordData, "id" | "files">,
-  query: Query,
+  query: AddressQuery,
 ): Promise<MachineRecordConfirmation | undefined> {
   const triaged = await loadTriageConfirmation(db, clock, viewer, query, record.id);
   if (triaged) return { kind: "triaged", triaged };
-  const fileId = typeof query.attached === "string" ? query.attached : undefined;
+  const fileId = oneOf(query.attached);
   if (fileId) {
     const file = record.files.find((shown) => shown.id === fileId);
     const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
-    return command?.some((entry) => entry.type === "EVT-FileAttached") ? { kind: "file-attached", title: file!.title } : undefined;
+    return file && command && fileAttachedIn(command, fileId) ? { kind: "file-attached", title: file.title } : undefined;
   }
   const asked = (["statusChanged", "moved", "problemReported"] as const).find((name) => query[name] !== undefined);
   if (!asked) return undefined;
   const command = await lastCommandBy(db, { machineId: record.id }, viewer);
-  const did = (type: string) => command?.some((entry) => entry.type === type) ?? false;
-  if (asked === "statusChanged" && did("EVT-MachineStatusChanged")) return { kind: "status-changed" };
-  if (asked === "moved" && did("EVT-MachineMoved")) return { kind: "moved" };
-  if (asked === "problemReported" && did("EVT-ProblemReported")) return { kind: "problem-reported" };
+  if (!command) return undefined;
+  const changes = collectionChangesIn(command, record.id);
+  if (asked === "statusChanged" && changes.statusChangedTo) return { kind: "status-changed" };
+  if (asked === "moved" && changes.moved) return { kind: "moved" };
+  if (asked === "problemReported" && problemReportedIn(command, record.id)) return { kind: "problem-reported" };
   return undefined;
 }
