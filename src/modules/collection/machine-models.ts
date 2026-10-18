@@ -81,7 +81,10 @@ export type MachineModelForTeam = {
 };
 
 /** The machine model by its ID, with its machine count (ST-036). Undefined for an unknown one or an address that is no ID. */
-export async function machineModelForTeam(db: Database, machineModelId: string): Promise<MachineModelForTeam | undefined> {
+export async function machineModelForTeam(
+  db: Database,
+  machineModelId: string,
+): Promise<MachineModelForTeam | undefined> {
   if (!isId(machineModelId)) return undefined;
   const [row] = await db
     .select({

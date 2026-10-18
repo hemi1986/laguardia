@@ -35,7 +35,8 @@ export type ProblemReportDismissed = {
   removedPhoto: string | undefined;
 };
 
-export type DismissProblemReportError = "already-triaged" | "dismissal-reason-required" | "dismissal-reason-text-required";
+export type DismissProblemReportError =
+  "already-triaged" | "dismissal-reason-required" | "dismissal-reason-text-required";
 
 export function dismissProblemReport(
   report: ProblemReport,

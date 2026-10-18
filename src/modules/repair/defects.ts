@@ -374,4 +374,3 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
     .for("update");
   return { defect: row };
 }
-

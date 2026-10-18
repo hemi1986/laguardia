@@ -18,7 +18,6 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
   const details = await loadDefectDetails(database(), systemClock, defectId, {
     viewer: member,
     done,
-    statusChanged: query.statusChanged === "1",
   });
 
   return (

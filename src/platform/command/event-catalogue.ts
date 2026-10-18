@@ -92,3 +92,15 @@ export async function readJournal<E extends Entries, const Type extends keyof E 
     .orderBy(asc(eventJournal.position));
   return rows.map((row) => journalEntryOf(row) as CatalogueEntry<E, Type>);
 }
+
+/**
+ * The entries of one command (`lastCommandBy`) that are of the catalogue's event types, typed like `readJournal`'s – so
+ * a module answers questions about a command it took part in without anyone matching its event types by string
+ * (architecture review 2026-10-18).
+ */
+export function entriesOf<E extends Entries>(
+  catalogue: EventCatalogue<E>,
+  entries: readonly JournalEntry[],
+): CatalogueEntry<E, keyof E & string>[] {
+  return entries.filter((entry) => entry.type in catalogue.entries) as CatalogueEntry<E, keyof E & string>[];
+}

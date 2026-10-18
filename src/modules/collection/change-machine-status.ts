@@ -64,7 +64,8 @@ export function changeMachineStatus(
   if (machine.retirement) return { ok: false, error: "machine-retired" };
   const newStatus = input.machineStatus;
   if (!newStatus) return { ok: false, error: "machine-status-required" };
-  if (!machineStatusesSettableBy(actor.role).includes(newStatus)) return { ok: false, error: "helpers-only-out-of-order" };
+  if (!machineStatusesSettableBy(actor.role).includes(newStatus))
+    return { ok: false, error: "helpers-only-out-of-order" };
   // No history entry without a change (user, 2026-10-03).
   if (newStatus === machine.machineStatus) return { ok: false, error: "machine-status-unchanged" };
   const reason = input.reason.trim();

@@ -4,14 +4,10 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../reporter";
 import { ProblemReportPhoto } from "../problem-report-photo";
-import type {
-  DefectRecordedConfirmation,
-  LinkedConfirmation,
-  TriagedConfirmation,
-  TriageListItem,
-} from "./triage-list-data";
+import { triageConfirmationText, type TriageConfirmation } from "../triage-confirmation";
+import type { TriageListItem } from "./triage-list-data";
 
-const { triage: texts, recordDefect, resolveOnTheSpot, dismiss, link, machines } = teamMessages;
+const { triage: texts } = teamMessages;
 
 /**
  * The triage list (RM-TriageList, ST-017): every untriaged problem report, the oldest first. An entry shows its
@@ -21,44 +17,25 @@ const { triage: texts, recordDefect, resolveOnTheSpot, dismiss, link, machines }
  */
 export function TriageListView({
   data,
-  defectRecorded,
-  resolvedOnTheSpot,
-  dismissed,
-  linked,
+  confirmation,
 }: {
   data: { entries: TriageListItem[] };
-  /** Just back from recording a defect (ST-018): the confirmation names it, its machine and its new status (G3). */
-  defectRecorded?: DefectRecordedConfirmation;
-  /** Just back from resolving a problem on the spot (ST-019): the confirmation names the machine (G3). */
-  resolvedOnTheSpot?: TriagedConfirmation;
-  /** Just back from dismissing a problem report (ST-020): the confirmation names the machine (G3). */
-  dismissed?: TriagedConfirmation;
-  /** Just back from linking a problem report (ST-022): the confirmation names the machine and the defect (G3). */
-  linked?: LinkedConfirmation;
+  /** Just back from a triage outcome (ST-018 – ST-022): what the team member did, as the journal says (G3). */
+  confirmation?: TriageConfirmation;
 }) {
   const { entries } = data;
-  const confirmation =
-    (defectRecorded && (
-      <Confirmation>
-        {recordDefect.recorded(defectRecorded.title, defectRecorded.museumNumber)}
-        {defectRecorded.newStatus &&
-          recordDefect.statusNow(defectRecorded.museumNumber, machines.statuses[defectRecorded.newStatus])}
-      </Confirmation>
-    )) ||
-    (resolvedOnTheSpot && <Confirmation>{resolveOnTheSpot.resolved(resolvedOnTheSpot.museumNumber)}</Confirmation>) ||
-    (dismissed && <Confirmation>{dismiss.dismissed(dismissed.museumNumber)}</Confirmation>) ||
-    (linked && <Confirmation>{link.linked(linked.museumNumber, linked.title)}</Confirmation>);
+  const confirmed = confirmation && <Confirmation>{triageConfirmationText(confirmation)}</Confirmation>;
   if (entries.length === 0) {
     return (
       <>
-        {confirmation}
+        {confirmed}
         <p>{texts.nothing}</p>
       </>
     );
   }
   return (
     <>
-      {confirmation}
+      {confirmed}
       <p>{texts.waiting(entries.length)}</p>
       <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
         {entries.map((entry) => (

@@ -2,12 +2,13 @@ import { machineLabels, machinesForMaintenance } from "@/modules/collection";
 import {
   dueMaintenance,
   maintenanceRecordById,
+  maintenanceRecordedIn,
   recordRefusal,
   type DueMachine,
   type DueMaintenanceTask,
 } from "@/modules/maintenance";
 import type { Clock } from "@/platform/clock";
-import type { Database } from "@/platform/command";
+import { isId, lastCommandBy, type Database } from "@/platform/command";
 import type { Viewer } from "../claimant";
 
 /** What the due maintenance list is narrowed to (ST-043): only tasks suitable for helpers, and the chosen task. */
@@ -95,11 +96,16 @@ export async function loadDueMaintenance(
   };
 }
 
-/** The machine of the maintenance record the address names – only when it exists and the viewer made it (G3). */
+/**
+ * The machine of the maintenance record the address names – only when recording it was the latest command on it and
+ * the viewer ran it, as everywhere (G3, architecture review 2026-10-18).
+ */
 async function confirmedRecord(db: Database, recordId: string | undefined, viewer: Viewer | undefined) {
-  if (!recordId || !viewer) return undefined;
+  if (!recordId || !viewer || !isId(recordId)) return undefined;
+  const command = await lastCommandBy(db, { aggregateId: recordId }, viewer.id);
+  if (!command || !maintenanceRecordedIn(command, recordId)) return undefined;
   const record = await maintenanceRecordById(db, recordId);
-  if (!record || record.recordedBy !== viewer.id) return undefined;
+  if (!record) return undefined;
   const label = (await machineLabels(db, [record.machineId])).get(record.machineId);
   return label && { museumNumber: label.museumNumber };
 }

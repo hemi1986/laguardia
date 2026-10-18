@@ -1,5 +1,5 @@
-import { machineForTeamForm, machineLabels, type MachineStatus } from "@/modules/collection";
-import { defectTitle, problemReportForTriage, triageList, type TriageListEntry } from "@/modules/repair";
+import { machineLabels } from "@/modules/collection";
+import { triageList, type TriageListEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -70,63 +70,4 @@ export async function withNames(
     waitingHours: entry.waitingHours,
     waitingLong: entry.waitingLong,
   }));
-}
-
-/** What the confirmation after recording a defect names (ST-018, G3): the defect, its machine and its new status. */
-export type DefectRecordedConfirmation = { title: string; museumNumber: string; newStatus?: MachineStatus };
-
-/**
- * The confirmation after recording a defect, from the defect's ID in the address. The machine's status is read now –
- * only when the form changed it in the same step; the address cannot make the page say anything that is not stored.
- */
-export async function loadDefectRecorded(
-  db: Database,
-  defectId: string,
-  statusChanged: boolean,
-): Promise<DefectRecordedConfirmation | undefined> {
-  const recorded = await defectTitle(db, defectId);
-  if (!recorded) return undefined;
-  const museumNumber = (await machineLabels(db, [recorded.machineId])).get(recorded.machineId)?.museumNumber ?? "";
-  const machine = statusChanged ? await machineForTeamForm(db, museumNumber) : undefined;
-  return { title: recorded.title, museumNumber, newStatus: machine?.machineStatus };
-}
-
-/** What the confirmation after resolving on the spot (ST-019) or dismissing (ST-020) names (G3): the machine. */
-export type TriagedConfirmation = { museumNumber: string };
-
-/**
- * The confirmation after a triage outcome that names only the machine, from the problem report's ID in the address –
- * only when it is stored with that outcome; the address cannot make the page say anything that is not stored.
- */
-export async function loadTriagedConfirmation(
-  db: Database,
-  clock: Clock,
-  problemReportId: string,
-  outcome: "resolved-on-the-spot" | "dismissed",
-): Promise<TriagedConfirmation | undefined> {
-  const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.triageOutcome !== outcome) return undefined;
-  return { museumNumber: (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "" };
-}
-
-/** What the confirmation after linking (ST-022) names (G3): the machine and the defect. */
-export type LinkedConfirmation = { museumNumber: string; title: string };
-
-/**
- * The confirmation after linking a problem report, from its ID in the address – only when it is stored as linked; the
- * defect's title is read now, so the address cannot make the page say anything that is not stored.
- */
-export async function loadLinkedConfirmation(
-  db: Database,
-  clock: Clock,
-  problemReportId: string,
-): Promise<LinkedConfirmation | undefined> {
-  const report = await problemReportForTriage(db, clock, problemReportId);
-  if (report?.triageOutcome !== "linked" || !report.triageDefectId) return undefined;
-  const [labels, defect] = await Promise.all([
-    machineLabels(db, [report.machineId]),
-    defectTitle(db, report.triageDefectId),
-  ]);
-  if (!defect) return undefined;
-  return { museumNumber: labels.get(report.machineId)?.museumNumber ?? "", title: defect.title };
 }

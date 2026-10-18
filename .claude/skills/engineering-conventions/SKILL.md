@@ -221,6 +221,21 @@ event in `actionOfEvent` and its projection in `repairEvents`, a confirmation te
 only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
 never from the address alone, and without a state field per action.
 
+**A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
+only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
+`?registered=`, `?created=`, `?corrected`, `?added=`); the page confirms it only when `lastCommandBy(db, { machineId } |
+{ aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team
+member looking at the page ran it. The command layer gives every journal entry its command's ID
+(`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
+is confirmed from there, never from a flag in the address. Which events mean what stays the owning module's: each
+module answers typed questions about a command (`collectionChangesIn`, `machineRegisteredIn`, `machineModelChangeIn`,
+`fileAttachedIn`, `triageOutcomeIn`, `problemReportedIn`, `maintenanceRecordedIn`, `maintenanceTaskAddedBy`), built on
+`entriesOf(<module>Events, command)` – no page matches an event type by string. The triage outcomes share one module,
+`src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
+`loadMachineConfirmation` and shows one `confirmation`; the defect page's `lastDefectActionBy` asks the same latest command.
+**The one exception** is the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
+is nobody to bind the confirmation to – it says only that a report was sent, nothing stored.
+
 **Where an action sits on the defect's page** (G22, first: ST-026): the work – `claim`, `release`, `log-work`,
 `resolve` – as buttons under the header; what manages the defect behind the fold „Verwalten“ (`manage-defect.tsx`, a
 native `<details>` that a rejection opens). One command can be two actions – CMD-ClaimDefect is `claim` and, with

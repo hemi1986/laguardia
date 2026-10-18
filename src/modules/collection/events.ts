@@ -35,7 +35,11 @@ export const collectionEvents = eventCatalogue({
     project: (event: MachineRegistered) => ({
       aggregateId: event.machineId,
       machineId: event.machineId,
-      data: { museumNumber: event.museumNumber, machineModelId: event.machineModelId, machineStatus: event.machineStatus },
+      data: {
+        museumNumber: event.museumNumber,
+        machineModelId: event.machineModelId,
+        machineStatus: event.machineStatus,
+      },
     }),
   },
   "EVT-MachineStatusChanged": {

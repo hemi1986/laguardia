@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
-import { machineModelForTeam } from "@/modules/collection";
+import { machineModelChangeIn, machineModelForTeam } from "@/modules/collection";
+import { lastCommandBy } from "@/platform/command";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -17,8 +18,8 @@ export default async function MachineModelPage({
   params,
   searchParams,
 }: PageProps<"/team/machine-models/[machineModelId]">) {
-  await requireTechnician();
-  const [{ machineModelId }, { corrected }] = await Promise.all([params, searchParams]);
+  const member = await requireTechnician();
+  const [{ machineModelId }, { corrected: correctedAsked }] = await Promise.all([params, searchParams]);
   const found = await machineModelForTeam(database(), machineModelId);
   if (!found) {
     return (
@@ -29,6 +30,12 @@ export default async function MachineModelPage({
     );
   }
   const { model } = found;
+  // Confirmed only when correcting it was the latest command on it and this technician ran it (G3).
+  const correcting =
+    correctedAsked !== undefined
+      ? await lastCommandBy(database(), { aggregateId: machineModelId }, member.id)
+      : undefined;
+  const corrected = correcting && machineModelChangeIn(correcting, machineModelId).corrected ? true : undefined;
   const details: [string, string][] = [
     [texts.modelTitle, model.title],
     [texts.manufacturer, model.manufacturer],

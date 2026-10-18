@@ -1,11 +1,6 @@
 import { activeTeamMemberRole } from "@/modules/team";
 import { aggregateCommand, type Database } from "@/platform/command";
-import {
-  claimDefect,
-  claimingActors,
-  type ClaimDefectInput,
-  type ClaimingFacts,
-} from "./claim-defect";
+import { claimDefect, claimingActors, type ClaimDefectInput, type ClaimingFacts } from "./claim-defect";
 import { defects } from "./defects";
 import { repairEvents } from "./events";
 
@@ -35,4 +30,3 @@ export const claimDefectCommand = aggregateCommand({
   journal: repairEvents.journal,
   result: (defect) => ({ defectId: defect.id }),
 });
-

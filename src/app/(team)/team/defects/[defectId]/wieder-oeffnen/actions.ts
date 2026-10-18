@@ -21,13 +21,12 @@ export async function reopenDefectAction(
   formData: FormData,
 ): Promise<ReopenDefectState> {
   await requireTeamMember(); // the page's access check
-  const statusChanged = Boolean(formData.get("machineStatus"));
   return formAction(reopenDefectCommand, {
     fields: reopenDefectFields,
     input: (fields) => reopenDefectInput(fields, defectId),
     onSuccess: async (reopened) => {
       revalidatePath("/team/defects");
-      redirect(`/team/defects/${reopened.defectId}?done=reopen${statusChanged ? "&statusChanged=1" : ""}`);
+      redirect(`/team/defects/${reopened.defectId}?done=reopen`);
     },
   })(previous, formData);
 }

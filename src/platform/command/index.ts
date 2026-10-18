@@ -30,8 +30,10 @@ export {
   type RunCall,
 } from "./aggregate";
 export { history, type History } from "./history";
+export { lastCommandBy } from "./last-command";
 export { entities, type Entities } from "./entities";
 export {
+  entriesOf,
   eventCatalogue,
   readJournal,
   type CatalogueEntry,
@@ -137,7 +139,10 @@ export async function executeCommand<Input, Result, Error extends string>(
       const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
       // Every command writes its journal entry (Definition of Done); only a policy may have nothing to do.
       if (rows.length === 0) throw new Error(`${command.id} succeeded but journals no event`);
-      await tx.insert(eventJournal).values(rows);
+      // One ID for everything the command journals – a page asks the journal what one command did (G3, lastCommandBy).
+      // Not from the injected generator: it is no domain ID, and tests count the IDs a command takes.
+      const commandId = randomUUID();
+      await tx.insert(eventJournal).values(rows.map((row) => ({ ...row, commandId })));
       return result;
     });
     return { ok: true, result };
