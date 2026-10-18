@@ -380,10 +380,17 @@ the only way:
 - **Abandoned uploads** – a form never sent – are cleaned up by `cleanUpAbandonedUploads`: after the response of every
   name the route gives (`after()`), at most 20 pending uploads older than 24 hours, the oldest first, each deleted with
   its content in one transaction (a failed content deletion keeps the record for the next time). No scheduler (ADR 0002).
-- **Opening uploaded content**: `viewAddressOf(storage, clock, name)` – 5 minutes, only after the page's access
-  check; the plain store address answers 403.
-- Until ST-037 the technicians' check page `/team/machines/<museum number>/upload-pruefen` (not linked) is the only
-  page that uploads; ST-037's form replaces it.
+- **Opening uploaded content**: `viewAddressOf(storage, clock, name, { download })` – 5 minutes, only after the
+  page's access check; the plain store address answers 403. A file has an address of its own,
+  `/team/dateien/<file ID>` (ST-037, a route handler): it checks the team session and sends the browser on with 303
+  to a fresh 5-minute address, so a link on a page never expires. Only PDF and JPEG/PNG/WebP/GIF open in the browser
+  (`opensInBrowser`, by the media type the store kept); everything else gets Blob's `download=1`.
+- **A form that attaches uploaded content** (first: ST-037, `…/[museumNumber]/datei-anhaengen/`) uses
+  `uploadFormAction(command, { fields, upload: { field, describedBy, owner }, refusal, input, onSuccess })`: the
+  chosen file is uploaded when it is chosen (`uploadFile`), the form posts its name in a hidden field. `refusal` – the
+  command's rules that need only the fields (`attachFileRefusal`) – is asked first and keeps the uploaded content: the
+  form says the chosen file is still attached (user, 2026-10-18). Every later rejection (`content-gone`, `too-large`,
+  the command's own) deletes it, the state no longer names it, and the form says to choose it again (G8a).
 - Locally the dev server and the browser tests use a separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`); without it the photo browser tests skip.
 
 ## The event journal
