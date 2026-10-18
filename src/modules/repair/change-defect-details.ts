@@ -1,4 +1,4 @@
-import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
 import type { Defect } from "./defect";
 
 /**
@@ -35,18 +35,38 @@ export type DefectDetailsChanged = {
   changedBy: TeamMemberId;
 };
 
-export type ChangeDefectDetailsError = never;
+export type ChangeDefectDetailsError = "defect-not-open" | "title-required" | "details-unchanged";
+
+/**
+ * Why this team member may not change the defect's details as it is, whatever they enter – undefined when they may.
+ * The decision applies it, and a page asks it to offer the control only to someone it will not reject (G11). Only
+ * technicians: the command layer refuses anyone else before the decision runs, this says so to a page. Only an open
+ * defect: a resolved one can only be reopened, one closed on retirement is final (AGG-Defect invariants).
+ */
+export function changeDetailsRefusal(
+  defect: Pick<Defect, "state">,
+  teamMember: { role: Role },
+): "not-authorized" | "defect-not-open" | undefined {
+  if (teamMember.role !== "technician") return "not-authorized";
+  if (defect.state !== "open") return "defect-not-open";
+  return undefined;
+}
 
 export function changeDefectDetails(
   defect: Defect,
   input: ChangeDefectDetailsInput,
   { actor }: DecisionContext<ChangingDetailsPerson>,
-): Decision<Defect, DefectDetailsChanged, ChangeDefectDetailsError> {
+): Decision<Defect, DefectDetailsChanged, ChangeDefectDetailsError | "not-authorized"> {
+  const refusal = changeDetailsRefusal(defect, actor);
+  if (refusal) return { ok: false, error: refusal };
   const title = input.title.trim();
+  if (!title) return { ok: false, error: "title-required" };
   const changed: DefectDetail[] = [
     ...(title !== defect.title ? (["title"] as const) : []),
     ...(input.suitableForHelpers !== defect.suitableForHelpers ? (["suitable-for-helpers"] as const) : []),
   ];
+  // A change that changes nothing would record no fact (user, 2026-10-18, as CMD-PrioritizeDefect).
+  if (changed.length === 0) return { ok: false, error: "details-unchanged" };
   return {
     ok: true,
     state: { ...defect, title, suitableForHelpers: input.suitableForHelpers },

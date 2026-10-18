@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, type Actor } from "@/platform/command";
+import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { anOpenDefectIn } from "@/test-support/defects";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -39,6 +39,20 @@ function change(
     { defectId, version, ...details },
     dependencies(actor, "2026-10-18T10:00:00Z"),
   );
+}
+
+const journalLength = async (defectId: string) => (await journalOf(db, { aggregateId: defectId })).length;
+
+/** A defect that was open and is resolved now – at version 1. */
+async function aResolvedDefect(title: string) {
+  const { defectId } = await anOpenDefect(title);
+  const resolved = await executeCommand(
+    resolveDefectCommand,
+    { defectId, version: 0, closingNote: "Door realigned." },
+    dependencies(tom, "2026-10-18T09:00:00Z"),
+  );
+  if (!resolved.ok) throw new Error(resolved.error);
+  return defectId;
 }
 
 beforeAll(async () => {
@@ -83,5 +97,50 @@ describe("CMD-ChangeDefectDetails", () => {
       ),
     ).toMatchObject({ ok: true });
     expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+  });
+
+  it("ST-031: Title is required", async () => {
+    const { defectId } = await anOpenDefect("Display flickers");
+    const journalBefore = await journalLength(defectId);
+
+    expect(await change(defectId, 0, { title: "   ", suitableForHelpers: false }, tom)).toEqual({
+      ok: false,
+      error: "title-required",
+    });
+    expect((await defectDetails(db, defectId))?.title).toBe("Display flickers");
+    expect(await journalLength(defectId)).toBe(journalBefore);
+  });
+
+  it("ST-031: Resolved defects cannot be changed", async () => {
+    const defectId = await aResolvedDefect("Coin door jammed");
+    const journalBefore = await journalLength(defectId);
+
+    expect(await change(defectId, 1, { title: "Coin door stuck", suitableForHelpers: false }, tom)).toEqual({
+      ok: false,
+      error: "defect-not-open",
+    });
+    expect((await defectDetails(db, defectId))?.title).toBe("Coin door jammed");
+    expect(await journalLength(defectId)).toBe(journalBefore);
+  });
+
+  it("ST-031: Helpers cannot change defect details", async () => {
+    const { defectId } = await anOpenDefect("Display flickers", true);
+
+    expect(await change(defectId, 0, { title: "Display dark", suitableForHelpers: true }, anna)).toEqual({
+      ok: false,
+      error: "not-authorized",
+    });
+    expect((await defectDetails(db, defectId))?.title).toBe("Display flickers");
+  });
+
+  it("rejects a change that changes nothing – every successful command records a fact", async () => {
+    const { defectId } = await anOpenDefect("Display flickers");
+    const journalBefore = await journalLength(defectId);
+
+    expect(await change(defectId, 0, { title: " Display flickers ", suitableForHelpers: false }, tom)).toEqual({
+      ok: false,
+      error: "details-unchanged",
+    });
+    expect(await journalLength(defectId)).toBe(journalBefore);
   });
 });
