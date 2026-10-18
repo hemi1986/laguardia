@@ -44,6 +44,7 @@ Solid arrows: upstream (U) supplies, downstream (D) depends. Dotted arrows: the 
 
 ### Collection → Maintenance (Customer/Supplier, Published Language)
 - Maintenance needs per machine: machine category and technology (via its machine model) to decide which maintenance tasks apply, and the machine status history, because machines that are *Not on display* never become due (HS-13, HS-20).
+- Since when: the machine model's **category history** – its machine category and technology from creation on and from every correction that changes either (`EVT-MachineModelCorrected`, ST-036). A maintenance task that newly applies after a correction counts as last done on the correction date (HS-20, D5).
 - `EVT-MachineRetired` removes the machine from due maintenance; `CMD-RecordMaintenance` checks that the machine is not retired.
 
 ### Maintenance → Repair (manual)

@@ -37,8 +37,9 @@ export type DueMaintenanceTask = {
  * those machines – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the
  * most due machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
- * Last done is the latest of the task's start date, the machine's registration date (HS-20) and its latest maintenance
- * record *done* (ST-044) – a record *partially done* restarts nothing. A machine *Not on display* is never due; after
+ * Last done is the latest of the task's start date, the machine's registration date (HS-20), the day the task began
+ * to apply after a machine model correction (ST-036, D5) and its latest maintenance record *done* (ST-044) – a record
+ * *partially done* restarts nothing. A machine *Not on display* is never due; after
  * its return a task that was already due counts from the return (ST-056).
  */
 export async function dueMaintenance(
@@ -58,11 +59,13 @@ export async function dueMaintenance(
     const dueMachines = machines.flatMap((machine) => {
       // A machine Not on display is never due; maintenance recorded there still counts (HS-13, ST-056).
       if (machine.machineStatus === "not-on-display" || !maintenanceTaskAppliesTo(task, machine)) return [];
-      // The latest record *done* – but never before the start date or the registration, which count as last done too
-      // (user, 2026-10-15, ST-044).
+      // The latest record *done* – but never before the start date, the registration or the day the task began to
+      // apply, which count as last done too (user, 2026-10-15, ST-044; ST-036).
+      const appliesSince = appliesSinceCorrection(task, machine.categoryHistory);
       const lastDone = latest(
         task.startDate,
         calendarDate(machine.registeredAt),
+        appliesSince && calendarDate(appliesSince),
         recorded.get(lastDoneKey(task.id, machine.id)),
       );
       const { dueDate, overdueFrom } = dueAfterReturn(
@@ -101,6 +104,23 @@ export async function dueMaintenance(
     (a, b) =>
       b.overdueCount - a.overdueCount || b.machines.length - a.machines.length || a.name.localeCompare(b.name, "de"),
   );
+}
+
+/**
+ * Since when a task has applied without a break, when that began with a correction of the machine model (ST-036): the
+ * first entry of the latest run of the category history the task applies to – none when it has applied since the
+ * creation (or the history is empty), where the registration and the start date already count.
+ */
+function appliesSinceCorrection(
+  task: Parameters<typeof maintenanceTaskAppliesTo>[0],
+  history: MachineForMaintenance["categoryHistory"],
+): Date | undefined {
+  let runStart: number | undefined;
+  for (const [index, entry] of history.entries()) {
+    if (!maintenanceTaskAppliesTo(task, entry)) runStart = undefined;
+    else runStart ??= index;
+  }
+  return runStart === undefined || runStart === 0 ? undefined : history[runStart].holdsFrom;
 }
 
 /** By location as people read it – "row 2" before "row 10" –, then by museum number. */

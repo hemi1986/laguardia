@@ -1,6 +1,7 @@
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
+import { categoryHistory } from "./machine-models";
 import {
   machineStatuses,
   type Machine,
@@ -352,8 +353,8 @@ export async function machineLabels(
 
 /**
  * A machine as maintenance needs it (context map: Collection → Maintenance, Published Language): which machine, where
- * it stands, what kind of machine its machine model is – to decide which maintenance tasks apply – and when it was
- * registered, which can be its last done (ST-043).
+ * it stands, what kind of machine its machine model is – to decide which maintenance tasks apply –, since when its
+ * machine model is of that kind (ST-036), and when it was registered, which can be its last done (ST-043).
  */
 export type MachineForMaintenance = {
   id: string;
@@ -362,6 +363,11 @@ export type MachineForMaintenance = {
   location: string;
   machineCategory: MachineCategory;
   technology: Technology | undefined;
+  /**
+   * Its machine model's category history, the oldest first (ST-036): the machine category and technology from each
+   * point in time on – a task that newly applies after a correction counts as last done on the correction date.
+   */
+  categoryHistory: { machineCategory: MachineCategory; technology: Technology | undefined; holdsFrom: Date }[];
   registeredAt: Date;
   /** Its machine status now – a machine *Not on display* is never due (ST-056). */
   machineStatus: MachineStatus;
@@ -379,6 +385,7 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
     .select({
       id: machine.id,
       museumNumber: machine.museumNumber,
+      machineModelId: machine.machineModelId,
       machineModelTitle: machineModel.title,
       location: machine.location,
       machineCategory: machineModel.machineCategory,
@@ -394,9 +401,15 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(isNull(machine.retiredAt));
-  return rows.map((row) => ({
+  const histories = await categoryHistory.load(db, [...new Set(rows.map((row) => row.machineModelId))]);
+  return rows.map(({ machineModelId, ...row }) => ({
     ...row,
     technology: row.technology ?? undefined,
+    categoryHistory: (histories.get(machineModelId) ?? []).map(({ machineCategory, technology, holdsFrom }) => ({
+      machineCategory,
+      technology,
+      holdsFrom,
+    })),
     returnedToDisplayAt: row.returnedToDisplayAt ?? undefined,
     retired: false as const,
   }));
