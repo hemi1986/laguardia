@@ -22,11 +22,14 @@ export type ContentStorage = {
    */
   uploadAddress(name: string, limits: UploadLimits): Promise<UploadAddress>;
   /**
-   * The size in bytes of the content stored under a name – undefined when nothing is. Blob holds an upload in parts to
-   * no size limit (ST-085), so whoever attaches uploaded content checks its size here.
+   * What the store says about the content under a name – its size in bytes and its media type – or undefined when
+   * nothing is stored there. Blob holds an upload in parts to no size limit (ST-085), so whoever attaches uploaded
+   * content checks its size here; the media type is the one the store keeps, not what a form claims (ST-037).
    */
-  size(name: string): Promise<number | undefined>;
+  details(name: string): Promise<ContentDetails | undefined>;
 };
+
+export type ContentDetails = { size: number; contentType: string };
 
 export type UploadLimits = { maximumSize: number; validUntil: Date };
 

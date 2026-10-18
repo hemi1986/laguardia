@@ -13,5 +13,5 @@ export async function storedContentAction(name: string): Promise<{ size?: number
   await requireTechnician();
   const storage = blobStorage();
   const viewAddress = await viewAddressOf(storage, systemClock, name);
-  return viewAddress ? { size: await storage.size(name), viewAddress } : {};
+  return viewAddress ? { size: (await storage.details(name))?.size, viewAddress } : {};
 }

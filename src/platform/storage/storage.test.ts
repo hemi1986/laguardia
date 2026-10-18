@@ -20,12 +20,12 @@ describe("the storage seam", () => {
     );
   });
 
-  it("tells the size of stored content, and nothing for content that is not stored", async () => {
+  it("tells the size and media type of stored content, and nothing for content that is not stored", async () => {
     const storage = memoryStorage();
     await storage.write("files/d", new Uint8Array([1, 2, 3]), "application/pdf");
 
-    expect(await storage.size("files/d")).toBe(3);
-    expect(await storage.size("files/never")).toBeUndefined();
+    expect(await storage.details("files/d")).toEqual({ size: 3, contentType: "application/pdf" });
+    expect(await storage.details("files/never")).toBeUndefined();
   });
 
   it("makes deleted content unreadable", async () => {
@@ -73,7 +73,7 @@ describe("an upload address", () => {
       multipart: true,
     });
 
-    expect(await storage.size("files/e")).toBe(5);
+    expect((await storage.details("files/e"))?.size).toBe(5);
   });
 
   it("refuses an upload after the address is no longer valid", async () => {

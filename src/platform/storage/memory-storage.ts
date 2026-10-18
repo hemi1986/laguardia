@@ -44,8 +44,9 @@ export function memoryStorage(): MemoryStorage {
       if (!multipart && bytes.length > maximumSize) throw new Error("content too large for the upload address");
       stored.set(name, { bytes, contentType });
     },
-    async size(name) {
-      return stored.get(name)?.bytes.length;
+    async details(name) {
+      const content = stored.get(name);
+      return content && { size: content.bytes.length, contentType: content.contentType };
     },
     read: (name) => stored.get(name),
     names: () => [...stored.keys()],

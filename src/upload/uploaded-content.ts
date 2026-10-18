@@ -10,6 +10,9 @@ import { pendingUpload } from "./schema";
 export const uploadedContentErrors = ["content-gone", "too-large"] as const;
 export type UploadedContentError = (typeof uploadedContentErrors)[number];
 
+/** Uploaded content as the attaching command keeps it: its name, and its size and media type as the store has them. */
+export type UploadedContent = { name: string; size: number; contentType: string };
+
 /**
  * The one way to attach content uploaded from the browser (ST-085, ADR 0009, for CMD-AttachFile in ST-037): take the
  * pending upload – it must name this content, belong to this owner and be younger than the fixed age –, then run the
@@ -21,7 +24,7 @@ export type UploadedContentError = (typeof uploadedContentErrors)[number];
 export async function withUploadedContent<Result, Error extends string>(
   { db, storage, clock }: UploadDependencies,
   uploaded: { name: string; owner: UploadOwner },
-  run: (content: string) => Promise<CommandResult<Result, Error>>,
+  run: (content: UploadedContent) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
   const youngest = abandonedUntil(clock.now());
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
@@ -46,9 +49,12 @@ export async function withUploadedContent<Result, Error extends string>(
   try {
     // Blob holds an upload in one piece to the upload address's size limit, but not an upload in parts (above 20 MB,
     // found in ST-085) – so the size is checked here too, before the command runs.
-    const size = await storage.size(uploaded.name);
-    if (size === undefined) return { ok: false, error: "content-gone" };
-    outcome = size > taken[0].maximumSize ? { ok: false, error: "too-large" } : await run(uploaded.name);
+    const details = await storage.details(uploaded.name);
+    if (details === undefined) return { ok: false, error: "content-gone" };
+    outcome =
+      details.size > taken[0].maximumSize
+        ? { ok: false, error: "too-large" }
+        : await run({ name: uploaded.name, ...details });
   } catch (error) {
     await deleteQuietly(storage, uploaded.name);
     throw error;

@@ -70,7 +70,7 @@ describe("cleaning up abandoned uploads", () => {
       { name: young, owner: { machineId } },
       async (content) => ({
         ok: true as const,
-        result: content,
+        result: content.name,
       }),
     );
     expect(attached).toEqual({ ok: true, result: young });

@@ -68,9 +68,10 @@ export function blobStorage(): ContentStorage {
       if (issued.type !== "blob.generate-presigned-url") throw new Error("Blob issued no upload address");
       return issued.presignedUrlPayload;
     },
-    async size(name) {
+    async details(name) {
       try {
-        return (await head(name)).size;
+        const { size, contentType } = await head(name);
+        return { size, contentType };
       } catch (error) {
         if (error instanceof BlobNotFoundError) return undefined;
         throw error;
