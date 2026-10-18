@@ -9,7 +9,7 @@ risk: high
 events: []
 depends_on: [ST-001, ST-016]
 labels: [files, foundation]
-status: in-progress
+status: done
 ---
 
 ## Task
@@ -33,12 +33,12 @@ Rejected alternatives:
 - [x] A file above the size limit is refused by the permission itself, not only by the form – tested at small scale with a small limit: once with the in-memory adapter and once in a browser test against the Development Blob store.
 - [x] A browser-side upload function, the counterpart of `src/photo/browser.ts`, uploads a file with the upload address, reports progress while it runs and reports a failed upload to the form, so the form can say so instead of attaching nothing.
 - [x] A file of about 25 MB is uploaded as a multipart upload (above 20 MB) from the browser directly to the Development Blob store without passing through a server function (browser test).
-- [ ] A PDF of 100 MB is uploaded once from a phone browser on the preview, directly to the private Blob store (manual check, recorded in the pull request).
+- [x] A PDF of 100 MB is uploaded once from a phone browser on the preview, directly to the private Blob store (manual check, recorded in the pull request).
 - [x] Uploaded content is reachable only through a presigned address valid for 5 minutes; its plain store address does not deliver it.
 - [x] When the attaching command is rejected, the uploaded content is deleted through the seam (ADR 0007); asserted with the in-memory adapter.
 - [x] Abandoned uploads are cleaned up as the ADR decides: a pending upload older than the fixed age is deleted after a later request and a younger one is kept (integration test with the injected clock and the in-memory adapter).
-- [ ] The upload works under the current security headers: a browser test on the preview uploads a file and finds no blocked request. ST-070's script policy, which comes after this task, allows only the Blob store's host for it.
-- [ ] `.claude/skills/engineering-conventions/SKILL.md` (user approves): the seam catalog row for code that stores content is extended with the upload address and the browser-side upload function, and the cleanup of abandoned uploads is documented.
+- [x] The upload works under the current security headers: a browser test on the preview uploads a file and finds no blocked request. ST-070's script policy, which comes after this task, allows only the Blob store's host for it.
+- [x] `.claude/skills/engineering-conventions/SKILL.md` (user approves): the seam catalog row for code that stores content is extended with the upload address and the browser-side upload function, and the cleanup of abandoned uploads is documented.
 
 ## Out of Scope
 - The form, the file categories, the machine record's files section and `CMD-AttachFile` itself (ST-037)

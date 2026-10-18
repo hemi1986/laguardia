@@ -4,15 +4,9 @@
 
 **Progress: 37 of 59 domain stories done** · scenarios 327 of 505
 
-**84 stories** · In Progress: 1 · Ready: 29 · In Review: 0 · Draft: 3 · Done: 51
+**84 stories** · In Progress: 0 · Ready: 29 · In Review: 0 · Draft: 3 · Done: 52
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
 
 ## Ready
 
@@ -111,3 +105,4 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-034](ST-034-move-machine.md) | Move a machine to a new location | story | Collection | should | XS | low | ST-009 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | should | M | medium | ST-009, ST-010, ST-043, ST-044 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
+| [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
