@@ -14,13 +14,16 @@ export {
 export { dueMaintenance, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";
 export { recordMaintenanceCommand } from "./record-maintenance-command";
 export {
-  LONGEST_BACK_DATING_DAYS,
   maintenanceOutcomes,
-  recordRefusal,
   type MaintenanceOutcome,
   type MaintenanceRecord,
   type RecordMaintenanceError,
   type RecordMaintenanceInput,
 } from "./record-maintenance";
-export { maintenanceRecordById, maintenanceRecords } from "./maintenance-records";
+export {
+  maintenanceForRecording,
+  maintenanceRecordById,
+  maintenanceRecords,
+  type MaintenanceForRecording,
+} from "./maintenance-records";
 export { maintenanceRecordedIn, maintenanceTaskAddedBy } from "./in-command";

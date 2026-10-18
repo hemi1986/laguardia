@@ -221,6 +221,12 @@ event in `actionOfEvent` and its projection in `repairEvents`, a confirmation te
 only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
 never from the address alone, and without a state field per action.
 
+**What a team member can do in maintenance** (architecture review 2026-10-18): the same answer from Maintenance –
+`dueMaintenance(db, clock, machines, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept
+them (`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
+task, the refusal (`whyNot`) and the dates allowed. The page passes Collection's machines and keeps no rule of its own
+(G11); `recordRefusal` stays inside the module.
+
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
 `?registered=`, `?created=`, `?corrected`, `?added=`); the page confirms it only when `lastCommandBy(db, { machineId } |
