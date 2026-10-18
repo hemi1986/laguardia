@@ -213,6 +213,7 @@ describe("RM-MachineRecord", () => {
         },
       ],
       retirement: undefined,
+      files: [],
     });
     expect(await machineRecord(db, "LG-043")).toBeUndefined();
   });
