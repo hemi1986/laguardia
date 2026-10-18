@@ -27,16 +27,16 @@ Rejected alternatives:
 - (c) **An external scheduler** (scheduled GitHub Actions workflow or Vercel Cron) – it would supersede part of ADR 0002; the same question stays open for ST-062's weekly Blob backup.
 
 ## Acceptance Criteria
-- [ ] An ADR that supersedes ADR 0007 decides how abandoned direct uploads are cleaned up on a later request (pending uploads recorded in the database, stale ones deleted after the response of a later request), and the user has accepted it.
-- [ ] The storage seam offers a short-lived, size-limited upload address for one owner (machine or machine model), issued only after the server's own authorization check (team members only); both adapters implement it, the in-memory one for integration tests. The size limit is a parameter of the seam, not a constant inside it.
-- [ ] The route that issues upload addresses verifies the request's Origin and a team session itself, independent of any page: a request without a session gets no upload address, and a request from another Origin gets none (both asserted).
-- [ ] A file above the size limit is refused by the permission itself, not only by the form – tested at small scale with a small limit: once with the in-memory adapter and once in a browser test against the Development Blob store.
-- [ ] A browser-side upload function, the counterpart of `src/photo/browser.ts`, uploads a file with the upload address, reports progress while it runs and reports a failed upload to the form, so the form can say so instead of attaching nothing.
-- [ ] A file of about 25 MB is uploaded as a multipart upload (above 20 MB) from the browser directly to the Development Blob store without passing through a server function (browser test).
+- [x] An ADR that supersedes ADR 0007 decides how abandoned direct uploads are cleaned up on a later request (pending uploads recorded in the database, stale ones deleted after the response of a later request), and the user has accepted it.
+- [x] The storage seam offers a short-lived, size-limited upload address for one owner (machine or machine model), issued only after the server's own authorization check (team members only); both adapters implement it, the in-memory one for integration tests. The size limit is a parameter of the seam, not a constant inside it.
+- [x] The route that issues upload addresses verifies the request's Origin and a team session itself, independent of any page: a request without a session gets no upload address, and a request from another Origin gets none (both asserted).
+- [x] A file above the size limit is refused by the permission itself, not only by the form – tested at small scale with a small limit: once with the in-memory adapter and once in a browser test against the Development Blob store.
+- [x] A browser-side upload function, the counterpart of `src/photo/browser.ts`, uploads a file with the upload address, reports progress while it runs and reports a failed upload to the form, so the form can say so instead of attaching nothing.
+- [x] A file of about 25 MB is uploaded as a multipart upload (above 20 MB) from the browser directly to the Development Blob store without passing through a server function (browser test).
 - [ ] A PDF of 100 MB is uploaded once from a phone browser on the preview, directly to the private Blob store (manual check, recorded in the pull request).
-- [ ] Uploaded content is reachable only through a presigned address valid for 5 minutes; its plain store address does not deliver it.
-- [ ] When the attaching command is rejected, the uploaded content is deleted through the seam (ADR 0007); asserted with the in-memory adapter.
-- [ ] Abandoned uploads are cleaned up as the ADR decides: a pending upload older than the fixed age is deleted after a later request and a younger one is kept (integration test with the injected clock and the in-memory adapter).
+- [x] Uploaded content is reachable only through a presigned address valid for 5 minutes; its plain store address does not deliver it.
+- [x] When the attaching command is rejected, the uploaded content is deleted through the seam (ADR 0007); asserted with the in-memory adapter.
+- [x] Abandoned uploads are cleaned up as the ADR decides: a pending upload older than the fixed age is deleted after a later request and a younger one is kept (integration test with the injected clock and the in-memory adapter).
 - [ ] The upload works under the current security headers: a browser test on the preview uploads a file and finds no blocked request. ST-070's script policy, which comes after this task, allows only the Blob store's host for it.
 - [ ] `.claude/skills/engineering-conventions/SKILL.md` (user approves): the seam catalog row for code that stores content is extended with the upload address and the browser-side upload function, and the cleanup of abandoned uploads is documented.
 
