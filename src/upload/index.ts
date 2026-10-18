@@ -10,3 +10,4 @@ export {
   type UploadDependencies,
   type UploadOwner,
 } from "./pending-uploads";
+export { withUploadedContent } from "./uploaded-content";
