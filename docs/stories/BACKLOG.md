@@ -4,15 +4,20 @@
 
 **Progress: 34 of 59 domain stories done** · scenarios 306 of 505
 
-**84 stories** · In Progress: 0 · Ready: 33 · In Review: 0 · Draft: 3 · Done: 48
+**84 stories** · In Progress: 1 · Ready: 32 · In Review: 0 · Draft: 3 · Done: 48
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
 | [ST-034](ST-034-move-machine.md) | Move a machine to a new location | story | Collection | should | XS | low | ST-009 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | should | M | medium | ST-009, ST-010, ST-043, ST-044 |
 | [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
