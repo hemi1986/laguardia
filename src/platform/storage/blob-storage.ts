@@ -1,5 +1,5 @@
 import "server-only";
-import { del, issueSignedToken, presignUrl, put } from "@vercel/blob";
+import { BlobNotFoundError, del, head, issueSignedToken, presignUrl, put } from "@vercel/blob";
 import { handleUploadPresigned } from "@vercel/blob/client";
 import type { ContentStorage } from ".";
 
@@ -59,6 +59,14 @@ export function blobStorage(): ContentStorage {
       });
       if (issued.type !== "blob.generate-presigned-url") throw new Error("Blob issued no upload address");
       return issued.presignedUrlPayload;
+    },
+    async size(name) {
+      try {
+        return (await head(name)).size;
+      } catch (error) {
+        if (error instanceof BlobNotFoundError) return undefined;
+        throw error;
+      }
     },
   };
 }

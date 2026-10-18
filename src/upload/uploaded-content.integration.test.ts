@@ -30,8 +30,12 @@ beforeAll(async () => {
 const at = (instant: string, storage: MemoryStorage) => ({ db, storage, clock: fixedClock(instant), newId: randomUUID });
 
 /** A file Anna uploaded for the machine with the upload address she was given. */
-async function anUploadedFile(storage: MemoryStorage): Promise<string> {
-  const pending = await recordPendingUpload(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, owner: { machineId } });
+async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Promise<string> {
+  const pending = await recordPendingUpload(at(uploadedAt, storage), {
+    issuedTo: anna.teamMemberId,
+    owner: { machineId },
+    maximumSize,
+  });
   if (!pending.ok) throw new Error(pending.error);
   const address = await uploadAddressOf(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, name: pending.name });
   await storage.upload(address!, new Uint8Array([1, 2, 3]), "application/pdf", new Date(uploadedAt));
@@ -105,5 +109,23 @@ describe("attaching uploaded content", () => {
       ok: false,
       error: "content-gone",
     });
+  });
+
+  it("refuses content larger than the pending upload allowed and deletes it – Blob does not hold a multipart upload to the limit", async () => {
+    const storage = memoryStorage();
+    const name = await anUploadedFile(storage, 3);
+    // What a multipart upload can leave behind: Blob checks the size limit only for an upload in one piece (ST-085).
+    await storage.write(name, new Uint8Array(4), "application/pdf");
+
+    expect(await attach(storage, "throw")(name)).toEqual({ ok: false, error: "too-large" });
+    expect(storage.read(name)).toBeUndefined();
+  });
+
+  it("does not run the command when nothing was uploaded under the name", async () => {
+    const storage = memoryStorage();
+    const pending = await recordPendingUpload(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, owner: { machineId } });
+    if (!pending.ok) throw new Error(pending.error);
+
+    expect(await attach(storage, "throw")(pending.name)).toEqual({ ok: false, error: "content-gone" });
   });
 });

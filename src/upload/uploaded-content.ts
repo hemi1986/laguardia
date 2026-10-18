@@ -6,10 +6,15 @@ import { ABANDONED_AFTER_HOURS } from "./limits";
 import type { UploadDependencies, UploadOwner } from "./pending-uploads";
 import { pendingUpload } from "./schema";
 
+/** Why uploaded content cannot be attached – each needs a text in the attaching form (ST-037). */
+export const uploadedContentErrors = ["content-gone", "too-large"] as const;
+export type UploadedContentError = (typeof uploadedContentErrors)[number];
+
 /**
  * The one way to attach content uploaded from the browser (ST-085, ADR 0009, for CMD-AttachFile in ST-037): take the
  * pending upload – it must name this content, belong to this owner and be younger than the fixed age –, then run the
  * command with the content's name, and delete the content if the command is rejected or throws (ADR 0007).
+ * Content larger than its pending upload allowed is deleted and refused as `too-large`; the command does not run.
  * Without such a pending upload the command does not run: the content is gone (cleaned up as abandoned) or was never
  * this owner's – `content-gone`, so the form says that the file must be chosen again.
  */
@@ -17,7 +22,7 @@ export async function withUploadedContent<Result, Error extends string>(
   { db, storage, clock }: UploadDependencies,
   uploaded: { name: string; owner: UploadOwner },
   run: (content: string) => Promise<CommandResult<Result, Error>>,
-): Promise<CommandResult<Result, Error> | { ok: false; error: "content-gone" }> {
+): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
   const youngest = new Date(clock.now().getTime() - ABANDONED_AFTER_HOURS * 60 * 60 * 1000);
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
   // is either attached or cleaned up, never both (ADR 0009).
@@ -32,8 +37,17 @@ export async function withUploadedContent<Result, Error extends string>(
         gt(pendingUpload.issuedAt, youngest),
       ),
     )
-    .returning({ name: pendingUpload.name });
+    .returning({ maximumSize: pendingUpload.maximumSize });
   if (taken.length === 0) return { ok: false, error: "content-gone" };
+
+  // Blob holds an upload in one piece to the upload address's size limit, but not an upload in parts (above 20 MB,
+  // found in ST-085) – so the size is checked here too, before the command runs.
+  const size = await storage.size(uploaded.name);
+  if (size === undefined) return { ok: false, error: "content-gone" };
+  if (size > taken[0].maximumSize) {
+    await deleteQuietly(storage, uploaded.name);
+    return { ok: false, error: "too-large" };
+  }
 
   let outcome: CommandResult<Result, Error>;
   try {

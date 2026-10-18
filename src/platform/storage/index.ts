@@ -20,6 +20,11 @@ export type ContentStorage = {
    * after the server's own access check; the size limit is the caller's and the permission itself refuses more.
    */
   uploadAddress(name: string, limits: UploadLimits): Promise<UploadAddress>;
+  /**
+   * The size in bytes of the content stored under a name – undefined when nothing is. Blob holds an upload in parts to
+   * no size limit (ST-085), so whoever attaches uploaded content checks its size here.
+   */
+  size(name: string): Promise<number | undefined>;
 };
 
 export type UploadLimits = { maximumSize: number; validUntil: Date };

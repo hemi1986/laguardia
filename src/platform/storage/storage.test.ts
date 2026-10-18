@@ -20,6 +20,14 @@ describe("the storage seam", () => {
     );
   });
 
+  it("tells the size of stored content, and nothing for content that is not stored", async () => {
+    const storage = memoryStorage();
+    await storage.write("files/d", new Uint8Array([1, 2, 3]), "application/pdf");
+
+    expect(await storage.size("files/d")).toBe(3);
+    expect(await storage.size("files/never")).toBeUndefined();
+  });
+
   it("makes deleted content unreadable", async () => {
     const storage = memoryStorage();
     await storage.write("problem-reports/b.jpg", new Uint8Array([4]), "image/jpeg");
