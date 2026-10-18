@@ -6,7 +6,7 @@ import { logWorkRefusal, type LogWorkError } from "./log-work";
 import { prioritizeRefusal } from "./prioritize-defect";
 import { putOnHoldRefusal } from "./put-defect-on-hold";
 import { releaseRefusal, type ReleaseClaimError } from "./release-claim";
-import { reopenRefusal } from "./reopen-defect";
+import { reopenRefusal, type ReopeningFacts } from "./reopen-defect";
 import { resolveRefusal, type ResolveDefectError } from "./resolve-defect";
 import { resumeRefusal } from "./resume-defect";
 
@@ -38,7 +38,7 @@ export type DefectActionRefusals = {
   "put-on-hold": ReturnType<typeof putOnHoldRefusal>;
   resume: ReturnType<typeof resumeRefusal>;
   resolve: Exclude<ResolveDefectError, "closing-note-required"> | undefined;
-  /** Whether it can be reopened – its machine being retired is checked by the command (it needs Collection). */
+  /** Whether it can be reopened – its machine being retired included, when the asker knows the machine. */
   reopen: ReturnType<typeof reopenRefusal>;
   /** Whether they may assign it at all – whom to is asked per team member (`assigneeRefusal`). */
   assign: ReturnType<typeof assignRefusal>;
@@ -53,6 +53,7 @@ export type DefectTeamMember = { teamMemberId: TeamMemberId; role: Role };
 export function defectActionRefusals(
   defect: Pick<Defect, "state" | "suitableForHelpers" | "claim" | "hold">,
   teamMember: DefectTeamMember,
+  reopening?: ReopeningFacts,
 ): DefectActionRefusals {
   return {
     claim: claimRefusal(defect, teamMember),
@@ -61,7 +62,7 @@ export function defectActionRefusals(
     "put-on-hold": putOnHoldRefusal(defect, teamMember),
     resume: resumeRefusal(defect, teamMember),
     resolve: resolveRefusal(defect, teamMember),
-    reopen: reopenRefusal(defect, undefined),
+    reopen: reopenRefusal(defect, reopening),
     assign: assignRefusal(defect, teamMember),
     prioritize: prioritizeRefusal(defect, teamMember),
   };

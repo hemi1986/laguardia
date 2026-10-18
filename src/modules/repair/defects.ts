@@ -12,6 +12,8 @@ import {
   type Resolution,
   type WorkLogEntry,
 } from "./defect";
+import { machineForReporting } from "@/modules/collection";
+import type { ReopeningFacts } from "./reopen-defect";
 import {
   defectActionRefusals,
   type DefectAction,
@@ -308,7 +310,7 @@ export async function defectDetails(
     version,
     claim: stored.claim,
     hold: stored.hold,
-    actions: teamMember && defectActionRefusals(stored, teamMember),
+    actions: teamMember && defectActionRefusals(stored, teamMember, await reopeningFacts(db, stored)),
     workLog: stored.workLog,
     resolution: resolution && {
       closingNote: resolution.closingNote,
@@ -340,7 +342,16 @@ export async function defectForAction<Action extends DefectAction>(
 ): Promise<DefectForAction<Action> | undefined> {
   const loaded = await loadDefect(db, defectId);
   if (!loaded) return undefined;
-  return { ...loaded.state, version: loaded.version, whyNot: defectActionRefusals(loaded.state, teamMember)[action] };
+  const whyNot = defectActionRefusals(loaded.state, teamMember, await reopeningFacts(db, loaded.state))[action];
+  return { ...loaded.state, version: loaded.version, whyNot };
+}
+
+/**
+ * What CMD-ReopenDefect reads besides the defect – its machine as Collection knows it now (context map), so no page
+ * offers reopening a defect of a retired machine (G11). Read only for a resolved defect, the one that can be reopened.
+ */
+async function reopeningFacts(db: Database, defect: Defect): Promise<ReopeningFacts | undefined> {
+  return defect.state === "resolved" ? { machine: await machineForReporting(db, defect.machineId) } : undefined;
 }
 
 /** The defect through its store – the one mapping from its rows to its state (ST-018). */

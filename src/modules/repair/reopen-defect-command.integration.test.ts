@@ -139,14 +139,16 @@ describe("CMD-ReopenDefect", () => {
 
     expect(await reopen(defectId, 2, "Jammed again", tom)).toEqual({ ok: false, error: "machine-retired" });
     expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+    // No page offers it (G11): the defect page asks the same rule.
+    expect((await defectDetails(db, defectId, tom))?.actions?.reopen).toBe("machine-retired");
   });
 
   it("refuses a machine status chosen by a helper – only technicians change it while reopening", async () => {
     const { machineId, defectId } = await aResolvedDefect("Rubber cracked");
 
-    expect(await reopen(defectId, 2, "Cracked again", anna, { machineStatus: "out-of-order", machineVersion: 0 })).toEqual(
-      { ok: false, error: "not-authorized" },
-    );
+    expect(
+      await reopen(defectId, 2, "Cracked again", anna, { machineStatus: "out-of-order", machineVersion: 0 }),
+    ).toEqual({ ok: false, error: "not-authorized" });
     expect((await machineRecord(db, await museumNumberOf(machineId)))?.machineStatus).toBe("playable");
   });
 });

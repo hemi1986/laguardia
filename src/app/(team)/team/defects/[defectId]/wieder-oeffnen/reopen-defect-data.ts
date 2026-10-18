@@ -1,13 +1,14 @@
 import { machineForTeamForm, type MachineStatus } from "@/modules/collection";
-import { stricterMachineStatuses, type ReopenDefectError } from "@/modules/repair";
+import { stricterMachineStatuses } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 import type { Viewer } from "../../../claimant";
 import { loadDefectForForm, type DefectForForm } from "../defect-form-data";
 
-/** What the form page „Defekt wieder öffnen“ shows (ST-030): the defect, and for technicians the status choice. */
-export type DefectForReopening = Omit<DefectForForm<"reopen">, "whyNot"> & {
-  /** Why CMD-ReopenDefect would refuse – its own reasons, the machine being retired included (G11). */
-  whyNot: ReopenDefectError | undefined;
+/**
+ * What the form page „Defekt wieder öffnen“ shows (ST-030): the defect – with why CMD-ReopenDefect would refuse, the
+ * machine being retired included (G11) – and for technicians the status choice.
+ */
+export type DefectForReopening = DefectForForm<"reopen"> & {
   /**
    * The machine for the status choice of POL-DefectMayChangeMachineStatus – technicians only; none for a helper, who
    * cannot change the status while reopening (ST-030).
@@ -29,10 +30,13 @@ export async function loadDefectForReopening(
   const machine = await machineForTeamForm(db, defect.museumNumber);
   return {
     ...defect,
-    whyNot: defect.whyNot ?? (machine?.retired ? "machine-retired" : undefined),
     machine:
       viewer.role === "technician" && machine
-        ? { status: machine.machineStatus, version: machine.version, stricter: stricterMachineStatuses(machine.machineStatus) }
+        ? {
+            status: machine.machineStatus,
+            version: machine.version,
+            stricter: stricterMachineStatuses(machine.machineStatus),
+          }
         : undefined,
   };
 }
