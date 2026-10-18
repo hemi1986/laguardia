@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gt } from "drizzle-orm";
-import type { CommandResult } from "@/platform/command";
+import { isId, type CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
 import { abandonedUntil } from "./limits";
 import type { UploadDependencies, UploadOwner } from "./pending-uploads";
@@ -26,6 +26,9 @@ export async function withUploadedContent<Result, Error extends string>(
   uploaded: { name: string; owner: UploadOwner },
   run: (content: UploadedContent) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
+  // An owner that is no ID names no pending upload – a forged form field, not a database error.
+  const ownerId = "machineId" in uploaded.owner ? uploaded.owner.machineId : uploaded.owner.machineModelId;
+  if (!isId(ownerId)) return { ok: false, error: "content-gone" };
   const youngest = abandonedUntil(clock.now());
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
   // is either attached or cleaned up, never both (ADR 0009).
