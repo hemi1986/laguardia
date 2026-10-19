@@ -41,6 +41,8 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | `tdd` | red → green loop, good tests, seams |
 | `codebase-design` | vocabulary for deep modules: module, interface, depth, seam, adapter, leverage, locality |
 | `/improve-codebase-architecture` | periodic scan for deepening opportunities, then grilling on the chosen one |
+| `/retro` | retrospective on a session: candidates to improve the agent's environment, the user picks |
+| `writing-for-agents` | how to write skills, agent files and `CLAUDE.md` |
 
 ## Rules
 - **Everything in English**: artifacts, stories, Gherkin, glossary, code, comments. IDs are CamelCase with a prefix (`EVT-DefectReported`, `CMD-ReportDefect`). Only the UI texts are German (and English on visitor pages), from the message catalogs.
