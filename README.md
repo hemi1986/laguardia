@@ -165,6 +165,8 @@ docs/                          all other artifacts (source of truth): product, d
     tdd/                       red → green loop, good tests, seams            (mattpocock/skills, adapted)
     codebase-design/           deep-module vocabulary                         (mattpocock/skills)
     improve-codebase-architecture/  /improve-codebase-architecture           (mattpocock/skills, adapted)
+    retro/                     /retro           – retrospective on a session: improve the agent's environment (mattpocock/skills, adapted)
+    writing-for-agents/        how to write skills, agents and CLAUDE.md      (mattpocock/skills)
   hooks/
     validate-docs.ts           PostToolUse: validates events.yaml/stories incl. status changes, renders Mermaid + backlog
     code-check.ts              PostToolUse: Prettier + ESLint on the changed app file
@@ -185,4 +187,4 @@ docs/                          all other artifacts (source of truth): product, d
 - `code-check.ts` and `stop-gate.ts` do nothing until the app exists; they expect Prettier, ESLint, `tsc` and Vitest in the app's `node_modules`.
 - The language check only warns: the glossary's avoid lists contain ordinary programming words, so it can't be strict.
 - The backlog is regenerated on every story write. Files deleted or renamed via the shell need a manual `render-backlog.ts` run.
-- `tdd`, `codebase-design` and `improve-codebase-architecture` are copied from mattpocock/skills with small local fixes; updating them from upstream overwrites those fixes.
+- `tdd`, `codebase-design`, `improve-codebase-architecture`, `grilling`, `grill-me`, `grill-with-docs`, `retro` and `writing-for-agents` come from mattpocock/skills, last synced with upstream commit `49dd158` (2026-10-09). Update by diffing against upstream, never by copying over: the local fixes stay. Deliberate deviations: the glossary is `CONTEXT.md` (upstream renamed it to `GLOSSARY.md`), the domain skill is our own `domain-model` (upstream `domain-modeling`), `grill-with-docs` also calls `architect`, `retro` maps upstream's `CODING_STANDARDS.md` onto the engineering conventions and the review agents. The `agents/openai.yaml` files (Codex) are left out.
