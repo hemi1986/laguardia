@@ -9,21 +9,11 @@ import { claimantName, claimantText } from "../../claimant";
 import type { ClaimDefectState, ReleaseClaimState, ResumeDefectState } from "./actions";
 import { DefectButtonForm } from "./defect-button-form";
 import { ManageDefect } from "./manage-defect";
+import { defectActionPages, defectFormAddress } from "./defect-action-pages";
 import type { DefectDetailsData } from "./defect-details-data";
 import { ProblemReportPhoto } from "../../problem-report-photo";
 
 const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
-
-/** The actions with a form page of their own (G21): where it is and what its button says (G14). */
-const formPages: Record<Exclude<DefectAction, "claim" | "release" | "resume">, { path: string; label: string }> = {
-  "log-work": { path: "arbeitsschritt", label: texts.logWork },
-  "put-on-hold": { path: "pausieren", label: texts.putOnHold },
-  resolve: { path: "beheben", label: texts.resolve },
-  reopen: { path: "wieder-oeffnen", label: texts.reopen },
-  assign: { path: "zuweisen", label: texts.assign },
-  prioritize: { path: "prioritaet", label: texts.prioritize },
-  "change-details": { path: "titel-und-eignung", label: texts.changeDetails },
-};
 
 /** The work on a defect, offered as buttons under its header – the rest is behind „Verwalten“ (G22). */
 const work = [
@@ -34,38 +24,6 @@ const work = [
   "resume",
   "resolve",
 ] as const satisfies readonly DefectAction[];
-
-/** What a confirmation can name besides the title. */
-type Confirmed = {
-  assignedTo: string;
-  priority: string;
-  holdReason: string;
-  suitableForHelpers: boolean;
-  changedDetails: NonNullable<DefectDetailsData["confirmed"]>["changedDetails"];
-};
-
-/** What the page says to who just did it (G3) – about the defect as it is now. */
-const confirmations: Record<DefectAction, (title: string, about: Confirmed) => string> = {
-  claim: texts.claimed,
-  release: texts.released,
-  "log-work": texts.workLogged,
-  "put-on-hold": (title, { holdReason }) => texts.putOnHoldDone(title, holdReason),
-  resume: texts.resumed,
-  resolve: texts.resolved,
-  reopen: texts.reopened,
-  assign: (title, { assignedTo }) => texts.assigned(title, assignedTo),
-  prioritize: (title, { priority }) => texts.prioritized(title, priority),
-  // One sentence per change, then the claim it released (ST-031).
-  "change-details": (title, { changedDetails, suitableForHelpers }) =>
-    [
-      changedDetails?.title && texts.titleChanged(title),
-      changedDetails?.suitableForHelpers &&
-        (suitableForHelpers ? texts.nowSuitableForHelpers(title) : texts.noLongerSuitableForHelpers(title)),
-      changedDetails?.releasedClaimOf && texts.claimOfReleased(changedDetails.releasedClaimOf),
-    ]
-      .filter(Boolean)
-      .join(" "),
-};
 
 /**
  * A defect's own page (ST-021): its machine – leading to the machine record –, title, priority, whether it is suitable
@@ -105,7 +63,7 @@ export function DefectDetailsView({
       {/* Only who just did it is told so – the address alone cannot make the page say it (G3). */}
       {details.confirmed && (
         <Confirmation>
-          {confirmations[details.confirmed.action](details.title, {
+          {defectActionPages[details.confirmed.action].confirmation(details.title, {
             assignedTo: details.confirmed.assignedTo ?? "",
             priority: recordDefect.priorities[details.priority],
             holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
@@ -188,26 +146,20 @@ export function DefectDetailsView({
                     details.offered.includes(action) && (
                       <Link
                         key={action}
-                        href={`/team/defects/${details.id}/${formPages[action].path}`}
+                        href={defectFormAddress(details.id, action)}
                         className={buttonVariants({ variant: "outline", className: "self-start" })}
                       >
-                        {formPages[action].label}
+                        {defectActionPages[action].form.label}
                       </Link>
                     ),
           )}
         <ManageDefect
-          assignHref={
-            details.offered.includes("assign") ? `/team/defects/${details.id}/${formPages.assign.path}` : undefined
-          }
+          assignHref={details.offered.includes("assign") ? defectFormAddress(details.id, "assign") : undefined}
           prioritizeHref={
-            details.offered.includes("prioritize")
-              ? `/team/defects/${details.id}/${formPages.prioritize.path}`
-              : undefined
+            details.offered.includes("prioritize") ? defectFormAddress(details.id, "prioritize") : undefined
           }
           changeDetailsHref={
-            details.offered.includes("change-details")
-              ? `/team/defects/${details.id}/${formPages["change-details"].path}`
-              : undefined
+            details.offered.includes("change-details") ? defectFormAddress(details.id, "change-details") : undefined
           }
           release={
             releaseAction && {
@@ -239,10 +191,10 @@ export function DefectDetailsView({
       {/* A resolved defect offers only reopening, under its closing note (G22). */}
       {details.offered.includes("reopen") && (
         <Link
-          href={`/team/defects/${details.id}/${formPages.reopen.path}`}
+          href={defectFormAddress(details.id, "reopen")}
           className={buttonVariants({ variant: "outline", className: "self-start" })}
         >
-          {formPages.reopen.label}
+          {defectActionPages.reopen.form.label}
         </Link>
       )}
       <section className="flex flex-col gap-3">

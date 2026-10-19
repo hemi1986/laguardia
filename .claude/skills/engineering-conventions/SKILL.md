@@ -208,18 +208,22 @@ in the page (G11). What a confirmation names but the aggregate does not keep (wh
 over from) is a reference in the event's journal data, listed in `events.yaml` and in the catalogue, and read back typed with
 `readJournal` (`lastDefectActionBy`) – only for the confirmation, never taken from the address.
 
-**What a team member can do to a defect** (architecture review 2026-10-11): `src/modules/repair/defect-actions.ts` is
-the one place that knows the actions on a defect (`defectActions`, in the order the page offers them), each command's
-reason for refusing a team member (`defectActionRefusals`, built from the refusal function next to each decision) and
-which event belongs to which action. `defectDetails(db, id, teamMember)` returns that answer as `actions`; the defect's
-page shows what is `offered`, and a form page reads the defect with `defectForAction(db, id, teamMember, action)` – the
-defect as its store loads it, its version and that command's refusal – and shows the reason in place of its form
-(`defect-form-data.ts`, architecture review 2026-10-17) – no page
-carries a rule or a `can…` flag of its own (G11). **A new command on a defect** adds: its action and refusal there, its
-event in `actionOfEvent` and its projection in `repairEvents`, a confirmation text and – if it needs input – its form page in the two small maps of
-`defect-details.tsx`. After an action the Server Action lands on `/team/defects/<id>?done=<action>`; the page confirms it
-only when the defect's latest journal event is that action by the team member looking at it (`lastDefectActionBy`) –
-never from the address alone, and without a state field per action.
+**What a team member can do to a defect** (architecture reviews 2026-10-11, 2026-10-18): `src/modules/repair/defect-actions.ts`
+describes each action on a defect once, in the order the page offers them (`defectActions`): its command's reason for
+refusing a team member (built from the refusal function next to each decision), the event it ends in and what its
+confirmation names from that event's journal data; its command sits next to it in `defect-action-commands.ts` (a file of
+its own: the commands load the defect store, which asks the refusals). `defectDetails(db, id, teamMember)` returns the
+refusals as `actions`; the defect's page shows what is `offered`, and a form page reads the defect with
+`defectForAction(db, id, teamMember, action)` – the defect as its store loads it, its version and that command's refusal
+– and shows the reason in place of its form (`defect-form-data.ts`) – no page carries a rule or a `can…` flag of its own
+(G11). In the app, `defect-action-pages.ts` says how each action looks – its form page (folder, button text) and its
+confirmation text –, and every Server Action of a defect runs through `defectFormAction(action, { fields, input })`
+(`defect-action.ts`): the access check, the action's command, then `/team/defects/<id>?done=<action>`. The page reads
+`done` back only as an action there is (`doneActionOf`) and confirms it only when the defect's latest journal event is
+that action by the team member looking at it (`lastDefectActionBy`) – never from the address alone, and without a state
+field per action. **A new command on a defect** adds: its description and command in Repair, its journal projection in
+`repairEvents`, its entry in `defect-action-pages.ts` and – if it needs input – its form folder, whose `actions.ts` only
+says which fields it reads and how they become the input.
 
 **What a team member can do in maintenance** (architecture review 2026-10-18): the same answer from Maintenance –
 `dueMaintenance(db, clock, machines, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept
@@ -539,6 +543,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | The acting person from the session (`currentPerson()`) – roles, no/expired/forged session, deactivated account | `formRunner({ currentPerson: () => currentPersonOf({ db, headers }), … })` with the headers of a real login (`createAccount` + `logIn`), observed through `journalOf` and read models | integration | `src/app/_actions/current-person.integration.test.ts` |
 | Type rules (acting person per `allowedActors`, error codes with a text) | `expectTypeOf` / `@ts-expect-error`, checked by `tsc` | unit (types) | `src/platform/command/actor-types.test.ts` |
 | A rule over the whole repository that neither lint nor the type check reads (config, workflows, browser tests) – e.g. no spike leftovers (ST-078) | a scan of `git ls-files` (tracked and new files; `docs/`, `.claude/`, `drizzle/` excluded) with a self-test on sample lines | unit | `src/platform/spike-leftovers.test.ts` |
+| A registry of the app that must match its files – every defect action's form page exists, `?done=` reads back only an action there is (architecture review 2026-10-18) | the registry against the file system and its own addresses | unit | `src/app/(team)/team/defects/[defectId]/defect-action-pages.test.ts` |
 | A rule over a whole set of aggregates (museum number unique and assigned, ST-007) | the command (`executeCommand`) or the read model against an **isolated** database (`isolatedTestDatabase`), emptied before each test | integration | `src/modules/collection/register-machine-command.integration.test.ts`, `machine-overview.integration.test.ts` |
 | A migration that changes or deletes existing data | `isolatedTestDatabase(…).reset("<tag before>")`, data inserted with SQL as production had it, then `.migrate()` | integration | `src/platform/migrations.integration.test.ts` |
 | A page composed from several modules' queries (the machine record with names, ST-009) | the page data function against an isolated database, its result rendered by the page's view with `renderToStaticMarkup` | integration | `src/app/(team)/team/machines/[museumNumber]/machine-record.integration.test.ts` |

@@ -4,6 +4,7 @@ import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
 import { claimDefectAction, releaseClaimAction, resumeDefectAction } from "./actions";
+import { doneActionOf } from "./defect-action-pages";
 import { loadDefectDetails } from "./defect-details-data";
 import { DefectDetailsView } from "./defect-details";
 
@@ -14,10 +15,9 @@ import { DefectDetailsView } from "./defect-details";
 export default async function DefectPage({ params, searchParams }: PageProps<"/team/defects/[defectId]">) {
   const member = await requireTeamMember();
   const [{ defectId }, query] = await Promise.all([params, searchParams]);
-  const done = typeof query.done === "string" ? query.done : undefined;
   const details = await loadDefectDetails(database(), systemClock, defectId, {
     viewer: member,
-    done,
+    done: doneActionOf(query.done),
   });
 
   return (
