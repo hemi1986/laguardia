@@ -122,13 +122,13 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
   ): FormStateAction<PhotoFormState<string, Field>> {
     return async (_previous, formData) => {
       const fields = fieldsOf(formData, definition.fields);
-      const rejected = (error: string, values = valuesOf(fields)) => ({ error, values });
+      const stateWith = (error: string, values = valuesOf(fields)) => ({ error, values });
 
       if ("upload" in definition) {
         const name = fields[definition.upload.field];
         const refusal = definition.refusal(fields);
-        if (refusal) return rejected(refusal);
-        if (!name) return rejected("file-required");
+        if (refusal) return stateWith(refusal);
+        if (!name) return stateWith("file-required");
         const actor = await currentPerson();
         const outcome = await withUploadedContent(
           {
@@ -145,7 +145,7 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
           const values = Object.fromEntries(
             Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field) ? "" : value]),
           ) as { readonly [F in Field]: string };
-          return rejected(outcome.error, values);
+          return stateWith(outcome.error, values);
         }
         await definition.onSuccess(outcome.result);
         return null;
@@ -162,7 +162,7 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
         );
         if (!outcome.ok) {
           const again = photo !== undefined && !photoRejections.includes(outcome.error);
-          return again ? { ...rejected(outcome.error), photoAgain: true } : rejected(outcome.error);
+          return again ? { ...stateWith(outcome.error), photoAgain: true } : stateWith(outcome.error);
         }
         await definition.onSuccess(outcome.result);
         return null;
@@ -172,7 +172,7 @@ export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDe
         ...dependencies,
         actor: await currentPerson(),
       });
-      if (!outcome.ok) return rejected(outcome.error);
+      if (!outcome.ok) return stateWith(outcome.error);
       const removed = definition.removesPhoto?.(outcome.result);
       if (removed) await removePhoto(storage ?? blobStorage(), removed);
       await definition.onSuccess(outcome.result);
