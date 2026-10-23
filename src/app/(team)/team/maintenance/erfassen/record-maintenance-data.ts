@@ -22,7 +22,11 @@ export async function loadMaintenanceForRecording(
 ): Promise<RecordMaintenancePageData | undefined> {
   const machineId = await machineIdOf(db, museumNumber);
   if (!machineId) return undefined;
-  const [facts, labels] = await Promise.all([machineForMaintenance(db, machineId), machineLabels(db, [machineId])]);
+  const [facts, labels] = await Promise.all([
+    // A page runs no command: no retirement lock (ADR 0010).
+    machineForMaintenance(db, machineId, { inCommand: false }),
+    machineLabels(db, [machineId]),
+  ]);
   const label = labels.get(machineId);
   if (!facts || !label) return undefined;
   const recording = await maintenanceForRecording(db, clock, maintenanceTaskId, facts, viewer);

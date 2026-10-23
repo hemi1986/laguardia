@@ -83,4 +83,4 @@ export {
 } from "./defect-actions";
 export { defectActionCommands } from "./defect-action-commands";
 export { problemReportedIn, triageOutcomeIn, type TriagedInCommand } from "./in-command";
-export { retireMachineCommand } from "./retirement-policies";
+export { retireMachineCommand, retirementConsequences } from "./retirement-policies";

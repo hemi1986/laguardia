@@ -147,6 +147,25 @@ describe("CMD-RecordDefect", () => {
     expect(commandErrorText(teamMessages, "machine-retired")).toContain("ausgemustert");
   });
 
+  it("a status change the inner command rejects rolls back the defect and the triage", async () => {
+    await anExistingTeamMember(db, tom);
+    const machineId = await aRegisteredMachine(db);
+    const problemReportId = await anUntriagedProblemReport(machineId);
+    const journalBefore = (await journalOf(db, { machineId })).length;
+
+    // A machine version nobody saw: CMD-ChangeMachineStatus fails the version check – after the defect was saved.
+    const recorded = await recordDefect(problemReportId, {
+      title: "Left flipper weak",
+      machineStatus: "out-of-order",
+      machineVersion: 7,
+    });
+
+    expect(recorded).toEqual({ ok: false, error: "version-conflict" });
+    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
+    expect((await machineRecord(db, await museumNumberOf(machineId)))?.statusHistory).toHaveLength(1);
+  });
+
   it("ST-018: Title is required", async () => {
     await anExistingTeamMember(db, tom);
     const machineId = await aRegisteredMachine(db);

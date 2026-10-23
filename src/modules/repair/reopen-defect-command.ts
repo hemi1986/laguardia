@@ -7,7 +7,7 @@ import { reopenDefect, reopeningActors } from "./reopen-defect";
 
 /**
  * CMD-ReopenDefect through the command layer: a change of AGG-Defect at the version the team member saw (ST-003),
- * emits EVT-DefectReopened. Its facts are the machine as Collection knows it now (read without a lock, context map); a
+ * emits EVT-DefectReopened. Its facts are the machine as Collection knows it now (with its retirement lock, ADR 0010); a
  * status change in the same step runs Collection's CMD-ChangeMachineStatus (`context.run`, HS-3).
  */
 export const reopenDefectCommand = aggregateCommand({

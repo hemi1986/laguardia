@@ -56,7 +56,7 @@ aggregates:
       - A defect has at most one claimant
       - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers
       - Only an open defect that is not on hold can be put on hold; only a defect on hold can be resumed
-      - Resolving ends the claim and any hold; a reopened defect is open, not on hold and unclaimed
+      - Resolving and closing on retirement end the claim and any hold; a reopened defect is open, not on hold and unclaimed
       - Work log entries are only added, never changed or removed
   - id: AGG-Machine
     name: Machine

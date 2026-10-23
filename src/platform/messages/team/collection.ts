@@ -151,7 +151,6 @@ export const collectionTexts = {
       `Das Gerät ist bereits ${status}. Einen anderen Status können nur Techniker:innen setzen.`,
     back: "Zurück zum Gerät",
   },
-  /** Moving a machine (ST-034) – its own page, reached from the machine record. */
   /** Retiring a machine (ST-039): the reason, then the question once (G10, G10b). */
   machineRetire: {
     title: (museumNumber: string) => `${museumNumber} ausmustern`,
@@ -175,6 +174,7 @@ export const collectionTexts = {
     retired: "Dieses Gerät ist schon ausgemustert.",
     backToMachine: "Zurück zum Gerät",
   },
+  /** Moving a machine (ST-034) – its own page, reached from the machine record. */
   machineMove: {
     title: (museumNumber: string) => `Standort von ${museumNumber} ändern`,
     submit: "Standort ändern",

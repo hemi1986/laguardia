@@ -453,14 +453,15 @@ Creating commands save at version 0. A command run by a person **must** pass the
 A policy (`POL-…`) is an `aggregateCommand` allowed for `"system"` only. The triggering command declares it; the layer runs it **after saving, in the same transaction**, as the system:
 
 ```ts
-policies: (machine) => [trigger(closeDefectsOnRetirement, { machineId: machine.id })],
+policies: (report) => [trigger(somePolicyOfThisModule, { problemReportId: report.id })], // a policy of the same module
 ```
 
 Its events are journaled with the system as actor, after the triggering command's events. A rejected policy rejects the whole command. A policy may journal nothing when there is nothing to do.
 
 **A policy of another module** (ADR 0010, first: ST-039): the upstream command never names a downstream policy. The
-downstream module adds them – `withPolicies(command, [policy({ id: "POL-…", calls: async (tx, { result, actor }) =>
-[trigger(…)] })])` (`src/platform/command/policies.ts`) – and exports the result; the page uses that export (CMD-RetireMachine
+downstream module adds them – `withPolicies(command, [policy({ id: "POL-…", calls: async (tx, { events, actor }) =>
+[trigger(…)] })])` – a policy reads what happened from the triggering command's journal events, never from its result
+(which is the page's) (`src/platform/command/policies.ts`) – and exports the result; the page uses that export (CMD-RetireMachine
 with Repair's two policies: `src/modules/repair/retirement-policies.ts`). A policy that acts on many aggregates selects
 them `FOR UPDATE`, filtered by the state it acts on, so one changed a moment earlier is skipped instead of rejecting the
 command; each is then changed by its own command, run as the system without a version. When a second module reacts

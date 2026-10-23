@@ -130,6 +130,9 @@ describe("Repair's retirement policies", () => {
     const closed = await defectDetails(db, displayDead);
     expect(closed?.state).toBe("closed-on-retirement");
     expect(closed?.resolutions).toEqual([]);
+    // Like resolving, closing on retirement ends the claim and the hold (AGG-Defect).
+    expect(closed?.claim).toBeUndefined();
+    expect(closed?.hold).toBeUndefined();
     const resolved = await defectDetails(db, coinMech);
     expect(resolved?.state).toBe("resolved");
     expect(resolved?.resolutions).toHaveLength(1);

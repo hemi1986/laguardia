@@ -453,12 +453,13 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
 /**
  * One machine as maintenance needs it to check a maintenance record (context map, Collection → Maintenance: the
  * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Takes
- * the machine's retirement lock shared (ADR 0010), so a retirement in flight decides first. Undefined for an unknown
- * machine.
+ * the machine's retirement lock shared in a command (ADR 0010), so a retirement in flight decides first; a page reads
+ * it with `{ inCommand: false }`. Undefined for an unknown machine.
  */
 export async function machineForMaintenance(
   db: Database,
   machineId: string,
+  { inCommand = true }: { inCommand?: boolean } = {},
 ): Promise<
   | {
       id: string;
@@ -470,7 +471,7 @@ export async function machineForMaintenance(
   | undefined
 > {
   if (!isId(machineId)) return undefined;
-  await retirementLock(db, machineId, "shared");
+  if (inCommand) await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({
       id: machine.id,
