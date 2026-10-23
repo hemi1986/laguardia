@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MaintenancePlanChanged]
 depends_on: [ST-043]
 labels: [maintenance, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
