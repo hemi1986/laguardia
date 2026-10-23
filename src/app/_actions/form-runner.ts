@@ -177,9 +177,9 @@ function photoStep<Input, Result, Error extends string, Field extends string>(
       (reference) => executeCommand(command, definition.input(fields, reference), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
-      const rejected = { error: outcome.error, values: valuesOf(fields) };
+      const state = { error: outcome.error, values: valuesOf(fields) };
       const ofThePhoto = isPhotoError(outcome.error) && rejectsThePhoto[outcome.error];
-      return photo !== undefined && !ofThePhoto ? { ...rejected, photoAgain: true } : rejected;
+      return photo !== undefined && !ofThePhoto ? { ...state, photoAgain: true } : state;
     }
     await definition.onSuccess(outcome.result);
     return null;
