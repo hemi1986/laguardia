@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { photoErrors } from "@/photo";
 import { teamMessages, visitorMessages } from ".";
+import { teamAreas } from "./team";
 
 /** `_UI (de)_` wording per glossary term in CONTEXT.md, e.g. "Machine" → "Gerät". */
 function glossaryUiTerms(): Map<string, string> {
@@ -42,5 +43,27 @@ describe("message catalogs", () => {
     }
     expect(visitorMessages("de").commandErrors["too-large"]).toContain("20 MB");
     expect(visitorMessages("en").commandErrors["too-large"]).toContain("20 MB");
+  });
+
+  it("every team text key and every team error code lives in one area file only (architecture review 2026-10-18)", () => {
+    for (const group of [teamAreas.texts, teamAreas.errors]) {
+      const files = new Map<string, string[]>();
+      for (const [file, entries] of Object.entries(group)) {
+        for (const key of Object.keys(entries)) files.set(key, [...(files.get(key) ?? []), file]);
+      }
+      const inSeveral = [...files].filter(([, inFiles]) => inFiles.length > 1);
+      expect(inSeveral).toEqual([]);
+    }
+    // … and `teamMessages` is made of exactly these areas – one left out of `teamAreas` would escape the check.
+    const { commandErrors, ...texts } = teamMessages;
+    const keys = (group: Record<string, object>) => Object.values(group).flatMap((entries) => Object.keys(entries));
+    expect(Object.keys(texts).sort()).toEqual(keys(teamAreas.texts).sort());
+    expect(Object.keys(commandErrors).sort()).toEqual(keys(teamAreas.errors).sort());
+  });
+
+  it("an unknown machine is one code with one text in every catalog (architecture review 2026-10-18)", () => {
+    expect(teamMessages.commandErrors["unknown-machine"]).toBe("Dieses Gerät gibt es nicht.");
+    expect(visitorMessages("de").commandErrors["unknown-machine"]).toBe("Kein Gerät mit dieser Museumsnummer.");
+    expect(visitorMessages("en").commandErrors["unknown-machine"]).toBe("There is no machine with this museum number.");
   });
 });

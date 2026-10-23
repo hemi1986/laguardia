@@ -90,7 +90,7 @@ export const visitorEn: VisitorMessages = {
     "not-stored": "The photo could not be sent. Please try again or send the report without a photo.",
     "machine-not-on-display":
       "This machine is not on display at the moment. Problems can only be reported for machines on display.",
-    "machine-not-found": "There is no machine with this museum number.",
+    "unknown-machine": "There is no machine with this museum number.",
     "machine-retired": "This machine is no longer in the museum.",
     "triage-required":
       "As a technician, report from the machine record in the team area – the problem report is triaged right there. Nothing was saved.",

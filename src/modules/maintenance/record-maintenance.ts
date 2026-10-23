@@ -73,7 +73,7 @@ export type MaintenanceRecorded = {
 
 export type RecordMaintenanceError =
   | "maintenance-task-unknown"
-  | "machine-unknown"
+  | "unknown-machine"
   | "machine-retired"
   | "maintenance-task-does-not-apply"
   | "maintenance-not-suitable-for-helpers"
@@ -94,14 +94,14 @@ export function recordRefusal(
   teamMember: { role: Role },
 ):
   | "maintenance-task-unknown"
-  | "machine-unknown"
+  | "unknown-machine"
   | "machine-retired"
   | "maintenance-task-does-not-apply"
   | "maintenance-not-suitable-for-helpers"
   | undefined {
   // A removed maintenance task is never due, and nothing is recorded for it any more.
   if (!maintenanceTask || maintenanceTask.removedAt) return "maintenance-task-unknown";
-  if (!machine) return "machine-unknown";
+  if (!machine) return "unknown-machine";
   if (machine.retired) return "machine-retired";
   if (!maintenanceTaskAppliesTo(maintenanceTask, machine)) return "maintenance-task-does-not-apply";
   if (teamMember.role === "helper" && !maintenanceTask.suitableForHelpers)

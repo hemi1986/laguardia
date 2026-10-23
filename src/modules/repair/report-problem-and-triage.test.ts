@@ -90,7 +90,7 @@ describe("CMD-ReportProblem with a triage outcome in the same step – the decis
   it("checks the machine before anything of the triage outcome", () => {
     expect(decide(technician, " ", defect(" "), machine("playable", true))).toBe("machine-retired");
     expect(decide(technician, "Ball stuck", defect("Ball trap"), { machine: undefined, defect: undefined })).toBe(
-      "machine-not-found",
+      "unknown-machine",
     );
     // Team members report for a machine not on display (ST-015) – a technician with a defect, whose status stays.
     expect(decide(technician, "Ball stuck", defect("Ball trap"), machine("not-on-display"))).toEqual([

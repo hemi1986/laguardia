@@ -114,10 +114,10 @@ describe("CMD-ReportProblem by a visitor", () => {
   it("rejects a problem report for a machine that does not exist, storing nothing", async () => {
     expect(
       await executeCommand(reportProblemCommand, { machineId: randomUUID(), description: "Ball stuck" }, deps),
-    ).toEqual({ ok: false, error: "machine-not-found" });
+    ).toEqual({ ok: false, error: "unknown-machine" });
     expect(await executeCommand(reportProblemCommand, { machineId: "", description: "Ball stuck" }, deps)).toEqual({
       ok: false,
-      error: "machine-not-found",
+      error: "unknown-machine",
     });
   });
 

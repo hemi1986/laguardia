@@ -1,4 +1,4 @@
-import { teamMessages } from "./team.de";
+import { teamMessages } from "./team";
 import { visitorDe, type VisitorMessages } from "./visitor.de";
 import { visitorEn } from "./visitor.en";
 
