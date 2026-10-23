@@ -322,13 +322,15 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
 
 /**
  * What the Repair module needs to know about a machine when a problem is reported (context map, Collection → Repair:
- * Repair checks its command rules against the current machine state). Undefined for an unknown machine.
+ * Repair checks its command rules against the current machine state). Undefined for an unknown machine. Takes the
+ * machine's retirement lock shared (ADR 0010): whether it is retired stays true until the command commits.
  */
 export async function machineForReporting(
   db: Database,
   machineId: string,
 ): Promise<{ machineStatus: MachineStatus; retired: boolean } | undefined> {
   if (!isId(machineId)) return undefined;
+  await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({ machineStatus: machine.machineStatus, retiredAt: machine.retiredAt })
     .from(machine)
@@ -434,8 +436,9 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
 
 /**
  * One machine as maintenance needs it to check a maintenance record (context map, Collection → Maintenance: the
- * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Read
- * without a lock, like every rule on another module's data. Undefined for an unknown machine.
+ * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Takes
+ * the machine's retirement lock shared (ADR 0010), so a retirement in flight decides first. Undefined for an unknown
+ * machine.
  */
 export async function machineForMaintenance(
   db: Database,
@@ -451,6 +454,7 @@ export async function machineForMaintenance(
   | undefined
 > {
   if (!isId(machineId)) return undefined;
+  await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({
       id: machine.id,
