@@ -210,6 +210,17 @@ export function MachineRecordView({
           </CardContent>
         </Card>
       </section>
+      {actions.retire && (
+        // Section 9 (ST-039, G18): retiring – it leads to its own page, which asks once (G10b).
+        <section>
+          <Link
+            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/ausmustern`}
+            className={buttonVariants({ variant: "outline", className: "self-start" })}
+          >
+            {texts.retire}
+          </Link>
+        </section>
+      )}
       <BackToMachines />
     </>
   );
@@ -222,6 +233,8 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.statusChanged(record.museumNumber, machines.statuses[record.machineStatus]);
     case "moved":
       return texts.moved(record.museumNumber, record.location);
+    case "retired":
+      return texts.retiredConfirmation(record.museumNumber);
     case "problem-reported":
       return texts.problemReported(record.museumNumber);
     case "file-attached":

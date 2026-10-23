@@ -4,6 +4,7 @@ import {
   type MachineRecord,
   type Retirement,
   type StatusChange,
+  retireRefusal,
 } from "@/modules/collection";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
@@ -42,6 +43,8 @@ export type MachineRecordActions = {
   changeStatus: boolean;
   /** Section 8 (ST-037): every team member, a retired machine's record too. */
   attachFile: boolean;
+  /** Section 9 (ST-039): technicians only, not for a retired machine – Collection's own rule. */
+  retire: boolean;
 };
 
 /** How many of the most recently ended entries of the repair history the machine record shows (user, 2026-10-14, `/implement ST-033`). */
@@ -101,5 +104,6 @@ function actionsOf(record: MachineRecord, viewer: Viewer): MachineRecordActions 
     changeStatus:
       machineStatusesToChangeTo(viewer.role, { machineStatus: record.machineStatus, retired: !active }).length > 0,
     attachFile: true,
+    retire: retireRefusal({ retired: !active }, viewer) === undefined,
   };
 }

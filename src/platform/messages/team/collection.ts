@@ -85,6 +85,9 @@ export const collectionTexts = {
     /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
     registeredAs: (status: string) => `Erfasst als ${status}`,
     retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
+    /** Section 9 (ST-039): technicians only, not for a retired machine (G11). */
+    retire: "Gerät ausmustern",
+    retiredConfirmation: (museumNumber: string) => `${museumNumber} ist ausgemustert.`,
     /** In place of the machine status of a retired machine (user, backlog grooming 2026-10-17, ST-039). */
     retiredInPlaceOfStatus: "Ausgemustert",
     unknownTeamMember: "unbekannt",
@@ -149,6 +152,29 @@ export const collectionTexts = {
     back: "Zurück zum Gerät",
   },
   /** Moving a machine (ST-034) – its own page, reached from the machine record. */
+  /** Retiring a machine (ST-039): the reason, then the question once (G10, G10b). */
+  machineRetire: {
+    title: (museumNumber: string) => `${museumNumber} ausmustern`,
+    reason: "Grund",
+    reasonHint: "Warum verlässt das Gerät das Museum?",
+    submit: "Weiter",
+    /** Names what nobody sees on this screen; a part with zero is left out (backlog grooming 2026-10-17, G10). */
+    question: (museumNumber: string, openDefects: number, problemReports: number) => {
+      const consequences = [
+        openDefects === 1 ? "1 offener Defekt wird geschlossen" : "",
+        openDefects > 1 ? `${openDefects} offene Defekte werden geschlossen` : "",
+        problemReports === 1 ? "1 Meldung wird verworfen" : "",
+        problemReports > 1 ? `${problemReports} Meldungen werden verworfen` : "",
+      ].filter(Boolean);
+      const what = consequences.length > 0 ? ` ${consequences.join(", ")}.` : "";
+      return `${museumNumber} ausmustern?${what} Das lässt sich nicht rückgängig machen.`;
+    },
+    confirm: "Endgültig ausmustern",
+    back: "Zurück",
+    reasonRequired: "Bitte einen Grund angeben.",
+    retired: "Dieses Gerät ist schon ausgemustert.",
+    backToMachine: "Zurück zum Gerät",
+  },
   machineMove: {
     title: (museumNumber: string) => `Standort von ${museumNumber} ändern`,
     submit: "Standort ändern",

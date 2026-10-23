@@ -228,6 +228,16 @@ describe("the machine record", () => {
     expect(await page("LG-013")).not.toContain("/standort");
   });
 
+  it("offers „Gerät ausmustern“ only to technicians, and not on a retired machine (ST-039, G11)", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+    await retiredMachine("LG-013");
+    const helper: Viewer = { id: randomUUID(), role: "helper" };
+
+    expect(await page("LG-042")).toContain('href="/team/machines/LG-042/ausmustern"');
+    expect(await page("LG-042", helper)).not.toContain("/ausmustern");
+    expect(await page("LG-013")).not.toContain("/ausmustern");
+  });
+
   it("offers „Status ändern“ only where the viewer has a machine status to set (ST-012, G11)", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
     await retiredMachine("LG-013");
