@@ -3,6 +3,7 @@ export { changeMaintenancePlanCommand } from "./change-maintenance-plan-command"
 export type {
   ChangeMaintenancePlanError,
   ChangeMaintenancePlanInput,
+  MaintenanceTaskChanges,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
 export {
