@@ -24,6 +24,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import type { Viewer } from "../../claimant";
 import { loadMachineRecord } from "./machine-record-data";
 import { MachineRecordView } from "./machine-record";
 
@@ -77,10 +78,25 @@ async function registered(museumNumber: string, at: string) {
   return outcome.result.machineId;
 }
 
+/** A registered machine that was retired on 2026-03-01 by Tom. */
+async function retiredMachine(museumNumber: string): Promise<string> {
+  const machineId = await registered(museumNumber, "2026-01-15T09:00:00Z");
+  const retired = await executeCommand(
+    retireMachineForTest,
+    { machineId, version: 0 },
+    { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
+  );
+  if (!retired.ok) throw new Error("not retired");
+  return machineId;
+}
+
 const NOW = "2026-10-14T10:00:00Z";
 
-async function page(museumNumber: string): Promise<string> {
-  const record = await loadMachineRecord(db, museumNumber, { clock: fixedClock(NOW) });
+/** A technician looks at the page unless the test says who. */
+const technician: Viewer = { id: eva.teamMemberId, role: "technician" };
+
+async function page(museumNumber: string, viewer: Viewer = technician): Promise<string> {
+  const record = await loadMachineRecord(db, museumNumber, { clock: fixedClock(NOW), viewer });
   return renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber }));
 }
 
@@ -145,18 +161,12 @@ describe("the machine record", () => {
   it("ST-009: Unknown museum number", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
 
-    expect(await loadMachineRecord(db, "LG-999")).toBeUndefined();
+    expect(await loadMachineRecord(db, "LG-999", { viewer: technician })).toBeUndefined();
     expect(await page("LG-999")).toContain("Kein Gerät mit der Museumsnummer LG-999.");
   });
 
   it("ST-009: Retired machine keeps its record", async () => {
-    const machineId = await registered("LG-013", "2026-01-15T09:00:00Z");
-    const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
-      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
-    );
-    if (!retired.ok) throw new Error("not retired");
+    await retiredMachine("LG-013");
 
     const html = await page("LG-013");
 
@@ -187,27 +197,40 @@ describe("the machine record", () => {
 
   it("offers „Standort ändern“ for an active machine and not for a retired one (ST-034, G11)", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
-    const retiredId = await registered("LG-013", "2026-01-15T09:00:00Z");
-    const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId: retiredId, version: 0 },
-      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
-    );
-    if (!retired.ok) throw new Error("not retired");
+    await retiredMachine("LG-013");
 
     expect(await page("LG-042")).toContain('href="/team/machines/LG-042/standort"');
     expect(await page("LG-013")).not.toContain("/standort");
   });
 
+  it("offers „Status ändern“ only where the viewer has a machine status to set (ST-012, G11)", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+    await retiredMachine("LG-013");
+
+    const helper: Viewer = { id: randomUUID(), role: "helper" };
+
+    // A helper may set only „Außer Betrieb“ – on a playable machine that is a status to set …
+    expect(await page("LG-042", helper)).toContain('href="/team/machines/LG-042/status"');
+    expect(await page("LG-042")).toContain('href="/team/machines/LG-042/status"');
+    expect(await page("LG-013")).not.toContain("/status");
+  });
+
+  it("offers a helper no „Status ändern“ on a machine already out of order, a technician still (ST-012, G11)", async () => {
+    const machineId = await registered("LG-042", "2026-01-15T09:00:00Z");
+    const changed = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "flipper coil burnt" },
+      { actor: tom, db, clock: fixedClock("2026-01-20T13:30:00Z"), newId: randomUUID },
+    );
+    if (!changed.ok) throw new Error("not changed");
+
+    expect(await page("LG-042", { id: randomUUID(), role: "helper" })).not.toContain("/status");
+    expect(await page("LG-042")).toContain('href="/team/machines/LG-042/status"');
+  });
+
   it("offers „Problem melden“ for an active machine and not for a retired one (ST-015, G11)", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
-    const retiredId = await registered("LG-013", "2026-01-15T09:00:00Z");
-    const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId: retiredId, version: 0 },
-      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
-    );
-    if (!retired.ok) throw new Error("not retired");
+    await retiredMachine("LG-013");
 
     expect(await page("LG-042")).toContain('href="/team/machines/LG-042/melden"');
     expect(await page("LG-013")).not.toContain("/melden");
@@ -319,13 +342,7 @@ describe("the machine record", () => {
 
   describe("its files (ST-037)", () => {
     it("offers attaching a file on a retired machine too – its manuals stay useful (user, 2026-10-18)", async () => {
-      const machineId = await registered("LG-013", "2026-01-15T09:00:00Z");
-      const retired = await executeCommand(
-        retireMachineForTest,
-        { machineId, version: 0 },
-        { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
-      );
-      if (!retired.ok) throw new Error("not retired");
+      await retiredMachine("LG-013");
 
       expect(section(await page("LG-013"), "Dateien")).toMatch(
         /<a [^>]*href="\/team\/machines\/LG-013\/datei-anhaengen"[^>]*>Datei anhängen<\/a>/,
@@ -349,7 +366,9 @@ describe("the machine record", () => {
       const files = section(await page("LG-042"), "Dateien");
 
       expect(files.indexOf("Handbuch")).toBeLessThan(files.indexOf("Sonstiges"));
-      expect(files).toMatch(new RegExp(`<a [^>]*href="/team/dateien/${manual}"[^>]*>MM Operations Manual</a><span[^>]*> · Modell</span>`));
+      expect(files).toMatch(
+        new RegExp(`<a [^>]*href="/team/dateien/${manual}"[^>]*>MM Operations Manual</a><span[^>]*> · Modell</span>`),
+      );
       expect(files).toContain("LG-042 wiring notes");
       expect(files).not.toContain("Noch keine Dateien");
     });

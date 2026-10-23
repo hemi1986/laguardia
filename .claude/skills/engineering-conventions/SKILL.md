@@ -231,6 +231,12 @@ them (`recordOffered`), and the form page asks `maintenanceForRecording(db, cloc
 task, the refusal (`whyNot`) and the dates allowed. The page passes Collection's machines and keeps no rule of its own
 (G11); `recordRefusal` stays inside the module.
 
+**What a team member can do on the machine record** (architecture review 2026-10-18): `loadMachineRecord(db, museumNumber,
+{ clock, viewer })` returns `actions` – report a problem, change the location, change the status (Collection's
+`machineStatusesToChangeTo` for the viewer's role), attach a file – and the view shows only those; neither the page nor
+the view takes a `can…` prop. An offer another module decides per item (ST-047's „Wartung erfassen“ per due task) comes
+with that section's data from that module.
+
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
 `?registered=`, `?created=`, `?corrected`, `?added=`); the page confirms it only when `lastCommandBy(db, { machineId } |
