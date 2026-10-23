@@ -1,7 +1,5 @@
 import { sql } from "drizzle-orm";
-import { aggregateCommand, type Database } from "@/platform/command";
-import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
-import { maintenancePlans } from "./maintenance-plans";
+import type { Database } from "@/platform/command";
 
 /**
  * Empties the maintenance plan of an isolated test database – never the shared one, where other tests add to the one
@@ -14,31 +12,3 @@ export async function withoutMaintenanceTasks(db: Database): Promise<void> {
   }
   await db.execute(sql`TRUNCATE maintenance_record, maintenance_task`);
 }
-
-/** Test stand-in for removing a maintenance task (CMD-ChangeMaintenancePlan, ST-041): it keeps `removedAt`. */
-export const removeMaintenanceTaskForTest = aggregateCommand({
-  id: "CMD-TestRemoveMaintenanceTask",
-  allowedActors: ["technician"],
-  store: maintenancePlans,
-  target: (input: { maintenanceTaskId: string; version: number }) => ({
-    id: MAINTENANCE_PLAN_ID,
-    version: input.version,
-  }),
-  decide: (plan, input, { clock }) => ({
-    ok: true as const,
-    state: {
-      ...plan,
-      maintenanceTasks: plan.maintenanceTasks.map((task) =>
-        task.id === input.maintenanceTaskId ? { ...task, removedAt: clock.now() } : task,
-      ),
-    },
-    events: [{ type: "EVT-TestMaintenanceTaskRemoved" as const, maintenanceTaskId: input.maintenanceTaskId }],
-  }),
-  journal: (event) => ({
-    type: event.type,
-    aggregate: { type: "AGG-MaintenancePlan", id: MAINTENANCE_PLAN_ID },
-    machineId: null,
-    data: { maintenanceTaskId: event.maintenanceTaskId },
-  }),
-  result: () => ({}),
-});

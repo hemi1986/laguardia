@@ -1,4 +1,5 @@
 import { entriesOf, lastCommandBy, type Database, type JournalEntry, type TeamMemberId } from "@/platform/command";
+import type { MaintenancePlanChange } from "./change-maintenance-plan";
 import { maintenanceEvents } from "./events";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 
@@ -13,12 +14,12 @@ export function maintenanceRecordedIn(command: readonly JournalEntry[], maintena
 }
 
 /**
- * Whether the latest change of the maintenance plan added this maintenance task and the given team member made it
- * (ST-040) – the maintenance plan is one aggregate, so Maintenance names it here.
+ * Whether the latest change of the maintenance plan made this change to this maintenance task and the given team member
+ * made it (ST-040, ST-041) – the maintenance plan is one aggregate, so Maintenance names it here.
  */
-export async function maintenanceTaskAddedBy(
+export async function maintenancePlanChangeBy(
   db: Database,
-  maintenanceTaskId: string,
+  { maintenanceTaskId, change }: { maintenanceTaskId: string; change: MaintenancePlanChange },
   teamMemberId: TeamMemberId,
 ): Promise<boolean> {
   const command = await lastCommandBy(db, { aggregateId: MAINTENANCE_PLAN_ID }, teamMemberId);
@@ -26,6 +27,6 @@ export async function maintenanceTaskAddedBy(
     (entry) =>
       entry.type === "EVT-MaintenancePlanChanged" &&
       entry.data.maintenanceTaskId === maintenanceTaskId &&
-      entry.data.change === "added",
+      entry.data.change === change,
   );
 }

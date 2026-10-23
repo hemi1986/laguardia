@@ -4,7 +4,8 @@ import { aHelper, expect, logIn, openMore, pageWidth, test, unique } from "./fix
 /**
  * The maintenance plan on a phone (ST-040): „Mehr“ → „Wartungsplan“ → „Wartungsaufgabe hinzufügen“ → the form page
  * → back on the plan with the confirmation and the new maintenance task, its restriction in words and when it is first
- * due. Native controls only, so the same works without JavaScript; helpers find no way there. Needs the e2e technician
+ * due. Native controls only, so the same works without JavaScript; helpers find no way there. „Ändern“ on a task leads
+ * to its change form, which also removes it after asking once (ST-041, G10b). Needs the e2e technician
  * each local run creates (ST-083); the preview database has none before ST-068, so this runs locally only.
  */
 const username = process.env.E2E_TEAM_USERNAME;
@@ -24,6 +25,17 @@ async function fillIn(page: Page, name: string, { category, technology }: { cate
   if (technology) await page.getByLabel("Und nur für Technik").selectOption({ label: technology });
   await page.getByLabel("Start").fill("2026-10-01");
 }
+
+/** A maintenance task added through the form – back on the maintenance plan, which lists it. */
+async function aMaintenanceTask(page: Page, name: string) {
+  await page.goto("/team/maintenance-plan/new");
+  await fillIn(page, name, { category: "Flipper" });
+  await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
+}
+
+/** The entry of the maintenance task of that name on the maintenance plan. */
+const entryOf = (page: Page, name: string) => page.getByRole("main").getByRole("listitem").filter({ hasText: name });
 
 test("a technician adds a maintenance task to the maintenance plan", async ({ page }) => {
   await logIn(page);
@@ -82,4 +94,59 @@ test.describe("without JavaScript", () => {
       "Nur Flipper · EM",
     );
   });
+
+  test("ST-041: Removing asks once", async ({ page }) => {
+    await logIn(page);
+    const name = unique("Wax playfield");
+    await aMaintenanceTask(page, name);
+
+    await entryOf(page, name)
+      .getByRole("link", { name: `„${name}“ ändern` })
+      .click();
+    await page.getByLabel("Intervall in Monaten").fill("6");
+    await page.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
+
+    const question = `„${name}“ aus dem Wartungsplan entfernen? Sie wird nie wieder fällig; die Wartungseinträge bleiben.`;
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText(question);
+    await expect(page.getByLabel("Anleitung")).toHaveCount(0);
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+    await page.getByRole("button", { name: "Zurück" }).click();
+
+    // Nothing removed, and the form keeps what was typed.
+    await expect(page.getByLabel("Intervall in Monaten")).toHaveValue("6");
+    await page.goto("/team/maintenance-plan");
+    await expect(entryOf(page, name)).toHaveCount(1);
+
+    await entryOf(page, name)
+      .getByRole("link", { name: `„${name}“ ändern` })
+      .click();
+    await page.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
+    await page.getByRole("button", { name: "Entfernen" }).click();
+
+    await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist nicht mehr im Wartungsplan.`);
+    await expect(entryOf(page, name)).toHaveCount(0);
+  });
+});
+
+test("a technician changes a maintenance task and is back on the maintenance plan", async ({ page }) => {
+  await logIn(page);
+  const name = unique("Clean playfield");
+  await aMaintenanceTask(page, name);
+
+  await entryOf(page, name)
+    .getByRole("link", { name: `„${name}“ ändern` })
+    .click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`„${name}“ ändern`);
+  await expect(page.getByLabel("Anleitung")).toHaveValue("Glass out, clean both sides.");
+  await expect(page.getByLabel("Für Helfer:innen geeignet")).toBeChecked();
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+
+  await page.getByLabel("Intervall in Monaten").fill("2");
+  await page.getByLabel("Für Helfer:innen geeignet").uncheck();
+  await page.getByLabel("Und nur für Technik").selectOption({ label: "EM (Flipper)" });
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ geändert.`);
+  await expect(entryOf(page, name)).toContainText("Alle 2 Monate · Nur Flipper · EM");
+  await expect(entryOf(page, name)).not.toContainText("Für Helfer:innen geeignet");
 });

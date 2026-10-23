@@ -36,6 +36,18 @@ export const maintenanceTexts = {
     add: "Wartungsaufgabe hinzufügen",
     empty: "Noch keine Wartungsaufgabe im Wartungsplan.",
     added: (name: string) => `„${name}“ ist jetzt im Wartungsplan.`,
+    changed: (name: string) => `„${name}“ geändert.`,
+    removed: (name: string) => `„${name}“ ist nicht mehr im Wartungsplan.`,
+    change: "Ändern",
+    changeTask: (name: string) => `„${name}“ ändern`,
+    save: "Änderungen speichern",
+    remove: "Wartungsaufgabe entfernen",
+    removeQuestion: (name: string) =>
+      `„${name}“ aus dem Wartungsplan entfernen? Sie wird nie wieder fällig; die Wartungseinträge bleiben.`,
+    confirmRemove: "Entfernen",
+    /** Going back from the question to the change form, with everything typed. */
+    questionBack: "Zurück",
+    notInPlan: "Diese Wartungsaufgabe ist nicht im Wartungsplan.",
     every: (months: number) => (months === 1 ? "Jeden Monat" : `Alle ${months} Monate`),
     onlyFor: (restriction: string) => `Nur ${restriction}`,
     allMachines: "Alle Geräte",

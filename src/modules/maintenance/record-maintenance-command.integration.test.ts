@@ -12,7 +12,6 @@ import {
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { reportProblemCommand, retireMachineCommand } from "@/modules/repair";
-import { removeMaintenanceTaskForTest } from "./maintenance.test-support";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
@@ -206,9 +205,10 @@ describe("CMD-RecordMaintenance", () => {
     // Maintenance reads from Collection whether the machine is retired – a retired machine gets no maintenance record.
     expect(await record(cleanGlass, lg013, undefined)).toEqual({ ok: false, error: "machine-retired" });
     expect(await maintenanceRecords(db, { machineId: lg013 })).toEqual([]);
-    expect(
-      await executeCommand(reportProblemCommand, { machineId: lg013, description: "Ball stuck" }, at),
-    ).toEqual({ ok: false, error: "machine-retired" });
+    expect(await executeCommand(reportProblemCommand, { machineId: lg013, description: "Ball stuck" }, at)).toEqual({
+      ok: false,
+      error: "machine-retired",
+    });
     expect(
       await executeCommand(
         changeMachineStatusCommand,
@@ -252,8 +252,8 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
     expect(await maintenanceForRecording(db, tenthOfJune, randomUUID(), machine!, tom)).toBeUndefined();
 
     const removed = await executeCommand(
-      removeMaintenanceTaskForTest,
-      { maintenanceTaskId: fuses, version: await maintenancePlanVersion(db) },
+      changeMaintenancePlanCommand,
+      { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId: fuses },
       { actor: tom, db, clock: tenthOfJune, newId: randomUUID },
     );
     if (!removed.ok) throw new Error(removed.error);

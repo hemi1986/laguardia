@@ -5,7 +5,10 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { changeMaintenancePlanCommand, maintenancePlan, maintenanceTaskAddedBy } from ".";
+import { changeMaintenancePlanCommand, maintenancePlan, maintenancePlanChangeBy } from ".";
+
+const maintenanceTaskAddedBy = (db: NodePgDatabase, maintenanceTaskId: string, teamMemberId: string) =>
+  maintenancePlanChangeBy(db, { maintenanceTaskId, change: "added" }, teamMemberId);
 
 /**
  * Whether a technician just added a maintenance task (ST-040, G3, architecture review 2026-10-18): the latest change of

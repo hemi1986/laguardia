@@ -36,10 +36,13 @@ export type ChangeMaintenancePlanInput = {
   | { change: "remove"; maintenanceTaskId: string }
 );
 
+/** What a change of the maintenance plan did to one maintenance task. */
+export type MaintenancePlanChange = "added" | "changed" | "removed";
+
 export type MaintenancePlanChanged = {
   type: "EVT-MaintenancePlanChanged";
   maintenanceTaskId: string;
-  change: "added" | "changed" | "removed";
+  change: MaintenancePlanChange;
   changedBy: TeamMemberId;
 };
 
@@ -69,11 +72,7 @@ export function changeMaintenancePlan(
   input: ChangeMaintenancePlanInput,
   { actor, clock, newId }: DecisionContext<ChangingPerson>,
 ): Decision<MaintenancePlan, MaintenancePlanChanged, ChangeMaintenancePlanError> {
-  const changed = (
-    maintenanceTasks: MaintenanceTask[],
-    maintenanceTaskId: string,
-    change: MaintenancePlanChanged["change"],
-  ) => ({
+  const changed = (maintenanceTasks: MaintenanceTask[], maintenanceTaskId: string, change: MaintenancePlanChange) => ({
     ok: true as const,
     state: { ...plan, maintenanceTasks },
     events: [{ type: "EVT-MaintenancePlanChanged" as const, maintenanceTaskId, change, changedBy: actor.teamMemberId }],
