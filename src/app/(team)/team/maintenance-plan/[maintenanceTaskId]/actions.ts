@@ -68,8 +68,8 @@ export async function changeMaintenanceTaskAction(
       return { asking: false, values };
     case "remove": {
       // A rejected removal goes back to the form with everything typed, and names the reason there (G8).
-      const rejected = await removeMaintenanceTask(null, formData);
-      return rejected && { error: rejected.error, values };
+      const outcome = await removeMaintenanceTask(null, formData);
+      return outcome && { error: outcome.error, values };
     }
     case "change":
       return changeMaintenanceTask(null, formData);
