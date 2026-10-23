@@ -9,7 +9,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import sharp from "sharp";
 import { memoryStorage } from "@/platform/storage";
 import { withPhotoForTest } from "@/photo/photo-stand-in.test-support";
-import { formRunner, photoFormRunner } from "./form-runner";
+import { formRunner } from "./form-runner";
 import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { post } from "@/test-support/forms";
@@ -122,7 +122,7 @@ describe("the Server Action runner", () => {
       storage = memoryStorage(),
       succeeded: (photo?: string) => void = () => {},
     ) {
-      const action = photoFormRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
+      const action = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
         withPhotoForTest,
         {
           fields: ["outcome"],
@@ -155,8 +155,26 @@ describe("the Server Action runner", () => {
       const form = post({ outcome: "reject" });
       form.append("photo", await aPhoto());
 
-      expect(await action(null, form)).toEqual({ error: "rejected-for-test", values: { outcome: "reject" } });
+      expect(await action(null, form)).toEqual({
+        error: "rejected-for-test",
+        values: { outcome: "reject" },
+        photoAgain: true,
+      });
       expect(storage.names()).toEqual([]);
+    });
+
+    it("says the photo must be chosen again only when one was attached and not rejected itself (G8a)", async () => {
+      const { action } = photoFormActingAs({ kind: "visitor" });
+      const notAnImage = post({ outcome: "accept" });
+      notAnImage.append("photo", new File(["%PDF-1.7 not a photo"], "manual.jpg", { type: "image/jpeg" }));
+
+      // Without a photo there is nothing to choose again.
+      expect(await action(null, post({ outcome: "reject" }))).toEqual({
+        error: "rejected-for-test",
+        values: { outcome: "reject" },
+      });
+      // A rejection of the photo itself already says to choose another one or leave it out (user, 2026-10-10).
+      expect(await action(null, notAnImage)).toEqual({ error: "not-an-image", values: { outcome: "accept" } });
     });
 
     it("treats an empty file field as no photo", async () => {

@@ -125,7 +125,7 @@ test("ST-023: Report without a description stores nothing", async ({ page }) => 
   await page.getByLabel("Titel").fill(defectTitle);
   await send(page).click();
 
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte das Problem beschreiben.");
   await expect(page.getByLabel("Beschreibung")).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Titel")).not.toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Titel")).toHaveValue(defectTitle);
@@ -140,7 +140,7 @@ test("with neither a description nor a title, the description is the one marked"
 
   await send(page).click();
 
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte das Problem beschreiben.");
   await expect(page.getByLabel("Beschreibung")).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Titel")).not.toHaveAttribute("aria-invalid", "true");
 });

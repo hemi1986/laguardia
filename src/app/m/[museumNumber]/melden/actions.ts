@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { machineIdOf } from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
-import { photoFormAction, type FormState } from "@/app/_actions/form-action";
+import { formAction, type PhotoFormState } from "@/app/_actions/form-action";
 import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
@@ -14,7 +14,10 @@ import {
   type ReportProblemField,
 } from "./report-problem-input";
 
-export type ReportProblemState = FormState<CommandError<typeof reportProblemCommand> | PhotoError, ReportProblemField>;
+export type ReportProblemState = PhotoFormState<
+  CommandError<typeof reportProblemCommand> | PhotoError,
+  ReportProblemField
+>;
 
 /**
  * CMD-ReportProblem from the report form page (ST-013) – through the Server Action runner (ST-073), as whoever the
@@ -28,7 +31,7 @@ export async function reportProblemAction(
   formData: FormData,
 ): Promise<ReportProblemState> {
   const machineId = await machineIdOf(database(), museumNumber);
-  return photoFormAction(reportProblemCommand, {
+  return formAction(reportProblemCommand, {
     fields: reportProblemFields,
     photo: reportProblemPhoto,
     input: (fields, photo) => reportProblemInput(fields, machineId, photo),

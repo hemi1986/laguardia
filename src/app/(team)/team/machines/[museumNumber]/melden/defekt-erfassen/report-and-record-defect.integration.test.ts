@@ -14,14 +14,13 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { commandErrorText, visitorMessages } from "@/platform/messages";
 import { memoryStorage } from "@/platform/storage";
-import { photoFormRunner } from "@/app/_actions/form-runner";
+import { formRunner } from "@/app/_actions/form-runner";
 import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "../report-problem-input";
 import { TriageChoice } from "../triage-choice";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndRecordDefectFields, reportAndRecordDefectInput } from "./report-and-record-defect-input";
-import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { post } from "@/test-support/forms";
 
@@ -43,14 +42,13 @@ async function aPhoto(): Promise<File> {
 }
 
 /** The form's action for one machine, with a storage of its own to look into. */
-function formFor(machineId: string, actor: Actor = tom) {
-  const storage = memoryStorage();
+function formFor(machineId: string, actor: Actor = tom, storage = memoryStorage()) {
   const reported: { problemReportId: string; defectId?: string }[] = [];
-  const action = photoFormRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
+  const action = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
     reportProblemAndTriageCommand,
     {
       fields: reportAndRecordDefectFields,
-      photo: reportAndTriagePhoto,
+      photo: teamReportProblemPhoto,
       input: (fields, photo) => reportAndRecordDefectInput(fields, machineId, photo),
       onSuccess: async (result) => void reported.push(result),
     },
@@ -98,8 +96,8 @@ describe("the form for reporting a problem and recording a defect", () => {
     const withPhoto = post({ description: "Left flipper coil stop broken", title: "" }, await aPhoto());
     const withoutPhoto = post({ description: "Left flipper coil stop broken", title: "" });
 
-    const rejected = withPhotoToChooseAgain(await action(null, withPhoto), withPhoto);
-    const rejectedWithoutPhoto = withPhotoToChooseAgain(await action(null, withoutPhoto), withoutPhoto);
+    const rejected = await action(null, withPhoto);
+    const rejectedWithoutPhoto = await action(null, withoutPhoto);
 
     await expectNothingStored(machineId, journalBefore, storage);
     expect(rejectionText(rejected!, "LG-042")).toBe(
@@ -108,7 +106,9 @@ describe("the form for reporting a problem and recording a defect", () => {
     // Only a form that had a photo attached says so.
     expect(rejectionText(rejectedWithoutPhoto!, "LG-042")).toBe("Bitte einen Titel angeben.");
     // A photo that could not be stored was not rejected itself – "try again" needs it chosen again.
-    const notStored = withPhotoToChooseAgain({ error: "not-stored" as const }, withPhoto);
+    const failing = { ...memoryStorage(), write: () => Promise.reject(new Error("Blob is down")) };
+    const notStored = await formFor(machineId, tom, failing).action(null, withPhoto);
+    expect(notStored?.error).toBe("not-stored");
     expect(rejectionText(notStored!, "LG-042")).toBe(
       "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden. Das Foto muss erneut ausgewählt werden.",
     );
@@ -122,7 +122,7 @@ describe("the form for reporting a problem and recording a defect", () => {
     const notAnImage = new File(["%PDF-1.7 not a photo"], "manual.pdf", { type: "application/pdf" });
     const form = post({ description: "Left flipper coil stop broken", title: "Left flipper sticks" }, notAnImage);
 
-    const rejected = withPhotoToChooseAgain(await action(null, form), form);
+    const rejected = await action(null, form);
 
     await expectNothingStored(machineId, journalBefore, storage);
     expect(rejected?.error).toBe("not-an-image");
@@ -146,7 +146,7 @@ describe("the form for reporting a problem and recording a defect", () => {
     const journalBefore = (await journalOf(db, { machineId })).length;
     const form = post({ description: "Left flipper coil stop broken", title: "Left flipper sticks" });
 
-    const rejected = withPhotoToChooseAgain(await action(null, form), form);
+    const rejected = await action(null, form);
 
     await expectNothingStored(machineId, journalBefore, storage);
     expect(rejected).toMatchObject({
@@ -180,7 +180,7 @@ describe("the form for reporting a problem and recording a defect", () => {
     const journalBefore = (await journalOf(db, { machineId })).length;
     const storage = memoryStorage();
     // ST-015's plain form, as a page loaded before the change still sends it – now as a technician.
-    const plainForm = photoFormRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
+    const plainForm = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
       reportProblemCommand,
       {
         fields: teamReportProblemFields,

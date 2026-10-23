@@ -12,12 +12,12 @@ import { storedProblemReport } from "@/modules/repair/command-probes.test-suppor
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
-import { photoFormRunner } from "@/app/_actions/form-runner";
+import { formRunner } from "@/app/_actions/form-runner";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndResolveFields, reportAndResolveInput } from "../direkt-behoben/report-and-resolve-input";
-import { reportAndTriagePhoto, withPhotoToChooseAgain } from "../report-and-triage";
+import { teamReportProblemPhoto } from "../report-problem-input";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { reportAndLinkFields, reportAndLinkInput } from "./report-and-link-input";
 import { post } from "@/test-support/forms";
@@ -65,7 +65,7 @@ async function aMachineWithAnOpenDefect() {
 }
 
 function runner(actor: Actor, storage = memoryStorage()) {
-  return { storage, run: photoFormRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage }) };
+  return { storage, run: formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage }) };
 }
 
 /** The form „… und mit Defekt verknüpfen“ for one machine, with a storage of its own to look into. */
@@ -73,7 +73,7 @@ function linkFormFor(machineId: string, actor: Actor = tom) {
   const { storage, run } = runner(actor);
   const action = run(reportProblemAndTriageCommand, {
     fields: reportAndLinkFields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => reportAndLinkInput(fields, machineId, photo),
     onSuccess: async () => {},
   });
@@ -85,7 +85,7 @@ function resolveFormFor(machineId: string, actor: Actor = anna) {
   const { storage, run } = runner(actor);
   const action = run(reportProblemAndTriageCommand, {
     fields: reportAndResolveFields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => reportAndResolveInput(fields, machineId, photo),
     onSuccess: async () => {},
   });
@@ -131,7 +131,7 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     const before = await stored(machineId, storage);
     const form = post({ description: "Left flipper weak again during test", defectId });
 
-    const rejected = withPhotoToChooseAgain(await action(null, form), form);
+    const rejected = await action(null, form);
 
     expect(rejected).toMatchObject({
       error: "defect-not-open",
@@ -151,11 +151,8 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     const linkWithoutDefect = post({ description: "Left flipper weak again during test" }, await aPhoto());
     const resolveWithoutNote = post({ description: "Ball stuck behind the left ramp", note: " " }, await aPhoto());
 
-    const rejectedLink = withPhotoToChooseAgain(await link.action(null, linkWithoutDefect), linkWithoutDefect);
-    const rejectedResolution = withPhotoToChooseAgain(
-      await resolve.action(null, resolveWithoutNote),
-      resolveWithoutNote,
-    );
+    const rejectedLink = await link.action(null, linkWithoutDefect);
+    const rejectedResolution = await resolve.action(null, resolveWithoutNote);
 
     expect(rejectionText(rejectedLink!, "LG-042")).toBe(
       "Bitte einen Defekt auswählen. Das Foto muss erneut ausgewählt werden.",
@@ -196,8 +193,8 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     const linkForm = post({ description: "Left flipper weak again during test", defectId }, await aPhoto());
     const resolveForm = post({ description: "Ball stuck behind the left ramp", note: "Ball freed" });
 
-    const rejectedLink = withPhotoToChooseAgain(await link.action(null, linkForm), linkForm);
-    const rejectedResolution = withPhotoToChooseAgain(await resolve.action(null, resolveForm), resolveForm);
+    const rejectedLink = await link.action(null, linkForm);
+    const rejectedResolution = await resolve.action(null, resolveForm);
 
     expect(rejectedLink).toMatchObject({
       error: "machine-retired",

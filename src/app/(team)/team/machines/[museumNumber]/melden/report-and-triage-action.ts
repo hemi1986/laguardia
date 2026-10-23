@@ -3,19 +3,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { machineForTeamForm } from "@/modules/collection";
 import { reportProblemAndTriageCommand, type ReportProblemAndTriageInput } from "@/modules/repair";
-import { photoFormAction, type FormFields, type FormState } from "@/app/_actions/form-action";
+import { formAction, type FormFields, type PhotoFormState } from "@/app/_actions/form-action";
 import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "../../../../../team-session";
-import { reportAndTriagePhoto, withPhotoToChooseAgain } from "./report-and-triage";
+import { teamReportProblemPhoto } from "./report-problem-input";
 
 /** After a rejection: the error, the typed values, and whether the photo must be chosen again (G8a). */
-export type ReportAndTriageState<Field extends string> =
-  | (NonNullable<FormState<CommandError<typeof reportProblemAndTriageCommand> | PhotoError, Field>> & {
-      photoAgain?: boolean;
-    })
-  | null;
+export type ReportAndTriageState<Field extends string> = PhotoFormState<
+  CommandError<typeof reportProblemAndTriageCommand> | PhotoError,
+  Field
+>;
 
 type Reported = { problemReportId: string; defectId?: string };
 
@@ -44,14 +43,13 @@ export async function reportAndTriage<const Field extends string>(
   await requireTeamMember();
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   const machine = await machineForTeamForm(database(), museumNumber);
-  const state = await photoFormAction(reportProblemAndTriageCommand, {
+  return formAction(reportProblemAndTriageCommand, {
     fields: form.fields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => form.input(fields, machine?.id, photo),
     onSuccess: async (reported) => {
       revalidatePath(record);
       redirect(`${record}?${form.confirms(reported)}`);
     },
   })(previous, formData);
-  return withPhotoToChooseAgain(state, formData);
 }
