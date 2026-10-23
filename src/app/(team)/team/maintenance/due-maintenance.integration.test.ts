@@ -12,7 +12,8 @@ import {
   type MachineStatus,
   type Technology,
 } from "@/modules/collection";
-import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import {
   changeMaintenancePlanCommand,
   maintenancePlanVersion,
@@ -365,8 +366,8 @@ describe("the due maintenance list", () => {
     const wax = await aMaintenanceTask("Wax playfield");
     await run(
       executeCommand(
-        retireMachineForTest,
-        { machineId: lg013, version: 0 },
+        retireMachineCommand,
+        { machineId: lg013, version: 0, reason: "Sold" },
         { actor: tom, db, clock: fixedClock("2026-02-01T09:00:00Z"), newId: randomUUID },
       ),
     );

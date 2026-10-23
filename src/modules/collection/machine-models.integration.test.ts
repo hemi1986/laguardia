@@ -4,7 +4,7 @@ import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { createMachineModelCommand, machineModelForTeam, registerMachineCommand } from ".";
-import { retireMachineForTest } from "./machines.test-support";
+import { retireMachineCommand } from "./retire-machine-command";
 
 /** The machine model as its page and its correction form show it (ST-036), set up through the commands. */
 const db = testDatabase();
@@ -39,7 +39,7 @@ describe("machineModelForTeam", () => {
     await aMachineOf(machineModelId);
     await aMachineOf(machineModelId);
     const sold = await aMachineOf(machineModelId);
-    const retired = await executeCommand(retireMachineForTest, { machineId: sold, version: 0 }, deps);
+    const retired = await executeCommand(retireMachineCommand, { machineId: sold, version: 0, reason: "Sold" }, deps);
     if (!retired.ok) throw new Error(retired.error);
 
     expect(await machineModelForTeam(db, machineModelId)).toEqual({

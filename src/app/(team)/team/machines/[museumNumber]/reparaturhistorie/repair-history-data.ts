@@ -46,7 +46,8 @@ export async function loadRepairHistory(
   museumNumber: string,
   chosenYear?: string,
 ): Promise<RepairHistoryData | undefined> {
-  const machineId = await machineIdOf(db, museumNumber);
+  // A retired machine keeps its repair history (ST-039).
+  const machineId = await machineIdOf(db, museumNumber, { retiredToo: true });
   if (!machineId) return undefined;
   const [labels, history] = await Promise.all([machineLabels(db, [machineId]), repairHistory(db, machineId)]);
   const counts = new Map<string, number>();

@@ -18,6 +18,7 @@ export function collectionChangesIn(command: readonly JournalEntry[], machineId:
         ? (statusChange.data.newStatus as MachineStatus | undefined)
         : undefined,
     moved: entries.some((entry) => entry.type === "EVT-MachineMoved" && entry.aggregate.id === machineId),
+    retired: entries.some((entry) => entry.type === "EVT-MachineRetired" && entry.aggregate.id === machineId),
   };
 }
 

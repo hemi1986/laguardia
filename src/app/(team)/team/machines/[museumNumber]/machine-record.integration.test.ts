@@ -10,7 +10,8 @@ import {
   registerMachineCommand,
   type FileCategory,
 } from "@/modules/collection";
-import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import {
   claimDefectCommand,
   putDefectOnHoldCommand,
@@ -82,8 +83,8 @@ async function registered(museumNumber: string, at: string) {
 async function retiredMachine(museumNumber: string): Promise<string> {
   const machineId = await registered(museumNumber, "2026-01-15T09:00:00Z");
   const retired = await executeCommand(
-    retireMachineForTest,
-    { machineId, version: 0 },
+    retireMachineCommand,
+    { machineId, version: 0, reason: "Sold" },
     { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
   );
   if (!retired.ok) throw new Error("not retired");
@@ -158,6 +159,30 @@ describe("the machine record", () => {
     expect(html).toContain("Eva · 15.01.2026, 10:00");
   });
 
+  it('ST-039: The machine record of a retired machine shows "retired" in place of the status', async () => {
+    const machineId = await registered("LG-013", "2026-01-15T09:00:00Z");
+    const changed = await executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version: 0, machineStatus: "out-of-order", reason: "Display dead" },
+      { actor: tom, db, clock: fixedClock("2026-02-01T10:00:00Z"), newId: randomUUID },
+    );
+    if (!changed.ok) throw new Error("not changed");
+    const retired = await executeCommand(
+      retireMachineCommand,
+      { machineId, version: 1, reason: "Sold to a collector" },
+      { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error(retired.error);
+
+    const html = await page("LG-013");
+
+    expect(html).toContain("<dt class=\"text-muted-foreground\">Status</dt><dd>Ausgemustert</dd>");
+    // Retirement is no entry of the status history – it still ends with the change to Out of order.
+    const newest = html.indexOf("Spielbereit → Außer Betrieb");
+    expect(newest).toBeGreaterThan(-1);
+    expect(html.indexOf("Ausgemustert", html.indexOf(">Status-Historie<"))).toBe(-1);
+  });
+
   it("ST-009: Unknown museum number", async () => {
     await registered("LG-042", "2026-01-15T09:00:00Z");
 
@@ -201,6 +226,16 @@ describe("the machine record", () => {
 
     expect(await page("LG-042")).toContain('href="/team/machines/LG-042/standort"');
     expect(await page("LG-013")).not.toContain("/standort");
+  });
+
+  it("offers „Gerät ausmustern“ only to technicians, and not on a retired machine (ST-039, G11)", async () => {
+    await registered("LG-042", "2026-01-15T09:00:00Z");
+    await retiredMachine("LG-013");
+    const helper: Viewer = { id: randomUUID(), role: "helper" };
+
+    expect(await page("LG-042")).toContain('href="/team/machines/LG-042/ausmustern"');
+    expect(await page("LG-042", helper)).not.toContain("/ausmustern");
+    expect(await page("LG-013")).not.toContain("/ausmustern");
   });
 
   it("offers „Status ändern“ only where the viewer has a machine status to set (ST-012, G11)", async () => {

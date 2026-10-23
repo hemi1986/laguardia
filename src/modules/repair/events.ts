@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { DefectDetailsChanged } from "./change-defect-details";
+import type { DefectClosedOnRetirement } from "./close-defect-on-retirement";
 import type { DefectClaimed } from "./claim-defect";
 import type { ProblemReportDismissed } from "./dismiss-problem-report";
 import type { ProblemReportLinkedToDefect } from "./link-problem-report-to-defect";
@@ -96,6 +97,11 @@ export const repairEvents = eventCatalogue({
       machineId: event.machineId,
       data: { resolvedBy: event.resolvedBy },
     }),
+  },
+  "EVT-DefectClosedOnRetirement": {
+    aggregate: "AGG-Defect",
+    // Run by the system (POL-RetirementClosesDefects); the retirement's reason stays in the machine.
+    project: (event: DefectClosedOnRetirement) => ({ aggregateId: event.defectId, machineId: event.machineId, data: {} }),
   },
   "EVT-DefectPutOnHold": {
     aggregate: "AGG-Defect",

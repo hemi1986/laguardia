@@ -5,6 +5,7 @@ import type { MachineModelCorrected } from "./correct-machine-model";
 import type { MachineModelCreated } from "./create-machine-model";
 import type { MachineMoved } from "./move-machine";
 import type { MachineRegistered } from "./register-machine";
+import type { MachineRetired } from "./retire-machine";
 
 /**
  * Collection's event catalogue (ST-079, architecture review 2026-10-17): per event its aggregate and what reaches the
@@ -54,6 +55,11 @@ export const collectionEvents = eventCatalogue({
     aggregate: "AGG-Machine",
     // The new location is typed text and stays in the aggregate; the journal names the machine and who moved it.
     project: (event: MachineMoved) => ({ aggregateId: event.machineId, machineId: event.machineId, data: {} }),
+  },
+  "EVT-MachineRetired": {
+    aggregate: "AGG-Machine",
+    // The reason is typed text and stays in the aggregate; the journal names the machine and who retired it.
+    project: (event: MachineRetired) => ({ aggregateId: event.machineId, machineId: event.machineId, data: {} }),
   },
   "EVT-FileAttached": {
     aggregate: "AGG-File",

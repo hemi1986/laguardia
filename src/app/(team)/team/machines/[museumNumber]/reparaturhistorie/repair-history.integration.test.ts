@@ -12,6 +12,7 @@ import {
   reopenDefectCommand,
   resolveDefectCommand,
   resolveProblemOnTheSpotCommand,
+  retireMachineCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -248,5 +249,36 @@ describe("the repair history's own page", () => {
   it("says so for a machine with nothing repaired, and for an unknown machine", async () => {
     expect(await page()).toContain("An diesem Gerät wurde noch nichts repariert.");
     expect(await loadRepairHistory(db, "LG-999")).toBeUndefined();
+  });
+
+  it("ST-039: Defects closed on retirement are shown as such in the repair history", async () => {
+    await aDefect("Display dead", "2026-09-01T08:00:00Z");
+    const coinMech = await aDefect("Coin mech jammed", "2026-09-02T08:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId: coinMech, version: 0, closingNote: "Coin path cleaned" },
+        as(eva, "2026-09-03T10:00:00Z"),
+      ),
+    );
+    await run(
+      executeCommand(
+        retireMachineCommand,
+        { machineId: lg042, version: 0, reason: "Sold to a collector" },
+        as(eva, "2026-09-10T11:00:00Z"),
+      ),
+    );
+
+    const html = await page("2026");
+
+    const entryOf = (title: string) => {
+      const start = html.indexOf(`>${title}<`);
+      return html.slice(start, html.indexOf("</article>", start));
+    };
+    expect(entryOf("Display dead")).toContain("Geschlossen (ausgemustert) am 10.09.2026, 13:00");
+    expect(entryOf("Display dead")).not.toContain("Abschlussnotiz");
+    expect(entryOf("Display dead")).not.toContain("Offen");
+    expect(entryOf("Coin mech jammed")).toContain("Coin path cleaned");
+    expect(entryOf("Coin mech jammed")).not.toContain("ausgemustert");
   });
 });

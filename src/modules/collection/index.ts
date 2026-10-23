@@ -22,6 +22,13 @@ export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTea
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";
+/**
+ * CMD-RetireMachine without the policies of the modules that react to it – retire a machine with Repair's
+ * `retireMachineCommand`, which adds them (ADR 0010). Only Repair builds on this one.
+ */
+export { retireMachineCommand as retireMachineCommandWithoutPolicies } from "./retire-machine-command";
+export { retireReasonRefusal, retireRefusal } from "./retire-machine";
+export type { RetireMachineError, RetireMachineInput } from "./retire-machine";
 export { machineStatuses } from "./register-machine";
 export type {
   MachineStatus,
@@ -35,6 +42,7 @@ export {
   machineRecord,
   machineForTeamForm,
   machineForReporting,
+  holdAgainstRetirement,
   machineIdOf,
   machineLabels,
   machineForMaintenance,

@@ -1,4 +1,4 @@
-import type { ActorOf, Decision, DecisionContext } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
 import type { DismissalReason, ProblemReport } from "./report-problem";
 
 /**
@@ -7,7 +7,7 @@ import type { DismissalReason, ProblemReport } from "./report-problem";
  * and the photo – the event names the removed photo, so it can be deleted from the storage after the commit (ADR 0007).
  */
 
-/** Who may dismiss a problem report by hand – technicians only; the system follows with ST-039. */
+/** Who may dismiss a problem report by hand – technicians only; the system dismisses on retirement (below). */
 export const dismissingActors = ["technician"] as const;
 
 type DismissingPerson = ActorOf<(typeof dismissingActors)[number]>;
@@ -70,6 +70,45 @@ export function dismissProblemReport(
         reason,
         reasonText: text,
         removedPhoto: spam ? photo : undefined,
+      },
+    ],
+  };
+}
+
+/** Only the system – POL-RetirementDismissesProblemReports – dismisses with the reason *machine retired* (ST-039). */
+export const dismissingOnRetirementActors = ["system"] as const;
+
+export type DismissOnRetirementInput = {
+  problemReportId: string;
+  /** The technician who retired the machine – the triage's *dismissed by* (data model: a TeamMemberId). */
+  retiredBy: TeamMemberId;
+};
+
+/**
+ * CMD-DismissProblemReport as POL-RetirementDismissesProblemReports runs it: an untriaged problem report of a retired
+ * machine is dismissed with the reason *machine retired*, by the technician who retired the machine.
+ */
+export function dismissOnRetirement(
+  report: ProblemReport,
+  input: DismissOnRetirementInput,
+  { clock }: DecisionContext,
+): Decision<ProblemReport, ProblemReportDismissed, "already-triaged"> {
+  if (report.triage) return { ok: false, error: "already-triaged" };
+  const reason = "machine-retired";
+  return {
+    ok: true,
+    state: {
+      ...report,
+      triage: { outcome: "dismissed", triagedBy: input.retiredBy, triagedAt: clock.now(), dismissal: { reason } },
+    },
+    events: [
+      {
+        type: "EVT-ProblemReportDismissed",
+        problemReportId: report.id,
+        machineId: report.machineId,
+        reason,
+        reasonText: undefined,
+        removedPhoto: undefined,
       },
     ],
   };

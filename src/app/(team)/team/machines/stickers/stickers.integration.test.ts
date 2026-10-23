@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -44,7 +45,7 @@ describe("QR stickers", () => {
   it("ST-011: Retired machines get no sticker", async () => {
     await registered("LG-012");
     const retired = await registered("LG-013");
-    await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, { actor: eva, db, newId: randomUUID });
+    await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, { actor: eva, db, newId: randomUUID });
 
     expect((await machinesToPrintFor(db, {})).map((machine) => machine.museumNumber)).toEqual(["LG-012"]);
     expect((await stickersFor(db, ["LG-012", "LG-013"])).map((sticker) => sticker.museumNumber)).toEqual(["LG-012"]);

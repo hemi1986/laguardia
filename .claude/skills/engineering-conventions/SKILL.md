@@ -278,8 +278,12 @@ command rules"): the command's `facts` call the other module's **public** query 
 – and the decision gets the result as plain data. The query is as narrow as the rule (a machine status and whether it
 is retired, not the machine). Only a context the context map names as upstream is read this way; nothing is stored
 twice, and the other module's tables are never imported. Such a read takes **no lock**: it is a check against the
-current state at command time, not an invariant (context map) – a change in the same second is caught by the other
-module's events and policies (e.g. the retirement policies).
+current state at command time, not an invariant (context map). **The one exception is "is the machine retired?"**
+(ADR 0010, ST-039): Collection's `machineForReporting` and `machineForMaintenance` take the machine's retirement lock
+shared (`retirementLock`, a transaction-scoped advisory lock), CMD-RetireMachine takes it exclusively – so a command in
+flight finishes before the retirement's policies look, and one that starts meanwhile waits and reads *retired*. **A new
+command that creates or reopens something on a machine reads the machine through one of these two** (or a new
+Collection read taking the same lock), and before any row lock of its own – the advisory lock always comes first.
 
 **Histories are append-only lists** (architecture review 2026-09-27, Q13; built in ST-012; the store keeps them since
 the architecture review 2026-10-11). A history – the machine status history, a work log, defect resolutions – is a list
@@ -449,10 +453,19 @@ Creating commands save at version 0. A command run by a person **must** pass the
 A policy (`POL-…`) is an `aggregateCommand` allowed for `"system"` only. The triggering command declares it; the layer runs it **after saving, in the same transaction**, as the system:
 
 ```ts
-policies: (machine) => [trigger(closeDefectsOnRetirement, { machineId: machine.id })],
+policies: (report) => [trigger(somePolicyOfThisModule, { problemReportId: report.id })], // a policy of the same module
 ```
 
 Its events are journaled with the system as actor, after the triggering command's events. A rejected policy rejects the whole command. A policy may journal nothing when there is nothing to do.
+
+**A policy of another module** (ADR 0010, first: ST-039): the upstream command never names a downstream policy. The
+downstream module adds them – `withPolicies(command, [policy({ id: "POL-…", calls: async (tx, { events, actor }) =>
+[trigger(…)] })])` – a policy reads what happened from the triggering command's journal events, never from its result
+(which is the page's) (`src/platform/command/policies.ts`) – and exports the result; the page uses that export (CMD-RetireMachine
+with Repair's two policies: `src/modules/repair/retirement-policies.ts`). A policy that acts on many aggregates selects
+them `FOR UPDATE`, filtered by the state it acts on, so one changed a moment earlier is skipped instead of rejecting the
+command; each is then changed by its own command, run as the system without a version. When a second module reacts
+to the same command, the composition moves to a neutral element (ADR 0010, option 4).
 
 ## Read models
 

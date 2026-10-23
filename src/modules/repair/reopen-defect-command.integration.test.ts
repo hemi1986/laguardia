@@ -6,7 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { anOpenDefectIn } from "@/test-support/defects";
 import { changeMachineStatusCommand, machineRecord } from "@/modules/collection";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "./retirement-policies";
 import {
   claimDefectCommand,
   defectDetails,
@@ -131,8 +131,8 @@ describe("CMD-ReopenDefect", () => {
   it("ST-030: No reopening on retired machines", async () => {
     const { machineId, defectId } = await aResolvedDefect("Coin mech jammed");
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       dependencies(tom, "2026-10-12T12:00:00Z"),
     );
     if (!retired.ok) throw new Error(retired.error);

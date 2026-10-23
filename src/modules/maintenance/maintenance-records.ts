@@ -39,8 +39,8 @@ export const maintenanceRecordStore = aggregateStore({
 
 /**
  * The facts of CMD-RecordMaintenance: the maintenance task from the plan – removed ones too, the decision says so –
- * and the machine as Collection publishes it for maintenance (context map), read in the command's transaction without
- * a lock.
+ * and the machine as Collection publishes it for maintenance (context map), read in the command's transaction. That read
+ * takes the machine's retirement lock shared (ADR 0010) – take no row lock before it.
  */
 export async function maintenanceFacts(tx: Database, input: RecordMaintenanceInput): Promise<MaintenanceFacts> {
   const [plan, machine] = await Promise.all([

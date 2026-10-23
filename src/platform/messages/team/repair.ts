@@ -1,3 +1,5 @@
+import { sharedTexts } from "./shared";
+
 /**
  * The team UI's texts of the Repair context (BC-Repair): problem reports and their triage, defects, the repair
  * history.
@@ -9,6 +11,8 @@ export const repairTexts = {
     year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     chooseYear: "Welches Jahr?",
     defectOpen: "Offen",
+    /** A defect its machine's retirement closed (ST-039) – not resolved, so no closing note. */
+    closedOnRetirement: (at: string) => `${sharedTexts.terms["Closed on retirement"]} am ${at}`,
     allYears: "Alle Jahre",
     backToMachine: "Zurück zum Gerät",
   },

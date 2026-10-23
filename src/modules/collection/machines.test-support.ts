@@ -14,26 +14,6 @@ export async function withoutMachines(db: Database): Promise<void> {
   await db.execute(sql`TRUNCATE machine, museum_number, machine_status_change, problem_report, file CASCADE`);
 }
 
-/** Test stand-in for CMD-RetireMachine (ST-039): the machine is retired and leaves the active lists. */
-export const retireMachineForTest = aggregateCommand({
-  id: "CMD-TestRetireMachine",
-  allowedActors: ["technician"],
-  store: machines,
-  target: (input: { machineId: string; version: number }) => ({ id: input.machineId, version: input.version }),
-  decide: (machine, _input, { actor, clock }) => ({
-    ok: true as const,
-    state: { ...machine, retirement: { reason: "Sold", retiredBy: actor.teamMemberId, retiredAt: clock.now() } },
-    events: [{ type: "EVT-TestMachineRetired" as const }],
-  }),
-  journal: (event, machine) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Machine", id: machine.id },
-    machineId: machine.id,
-    data: {},
-  }),
-  result: () => ({}),
-});
-
 /** Test stand-in for CMD-CorrectMachineDetails (ST-035): a new museum number; the old one stays reserved (D11). */
 export const correctMuseumNumberForTest = aggregateCommand({
   id: "CMD-TestCorrectMuseumNumber",

@@ -83,6 +83,8 @@ export type Defect = {
   claim?: Claim;
   /** None unless it is on hold – only an open defect can be (ST-029). */
   hold?: Hold;
+  /** When its machine's retirement closed it – only for the state *closed on retirement* (ST-039). */
+  closedOnRetirementAt?: Date;
   /** The oldest first – only added to, never changed or removed (Q13). */
   workLog: WorkLogEntry[];
   /** One per resolve, the oldest first – only added to, never changed (Q13). */

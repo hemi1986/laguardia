@@ -267,6 +267,28 @@ function retirementOf(row: {
     : undefined;
 }
 
+/**
+ * The machine's retirement lock (ADR 0010): a transaction-scoped advisory lock per machine. CMD-RetireMachine takes it
+ * exclusively; the reads other modules' commands check "not retired" with take it shared, so a command in flight
+ * finishes before the retirement decides, and one that starts meanwhile waits for its commit and reads it retired.
+ * Advisory locks do not conflict with row locks, so changes of the machine row are unaffected.
+ */
+export async function retirementLock(tx: Database, machineId: string, mode: "exclusive" | "shared"): Promise<void> {
+  const key = sql`hashtext(${"machine:" + machineId})`;
+  await tx.execute(
+    mode === "exclusive" ? sql`SELECT pg_advisory_xact_lock(${key})` : sql`SELECT pg_advisory_xact_lock_shared(${key})`,
+  );
+}
+
+/**
+ * Holds the machine's retirement lock shared until the command commits (ADR 0010) – for a command of another module
+ * that changes something on the machine without reading it (CMD-LinkProblemReportToDefect: linking to a resolved
+ * defect reopens it from ST-053 on). Call it before any row lock of the command's own.
+ */
+export function holdAgainstRetirement(tx: Database, machineId: string): Promise<void> {
+  return isId(machineId) ? retirementLock(tx, machineId, "shared") : Promise.resolve();
+}
+
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
@@ -309,13 +331,17 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
 
 /**
  * What the Repair module needs to know about a machine when a problem is reported (context map, Collection → Repair:
- * Repair checks its command rules against the current machine state). Undefined for an unknown machine.
+ * Repair checks its command rules against the current machine state). Undefined for an unknown machine. In a
+ * command it takes the machine's retirement lock shared (ADR 0010): whether it is retired stays true until the command
+ * commits. A page, which runs no command, reads it with `{ inCommand: false }` – no lock to wait for.
  */
 export async function machineForReporting(
   db: Database,
   machineId: string,
+  { inCommand = true }: { inCommand?: boolean } = {},
 ): Promise<{ machineStatus: MachineStatus; retired: boolean } | undefined> {
   if (!isId(machineId)) return undefined;
+  if (inCommand) await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({ machineStatus: machine.machineStatus, retiredAt: machine.retiredAt })
     .from(machine)
@@ -326,13 +352,18 @@ export async function machineForReporting(
 /**
  * The ID of an active machine by its museum number – for the server to compose other modules' data (the visitor
  * machine page's count) or to run their commands (a visitor's problem report, ST-013) without the ID reaching a
- * public page. Undefined for an unknown or retired museum number.
+ * public page. Undefined for an unknown or retired museum number – unless a team page asks for retired ones too (the
+ * repair history of a retired machine stays readable, ST-039).
  */
-export async function machineIdOf(db: Database, museumNumber: string): Promise<string | undefined> {
+export async function machineIdOf(
+  db: Database,
+  museumNumber: string,
+  { retiredToo = false }: { retiredToo?: boolean } = {},
+): Promise<string | undefined> {
   const [row] = await db
     .select({ id: machine.id })
     .from(machine)
-    .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
+    .where(and(eq(machine.museumNumber, museumNumber), retiredToo ? undefined : isNull(machine.retiredAt)));
   return row?.id;
 }
 
@@ -421,12 +452,14 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
 
 /**
  * One machine as maintenance needs it to check a maintenance record (context map, Collection → Maintenance: the
- * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Read
- * without a lock, like every rule on another module's data. Undefined for an unknown machine.
+ * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Takes
+ * the machine's retirement lock shared in a command (ADR 0010), so a retirement in flight decides first; a page reads
+ * it with `{ inCommand: false }`. Undefined for an unknown machine.
  */
 export async function machineForMaintenance(
   db: Database,
   machineId: string,
+  { inCommand = true }: { inCommand?: boolean } = {},
 ): Promise<
   | {
       id: string;
@@ -438,6 +471,7 @@ export async function machineForMaintenance(
   | undefined
 > {
   if (!isId(machineId)) return undefined;
+  if (inCommand) await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({
       id: machine.id,

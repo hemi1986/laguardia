@@ -103,7 +103,7 @@ stateDiagram-v2
 | | | Reported at | `Timestamp` | yes | EVT-ProblemReported |
 | | | Triage | Triage (VO) | once triaged | see below |
 | Triage | VO | Outcome | `TriageOutcome` | yes | EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-ProblemResolvedOnTheSpot, EVT-ProblemReportDismissed |
-| | | Triaged by | `TeamMemberId` | yes | Recorded by / Linked by / Resolved by / Dismissed by of those events |
+| | | Triaged by | `TeamMemberId` | yes | Recorded by / Linked by / Resolved by / Dismissed by of those events; for *dismissed – machine retired* the technician who retired the machine (ST-039) |
 | | | Triaged at | `Timestamp` | yes | occurrence time of those events |
 | | | Defect | `DefectId` | for *defect recorded* and *linked* | EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect |
 | | | Note | `Text` | for *resolved on the spot* | EVT-ProblemResolvedOnTheSpot |
@@ -123,7 +123,7 @@ Derived for read models: *Waiting longer than 3 days* (`RM-TriageList`, `RM-Tech
 - A defect has at most one claimant
 - Only defects suitable for helpers can be claimed by, assigned to or resolved by helpers
 - Only an open defect that is not on hold can be put on hold; only a defect on hold can be resumed
-- Resolving ends the claim and any hold; a reopened defect is open, not on hold and unclaimed
+- Resolving and closing on retirement end the claim and any hold; a reopened defect is open, not on hold and unclaimed
 - Work log entries are only added, never changed or removed
 
 **Lifecycle** – prioritizing, claiming, releasing and logging work happen inside *Open* and do not change the state.

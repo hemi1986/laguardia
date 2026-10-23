@@ -13,7 +13,8 @@ import {
   registerMachineCommand,
   type MachineStatus,
 } from ".";
-import { retireMachineForTest, withoutMachines } from "./machines.test-support";
+import { withoutMachines } from "./machines.test-support";
+import { retireMachineCommand } from "./retire-machine-command";
 
 /**
  * CMD-ChangeMachineStatus (ST-012) through the command layer, observed through the machine record and the journal.
@@ -118,8 +119,8 @@ describe("CMD-ChangeMachineStatus", () => {
   it("ST-012: Retired machines cannot change status", async () => {
     const machineId = await registered("LG-013");
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       { actor: tom, ...at("2026-03-01T11:00:00Z") },
     );
     if (!retired.ok) throw new Error("not retired");

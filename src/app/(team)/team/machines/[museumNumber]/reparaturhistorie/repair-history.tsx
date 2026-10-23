@@ -97,12 +97,14 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
           </div>
         ) : (
           <div key={step.id} className="flex flex-col gap-1">
-            <p className="font-medium">
-              {defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}
-            </p>
+            <p className="font-medium">{defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}</p>
             <p className="whitespace-pre-line">{step.reason}</p>
           </div>
         ),
+      )}
+      {/* Closing on retirement is final – always the last thing that happened to the defect (ST-039). */}
+      {entry.closedOnRetirementAt && (
+        <p className="font-medium">{texts.closedOnRetirement(formatDateTime(entry.closedOnRetirementAt))}</p>
       )}
       {entry.workLog.length > 0 && (
         <div className="flex flex-col gap-1">
@@ -123,4 +125,3 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
     </article>
   );
 }
-

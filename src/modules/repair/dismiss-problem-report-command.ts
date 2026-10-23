@@ -1,5 +1,10 @@
 import { aggregateCommand } from "@/platform/command";
-import { dismissingActors, dismissProblemReport } from "./dismiss-problem-report";
+import {
+  dismissingActors,
+  dismissingOnRetirementActors,
+  dismissOnRetirement,
+  dismissProblemReport,
+} from "./dismiss-problem-report";
 import { problemReports } from "./problem-reports";
 import { repairEvents } from "./events";
 
@@ -19,4 +24,18 @@ export const dismissProblemReportCommand = aggregateCommand({
     problemReportId: report.id,
     removedPhoto: events.find((event) => event.removedPhoto)?.removedPhoto,
   }),
+});
+
+/**
+ * CMD-DismissProblemReport as POL-RetirementDismissesProblemReports runs it (ST-039): as the system, without a version –
+ * the problem report is loaded with a row lock (ADR 0010).
+ */
+export const dismissProblemReportOnRetirementCommand = aggregateCommand({
+  id: "CMD-DismissProblemReport",
+  allowedActors: dismissingOnRetirementActors,
+  store: problemReports,
+  target: (input) => ({ id: input.problemReportId }),
+  decide: dismissOnRetirement,
+  journal: repairEvents.journal,
+  result: (report) => ({ problemReportId: report.id }),
 });
