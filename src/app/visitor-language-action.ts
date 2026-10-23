@@ -7,7 +7,6 @@ import { sameSitePath } from "./same-site-path";
 
 const YEAR = 365 * 24 * 60 * 60;
 
-
 /**
  * The language switch of the visitor pages (ST-010): remembers the chosen language for a year and shows the same page
  * again. A Server Action, so it works without JavaScript and sits under the proxy's Origin check. Only a path of this

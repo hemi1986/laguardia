@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { reportProblemCommand, untriagedProblemReportCount } from "@/modules/repair";
+import { problemReportsOfMachine, reportProblemCommand, untriagedProblemReportCount } from "@/modules/repair";
 import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { formRunner } from "@/app/_actions/form-runner";
@@ -11,6 +11,7 @@ import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { teamReportProblemFields, teamReportProblemInput, teamReportProblemPhoto } from "./report-problem-input";
 import { post } from "@/test-support/forms";
+import { photoRejectionText } from "@/app/_actions/rejection-text";
 
 /**
  * A team member's problem report from the machine record (ST-015): the report form's fields and input function run
@@ -77,6 +78,71 @@ describe("the team's report form", () => {
     expect(await storedProblemReport(db, reported[0])).toMatchObject({
       reporter: { kind: "team-member", teamMemberId: hanna.teamMemberId },
       photo: storage.names()[0],
+    });
+  });
+
+  describe("after a rejection (ST-084, G8a)", () => {
+    function reportFormOf(machineId: string, storage = memoryStorage()) {
+      return formRunner({
+        currentPerson: async () => anna,
+        db,
+        clock: fixedClock("2026-10-23T10:00:00Z"),
+        newId: randomUUID,
+        storage,
+      })(reportProblemCommand, {
+        fields: teamReportProblemFields,
+        photo: teamReportProblemPhoto,
+        input: (fields, photo) => teamReportProblemInput(fields, machineId, photo),
+        onSuccess: async () => {},
+      });
+    }
+
+    async function aPhoto(): Promise<File> {
+      const jpeg = await sharp({ create: { width: 800, height: 600, channels: 3, background: "#3c78c8" } })
+        .jpeg()
+        .toBuffer();
+      return new File([Uint8Array.from(jpeg)], "IMG_0042.jpg", { type: "image/jpeg" });
+    }
+
+    it("says after a rejection that the photo must be chosen again (the browser test checks the form)", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const machineId = await aRegisteredMachine(db);
+      const storage = memoryStorage();
+
+      const state = await reportFormOf(machineId, storage)(null, post({ description: "" }, await aPhoto()));
+
+      expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+      expect(storage.names()).toEqual([]);
+      expect(photoRejectionText(state!)).toBe("Bitte das Problem beschreiben. Das Foto muss erneut ausgewählt werden.");
+    });
+
+    it("ST-084: No photo sentence without a photo", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const machineId = await aRegisteredMachine(db);
+
+      const state = await reportFormOf(machineId)(null, post({ description: "" }));
+
+      expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+      expect(photoRejectionText(state!)).toBe("Bitte das Problem beschreiben.");
+      expect(photoRejectionText(state!)).not.toContain("Foto");
+    });
+
+    it("ST-084: A rejected photo gets no extra sentence about choosing it again", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const machineId = await aRegisteredMachine(db);
+      const storage = memoryStorage();
+      const notAnImage = new File(["%PDF-1.7 not a photo"], "manual.pdf", { type: "application/pdf" });
+
+      const state = await reportFormOf(machineId, storage)(
+        null,
+        post({ description: "Left flipper weak" }, notAnImage),
+      );
+
+      expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+      expect(storage.names()).toEqual([]);
+      expect(photoRejectionText(state!)).toBe("Das ist kein Foto. Bitte ein Foto wählen oder es weglassen.");
+      expect(photoRejectionText(state!)).not.toContain("erneut ausgewählt");
+      expect(state?.values.description).toBe("Left flipper weak");
     });
   });
 });

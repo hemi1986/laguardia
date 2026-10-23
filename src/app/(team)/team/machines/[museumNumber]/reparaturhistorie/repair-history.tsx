@@ -97,9 +97,7 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
           </div>
         ) : (
           <div key={step.id} className="flex flex-col gap-1">
-            <p className="font-medium">
-              {defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}
-            </p>
+            <p className="font-medium">{defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}</p>
             <p className="whitespace-pre-line">{step.reason}</p>
           </div>
         ),
@@ -123,4 +121,3 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
     </article>
   );
 }
-

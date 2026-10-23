@@ -44,7 +44,11 @@ describe("QR stickers", () => {
   it("ST-011: Retired machines get no sticker", async () => {
     await registered("LG-012");
     const retired = await registered("LG-013");
-    await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, { actor: eva, db, newId: randomUUID });
+    await executeCommand(
+      retireMachineForTest,
+      { machineId: retired, version: 0 },
+      { actor: eva, db, newId: randomUUID },
+    );
 
     expect((await machinesToPrintFor(db, {})).map((machine) => machine.museumNumber)).toEqual(["LG-012"]);
     expect((await stickersFor(db, ["LG-012", "LG-013"])).map((sticker) => sticker.museumNumber)).toEqual(["LG-012"]);

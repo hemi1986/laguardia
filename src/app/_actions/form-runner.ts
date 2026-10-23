@@ -59,8 +59,7 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
 
 /** After a rejection of a form with a photo: also whether the photo must be chosen again (G8a) – set only then. */
 export type PhotoFormState<Error extends string, Field extends string> =
-  | (NonNullable<FormState<Error, Field>> & { photoAgain?: true })
-  | null;
+  (NonNullable<FormState<Error, Field>> & { photoAgain?: true }) | null;
 
 /**
  * A form that attaches content uploaded from the browser (ST-037): the field that carries the content's name, whom the

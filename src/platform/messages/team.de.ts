@@ -363,8 +363,6 @@ export const teamMessages = {
     report: "Meldung",
     /** As on the team's report form, without its sentence about triage – this problem report is triaged right here. */
     descriptionHint: "Was ist kaputt, wo am Gerät?",
-    /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
-    photoAgain: "Das Foto muss erneut ausgewählt werden.",
   },
   /** … with the outcome *defect recorded* (ST-023) – technicians only. */
   reportAndRecordDefect: {
@@ -589,6 +587,8 @@ export const teamMessages = {
      * sending again is all it takes (G8, G13) – reloading would throw the input away.
      */
     conflict: "Jemand hat das inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal senden.",
+    /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
+    photoAgain: "Das Foto muss erneut ausgewählt werden.",
   },
   commandErrors: {
     /** The photo errors (ST-016), defined once in the photo module. */
@@ -639,7 +639,7 @@ export const teamMessages = {
     "machine-retired": "Dieses Gerät ist ausgemustert – daran lässt sich nichts mehr ändern oder melden.",
     "machine-not-found": "Dieses Gerät gibt es nicht.",
     "machine-not-on-display": "Dieses Gerät ist nicht ausgestellt.",
-    "description-required": "Bitte beschreibe das Problem.",
+    "description-required": "Bitte das Problem beschreiben.", // G13: team instructions use the infinitive (ST-084)
     /** A technician's problem report needs its triage outcome in the same step (ST-023). */
     "triage-required": "Bitte wählen, wie die Meldung gesichtet wird. Es wurde nichts gespeichert.",
     "already-triaged": "Diese Meldung ist schon gesichtet.",

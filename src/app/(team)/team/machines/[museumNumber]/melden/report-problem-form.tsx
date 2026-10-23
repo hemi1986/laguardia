@@ -7,7 +7,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { teamMessages } from "@/platform/messages";
-import { rejectionText } from "@/app/_actions/rejection-text";
+import { photoRejectionText } from "@/app/_actions/rejection-text";
 import { PhotoField } from "../../../../../photo-field";
 import type { TeamReportProblemState } from "./actions";
 import { isAboutDescription } from "./report-section";
@@ -18,7 +18,8 @@ const { reportProblem: texts } = teamMessages;
 /**
  * The team's report form (ST-015) – what a helper sees: the description of the problem and an optional photo (ST-016),
  * and above them the way to reporting and resolving on the spot in the same step (ST-052). A rejection keeps it, names the reason above the
- * button and marks the field (G8), with and without JavaScript.
+ * button and marks the field (G8), with and without JavaScript; after it a photo must be chosen again, and the
+ * rejection says so (G8a).
  */
 export function TeamReportProblemForm({
   action: report,
@@ -68,7 +69,7 @@ export function TeamReportProblemForm({
       />
       {state && (
         <div id={rejectionId}>
-          <Rejection>{rejectionText(state.error)}</Rejection>
+          <Rejection>{photoRejectionText(state)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending || preparingPhoto}>

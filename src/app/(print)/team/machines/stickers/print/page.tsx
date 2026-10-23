@@ -24,7 +24,7 @@ export default async function PrintStickersPage({ searchParams }: { searchParams
 
   return (
     <main>
-      <div className="print:hidden flex flex-wrap items-center gap-3 p-4">
+      <div className="flex flex-wrap items-center gap-3 p-4 print:hidden">
         <PrintButton label={teamMessages.stickers.printNow} />
         <Link href={back} className="text-sm underline underline-offset-4">
           {teamMessages.stickers.back}
