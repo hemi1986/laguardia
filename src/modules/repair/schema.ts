@@ -68,6 +68,8 @@ export const defect = pgTable("defect", {
   /** Typed text – stays here, never in the journal (ST-003). */
   holdNote: text("hold_note"),
   heldAt: timestamp("held_at", { withTimezone: true }),
+  /** When its machine's retirement closed it (data model, ST-039) – set exactly when the state is closed on retirement. */
+  closedOnRetirementAt: timestamp("closed_on_retirement_at", { withTimezone: true }),
   /** Optimistic version check (HS-16). */
   version: integer("version").notNull().default(0),
 });

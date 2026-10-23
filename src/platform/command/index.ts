@@ -30,6 +30,7 @@ export {
   type RunCall,
 } from "./aggregate";
 export { history, type History } from "./history";
+export { policy, withPolicies, type Policy } from "./policies";
 export { lastCommandBy } from "./last-command";
 export { entities, type Entities } from "./entities";
 export {

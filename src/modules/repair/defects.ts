@@ -81,6 +81,7 @@ export const defects = aggregateStore({
     state: row.state,
     ...claimOf(row),
     ...holdOf(row),
+    ...(row.closedOnRetirementAt ? { closedOnRetirementAt: row.closedOnRetirementAt } : {}),
     workLog: histories.workLog,
     resolutions: histories.resolutions,
     reopenings: histories.reopenings,
@@ -102,6 +103,7 @@ export const defects = aggregateStore({
     holdReason: state.hold?.reason ?? null,
     holdNote: state.hold?.note ?? null,
     heldAt: state.hold?.heldAt ?? null,
+    closedOnRetirementAt: state.closedOnRetirementAt ?? null,
   }),
 });
 

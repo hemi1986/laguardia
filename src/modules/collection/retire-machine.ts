@@ -31,8 +31,10 @@ export function retireMachine(
   machine: Machine,
   input: RetireMachineInput,
   { actor, clock }: DecisionContext<RetiringPerson>,
-  _facts: RetirementFacts,
+  facts: RetirementFacts,
 ): Decision<Machine, MachineRetired, RetireMachineError> {
+  // Deciding without the lock would let a problem report slip past the retirement policies (ADR 0010).
+  if (facts.lock !== "held") throw new Error("CMD-RetireMachine decides only while holding the retirement lock");
   // A retired machine is final – it cannot be retired again (AGG-Machine).
   if (machine.retirement) return { ok: false, error: "machine-retired" };
   const reason = input.reason.trim();
