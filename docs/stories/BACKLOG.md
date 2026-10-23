@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 38 of 59 domain stories done** · scenarios 339 of 505
+**Progress: 39 of 59 domain stories done** · scenarios 344 of 505
 
-**84 stories** · In Progress: 1 · Ready: 27 · In Review: 0 · Draft: 3 · Done: 53
+**84 stories** · In Progress: 0 · Ready: 27 · In Review: 0 · Draft: 3 · Done: 54
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
 
 ## Ready
 
@@ -111,3 +105,4 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
 | [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
+| [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
