@@ -9,7 +9,7 @@ import {
   maintenancePlan,
   maintenanceTaskAppliesTo,
   type ChangeMaintenancePlanInput,
-  type MaintenanceTaskChanges,
+  type MaintenanceTaskDetails,
   type NewMaintenanceTask,
 } from ".";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
@@ -163,7 +163,7 @@ describe("CMD-ChangeMaintenancePlan – changing and removing a maintenance task
   /** What a change of the task gives when it keeps everything as it is, except `overrides`. */
   const keeping = (
     task: NonNullable<Awaited<ReturnType<typeof listed>>>,
-    overrides: Partial<MaintenanceTaskChanges>,
+    overrides: Partial<MaintenanceTaskDetails>,
   ) => ({
     change: "change" as const,
     maintenanceTaskId: task.id,
@@ -240,6 +240,14 @@ describe("CMD-ChangeMaintenancePlan – changing and removing a maintenance task
     });
 
     expect(await listed(name)).toBeUndefined();
+    const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
+      (entry) => entry.data.maintenanceTaskId === task.id,
+    );
+    expect(entries.at(-1)).toMatchObject({
+      type: "EVT-MaintenancePlanChanged",
+      actor: tom,
+      data: { maintenanceTaskId: task.id, change: "removed" },
+    });
     expect(await change({ change: "remove", maintenanceTaskId: task.id })).toEqual({
       ok: false,
       error: "maintenance-task-unknown",

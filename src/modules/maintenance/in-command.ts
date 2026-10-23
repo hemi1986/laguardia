@@ -17,7 +17,7 @@ export function maintenanceRecordedIn(command: readonly JournalEntry[], maintena
  * Whether the latest change of the maintenance plan made this change to this maintenance task and the given team member
  * made it (ST-040, ST-041) – the maintenance plan is one aggregate, so Maintenance names it here.
  */
-export async function maintenancePlanChangeBy(
+export async function maintenancePlanChangedBy(
   db: Database,
   { maintenanceTaskId, change }: { maintenanceTaskId: string; change: MaintenancePlanChange },
   teamMemberId: TeamMemberId,

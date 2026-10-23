@@ -68,6 +68,8 @@ test("helpers find no maintenance plan, and are sent away from its address", asy
   await expect(page.getByRole("navigation").getByRole("link", { name: "Wartungsplan" })).toHaveCount(0);
   await page.goto("/team/maintenance-plan/new");
   await expect(page).toHaveURL(/\/team$/);
+  await page.goto("/team/maintenance-plan/7a1e0f40-0000-4000-8000-000000000041");
+  await expect(page).toHaveURL(/\/team$/);
 });
 
 test.describe("without JavaScript", () => {

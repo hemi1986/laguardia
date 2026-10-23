@@ -27,15 +27,19 @@ export type TaskAsItIs = {
  * The change form of a maintenance task (ST-041, G5): its details as they are, „Änderungen speichern“ – and
  * „Wartungsaufgabe entfernen“, which only asks, once, on its own (G10, G10b): the question names the task, says that it
  * never becomes due again and that its maintenance records stay. „Zurück“ returns to the form with everything typed;
- * only „Entfernen“ removes it. A rejection keeps every value and marks the field that caused it (G8).
+ * only „Entfernen“ removes it. A rejection keeps every value and marks the field that caused it (G8). A task already
+ * removed when the page loaded shows no form – but one removed while the technician typed keeps the form and the
+ * rejection.
  */
 export function ChangeMaintenanceTaskForm({
   task,
   version,
+  removed,
   ...choices
-}: Choices & { task: TaskAsItIs; version: number }) {
+}: Choices & { task: TaskAsItIs; version: number; removed: boolean }) {
   const [state, action, pending] = useActionState(changeMaintenanceTaskAction, null);
   const rejectionId = useId();
+  if (removed && !state) return <p>{texts.notInPlan}</p>;
 
   if (state?.asking) {
     return (
@@ -61,14 +65,12 @@ export function ChangeMaintenanceTaskForm({
     );
   }
 
-  const values = state ? { ...state.values, suitableForHelpers: state.values.suitableForHelpers !== "" } : task;
-
   return (
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="maintenanceTaskId" value={task.id} />
       <VersionField version={version} />
       <MaintenanceTaskFields
-        values={values}
+        values={state?.values ?? task}
         kept={keptKey(state)}
         error={state?.error}
         rejectionId={rejectionId}

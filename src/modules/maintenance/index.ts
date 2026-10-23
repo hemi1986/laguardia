@@ -4,7 +4,7 @@ export type {
   ChangeMaintenancePlanError,
   ChangeMaintenancePlanInput,
   MaintenancePlanChange,
-  MaintenanceTaskChanges,
+  MaintenanceTaskDetails,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
 export {
@@ -29,4 +29,4 @@ export {
   maintenanceRecords,
   type MaintenanceForRecording,
 } from "./maintenance-records";
-export { maintenancePlanChangeBy, maintenanceRecordedIn } from "./in-command";
+export { maintenancePlanChangedBy, maintenanceRecordedIn } from "./in-command";

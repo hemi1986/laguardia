@@ -24,15 +24,15 @@ export type NewMaintenanceTask = {
   startDate: CalendarDate | undefined;
 };
 
-/** What a change of a maintenance task gives – everything but its name, which stays (ST-041). */
-export type MaintenanceTaskChanges = Omit<NewMaintenanceTask, "name">;
+/** The details of a maintenance task – everything but its name, which a change keeps (ST-041). */
+export type MaintenanceTaskDetails = Omit<NewMaintenanceTask, "name">;
 
 export type ChangeMaintenancePlanInput = {
   /** The version of the maintenance plan the technician saw (HS-16). */
   version: number;
 } & (
   | { change: "add"; task: NewMaintenanceTask }
-  | { change: "change"; maintenanceTaskId: string; task: MaintenanceTaskChanges }
+  | { change: "change"; maintenanceTaskId: string; task: MaintenanceTaskDetails }
   | { change: "remove"; maintenanceTaskId: string }
 );
 
@@ -64,8 +64,6 @@ export type ChangeMaintenancePlanError =
 export const LONGEST_INTERVAL_MONTHS = 1200;
 export const EARLIEST_START_DATE = "1900-01-01";
 export const LATEST_START_DATE = "2999-12-31";
-
-type Details = Omit<MaintenanceTask, "id" | "name" | "removedAt">;
 
 export function changeMaintenancePlan(
   plan: MaintenancePlan,
@@ -104,8 +102,10 @@ export function changeMaintenancePlan(
 
 /** The rules every maintenance task keeps, whether added or changed (AGG-MaintenancePlan invariants). */
 function detailsOf(
-  task: MaintenanceTaskChanges,
-): { ok: true; details: Details } | { ok: false; error: ChangeMaintenancePlanError } {
+  task: MaintenanceTaskDetails,
+):
+  | { ok: true; details: Omit<MaintenanceTask, "id" | "name" | "removedAt"> }
+  | { ok: false; error: ChangeMaintenancePlanError } {
   const instruction = task.instruction.trim();
   if (!instruction) return { ok: false, error: "instruction-required" };
   if (task.intervalMonths === undefined || !Number.isInteger(task.intervalMonths) || task.intervalMonths < 1) {

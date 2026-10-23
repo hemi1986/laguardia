@@ -1,6 +1,6 @@
 import {
   maintenancePlan,
-  maintenancePlanChangeBy,
+  maintenancePlanChangedBy,
   maintenanceTaskName,
   type ListedMaintenanceTask,
   type MaintenancePlanChange,
@@ -37,7 +37,7 @@ export async function loadMaintenancePlan(
   const [plan, confirmed] = await Promise.all([
     maintenancePlan(db),
     change && maintenanceTaskId
-      ? maintenancePlanChangeBy(db, { maintenanceTaskId, change }, teamMemberId)
+      ? maintenancePlanChangedBy(db, { maintenanceTaskId, change }, teamMemberId)
       : Promise.resolve(false),
   ]);
   const name = confirmed && maintenanceTaskId ? await maintenanceTaskName(db, maintenanceTaskId) : undefined;

@@ -1,5 +1,5 @@
 import { machineCategories, technologies } from "@/modules/collection";
-import type { MaintenanceTaskChanges } from "@/modules/maintenance";
+import type { MaintenanceTaskDetails } from "@/modules/maintenance";
 import type { FormFields } from "@/app/_actions/form-action";
 import { isCalendarDate } from "@/platform/time";
 
@@ -21,7 +21,7 @@ export type MaintenanceTaskField = (typeof maintenanceTaskFields)[number];
  * "nothing given" – the command says what is missing; no machine category is no restriction. The checkbox is sent only
  * when ticked.
  */
-export function maintenanceTaskChangesOf(fields: FormFields<MaintenanceTaskField>): MaintenanceTaskChanges {
+export function maintenanceTaskChangesOf(fields: FormFields<MaintenanceTaskField>): MaintenanceTaskDetails {
   const interval = fields.intervalMonths?.trim() ?? "";
   const startDate = fields.startDate?.trim() ?? "";
   return {

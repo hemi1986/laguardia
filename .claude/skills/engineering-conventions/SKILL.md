@@ -239,13 +239,13 @@ with that section's data from that module.
 
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
-`?registered=`, `?created=`, `?corrected`, `?added=`); the page confirms it only when `lastCommandBy(db, { machineId } |
+`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`); the page confirms it only when `lastCommandBy(db, { machineId } |
 { aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team
 member looking at the page ran it. The command layer gives every journal entry its command's ID
 (`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
 is confirmed from there, never from a flag in the address. Which events mean what stays the owning module's: each
 module answers typed questions about a command (`collectionChangesIn`, `machineRegisteredIn`, `machineModelChangeIn`,
-`fileAttachedIn`, `triageOutcomeIn`, `problemReportedIn`, `maintenanceRecordedIn`, `maintenanceTaskAddedBy`), built on
+`fileAttachedIn`, `triageOutcomeIn`, `problemReportedIn`, `maintenanceRecordedIn`, `maintenancePlanChangedBy`), built on
 `entriesOf(<module>Events, command)` – no page matches an event type by string. The triage outcomes share one module,
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
 `loadMachineConfirmation` and shows one `confirmation`; the defect page's `lastDefectActionBy` asks the same latest command.

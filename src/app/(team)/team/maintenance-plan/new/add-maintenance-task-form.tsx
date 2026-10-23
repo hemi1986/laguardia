@@ -40,7 +40,7 @@ export function AddMaintenanceTaskForm({ version, ...choices }: Choices & { vers
         />
       </Field>
       <MaintenanceTaskFields
-        values={{ ...state?.values, suitableForHelpers: state ? state.values.suitableForHelpers !== "" : false }}
+        values={state?.values ?? {}}
         kept={kept}
         error={state?.error}
         rejectionId={rejectionId}

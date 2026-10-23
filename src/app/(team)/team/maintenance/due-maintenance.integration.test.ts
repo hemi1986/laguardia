@@ -21,7 +21,7 @@ import {
   maintenanceRecords,
   recordMaintenanceCommand,
   type MaintenanceOutcome,
-  type MaintenanceTaskChanges,
+  type MaintenanceTaskDetails,
 } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
@@ -156,7 +156,7 @@ async function aMaintenanceTask(
 }
 
 /** The maintenance task changed by Tom on that day – everything else as the maintenance plan lists it now. */
-async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTaskChanges>, on = "2026-02-01") {
+async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTaskDetails>, on = "2026-02-01") {
   const plan = await maintenancePlan(db);
   const task = plan.maintenanceTasks.find((each) => each.id === maintenanceTaskId)!;
   const { instruction, intervalMonths, suitableForHelpers, machineCategory, technology, startDate } = task;

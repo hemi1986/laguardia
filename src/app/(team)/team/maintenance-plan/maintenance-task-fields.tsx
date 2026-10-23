@@ -42,8 +42,9 @@ export function MaintenanceTaskFields({
   machineCategories,
   technologies,
 }: Choices & {
+  /** What was typed (a ticked checkbox is any text but "") – or the task as it is, its mark a boolean. */
   values: { readonly [F in Exclude<MaintenanceTaskField, "suitableForHelpers">]?: string } & {
-    suitableForHelpers: boolean;
+    suitableForHelpers?: string | boolean;
   };
   kept: string;
   error: string | undefined;
@@ -89,7 +90,7 @@ export function MaintenanceTaskFields({
         <input
           type="checkbox"
           name="suitableForHelpers"
-          defaultChecked={values.suitableForHelpers}
+          defaultChecked={!!values.suitableForHelpers}
           key={`suitableForHelpers-${kept}`}
           className="size-4"
         />
