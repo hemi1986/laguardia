@@ -38,7 +38,7 @@ test("a helper reports a problem from the machine record and is back there with 
   await page.getByRole("link", { name: "Problem melden" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Problem melden · ${museumNumber}`);
   await page.getByRole("button", { name: "Meldung erfassen" }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte das Problem beschreiben.");
   await expect(page.getByLabel("Beschreibung")).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("Beschreibung").fill("Rubber on the left slingshot cracked");
   await page.getByRole("button", { name: "Meldung erfassen" }).click();

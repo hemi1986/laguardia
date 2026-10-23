@@ -1,6 +1,6 @@
 import type { Browser, Page } from "@playwright/test";
 import sharp from "sharp";
-import { allowPreview, expect, logIn, openMore, test } from "./fixtures";
+import { aHelper, allowPreview, expect, logIn, openMore, test } from "./fixtures";
 
 /**
  * The photo on a problem report on a phone (ST-016): a visitor takes or chooses a photo on the report form, the browser
@@ -138,8 +138,37 @@ test("after a rejection the photo is gone from the form – also when the same r
     await expect(phone.getByRole("button", { name: "Foto entfernen" })).toBeVisible();
     await phone.getByRole("button", { name: "Meldung senden" }).click(); // no description: rejected
 
-    await expect(phone.getByRole("main").getByRole("alert")).toHaveText("Bitte beschreibe das Problem.");
+    await expect(phone.getByRole("main").getByRole("alert")).toHaveText(
+      "Bitte beschreibe das Problem. Das Foto muss erneut ausgewählt werden.",
+    );
     // The form was reset: no preview may promise a photo the next post would not send.
     await expect(phone.getByRole("button", { name: "Foto entfernen" })).toHaveCount(0);
   }
+});
+
+test("ST-084: Team report form says the photo must be chosen again", async ({ page }) => {
+  needsMachines();
+  needsBlob(); // the photo is stored before the command rejects it – without the store the answer is not-stored
+  const museumNumber = await aPlayableMachine(page);
+  await logIn(page);
+  await logIn(page, await aHelper(page));
+  await page.goto(`/team/machines/${museumNumber}/melden`);
+
+  await page.getByLabel("Foto auswählen").setInputFiles({
+    name: "IMG_0003.jpg",
+    mimeType: "image/jpeg",
+    buffer: await aCameraPhoto(),
+  });
+  await expect(page.getByRole("button", { name: "Foto entfernen" })).toBeVisible();
+  await page.getByRole("button", { name: "Meldung erfassen" }).click(); // no description: rejected
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Bitte das Problem beschreiben. Das Foto muss erneut ausgewählt werden.",
+  );
+  // The chooser shows itself as empty rather than pretending the photo is still attached (G8a).
+  await expect(page.getByRole("button", { name: "Foto entfernen" })).toHaveCount(0);
+  // Nothing was stored: the machine record has no problem report waiting for triage.
+  await page.goto(`/team/machines/${museumNumber}`);
+  await expect(page.getByRole("main")).not.toContainText("wartet auf die Sichtung");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });
