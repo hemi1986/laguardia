@@ -112,6 +112,8 @@ export const visitorDe = {
         "PLATZHALTER – Das Foto sehen nur die Teammitglieder des Museums. Wir entfernen die GPS-Daten aus dem Bild und bewahren es so lange auf wie die Meldung.",
       noticeLink: "Datenschutzhinweis",
     },
+    /** After a rejection of a form that had a photo attached (G8a, ST-084) – the browser cannot keep it. */
+    photoAgain: "Das Foto muss erneut ausgewählt werden.",
   },
   legal,
   /** Texts of rejected commands, keyed by their kebab-case error code (ST-073). */

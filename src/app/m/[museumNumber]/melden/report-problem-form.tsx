@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
-import { commandErrorText, type VisitorMessages } from "@/platform/messages";
+import type { VisitorMessages } from "@/platform/messages";
 import { PhotoField } from "../../../photo-field";
 import type { ReportProblemState } from "./actions";
+import { reportRejectionText } from "./report-rejection-text";
 import { keptKey } from "@/app/_actions/form-parts";
 
 /**
  * The report form (ST-013): the description and an optional photo (ST-016) – no name, no e-mail address, no account. A
  * rejection keeps the description, names the reason above the button and marks the field (G8), with and without
- * JavaScript; a photo has to be chosen again after one (the form is reset), or left out.
+ * JavaScript; a photo has to be chosen again after one (the form is reset), or left out, and the rejection says so (G8a).
  */
 export function ReportProblemForm({
   action: report,
@@ -57,7 +58,7 @@ export function ReportProblemForm({
         }}
         onPreparing={setPreparingPhoto}
       >
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {texts.photo.notice}{" "}
           <Link href="/datenschutz" className="underline underline-offset-4">
             {texts.photo.noticeLink}
@@ -66,7 +67,7 @@ export function ReportProblemForm({
       </PhotoField>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{commandErrorText(messages, state.error)}</Rejection>
+          <Rejection>{reportRejectionText(state, messages)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending || preparingPhoto}>

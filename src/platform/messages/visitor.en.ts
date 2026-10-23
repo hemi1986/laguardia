@@ -45,6 +45,7 @@ export const visitorEn: VisitorMessages = {
         "PLACEHOLDER – Only the museum's team members see the photo. We remove the GPS data from the image and keep it as long as the report.",
       noticeLink: "Privacy notice",
     },
+    photoAgain: "Please choose the photo again.",
   },
   legal: {
     label: "Legal",

@@ -9,6 +9,7 @@ import { memoryStorage, type ContentStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { reportProblemFields, reportProblemInput, reportProblemPhoto } from "./report-problem-input";
+import { reportRejectionText } from "./report-rejection-text";
 
 /**
  * The visitor report form with a photo (ST-016): its fields, its photo and its input function through the Server
@@ -36,7 +37,8 @@ function post(description: string, photo?: File): FormData {
   return form;
 }
 
-const notAnImage = () => new File([new TextEncoder().encode("%PDF-1.7 not a photo")], "manual.jpg", { type: "image/jpeg" });
+const notAnImage = () =>
+  new File([new TextEncoder().encode("%PDF-1.7 not a photo")], "manual.jpg", { type: "image/jpeg" });
 
 describe("the visitor report form with a photo", () => {
   it("answers a photo above the server's 2 MB guard with the 20 MB limit people know (user, 2026-10-04)", async () => {
@@ -68,6 +70,41 @@ describe("the visitor report form with a photo", () => {
     );
   });
 
+  it("ST-084: Visitor report form says the photo must be chosen again", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const storage = memoryStorage();
+    const photo = new File([await aJpeg()], "photo.jpg", { type: "image/jpeg" });
+
+    const state = await reportForm(machineId, storage)(null, post("", photo));
+
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(storage.names()).toEqual([]);
+    expect(reportRejectionText(state!, visitorMessages("de"))).toBe(
+      "Bitte beschreibe das Problem. Das Foto muss erneut ausgewählt werden.",
+    );
+  });
+
+  it("ST-084: Visitor report form in English says the photo must be chosen again", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const storage = memoryStorage();
+    const photo = new File([await aJpeg()], "photo.jpg", { type: "image/jpeg" });
+
+    const state = await reportForm(machineId, storage)(null, post("", photo));
+
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+    expect(storage.names()).toEqual([]);
+    expect(reportRejectionText(state!, visitorMessages("en"))).toBe(
+      "Please describe the problem. Please choose the photo again.",
+    );
+    // Without a photo the reason stands alone, and a rejected photo keeps ST-016's text.
+    const withoutPhoto = await reportForm(machineId, storage)(null, post(""));
+    expect(reportRejectionText(withoutPhoto!, visitorMessages("en"))).toBe("Please describe the problem.");
+    const rejectedPhoto = await reportForm(machineId, storage)(null, post("Ball stuck", notAnImage()));
+    expect(reportRejectionText(rejectedPhoto!, visitorMessages("en"))).toBe(
+      "This is not a photo. Please choose a photo or leave it out.",
+    );
+  });
+
   it("ST-016: Failed photo keeps the description", async () => {
     const machineId = await aRegisteredMachine(db);
     const failing: ContentStorage = { ...memoryStorage(), write: () => Promise.reject(new Error("Blob is down")) };
@@ -88,6 +125,8 @@ describe("the visitor report form with a photo", () => {
 
 async function aJpeg(): Promise<Uint8Array<ArrayBuffer>> {
   return Uint8Array.from(
-    await sharp({ create: { width: 320, height: 240, channels: 3, background: "#c87828" } }).jpeg().toBuffer(),
+    await sharp({ create: { width: 320, height: 240, channels: 3, background: "#c87828" } })
+      .jpeg()
+      .toBuffer(),
   );
 }
