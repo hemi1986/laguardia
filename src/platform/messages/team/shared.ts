@@ -1,6 +1,7 @@
 /**
  * The team UI's shared texts: the domain terms – keyed by the glossary term in the `_UI (de)_` wording of
- * CONTEXT.md (a test keeps both in sync; add a term when a page first needs it) – and what every form shares.
+ * CONTEXT.md (a test keeps both in sync; add a term when a page first needs it) –, the navigation, and what every form
+ * shares.
  */
 export const sharedTexts = {
   terms: {
@@ -28,6 +29,23 @@ export const sharedTexts = {
     "Closing note": "Abschlussnotiz",
     "Work log entry": "Arbeitsschritt",
   },
+  /** The team UI's frame: the navigation (G19) and who is logged in. */
+  team: {
+    menu: "Navigation",
+    dashboard: "Übersicht",
+    more: "Mehr",
+    start: "La Guardia – Team",
+    loggedInAs: "Angemeldet als",
+    logout: "Abmelden",
+    accounts: "Teammitglieder",
+    maintenance: "Wartung",
+    maintenancePlan: "Wartungsplan",
+    machineModels: "Modelle",
+    machines: "Geräte",
+    triage: "Sichtung",
+    defects: "Defekte",
+    ownPassword: "Passwort ändern",
+  },
   /** Texts every form on the form runner shares (architecture review 2026-10-17). */
   forms: {
     /**
@@ -41,8 +59,8 @@ export const sharedTexts = {
 } as const;
 
 /**
- * Texts of rejected commands whose codes several areas share (photo, upload, the command layer, a machine that is
- * unknown or retired), keyed by their kebab-case error code – an area's own codes are in its file.
+ * Texts of rejected commands whose codes several areas produce, keyed by their kebab-case error code – an area's own
+ * codes are in its file. A code a second area starts to produce moves here.
  */
 export const sharedErrors = {
   /** The photo errors (ST-016), defined once in the photo module. */
@@ -51,12 +69,15 @@ export const sharedErrors = {
   "unsupported-format":
     "Dieses Bildformat wird nicht unterstützt. Bitte ein Foto (JPEG, PNG oder WebP) wählen oder es weglassen.",
   "not-stored": "Das Foto konnte nicht gesendet werden. Bitte noch einmal versuchen oder ohne Foto melden.",
-  "title-required": "Bitte einen Titel angeben.",
+  /** Content uploaded from the browser (ST-037, ADR 0009). */
   "file-required": "Bitte eine Datei auswählen.",
   "content-gone": "Die hochgeladene Datei ist nicht mehr da.",
+  /** Collection, Repair and Maintenance. */
+  "title-required": "Bitte einen Titel angeben.",
   "unknown-machine": "Dieses Gerät gibt es nicht.",
   "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
   "machine-retired": "Dieses Gerät ist ausgemustert – daran lässt sich nichts mehr ändern oder melden.",
+  /** The command layer. */
   "not-authorized": "Das dürfen nur Techniker:innen.",
   "not-found": "Das gibt es nicht mehr.",
   "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",

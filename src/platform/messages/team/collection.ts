@@ -160,25 +160,27 @@ export const collectionTexts = {
  * Texts of Collection's rejected commands, keyed by their kebab-case error code (shared codes: `shared.ts`).
  */
 export const collectionErrors = {
-  /** Attaching a file (ST-037). */
-  "file-category-required": "Bitte eine Dateikategorie wählen.",
-  "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
+  /** Registering a machine model (ST-006) and correcting it (ST-036): no correction without a change. */
   "manufacturer-required": "Bitte einen Hersteller angeben.",
   "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
   "machine-category-required": "Bitte eine Kategorie wählen.",
-  /** Correcting a machine model (ST-036): no correction without a change. */
   "machine-model-unchanged": "Am Modell hat sich nichts geändert. Bitte etwas ändern.",
+  /** Registering a machine (ST-007). */
   "machine-model-required": "Bitte ein Modell wählen.",
   "location-required": "Bitte einen Standort angeben.",
-  /** Moving a machine (ST-034): no change without a change. */
-  "location-unchanged": "Das Gerät steht schon dort. Bitte einen anderen Standort angeben.",
   "machine-status-required": "Bitte einen Status wählen.",
   "museum-number-format":
     "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042 – oder das Feld leer lassen.",
   "museum-number-taken": "Diese Museumsnummer ist schon vergeben. Bitte eine andere angeben oder das Feld leer lassen.",
+  "no-museum-number-free":
+    "Alle Museumsnummern von LG-001 bis LG-999 sind vergeben – es kann kein weiteres Gerät erfasst werden.",
+  /** Moving a machine (ST-034): no change without a change. */
+  "location-unchanged": "Das Gerät steht schon dort. Bitte einen anderen Standort angeben.",
+  /** Changing a machine's status (ST-012). */
   "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",
   "machine-status-unchanged": "Das Gerät hat diesen Status schon. Bitte einen anderen Status wählen.",
   "reason-required": "Bitte einen Grund angeben – er steht in der Status-Historie.",
-  "no-museum-number-free":
-    "Alle Museumsnummern von LG-001 bis LG-999 sind vergeben – es kann kein weiteres Gerät erfasst werden.",
+  /** Attaching a file (ST-037). */
+  "file-category-required": "Bitte eine Dateikategorie wählen.",
+  "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
 } as const;
