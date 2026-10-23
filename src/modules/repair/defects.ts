@@ -350,10 +350,12 @@ export async function defectForAction<Action extends DefectAction>(
 
 /**
  * What CMD-ReopenDefect reads besides the defect – its machine as Collection knows it now (context map), so no page
- * offers reopening a defect of a retired machine (G11). Read only for a resolved defect, the one that can be reopened.
+ * offers reopening a defect of a retired machine (G11). A page runs no command: no retirement lock (ADR 0010). Read only for a resolved defect, the one that can be reopened.
  */
 async function reopeningFacts(db: Database, defect: Defect): Promise<ReopeningFacts | undefined> {
-  return defect.state === "resolved" ? { machine: await machineForReporting(db, defect.machineId) } : undefined;
+  return defect.state === "resolved"
+    ? { machine: await machineForReporting(db, defect.machineId, { inCommand: false }) }
+    : undefined;
 }
 
 /** The defect through its store – the one mapping from its rows to its state (ST-018). */

@@ -280,6 +280,15 @@ export async function retirementLock(tx: Database, machineId: string, mode: "exc
   );
 }
 
+/**
+ * Holds the machine's retirement lock shared until the command commits (ADR 0010) – for a command of another module
+ * that changes something on the machine without reading it (CMD-LinkProblemReportToDefect: linking to a resolved
+ * defect reopens it from ST-053 on). Call it before any row lock of the command's own.
+ */
+export function holdAgainstRetirement(tx: Database, machineId: string): Promise<void> {
+  return isId(machineId) ? retirementLock(tx, machineId, "shared") : Promise.resolve();
+}
+
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
@@ -322,15 +331,17 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
 
 /**
  * What the Repair module needs to know about a machine when a problem is reported (context map, Collection → Repair:
- * Repair checks its command rules against the current machine state). Undefined for an unknown machine. Takes the
- * machine's retirement lock shared (ADR 0010): whether it is retired stays true until the command commits.
+ * Repair checks its command rules against the current machine state). Undefined for an unknown machine. In a
+ * command it takes the machine's retirement lock shared (ADR 0010): whether it is retired stays true until the command
+ * commits. A page, which runs no command, reads it with `{ inCommand: false }` – no lock to wait for.
  */
 export async function machineForReporting(
   db: Database,
   machineId: string,
+  { inCommand = true }: { inCommand?: boolean } = {},
 ): Promise<{ machineStatus: MachineStatus; retired: boolean } | undefined> {
   if (!isId(machineId)) return undefined;
-  await retirementLock(db, machineId, "shared");
+  if (inCommand) await retirementLock(db, machineId, "shared");
   const [row] = await db
     .select({ machineStatus: machine.machineStatus, retiredAt: machine.retiredAt })
     .from(machine)

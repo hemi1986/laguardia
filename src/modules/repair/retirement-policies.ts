@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { retireMachineCommand as collectionsRetireMachine } from "@/modules/collection";
+import { retireMachineCommandWithoutPolicies } from "@/modules/collection";
 import { policy, trigger, withPolicies, type Actor, type Database } from "@/platform/command";
 import { closeDefectOnRetirementCommand } from "./close-defect-on-retirement-command";
 import { dismissProblemReportOnRetirementCommand } from "./dismiss-problem-report-command";
@@ -41,7 +41,7 @@ const retirementDismissesProblemReports = policy({
 });
 
 /** CMD-RetireMachine as the retire page runs it – Collection's command with Repair's retirement policies. */
-export const retireMachineCommand = withPolicies(collectionsRetireMachine, [
+export const retireMachineCommand = withPolicies(retireMachineCommandWithoutPolicies, [
   retirementClosesDefects,
   retirementDismissesProblemReports,
 ]);

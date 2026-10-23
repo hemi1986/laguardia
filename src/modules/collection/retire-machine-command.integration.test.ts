@@ -5,13 +5,8 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import {
-  changeMachineStatusCommand,
-  createMachineModelCommand,
-  machineRecord,
-  registerMachineCommand,
-  retireMachineCommand,
-} from ".";
+import { changeMachineStatusCommand, createMachineModelCommand, machineRecord, registerMachineCommand } from ".";
+import { retireMachineCommand } from "./retire-machine-command";
 import { withoutMachines } from "./machines.test-support";
 
 /**

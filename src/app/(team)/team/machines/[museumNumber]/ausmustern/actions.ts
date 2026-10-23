@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { machineForTeamForm, retireReasonRefusal } from "@/modules/collection";
+import { machineForTeamForm, retireReasonRefusal, retireRefusal } from "@/modules/collection";
 import { openDefectCounts, retireMachineCommand, untriagedProblemReportCount } from "@/modules/repair";
 import { formAction, type FormState } from "@/app/_actions/form-action";
 import type { CommandError } from "@/platform/command";
@@ -50,7 +50,7 @@ export async function retireMachineAction(
   previous: RetireMachineState,
   formData: FormData,
 ): Promise<RetireMachineState> {
-  await requireTechnician(); // the page's access check; who may retire is the command's allowedActors
+  const technician = await requireTechnician(); // the page's access check; who may retire is the command's allowedActors
   const step = retireStep(formData);
   const values = keptValues(formData);
   if (step === "back") return { asking: false, values };
@@ -61,6 +61,9 @@ export async function retireMachineAction(
     const db = database();
     const machine = await machineForTeamForm(db, museumNumber);
     if (!machine) return { error: "not-found", values };
+    // Never ask the final question about a machine that was retired meanwhile (G10) – say so at the form.
+    const notNow = retireRefusal(machine, technician);
+    if (notNow) return { error: notNow, values };
     const [defects, problemReports] = await Promise.all([
       openDefectCounts(db, [machine.id]),
       untriagedProblemReportCount(db, machine.id),
