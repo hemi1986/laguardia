@@ -21,13 +21,10 @@ const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 export function MachineRecordView({
   record,
   museumNumber,
-  canChangeStatus = false,
   confirmation,
 }: {
   record: MachineRecordData | undefined;
   museumNumber: string;
-  /** Whether the team member may change this machine's status at all (G11) – the page decides it (ST-012). */
-  canChangeStatus?: boolean;
   /** Just back from an action on this machine: what the team member did, as the journal says (G3). */
   confirmation?: MachineRecordConfirmation;
 }) {
@@ -39,7 +36,7 @@ export function MachineRecordView({
       </>
     );
   }
-  const { machineModel } = record;
+  const { machineModel, actions } = record;
   const details: [string, string][] = [
     [terms["Serial number"], record.serialNumber ?? texts.noSerialNumber],
     [terms["Machine model"], machineModel.title],
@@ -65,8 +62,8 @@ export function MachineRecordView({
           )}
         </p>
       )}
-      {!record.retirement && (
-        // Section 2 of the machine record (ST-009): reporting a problem – any team member, not for a retired machine (G11).
+      {actions.reportProblem && (
+        // Section 2 of the machine record (ST-009): reporting a problem (ST-015).
         <Link
           href={`/team/machines/${encodeURIComponent(record.museumNumber)}/melden`}
           className={buttonVariants({ className: "self-start" })}
@@ -82,17 +79,18 @@ export function MachineRecordView({
           </div>
         ))}
       </dl>
-      {!record.retirement && (
-        // The actions of section 3, none for a retired machine (G11): moving (ST-034) is for every team member,
-        // changing the status (ST-012) only where the team member has a status to set.
+      {(actions.changeLocation || actions.changeStatus) && (
+        // The actions of section 3: moving (ST-034) and changing the status (ST-012).
         <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/standort`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            {texts.changeLocation}
-          </Link>
-          {canChangeStatus && (
+          {actions.changeLocation && (
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/standort`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {texts.changeLocation}
+            </Link>
+          )}
+          {actions.changeStatus && (
             <Link
               href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status`}
               className={buttonVariants({ variant: "outline" })}
@@ -200,12 +198,14 @@ export function MachineRecordView({
                 );
               })
             )}
-            <Link
-              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
-              className={buttonVariants({ variant: "outline", className: "self-start" })}
-            >
-              {texts.attachFile}
-            </Link>
+            {actions.attachFile && (
+              <Link
+                href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
+                className={buttonVariants({ variant: "outline", className: "self-start" })}
+              >
+                {texts.attachFile}
+              </Link>
+            )}
           </CardContent>
         </Card>
       </section>

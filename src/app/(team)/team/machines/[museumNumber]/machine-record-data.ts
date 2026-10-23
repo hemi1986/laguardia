@@ -1,4 +1,10 @@
-import { machineRecord, type MachineRecord, type Retirement, type StatusChange } from "@/modules/collection";
+import {
+  machineRecord,
+  machineStatusesToChangeTo,
+  type MachineRecord,
+  type Retirement,
+  type StatusChange,
+} from "@/modules/collection";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import { systemClock, type Clock } from "@/platform/clock";
@@ -19,6 +25,23 @@ export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retiremen
   recentRepairHistory: ShownEndedRepairHistoryEntry[];
   /** How many entries its whole repair history has – open defects included (ST-033). */
   repairHistoryCount: number;
+  /** What the viewer may do here – the page offers only these (G11). */
+  actions: MachineRecordActions;
+};
+
+/**
+ * The actions of the machine record the viewer may take (G11), decided once with the record (architecture review
+ * 2026-10-18) – the page and its sections only show them. The commands check again.
+ */
+export type MachineRecordActions = {
+  /** Section 2 (ST-015): every team member, not for a retired machine. */
+  reportProblem: boolean;
+  /** Section 3 (ST-034): every team member, not for a retired machine. */
+  changeLocation: boolean;
+  /** Section 3 (ST-012): only where the viewer has a machine status to set – none for a retired machine. */
+  changeStatus: boolean;
+  /** Section 8 (ST-037): every team member, a retired machine's record too. */
+  attachFile: boolean;
 };
 
 /** How many of the most recently ended entries of the repair history the machine record shows (user, 2026-10-14, `/implement ST-033`). */
@@ -33,12 +56,13 @@ export type ShownEndedRepairHistoryEntry = Omit<EndedRepairHistoryEntry, "resolv
  * The page's data: the Collection module's machine record, with the team members' names from the Team module, and the
  * Repair module's open defects and repair history (ST-033). The first read across two modules (ST-009): neither module
  * imports the other – the page composes their public queries. `clock` makes "open for … days" (ST-021); `viewer` is the
- * team member looking at the page – one's own claim is said as such (ST-025).
+ * team member looking at the page – one's own claim is said as such (ST-025), and what they may do here is decided by
+ * their role (`actions`).
  */
 export async function loadMachineRecord(
   db: Database,
   museumNumber: string,
-  { clock = systemClock, viewer }: { clock?: Clock; viewer?: Viewer } = {},
+  { clock = systemClock, viewer }: { clock?: Clock; viewer: Viewer },
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
@@ -65,5 +89,17 @@ export async function loadMachineRecord(
     openDefects: shownOpen,
     recentRepairHistory: recent.entries.map((entry) => ({ ...entry, resolvedBy: names.get(entry.resolvedBy) })),
     repairHistoryCount: recent.total,
+    actions: actionsOf(record, viewer),
+  };
+}
+
+function actionsOf(record: MachineRecord, viewer: Viewer): MachineRecordActions {
+  const active = record.retirement === undefined;
+  return {
+    reportProblem: active,
+    changeLocation: active,
+    changeStatus:
+      machineStatusesToChangeTo(viewer.role, { machineStatus: record.machineStatus, retired: !active }).length > 0,
+    attachFile: true,
   };
 }

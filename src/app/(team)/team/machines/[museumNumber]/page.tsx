@@ -1,5 +1,4 @@
 import { Page } from "@/components/page";
-import { machineStatusesToChangeTo } from "@/modules/collection";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -23,18 +22,7 @@ export default async function MachineRecordPage({ params, searchParams }: PagePr
 
   return (
     <Page title={record ? `${record.museumNumber} · ${record.machineModel.title}` : teamMessages.terms.Machine}>
-      <MachineRecordView
-        record={record}
-        museumNumber={museumNumber}
-        canChangeStatus={
-          !!record &&
-          machineStatusesToChangeTo(member.role, {
-            machineStatus: record.machineStatus,
-            retired: record.retirement !== undefined,
-          }).length > 0
-        }
-        confirmation={confirmation}
-      />
+      <MachineRecordView record={record} museumNumber={museumNumber} confirmation={confirmation} />
     </Page>
   );
 }
