@@ -99,7 +99,7 @@ describe("CMD-RecordMaintenance – the decision", () => {
       ok: false,
       error: "maintenance-task-unknown",
     });
-    expect(record({}, { machine: undefined })).toEqual({ ok: false, error: "machine-unknown" });
+    expect(record({}, { machine: undefined })).toEqual({ ok: false, error: "unknown-machine" });
   });
 
   it("ST-044: Helpers can only record maintenance tasks suitable for helpers", () => {

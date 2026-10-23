@@ -612,7 +612,6 @@ export const teamMessages = {
     "machine-model-unchanged": "Am Modell hat sich nichts geändert. Bitte etwas ändern.",
     /** Recording maintenance (ST-044). */
     "maintenance-task-unknown": "Diese Wartungsaufgabe gibt es nicht mehr.",
-    "machine-unknown": "Dieses Gerät gibt es nicht.",
     "maintenance-task-does-not-apply": "Diese Wartungsaufgabe gilt nicht für dieses Gerät.",
     "maintenance-not-suitable-for-helpers": "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
     "outcome-required": "Bitte ein Ergebnis auswählen.",
@@ -637,7 +636,6 @@ export const teamMessages = {
     "museum-number-taken":
       "Diese Museumsnummer ist schon vergeben. Bitte eine andere angeben oder das Feld leer lassen.",
     "machine-retired": "Dieses Gerät ist ausgemustert – daran lässt sich nichts mehr ändern oder melden.",
-    "machine-not-found": "Dieses Gerät gibt es nicht.",
     "machine-not-on-display": "Dieses Gerät ist nicht ausgestellt.",
     "description-required": "Bitte das Problem beschreiben.", // G13: team instructions use the infinitive (ST-084)
     /** A technician's problem report needs its triage outcome in the same step (ST-023). */

@@ -128,7 +128,7 @@ export const visitorDe = {
     "not-stored": "Das Foto konnte nicht gesendet werden. Versuche es noch einmal oder sende die Meldung ohne Foto.",
     "machine-not-on-display":
       "Dieses Gerät ist gerade nicht ausgestellt. Probleme kannst du nur für ausgestellte Geräte melden.",
-    "machine-not-found": "Kein Gerät mit dieser Museumsnummer.",
+    "unknown-machine": "Kein Gerät mit dieser Museumsnummer.",
     "machine-retired": "Dieses Gerät ist nicht mehr im Museum.",
     /** Only for a logged-in technician who sends the visitors' form: their problem reports are triaged in the same step (ST-023). */
     "triage-required":

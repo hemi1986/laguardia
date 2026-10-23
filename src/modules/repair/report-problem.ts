@@ -72,7 +72,7 @@ export type ReportProblemInput = { machineId: string; description: string; photo
 export type ReportingFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
 
 export type ReportProblemError =
-  "machine-not-found" | "machine-retired" | "machine-not-on-display" | "description-required" | "description-too-long";
+  "unknown-machine" | "machine-retired" | "machine-not-on-display" | "description-required" | "description-too-long";
 
 /** The longest description a problem report may have (ST-013) – the rejection names it. */
 export const DESCRIPTION_MAX_LENGTH = 2000;
@@ -82,7 +82,7 @@ export function reportProblem(
   input: ReportProblemInput,
   { actor, clock, newId }: DecisionContext<ReportingPerson>,
 ): Decision<ProblemReport, ProblemReported, ReportProblemError> {
-  if (!machine) return { ok: false, error: "machine-not-found" };
+  if (!machine) return { ok: false, error: "unknown-machine" };
   // Nobody reports for a retired machine (CMD-ReportProblem rules); team members may for any other one (ST-015).
   if (machine.retired) return { ok: false, error: "machine-retired" };
   // Visitors report only for machines on display (CMD-ReportProblem rules); the page offers no button either (ST-010).

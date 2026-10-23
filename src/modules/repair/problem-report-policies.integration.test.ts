@@ -50,7 +50,7 @@ describe("automatic policies triggered by a command", () => {
     // The policy's error is part of the triggering command's result type.
     if (!outcome.ok)
       expectTypeOf(outcome.error).toEqualTypeOf<
-        | "machine-not-found"
+        | "unknown-machine"
         | "machine-retired"
         | "machine-not-on-display"
         | "description-required"

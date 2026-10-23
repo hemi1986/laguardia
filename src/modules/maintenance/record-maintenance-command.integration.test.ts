@@ -188,7 +188,7 @@ describe("CMD-RecordMaintenance", () => {
       ok: false,
       error: "not-authorized",
     });
-    expect(await record(cleanGlass, randomUUID(), undefined)).toEqual({ ok: false, error: "machine-unknown" });
+    expect(await record(cleanGlass, randomUUID(), undefined)).toEqual({ ok: false, error: "unknown-machine" });
     expect(await record("not-an-id", lg042, undefined)).toEqual({ ok: false, error: "maintenance-task-unknown" });
   });
 
