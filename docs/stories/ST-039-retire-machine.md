@@ -9,7 +9,7 @@ risk: high
 events: [EVT-MachineRetired, EVT-DefectClosedOnRetirement, EVT-ProblemReportDismissed]
 depends_on: [ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033]
 labels: [mvp, collection, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
