@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { photoFormRunner } from "@/app/_actions/form-runner";
+import { formRunner } from "@/app/_actions/form-runner";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { commandErrorText, visitorMessages } from "@/platform/messages";
@@ -18,7 +18,7 @@ const db = testDatabase();
 const clock = fixedClock("2026-10-04T10:00:00Z");
 
 function reportForm(machineId: string, storage: ContentStorage) {
-  return photoFormRunner({ currentPerson: async () => ({ kind: "visitor" }), db, clock, newId: randomUUID, storage })(
+  return formRunner({ currentPerson: async () => ({ kind: "visitor" }), db, clock, newId: randomUUID, storage })(
     reportProblemCommand,
     {
       fields: reportProblemFields,
@@ -75,7 +75,8 @@ describe("the visitor report form with a photo", () => {
 
     const state = await reportForm(machineId, failing)(null, post("Right flipper dead", photo));
 
-    expect(state).toEqual({ error: "not-stored", values: { description: "Right flipper dead" } });
+    // The photo was fine but is gone from the form – it must be chosen again (G8a).
+    expect(state).toEqual({ error: "not-stored", values: { description: "Right flipper dead" }, photoAgain: true });
     expect(commandErrorText(visitorMessages("de"), state!.error)).toBe(
       "Das Foto konnte nicht gesendet werden. Versuche es noch einmal oder sende die Meldung ohne Foto.",
     );

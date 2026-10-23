@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { machineIdOf } from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
-import { photoFormAction, type FormState } from "@/app/_actions/form-action";
+import { formAction, type FormState } from "@/app/_actions/form-action";
 import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
@@ -28,7 +28,7 @@ export async function reportProblemAction(
   formData: FormData,
 ): Promise<ReportProblemState> {
   const machineId = await machineIdOf(database(), museumNumber);
-  return photoFormAction(reportProblemCommand, {
+  return formAction(reportProblemCommand, {
     fields: reportProblemFields,
     photo: reportProblemPhoto,
     input: (fields, photo) => reportProblemInput(fields, machineId, photo),

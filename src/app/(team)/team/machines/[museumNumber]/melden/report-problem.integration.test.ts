@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { reportProblemCommand, untriagedProblemReportCount } from "@/modules/repair";
 import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
-import { formRunner, photoFormRunner } from "@/app/_actions/form-runner";
+import { formRunner } from "@/app/_actions/form-runner";
 import sharp from "sharp";
 import { memoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
@@ -52,7 +52,7 @@ describe("the team's report form", () => {
     const machineId = await aRegisteredMachine(db);
     const storage = memoryStorage();
     const reported: string[] = [];
-    const action = photoFormRunner({
+    const action = formRunner({
       currentPerson: async () => hanna,
       db,
       clock: fixedClock("2026-10-04T10:00:00Z"),

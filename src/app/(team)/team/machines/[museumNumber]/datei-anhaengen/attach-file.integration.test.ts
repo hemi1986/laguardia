@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { attachFileCommand, machineRecord } from "@/modules/collection";
-import { uploadFormRunner } from "@/app/_actions/form-runner";
+import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { teamMessages } from "@/platform/messages";
 import { journalOf } from "@/platform/command";
@@ -15,7 +15,7 @@ import { attachFileForm } from "./attach-file-form";
 import { rejectionWithFile } from "./attach-file-form-view";
 
 /**
- * The form that attaches a file (ST-037): the runner for uploaded content (`uploadFormRunner`) with the form's
+ * The form that attaches a file (ST-037): the runner for uploaded content (`formRunner`) with the form's
  * definition, against real PostgreSQL and the in-memory storage adapter. The file was uploaded from the browser before
  * the form is sent (ST-085); the form posts its name.
  */
@@ -47,7 +47,7 @@ async function aChosenPdf(
 
 function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}) {
   const attached: string[] = [];
-  const action = uploadFormRunner({
+  const action = formRunner({
     currentPerson: async () => anna,
     db,
     clock: fixedClock(when),

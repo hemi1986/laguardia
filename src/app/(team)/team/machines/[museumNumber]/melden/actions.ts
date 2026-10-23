@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { machineForTeamForm } from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
-import { photoFormAction, type FormState } from "@/app/_actions/form-action";
+import { formAction, type FormState } from "@/app/_actions/form-action";
 import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
@@ -36,7 +36,7 @@ export async function teamReportProblemAction(
   const member = await requireTeamMember(); // the page's access check; who may report for which machine is the command's
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   const machine = await machineForTeamForm(database(), museumNumber);
-  const state = await photoFormAction(reportProblemCommand, {
+  const state = await formAction(reportProblemCommand, {
     fields: teamReportProblemFields,
     photo: teamReportProblemPhoto,
     input: (fields, photo) => teamReportProblemInput(fields, machine?.id, photo),

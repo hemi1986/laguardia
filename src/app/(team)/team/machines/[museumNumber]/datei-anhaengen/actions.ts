@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { attachFileCommand } from "@/modules/collection";
-import { uploadFormAction } from "@/app/_actions/form-action";
+import { formAction } from "@/app/_actions/form-action";
 import { requireTeamMember } from "../../../../../team-session";
 import { attachFileForm } from "./attach-file-form";
 
@@ -13,7 +13,7 @@ import { attachFileForm } from "./attach-file-form";
  * file (G3). The machine is bound by the page – a bound value is still checked by the command (`attachingFacts`).
  */
 const attachFile = (museumNumber: string) =>
-  uploadFormAction(
+  formAction(
     attachFileCommand,
     attachFileForm(async ({ fileId }) => {
       const record = `/team/machines/${encodeURIComponent(museumNumber)}`;

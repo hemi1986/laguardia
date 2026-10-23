@@ -57,28 +57,10 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
 };
 
-export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
-  return function formAction<Input, Result, Error extends string, const Field extends string>(
-    command: Command<Input, Result, Error>,
-    definition: FormDefinition<Input, Result, Field>,
-  ) {
-    return async (
-      _previous: FormState<CommandError<typeof command>, Field>,
-      formData: FormData,
-    ): Promise<FormState<CommandError<typeof command>, Field>> => {
-      const fields = fieldsOf(formData, definition.fields);
-      const outcome = await executeCommand(command, definition.input(fields), {
-        ...dependencies,
-        actor: await currentPerson(),
-      });
-      if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
-      const removed = definition.removesPhoto?.(outcome.result);
-      if (removed) await removePhoto(storage ?? blobStorage(), removed);
-      await definition.onSuccess(outcome.result);
-      return null;
-    };
-  };
-}
+/** After a rejection of a form with a photo: also whether the photo must be chosen again (G8a) – set only then. */
+export type PhotoFormState<Error extends string, Field extends string> =
+  | (NonNullable<FormState<Error, Field>> & { photoAgain?: true })
+  | null;
 
 /**
  * A form that attaches content uploaded from the browser (ST-037): the field that carries the content's name, whom the
@@ -101,73 +83,108 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
 };
 
 /**
- * The runner of a form that attaches uploaded content (ST-037, ADR 0009): the form's own rejections come first and keep
- * the uploaded content – the chosen file is still attached for the next send (user, 2026-10-18). Then the command runs
- * through the upload module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no
- * content behind, and the form state no longer names it – the file must be chosen again.
+ * The rejections of the photo itself (ST-016): their texts already say to choose another photo or leave it out. A photo
+ * that could not be stored (`not-stored`) is not one of them – the photo was fine, and "try again" needs it again.
  */
-export function uploadFormRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
-  return function uploadFormAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
-    command: Command<Input, Result, Error>,
-    definition: UploadFormDefinition<Input, Result, Field, Refusal>,
-  ) {
-    type State = FormState<CommandError<typeof command> | UploadedContentError | "file-required", Field>;
-    return async (_previous: State, formData: FormData): Promise<State> => {
-      const fields = fieldsOf(formData, definition.fields);
-      const name = fields[definition.upload.field];
-      const refusal = definition.refusal(fields);
-      if (refusal) return { error: refusal, values: valuesOf(fields) };
-      if (!name) return { error: "file-required", values: valuesOf(fields) };
-      const actor = await currentPerson();
-      const outcome = await withUploadedContent(
-        {
-          db: dependencies.db ?? database(),
-          storage: storage ?? blobStorage(),
-          clock: dependencies.clock ?? systemClock,
-          newId: dependencies.newId ?? randomUUID,
-        },
-        { name, owner: definition.upload.owner(fields) },
-        (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
-      );
-      if (!outcome.ok) {
-        const gone = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
-        const values = Object.fromEntries(
-          Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field as Field) ? "" : value]),
-        ) as { readonly [F in Field]: string };
-        return { error: outcome.error, values };
-      }
-      await definition.onSuccess(outcome.result);
-      return null;
-    };
-  };
-}
+const photoRejections: readonly string[] = ["too-large", "not-an-image", "unsupported-format"] satisfies PhotoError[];
 
 /**
- * The runner of a form with a photo (ST-016, moved from ST-073): the same runner, but the command runs through the photo
- * module's "store, run, delete on failure" – a rejected form leaves no stored photo, and a photo that cannot be
- * accepted or stored rejects the form like a command would, keeping the typed values.
+ * One runner for every form (architecture review 2026-10-18): the fields, the command as the acting person, and
+ * `onSuccess` – with an optional content step around the command, chosen by the definition:
+ * - **none** – the command alone;
+ * - **`photo`** (ST-016) – through the photo module's "store, run, delete on failure": a rejected form leaves no stored
+ *   photo, a photo that cannot be accepted or stored rejects the form like a command would, and a rejection of a form
+ *   that had a photo attached says it must be chosen again (`photoAgain`, G8a) – not after a rejection of the photo
+ *   itself (user, 2026-10-10);
+ * - **`upload`** (ST-037, ADR 0009) – the form's own rejections (`refusal`) come first and keep the uploaded content,
+ *   the chosen file is still attached for the next send (user, 2026-10-18); then the command runs through the upload
+ *   module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no content behind,
+ *   and the form state no longer names it – the file must be chosen again.
  */
-export function photoFormRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
-  return function photoFormAction<Input, Result, Error extends string, const Field extends string>(
+export function formRunner({ currentPerson, storage, ...dependencies }: RunnerDependencies) {
+  function formAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition: UploadFormDefinition<Input, Result, Field, Refusal>,
+  ): FormStateAction<FormState<CommandError<typeof command> | UploadedContentError | "file-required", Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: PhotoFormDefinition<Input, Result, Field>,
-  ) {
-    type State = FormState<CommandError<typeof command> | PhotoError, Field>;
-    return async (_previous: State, formData: FormData): Promise<State> => {
+  ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition: FormDefinition<Input, Result, Field>,
+  ): FormStateAction<FormState<CommandError<typeof command>, Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition:
+      | FormDefinition<Input, Result, Field>
+      | PhotoFormDefinition<Input, Result, Field>
+      | UploadFormDefinition<Input, Result, Field, Error>,
+  ): FormStateAction<PhotoFormState<string, Field>> {
+    return async (_previous, formData) => {
       const fields = fieldsOf(formData, definition.fields);
-      const actor = await currentPerson();
-      const outcome = await withStoredPhoto(
-        await sentPhotoOf(formData, definition.photo.field),
-        definition.photo.owner,
-        { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
-        (photo) => executeCommand(command, definition.input(fields, photo), { ...dependencies, actor }),
-      );
-      if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
+      const rejected = (error: string, values = valuesOf(fields)) => ({ error, values });
+
+      if ("upload" in definition) {
+        const name = fields[definition.upload.field];
+        const refusal = definition.refusal(fields);
+        if (refusal) return rejected(refusal);
+        if (!name) return rejected("file-required");
+        const actor = await currentPerson();
+        const outcome = await withUploadedContent(
+          {
+            db: dependencies.db ?? database(),
+            storage: storage ?? blobStorage(),
+            clock: dependencies.clock ?? systemClock,
+            newId: dependencies.newId ?? randomUUID,
+          },
+          { name, owner: definition.upload.owner(fields) },
+          (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
+        );
+        if (!outcome.ok) {
+          const gone: readonly string[] = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
+          const values = Object.fromEntries(
+            Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field) ? "" : value]),
+          ) as { readonly [F in Field]: string };
+          return rejected(outcome.error, values);
+        }
+        await definition.onSuccess(outcome.result);
+        return null;
+      }
+
+      if ("photo" in definition) {
+        const actor = await currentPerson();
+        const photo = await sentPhotoOf(formData, definition.photo.field);
+        const outcome = await withStoredPhoto(
+          photo,
+          definition.photo.owner,
+          { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
+          (reference) => executeCommand(command, definition.input(fields, reference), { ...dependencies, actor }),
+        );
+        if (!outcome.ok) {
+          const again = photo !== undefined && !photoRejections.includes(outcome.error);
+          return again ? { ...rejected(outcome.error), photoAgain: true } : rejected(outcome.error);
+        }
+        await definition.onSuccess(outcome.result);
+        return null;
+      }
+
+      const outcome = await executeCommand(command, definition.input(fields), {
+        ...dependencies,
+        actor: await currentPerson(),
+      });
+      if (!outcome.ok) return rejected(outcome.error);
+      const removed = definition.removesPhoto?.(outcome.result);
+      if (removed) await removePhoto(storage ?? blobStorage(), removed);
       await definition.onSuccess(outcome.result);
       return null;
     };
-  };
+  }
+  return formAction;
 }
+
+/** The action `useActionState` takes: the previous state and the post. */
+type FormStateAction<State> = (previous: State, formData: FormData) => Promise<State>;
 
 /** The bytes of the posted file – none for a missing, empty or non-file field. */
 async function sentPhotoOf(formData: FormData, field: string): Promise<Uint8Array | undefined> {
