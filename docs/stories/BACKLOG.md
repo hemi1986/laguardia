@@ -4,9 +4,15 @@
 
 **Progress: 38 of 59 domain stories done** · scenarios 339 of 505
 
-**84 stories** · In Progress: 0 · Ready: 28 · In Review: 0 · Draft: 3 · Done: 53
+**84 stories** · In Progress: 1 · Ready: 27 · In Review: 0 · Draft: 3 · Done: 53
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
 
 ## Ready
 
@@ -33,7 +39,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | could | M | medium | ST-007, ST-013, ST-059 |
 | [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | could | M | medium | ST-003, ST-013, ST-085 |
-| [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
 | [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | wont | S | medium | ST-001 |
 | [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | wont | M | medium | ST-001, ST-065 |
 | [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | wont | M | medium | ST-061 |
