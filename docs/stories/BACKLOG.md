@@ -4,15 +4,20 @@
 
 **Progress: 39 of 59 domain stories done** · scenarios 344 of 505
 
-**84 stories** · In Progress: 0 · Ready: 27 · In Review: 0 · Draft: 3 · Done: 54
+**84 stories** · In Progress: 1 · Ready: 26 · In Review: 0 · Draft: 3 · Done: 54
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-039](ST-039-retire-machine.md) | Retire a machine, closing its open defects and problem reports | story | Collection | should | M | high | ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-039](ST-039-retire-machine.md) | Retire a machine, closing its open defects and problem reports | story | Collection | should | M | high | ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | should | M | medium | ST-044 |
 | [ST-047](ST-047-maintenance-on-machine-record-and-overview.md) | Maintenance on the machine record | story | Maintenance | should | M | low | ST-009, ST-044, ST-056 |
