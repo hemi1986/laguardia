@@ -4,7 +4,14 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { changeMaintenancePlanCommand, maintenancePlan, maintenanceTaskAppliesTo, type NewMaintenanceTask } from ".";
+import {
+  changeMaintenancePlanCommand,
+  maintenancePlan,
+  maintenanceTaskAppliesTo,
+  type ChangeMaintenancePlanInput,
+  type MaintenanceTaskDetails,
+  type NewMaintenanceTask,
+} from ".";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 
 /**
@@ -13,6 +20,12 @@ import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
  * – it reads the version it changes, and finds its own maintenance task by a name no other test uses.
  */
 const db = testDatabase();
+
+/** One kind of change of the plan, without the version – the test reads the version stored now. */
+type ChangeOf<Change extends ChangeMaintenancePlanInput["change"]> = Omit<
+  Extract<ChangeMaintenancePlanInput, { change: Change }>,
+  "version"
+>;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 
@@ -133,5 +146,112 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
 
     expect(late).toEqual({ ok: false, error: "version-conflict" });
     expect(await listed(name)).toBeUndefined();
+  });
+});
+
+describe("CMD-ChangeMaintenancePlan – changing and removing a maintenance task (ST-041)", () => {
+  /** Runs a change of the plan at the version stored now. */
+  async function change(input: ChangeOf<"change"> | ChangeOf<"remove">, actor: Actor = tom) {
+    const { version } = await maintenancePlan(db);
+    return executeCommand(
+      changeMaintenancePlanCommand,
+      { version, ...input },
+      { actor, db, clock: fixedClock("2026-10-16T10:00:00Z"), newId: randomUUID },
+    );
+  }
+
+  /** What a change of the task gives when it keeps everything as it is, except `overrides`. */
+  const keeping = (
+    task: NonNullable<Awaited<ReturnType<typeof listed>>>,
+    overrides: Partial<MaintenanceTaskDetails>,
+  ) => ({
+    change: "change" as const,
+    maintenanceTaskId: task.id,
+    task: {
+      instruction: task.instruction,
+      intervalMonths: task.intervalMonths,
+      suitableForHelpers: task.suitableForHelpers,
+      machineCategory: task.machineCategory,
+      technology: task.technology,
+      startDate: task.startDate,
+      ...overrides,
+    },
+  });
+
+  it("ST-041: Invalid change is rejected", async () => {
+    const name = `Clean playfield ${randomUUID()}`;
+    await add(aTask({ name, machineCategory: "pinball", technology: "dmd" }));
+    const task = (await listed(name))!;
+
+    const rejected = await change(keeping(task, { machineCategory: "arcade", technology: "em" }));
+
+    expect(rejected).toEqual({ ok: false, error: "technology-does-not-fit-machine-category" });
+    expect(await listed(name)).toMatchObject({ machineCategory: "pinball", technology: "dmd" });
+  });
+
+  it("ST-041: The interval must stay positive", async () => {
+    const name = `Clean playfield ${randomUUID()}`;
+    await add(aTask({ name, intervalMonths: 3 }));
+    const task = (await listed(name))!;
+
+    expect(await change(keeping(task, { intervalMonths: 0 }))).toEqual({ ok: false, error: "interval-not-positive" });
+
+    expect(await listed(name)).toMatchObject({ intervalMonths: 3 });
+  });
+
+  it("ST-041: Helpers cannot change the maintenance plan", async () => {
+    const name = `Wax playfield ${randomUUID()}`;
+    await add(aTask({ name, intervalMonths: 12 }));
+    const task = (await listed(name))!;
+
+    expect(await change(keeping(task, { intervalMonths: 6 }), anna)).toEqual({ ok: false, error: "not-authorized" });
+    expect(await change({ change: "remove", maintenanceTaskId: task.id }, anna)).toEqual({
+      ok: false,
+      error: "not-authorized",
+    });
+
+    expect(await listed(name)).toEqual(task);
+  });
+
+  it("changes the maintenance task in place and journals the change without its text", async () => {
+    const name = `Clean playfield ${randomUUID()}`;
+    await add(aTask({ name }));
+    const task = (await listed(name))!;
+
+    const changed = await change(keeping(task, { instruction: "Novus 1 only.", intervalMonths: 2 }));
+
+    expect(changed).toEqual({ ok: true, result: { maintenanceTaskId: task.id } });
+    expect(await listed(name)).toMatchObject({ id: task.id, instruction: "Novus 1 only.", intervalMonths: 2 });
+    const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
+      (entry) => entry.data.maintenanceTaskId === task.id,
+    );
+    expect(entries.map((entry) => entry.data.change)).toEqual(["added", "changed"]);
+    expect(JSON.stringify(entries[1].data)).not.toContain("Novus");
+  });
+
+  it("removes a maintenance task once – a removed one can neither be changed nor removed again", async () => {
+    const name = `Wax playfield ${randomUUID()}`;
+    await add(aTask({ name }));
+    const task = (await listed(name))!;
+
+    expect(await change({ change: "remove", maintenanceTaskId: task.id })).toEqual({
+      ok: true,
+      result: { maintenanceTaskId: task.id },
+    });
+
+    expect(await listed(name)).toBeUndefined();
+    const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
+      (entry) => entry.data.maintenanceTaskId === task.id,
+    );
+    expect(entries.at(-1)).toMatchObject({
+      type: "EVT-MaintenancePlanChanged",
+      actor: tom,
+      data: { maintenanceTaskId: task.id, change: "removed" },
+    });
+    expect(await change({ change: "remove", maintenanceTaskId: task.id })).toEqual({
+      ok: false,
+      error: "maintenance-task-unknown",
+    });
+    expect(await change(keeping(task, {}))).toEqual({ ok: false, error: "maintenance-task-unknown" });
   });
 });

@@ -3,12 +3,15 @@ export { changeMaintenancePlanCommand } from "./change-maintenance-plan-command"
 export type {
   ChangeMaintenancePlanError,
   ChangeMaintenancePlanInput,
+  MaintenancePlanChange,
+  MaintenanceTaskDetails,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
 export {
   maintenancePlan,
   maintenancePlanVersion,
   maintenanceTaskAppliesTo,
+  maintenanceTaskName,
   type ListedMaintenanceTask,
 } from "./maintenance-plans";
 export { dueMaintenance, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";
@@ -26,4 +29,4 @@ export {
   maintenanceRecords,
   type MaintenanceForRecording,
 } from "./maintenance-records";
-export { maintenanceRecordedIn, maintenanceTaskAddedBy } from "./in-command";
+export { maintenancePlanChangedBy, maintenanceRecordedIn } from "./in-command";

@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MaintenancePlanChanged]
 depends_on: [ST-043]
 labels: [maintenance, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -21,7 +21,7 @@ Command `CMD-ChangeMaintenancePlan` (technicians only). Rules and invariants (`A
 - A removed maintenance task never becomes due again; its maintenance records are kept.
 - Due and overdue are derived when read (`docs/architecture/data-model.md`), so a changed interval applies immediately, counted from the last done date.
 - A narrowed restriction removes the machines that no longer match from the due maintenance list; their maintenance records are kept.
-- The start date can be changed (it is part of `EVT-MaintenancePlanChanged`); it only matters for machines without a *done* maintenance record for the task, because otherwise the latest *done* record is the last done date.
+- The start date can be changed (it is part of `EVT-MaintenancePlanChanged`). Last done stays the later of the latest *done* maintenance record and the start date (ST-044, user 2026-10-15): a new start date matters for machines without a *done* record and for those whose latest *done* record is earlier; a later *done* record stays the last done date (decided during `/implement` ST-041, user 2026-10-23).
 
 Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G5, G10, G3):
 - Each maintenance task in the maintenance plan offers „Ändern“, which leads to the task's change form with its current values; the change form also offers „Wartungsaufgabe entfernen“.
@@ -64,10 +64,10 @@ Scenario: Narrowed restriction removes machines from the due list
 Scenario: Changing the start date
   Given the maintenance task "Wax playfield" (12 months) has the start date 1 January 2026
   And "LG-042" and "LG-043" were registered in 2025
-  And "LG-042" has no done maintenance record for it, while "LG-043" was done on 1 March 2026
+  And "LG-042" has no done maintenance record for it, while "LG-043" was done on 1 May 2026
   When a technician changes the start date to 1 April 2026
   Then "Wax playfield" is next due on "LG-042" on 1 April 2027
-  And on "LG-043" still on 1 March 2027
+  And on "LG-043" still on 1 May 2027
 
 Scenario: Invalid change is rejected
   When a technician changes the restriction of a maintenance task to Arcade with the technology EM

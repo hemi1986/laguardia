@@ -81,6 +81,18 @@ export async function maintenancePlan(
   };
 }
 
+/**
+ * The name of a maintenance task of the plan, also of a removed one – what a confirmation names (ST-041); none for an
+ * ID that is no maintenance task.
+ */
+export async function maintenanceTaskName(db: Database, maintenanceTaskId: string): Promise<string | undefined> {
+  const [row] = await db
+    .select({ name: maintenanceTask.name })
+    .from(maintenanceTask)
+    .where(eq(maintenanceTask.id, maintenanceTaskId));
+  return row?.name;
+}
+
 /** The maintenance tasks of the plan that are not removed – a removed maintenance task is never due (invariant). */
 export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceTask[]> {
   return activeOf((await maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID])).get(MAINTENANCE_PLAN_ID) ?? []);

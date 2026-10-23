@@ -13,6 +13,12 @@ import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "./maintenance-plan";
 import { addMaintenanceTaskFields, addMaintenanceTaskInput } from "./new/add-maintenance-task-input";
+import {
+  changeMaintenanceTaskFields,
+  changeMaintenanceTaskInput,
+  removeMaintenanceTaskFields,
+  removeMaintenanceTaskInput,
+} from "./[maintenanceTaskId]/change-maintenance-task-input";
 
 /**
  * The maintenance plan's page and its form „Wartungsaufgabe hinzufügen“ (ST-040): the form's fields and input function
@@ -152,5 +158,74 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
 
     expect(html).toContain("Noch keine Wartungsaufgabe im Wartungsplan.");
     expect(html).toMatch(/<a [^>]*href="\/team\/maintenance-plan\/new"[^>]*>Wartungsaufgabe hinzufügen<\/a>/);
+  });
+});
+
+describe("the change form of a maintenance task (ST-041)", () => {
+  const run = (actor: Actor, remove = false) =>
+    formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID })(
+      changeMaintenancePlanCommand,
+      remove
+        ? { fields: removeMaintenanceTaskFields, input: removeMaintenanceTaskInput, onSuccess: async () => {} }
+        : { fields: changeMaintenanceTaskFields, input: changeMaintenanceTaskInput, onSuccess: async () => {} },
+    );
+
+  /** A maintenance task added through the form – its ID. */
+  async function added(name: string) {
+    const form = formOf(tom);
+    await form.action(null, await filledIn({ name }));
+    return form.added[0];
+  }
+
+  /** The change form as the technician sends it – the task as added, with `fields` changed. */
+  async function sent(maintenanceTaskId: string, fields: Record<string, string | undefined>) {
+    const posted = await filledIn({ maintenanceTaskId, ...fields });
+    posted.delete("name");
+    return posted;
+  }
+
+  it("changes the maintenance task with what was sent – the name stays", async () => {
+    const name = `Clean playfield ${randomUUID()}`;
+    const id = await added(name);
+
+    const outcome = await run(tom)(
+      null,
+      await sent(id, { intervalMonths: "2", suitableForHelpers: undefined, name: "Renamed" }),
+    );
+
+    expect(outcome).toBeNull();
+    const entry = entryOf(await page(), name);
+    expect(entry).toContain("Alle 2 Monate");
+    expect(entry).not.toContain("Für Helfer:innen geeignet");
+    expect(await page()).not.toContain("Renamed");
+  });
+
+  it("keeps what was typed when it is rejected – a forged role is not read", async () => {
+    const name = `Wax playfield ${randomUUID()}`;
+    const id = await added(name);
+
+    const rejected = await run(tom)(null, await sent(id, { intervalMonths: "0", instruction: "Carnauba only." }));
+    expect(rejected).toMatchObject({
+      error: "interval-not-positive",
+      values: { maintenanceTaskId: id, intervalMonths: "0", instruction: "Carnauba only." },
+    });
+
+    const byHelper = await run(anna)(null, await sent(id, { intervalMonths: "6", role: "technician" }));
+    expect(byHelper?.error).toBe("not-authorized");
+    const removedByHelper = await run(anna, true)(null, await sent(id, { role: "technician" }));
+    expect(removedByHelper?.error).toBe("not-authorized");
+    expect(entryOf(await page(), name)).toContain("Jeden Monat");
+  });
+
+  it("removes the maintenance task, and a second removal says it is gone", async () => {
+    const name = `Wax playfield ${randomUUID()}`;
+    const id = await added(name);
+
+    expect(await run(tom, true)(null, await sent(id, {}))).toBeNull();
+    expect(await page()).not.toContain(name);
+
+    const again = await run(tom, true)(null, await sent(id, {}));
+    expect(again?.error).toBe("maintenance-task-unknown");
+    expect(commandErrorText(teamMessages, again!.error)).toBe("Diese Wartungsaufgabe gibt es nicht mehr.");
   });
 });

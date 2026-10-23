@@ -16,12 +16,14 @@ import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { retireMachineCommand } from "@/modules/repair";
 import {
   changeMaintenancePlanCommand,
+  maintenancePlan,
   maintenancePlanVersion,
   maintenanceRecords,
   recordMaintenanceCommand,
   type MaintenanceOutcome,
+  type MaintenanceTaskDetails,
 } from "@/modules/maintenance";
-import { removeMaintenanceTaskForTest, withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
+import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -34,6 +36,8 @@ import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
 import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
+import { loadMaintenancePlan } from "../maintenance-plan/maintenance-plan-data";
+import { MaintenancePlanView } from "../maintenance-plan/maintenance-plan";
 
 /**
  * The due maintenance list (RM-DueMaintenance, ST-043): Maintenance's maintenance tasks, due on Collection's machines –
@@ -149,6 +153,36 @@ async function aMaintenanceTask(
     ),
   );
   return added.maintenanceTaskId;
+}
+
+/** The maintenance task changed by Tom on that day – everything else as the maintenance plan lists it now. */
+async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTaskDetails>, on = "2026-02-01") {
+  const plan = await maintenancePlan(db);
+  const task = plan.maintenanceTasks.find((each) => each.id === maintenanceTaskId)!;
+  const { instruction, intervalMonths, suitableForHelpers, machineCategory, technology, startDate } = task;
+  return run(
+    executeCommand(
+      changeMaintenancePlanCommand,
+      {
+        version: plan.version,
+        change: "change",
+        maintenanceTaskId,
+        task: { instruction, intervalMonths, suitableForHelpers, machineCategory, technology, startDate, ...changes },
+      },
+      { actor: tom, db, clock: fixedClock(`${on}T09:00:00Z`), newId: randomUUID },
+    ),
+  );
+}
+
+/** The maintenance task removed from the maintenance plan by Tom on that day. */
+async function removed(maintenanceTaskId: string, on = "2026-02-01") {
+  return run(
+    executeCommand(
+      changeMaintenancePlanCommand,
+      { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId },
+      { actor: tom, db, clock: fixedClock(`${on}T09:00:00Z`), newId: randomUUID },
+    ),
+  );
 }
 
 /** The machine's status changed by Tom on that day – `version`: the machine's version before the change. */
@@ -371,13 +405,7 @@ describe("the due maintenance list", () => {
         { actor: tom, db, clock: fixedClock("2026-02-01T09:00:00Z"), newId: randomUUID },
       ),
     );
-    await run(
-      executeCommand(
-        removeMaintenanceTaskForTest,
-        { maintenanceTaskId: wax, version: await maintenancePlanVersion(db) },
-        { actor: tom, db, clock: fixedClock("2026-02-01T09:00:00Z"), newId: randomUUID },
-      ),
-    );
+    await removed(wax, "2026-02-01");
 
     const { data, html } = await page("2026-04-02");
 
@@ -747,6 +775,103 @@ describe("a machine model correction (ST-036)", () => {
 
     expect((await page("2026-04-02", { maintenanceTaskId: rubbers })).data.chosen?.machines).toEqual([
       expect.objectContaining({ museumNumber: "LG-006", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
+    ]);
+  });
+});
+
+describe("changing and removing a maintenance task (ST-041)", () => {
+  /** The maintenance plan as Tom sees it, back from a change – `params`: the address the change led to. */
+  async function planPage(params: Record<string, string> = {}) {
+    const data = await loadMaintenancePlan(db, tom.teamMemberId, params);
+    return { data, html: renderToStaticMarkup(createElement(MaintenancePlanView, data)) };
+  }
+
+  it("ST-041: Technician changes the interval", async () => {
+    const lg042 = await aMachine("LG-042");
+    const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3 });
+    await recorded(cleanPlayfield, lg042, "2026-01-01");
+
+    await changed(cleanPlayfield, { intervalMonths: 2 }, "2026-01-15");
+
+    const { data } = await page("2026-03-02", { maintenanceTaskId: cleanPlayfield });
+    expect(data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-01-01", dueSince: "2026-03-01" }),
+    ]);
+    expect((await planPage({ changed: cleanPlayfield })).html).toContain(
+      teamMessages.maintenancePlan.changed("Clean playfield"),
+    );
+  });
+
+  it("ST-041: Technician changes the suitable-for-helpers mark", async () => {
+    await aMachine("LG-042");
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", {
+      suitableForHelpers: false,
+    });
+    expect((await page("2026-04-02", { suitableForHelpers: true })).data.tasks).toEqual([]);
+
+    await changed(fuses, { suitableForHelpers: true });
+
+    const plan = await planPage();
+    expect(plan.data.plan.maintenanceTasks).toEqual([expect.objectContaining({ id: fuses, suitableForHelpers: true })]);
+    expect(plan.html).toContain(teamMessages.terms["Suitable for helpers"]);
+    const forHelpers = await page("2026-04-02", { suitableForHelpers: true, maintenanceTaskId: fuses });
+    expect(forHelpers.data.tasks.map((task) => task.id)).toEqual([fuses]);
+    expect(forHelpers.data.chosen?.suitableForHelpers).toBe(true);
+    expect(forHelpers.html).toContain(teamMessages.terms["Suitable for helpers"]);
+  });
+
+  it("ST-041: Technician removes a maintenance task", async () => {
+    const lg042 = await aMachine("LG-042");
+    const lg043 = await aMachine("LG-043");
+    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12 });
+    await recorded(wax, lg042, "2026-01-10");
+    await recorded(wax, lg043, "2026-01-12", { outcome: "partially-done", note: "Only the lower half" });
+
+    await removed(wax, "2026-02-01");
+
+    const plan = await planPage({ removed: wax });
+    expect(plan.data.plan.maintenanceTasks.map((task) => task.name)).not.toContain("Wax playfield");
+    expect(plan.html).toContain(teamMessages.maintenancePlan.removed("Wax playfield"));
+    for (const on of ["2027-01-11", "2030-06-01"]) {
+      expect((await page(on)).data.tasks.map((task) => task.name)).not.toContain("Wax playfield");
+    }
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+      expect.objectContaining({ maintenanceTaskId: wax, outcome: "done", date: "2026-01-10" }),
+    ]);
+    expect(await maintenanceRecords(db, { machineId: lg043 })).toEqual([
+      expect.objectContaining({ maintenanceTaskId: wax, outcome: "partially-done", note: "Only the lower half" }),
+    ]);
+  });
+
+  it("ST-041: Narrowed restriction removes machines from the due list", async () => {
+    const lg042 = await aMachine("LG-042", { machineCategory: "pinball", technology: "dmd" });
+    await aMachine("LG-005", { machineCategory: "pinball", technology: "em" });
+    const cleanPlayfield = await aMaintenanceTask("Clean playfield");
+    await recorded(cleanPlayfield, lg042, "2026-03-20", { outcome: "partially-done" });
+    expect(await listedOn("2026-04-02", cleanPlayfield)).toEqual(["LG-005", "LG-042"]);
+
+    await changed(cleanPlayfield, { machineCategory: "pinball", technology: "em" }, "2026-04-02");
+
+    expect(await listedOn("2026-04-02", cleanPlayfield)).toEqual(["LG-005"]);
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+      expect.objectContaining({ maintenanceTaskId: cleanPlayfield, outcome: "partially-done" }),
+    ]);
+  });
+
+  it("ST-041: Changing the start date", async () => {
+    await aMachine("LG-042", { registeredAt: "2025-03-01T09:00:00Z" });
+    const lg043 = await aMachine("LG-043", { registeredAt: "2025-05-01T09:00:00Z" });
+    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2026-01-01" });
+    await recorded(wax, lg043, "2026-05-01");
+
+    await changed(wax, { startDate: "2026-04-01" }, "2026-06-01");
+
+    expect(await listedOn("2027-03-31", wax)).toEqual([]);
+    expect(await listedOn("2027-04-01", wax)).toEqual(["LG-042"]);
+    const { data } = await page("2027-05-01", { maintenanceTaskId: wax });
+    expect(data.chosen?.machines.map(({ museumNumber, dueSince }) => [museumNumber, dueSince])).toEqual([
+      ["LG-042", "2027-04-01"],
+      ["LG-043", "2027-05-01"],
     ]);
   });
 });
