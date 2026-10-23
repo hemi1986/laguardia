@@ -857,4 +857,21 @@ describe("changing and removing a maintenance task (ST-041)", () => {
       expect.objectContaining({ maintenanceTaskId: cleanPlayfield, outcome: "partially-done" }),
     ]);
   });
+
+  it("ST-041: Changing the start date", async () => {
+    await aMachine("LG-042", { registeredAt: "2025-03-01T09:00:00Z" });
+    const lg043 = await aMachine("LG-043", { registeredAt: "2025-05-01T09:00:00Z" });
+    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2026-01-01" });
+    await recorded(wax, lg043, "2026-05-01");
+
+    await changed(wax, { startDate: "2026-04-01" }, "2026-06-01");
+
+    expect(await listedOn("2027-03-31", wax)).toEqual([]);
+    expect(await listedOn("2027-04-01", wax)).toEqual(["LG-042"]);
+    const { data } = await page("2027-05-01", { maintenanceTaskId: wax });
+    expect(data.chosen?.machines.map(({ museumNumber, dueSince }) => [museumNumber, dueSince])).toEqual([
+      ["LG-042", "2027-04-01"],
+      ["LG-043", "2027-05-01"],
+    ]);
+  });
 });
