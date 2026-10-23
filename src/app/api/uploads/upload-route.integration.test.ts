@@ -24,10 +24,7 @@ beforeAll(async () => {
 
 async function aLoggedInTeamMember(role: "helper" | "technician" = "helper"): Promise<string> {
   const username = `up_${randomUUID().slice(0, 8)}`;
-  const created = await createAccount(
-    { name: "Test", username, password: PASSWORD, role },
-    { db, actor: accountManager },
-  );
+  const created = await createAccount({ name: "Test", username, password: PASSWORD, role }, { db, actor: accountManager });
   if (!created.ok) throw new Error(created.error);
   const outcome = await logIn({ username, password: PASSWORD }, { db });
   if (!outcome.ok) throw new Error(outcome.error);

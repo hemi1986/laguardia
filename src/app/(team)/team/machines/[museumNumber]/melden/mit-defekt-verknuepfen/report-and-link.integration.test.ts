@@ -17,7 +17,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndResolveFields, reportAndResolveInput } from "../direkt-behoben/report-and-resolve-input";
-import { reportAndTriagePhoto } from "../report-and-triage";
+import { teamReportProblemPhoto } from "../report-problem-input";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { reportAndLinkFields, reportAndLinkInput } from "./report-and-link-input";
 import { post } from "@/test-support/forms";
@@ -73,7 +73,7 @@ function linkFormFor(machineId: string, actor: Actor = tom) {
   const { storage, run } = runner(actor);
   const action = run(reportProblemAndTriageCommand, {
     fields: reportAndLinkFields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => reportAndLinkInput(fields, machineId, photo),
     onSuccess: async () => {},
   });
@@ -85,7 +85,7 @@ function resolveFormFor(machineId: string, actor: Actor = anna) {
   const { storage, run } = runner(actor);
   const action = run(reportProblemAndTriageCommand, {
     fields: reportAndResolveFields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => reportAndResolveInput(fields, machineId, photo),
     onSuccess: async () => {},
   });

@@ -33,9 +33,7 @@ export async function loadMachineConfirmation(
   if (fileId) {
     const file = record.files.find((shown) => shown.id === fileId);
     const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
-    return file && command && fileAttachedIn(command, fileId)
-      ? { kind: "file-attached", title: file.title }
-      : undefined;
+    return file && command && fileAttachedIn(command, fileId) ? { kind: "file-attached", title: file.title } : undefined;
   }
   const asked = (["statusChanged", "moved", "problemReported"] as const).find((name) => query[name] !== undefined);
   if (!asked) return undefined;

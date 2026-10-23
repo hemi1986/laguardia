@@ -96,7 +96,11 @@ describe("the visitor report form with a photo", () => {
     expect(reportRejectionText(state!, visitorMessages("en"))).toBe(
       "Please describe the problem. Please choose the photo again.",
     );
-    // Without a photo the reason stands alone, and a rejected photo keeps ST-016's text.
+  });
+
+  it("adds the photo sentence neither without a photo nor after a rejection of the photo itself (G8a)", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const storage = memoryStorage();
     const withoutPhoto = await reportForm(machineId, storage)(null, post(""));
     expect(reportRejectionText(withoutPhoto!, visitorMessages("en"))).toBe("Please describe the problem.");
     const rejectedPhoto = await reportForm(machineId, storage)(null, post("Ball stuck", notAnImage()));

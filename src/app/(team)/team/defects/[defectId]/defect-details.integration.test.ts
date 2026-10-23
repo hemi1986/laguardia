@@ -335,15 +335,7 @@ describe("a defect's own page", () => {
       const defectId = await aDefect();
 
       const toms = await seenBy(defectId, asTom);
-      expect(toms.offered).toEqual([
-        "claim",
-        "log-work",
-        "put-on-hold",
-        "resolve",
-        "assign",
-        "prioritize",
-        "change-details",
-      ]);
+      expect(toms.offered).toEqual(["claim", "log-work", "put-on-hold", "resolve", "assign", "prioritize", "change-details"]);
       expect(toms.html).toMatch(/<details[^>]*><summary[^>]*>Verwalten/);
       expect(toms.html).toContain(`href="/team/defects/${defectId}/zuweisen"`);
       const annas = await seenBy(defectId, asAnna);
@@ -366,16 +358,7 @@ describe("a defect's own page", () => {
       expect(toms.html).toContain("Übernommen von Anna");
       expect(toms.html).toContain("Von dir zugewiesen");
       // A technician may take it over, assign it to someone else, or release Anna's claim.
-      expect(toms.offered).toEqual([
-        "claim",
-        "release",
-        "log-work",
-        "put-on-hold",
-        "resolve",
-        "assign",
-        "prioritize",
-        "change-details",
-      ]);
+      expect(toms.offered).toEqual(["claim", "release", "log-work", "put-on-hold", "resolve", "assign", "prioritize", "change-details"]);
       const annas = await seenBy(defectId, asAnna, "assign");
       expect(annas.html).toContain("Von dir übernommen");
       expect(annas.html).toContain("Zugewiesen von Tom");

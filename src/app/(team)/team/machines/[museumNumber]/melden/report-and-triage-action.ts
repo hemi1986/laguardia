@@ -8,7 +8,7 @@ import type { PhotoError } from "@/photo";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "../../../../../team-session";
-import { reportAndTriagePhoto } from "./report-and-triage";
+import { teamReportProblemPhoto } from "./report-problem-input";
 
 /** After a rejection: the error, the typed values, and whether the photo must be chosen again (G8a). */
 export type ReportAndTriageState<Field extends string> = PhotoFormState<
@@ -45,7 +45,7 @@ export async function reportAndTriage<const Field extends string>(
   const machine = await machineForTeamForm(database(), museumNumber);
   return formAction(reportProblemAndTriageCommand, {
     fields: form.fields,
-    photo: reportAndTriagePhoto,
+    photo: teamReportProblemPhoto,
     input: (fields, photo) => form.input(fields, machine?.id, photo),
     onSuccess: async (reported) => {
       revalidatePath(record);

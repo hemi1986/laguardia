@@ -167,8 +167,9 @@ test("ST-084: Team report form says the photo must be chosen again", async ({ pa
   );
   // The chooser shows itself as empty rather than pretending the photo is still attached (G8a).
   await expect(page.getByRole("button", { name: "Foto entfernen" })).toHaveCount(0);
-  // Nothing was stored: the machine record has no problem report waiting for triage.
-  await page.goto(`/team/machines/${museumNumber}`);
-  await expect(page.getByRole("main")).not.toContainText("wartet auf die Sichtung");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  // Nothing was stored: no problem report of this machine waits in the triage list.
+  await page.goto("/team/triage");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("main")).not.toContainText(museumNumber);
 });

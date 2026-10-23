@@ -15,7 +15,7 @@ import { attachFileForm } from "./attach-file-form";
 import { rejectionWithFile } from "./attach-file-form-view";
 
 /**
- * The form that attaches a file (ST-037): the runner for uploaded content (`formRunner`) with the form's
+ * The form that attaches a file (ST-037): the runner with its `upload` step (`formRunner`) with the form's
  * definition, against real PostgreSQL and the in-memory storage adapter. The file was uploaded from the browser before
  * the form is sent (ST-085); the form posts its name.
  */

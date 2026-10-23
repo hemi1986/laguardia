@@ -37,9 +37,7 @@ test("a technician reopens a resolved defect: asked for a reason, then the page 
 
   await page.getByLabel("Warum wieder öffnen?").fill("Weak again after an hour of play");
   await main.getByRole("button", { name: "Wieder öffnen" }).click();
-  await expect(main.getByRole("status")).toHaveText(
-    `„${title}“ ist wieder offen. ${museumNumber} ist jetzt Eingeschränkt.`,
-  );
+  await expect(main.getByRole("status")).toHaveText(`„${title}“ ist wieder offen. ${museumNumber} ist jetzt Eingeschränkt.`);
   await expect(main).toContainText("Coil replaced");
   await expect(main).toContainText(/Wieder geöffnet von E2E Technician am/);
   await expect(main).toContainText("Weak again after an hour of play");

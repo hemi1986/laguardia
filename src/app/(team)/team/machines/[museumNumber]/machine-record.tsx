@@ -192,9 +192,7 @@ export function MachineRecordView({
                           <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
                             {file.title}
                           </a>
-                          {file.ofMachineModel && (
-                            <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
-                          )}
+                          {file.ofMachineModel && <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>}
                         </li>
                       ))}
                     </ul>

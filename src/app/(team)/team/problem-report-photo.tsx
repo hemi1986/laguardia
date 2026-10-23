@@ -19,12 +19,7 @@ export function ProblemReportPhoto({ address }: { address: string }) {
     <a href={address} target="_blank" rel="noreferrer" className="self-start">
       {/* A signed, short-lived address of the private store – not something next/image could optimize or cache. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={address}
-        alt={teamMessages.problemReportPhoto.alt}
-        loading="lazy"
-        className="max-h-64 w-auto rounded-md"
-      />
+      <img src={address} alt={teamMessages.problemReportPhoto.alt} loading="lazy" className="max-h-64 w-auto rounded-md" />
     </a>
   );
 }

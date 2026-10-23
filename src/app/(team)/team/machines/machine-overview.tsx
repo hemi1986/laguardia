@@ -4,7 +4,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
-import { machineStatuses, type MachineOverviewQuery, type MachineStatus } from "@/modules/collection";
+import {
+  machineStatuses,
+  type MachineOverviewQuery,
+  type MachineStatus,
+} from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 import type { MachineOverviewItem } from "./machine-overview-data";
 
@@ -66,7 +70,13 @@ export function MachineOverview({
               {texts.search}
             </label>
             <div className="flex gap-2">
-              <Input id="search" name="search" type="search" defaultValue={search} aria-describedby="search-hint" />
+              <Input
+                id="search"
+                name="search"
+                type="search"
+                defaultValue={search}
+                aria-describedby="search-hint"
+              />
               {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
               <button type="submit" className={buttonVariants({ variant: "outline" })}>
                 {texts.searchSubmit}

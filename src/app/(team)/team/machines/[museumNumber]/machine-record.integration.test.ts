@@ -349,9 +349,7 @@ describe("the machine record", () => {
       const files = section(await page("LG-042"), "Dateien");
 
       expect(files.indexOf("Handbuch")).toBeLessThan(files.indexOf("Sonstiges"));
-      expect(files).toMatch(
-        new RegExp(`<a [^>]*href="/team/dateien/${manual}"[^>]*>MM Operations Manual</a><span[^>]*> · Modell</span>`),
-      );
+      expect(files).toMatch(new RegExp(`<a [^>]*href="/team/dateien/${manual}"[^>]*>MM Operations Manual</a><span[^>]*> · Modell</span>`));
       expect(files).toContain("LG-042 wiring notes");
       expect(files).not.toContain("Noch keine Dateien");
     });

@@ -21,7 +21,6 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndRecordDefectFields, reportAndRecordDefectInput } from "./report-and-record-defect-input";
-import { reportAndTriagePhoto } from "../report-and-triage";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { post } from "@/test-support/forms";
 
@@ -49,7 +48,7 @@ function formFor(machineId: string, actor: Actor = tom, storage = memoryStorage(
     reportProblemAndTriageCommand,
     {
       fields: reportAndRecordDefectFields,
-      photo: reportAndTriagePhoto,
+      photo: teamReportProblemPhoto,
       input: (fields, photo) => reportAndRecordDefectInput(fields, machineId, photo),
       onSuccess: async (result) => void reported.push(result),
     },
