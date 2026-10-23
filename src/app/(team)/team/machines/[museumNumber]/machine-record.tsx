@@ -47,7 +47,8 @@ export function MachineRecordView({
       ? [[terms.Technology, machineModels.technologies[machineModel.technology]] as [string, string]]
       : []),
     [terms.Location, record.location],
-    [machines.status, machines.statuses[record.machineStatus]],
+    // A retired machine shows „Ausgemustert“ in place of its machine status; the status history stays (ST-039).
+    [machines.status, record.retirement ? texts.retiredInPlaceOfStatus : machines.statuses[record.machineStatus]],
   ];
 
   return (

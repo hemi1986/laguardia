@@ -9,6 +9,8 @@ export const repairTexts = {
     year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     chooseYear: "Welches Jahr?",
     defectOpen: "Offen",
+    /** A defect its machine's retirement closed (ST-039) – not resolved, so no closing note. */
+    closedOnRetirement: (at: string) => `Geschlossen (ausgemustert) am ${at}`,
     allYears: "Alle Jahre",
     backToMachine: "Zurück zum Gerät",
   },

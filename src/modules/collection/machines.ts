@@ -341,13 +341,18 @@ export async function machineForReporting(
 /**
  * The ID of an active machine by its museum number – for the server to compose other modules' data (the visitor
  * machine page's count) or to run their commands (a visitor's problem report, ST-013) without the ID reaching a
- * public page. Undefined for an unknown or retired museum number.
+ * public page. Undefined for an unknown or retired museum number – unless a team page asks for retired ones too (the
+ * repair history of a retired machine stays readable, ST-039).
  */
-export async function machineIdOf(db: Database, museumNumber: string): Promise<string | undefined> {
+export async function machineIdOf(
+  db: Database,
+  museumNumber: string,
+  { retiredToo = false }: { retiredToo?: boolean } = {},
+): Promise<string | undefined> {
   const [row] = await db
     .select({ id: machine.id })
     .from(machine)
-    .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
+    .where(and(eq(machine.museumNumber, museumNumber), retiredToo ? undefined : isNull(machine.retiredAt)));
   return row?.id;
 }
 

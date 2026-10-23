@@ -85,6 +85,9 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
         {defects.recordedAt(formatDateTime(entry.recordedAt))}
         {entry.state === "open" && ` · ${texts.defectOpen}`}
       </p>
+      {entry.closedOnRetirementAt && (
+        <p className="font-medium">{texts.closedOnRetirement(formatDateTime(entry.closedOnRetirementAt))}</p>
+      )}
       {/* Every closing note, each followed by the reason it was reopened – in the order they happened (ST-030). */}
       {entry.resolutionsAndReopenings.map((step) =>
         step.kind === "resolution" ? (

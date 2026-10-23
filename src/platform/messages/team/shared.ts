@@ -27,6 +27,7 @@ export const sharedTexts = {
     "Maintenance task": "Wartungsaufgabe",
     "Resolved on the spot": "Direkt behoben",
     "Closing note": "Abschlussnotiz",
+    "Closed on retirement": "Geschlossen (ausgemustert)",
     "Work log entry": "Arbeitsschritt",
   },
   /** The team UI's frame: the navigation (G19) and who is logged in. */

@@ -15,6 +15,8 @@ export type RepairHistoryEntry =
       title: string;
       state: DefectState;
       recordedAt: Date;
+      /** When its machine's retirement closed it – only for the state *closed on retirement* (ST-039). */
+      closedOnRetirementAt: Date | undefined;
       /** The oldest entry first. */
       workLog: WorkLogEntry[];
       /** One per resolve, the oldest first – none while it was never resolved. */
@@ -43,7 +45,13 @@ export type RepairHistoryEntry =
 export async function repairHistory(db: Database, machineId: string): Promise<RepairHistoryEntry[]> {
   const [defects, resolvedOnTheSpot] = await Promise.all([
     db
-      .select({ id: defect.id, title: defect.title, state: defect.state, recordedAt: defect.recordedAt })
+      .select({
+        id: defect.id,
+        title: defect.title,
+        state: defect.state,
+        recordedAt: defect.recordedAt,
+        closedOnRetirementAt: defect.closedOnRetirementAt,
+      })
       .from(defect)
       .where(eq(defect.machineId, machineId)),
     db
@@ -65,9 +73,10 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
     reopenings.load(db, ids),
   ]);
   const entries: RepairHistoryEntry[] = [
-    ...defects.map((row) => ({
+    ...defects.map(({ closedOnRetirementAt, ...row }) => ({
       kind: "defect" as const,
       ...row,
+      closedOnRetirementAt: closedOnRetirementAt ?? undefined,
       workLog: workLogs.get(row.id) ?? [],
       resolutions: resolutionsByDefect.get(row.id) ?? [],
       reopenings: reopeningsByDefect.get(row.id) ?? [],

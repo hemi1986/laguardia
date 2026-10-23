@@ -85,6 +85,8 @@ export const collectionTexts = {
     /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
     registeredAs: (status: string) => `Erfasst als ${status}`,
     retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
+    /** In place of the machine status of a retired machine (user, backlog grooming 2026-10-17, ST-039). */
+    retiredInPlaceOfStatus: "Ausgemustert",
     unknownTeamMember: "unbekannt",
     changeStatus: "Status ändern",
     reportProblem: "Problem melden",
