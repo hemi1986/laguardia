@@ -11,7 +11,7 @@ import {
 } from "@/modules/collection";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { reportProblemCommand, retireMachineCommand } from "@/modules/repair";
 import { removeMaintenanceTaskForTest } from "./maintenance.test-support";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -192,18 +192,31 @@ describe("CMD-RecordMaintenance", () => {
     expect(await record("not-an-id", lg042, undefined)).toEqual({ ok: false, error: "maintenance-task-unknown" });
   });
 
-  it("reads whether the machine is retired from Collection – a retired machine gets no maintenance record", async () => {
+  it("ST-039: Actions on a retired machine are rejected", async () => {
     const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
     const lg013 = await aMachine();
+    const at = { actor: tom, db, clock: fixedClock("2026-06-01T09:00:00Z"), newId: randomUUID };
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId: lg013, version: 0 },
-      { actor: tom, db, clock: fixedClock("2026-06-01T09:00:00Z"), newId: randomUUID },
+      retireMachineCommand,
+      { machineId: lg013, version: 0, reason: "Sold to a collector" },
+      at,
     );
     if (!retired.ok) throw new Error(retired.error);
 
+    // Maintenance reads from Collection whether the machine is retired – a retired machine gets no maintenance record.
     expect(await record(cleanGlass, lg013, undefined)).toEqual({ ok: false, error: "machine-retired" });
     expect(await maintenanceRecords(db, { machineId: lg013 })).toEqual([]);
+    expect(
+      await executeCommand(reportProblemCommand, { machineId: lg013, description: "Ball stuck" }, at),
+    ).toEqual({ ok: false, error: "machine-retired" });
+    expect(
+      await executeCommand(
+        changeMachineStatusCommand,
+        { machineId: lg013, version: 1, machineStatus: "limited", reason: "Back again?" },
+        at,
+      ),
+    ).toEqual({ ok: false, error: "machine-retired" });
+    expect(await journalOf(db, { machineId: lg013 })).toHaveLength(2);
   });
 });
 
