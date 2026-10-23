@@ -267,6 +267,19 @@ function retirementOf(row: {
     : undefined;
 }
 
+/**
+ * The machine's retirement lock (ADR 0010): a transaction-scoped advisory lock per machine. CMD-RetireMachine takes it
+ * exclusively; the reads other modules' commands check "not retired" with take it shared, so a command in flight
+ * finishes before the retirement decides, and one that starts meanwhile waits for its commit and reads it retired.
+ * Advisory locks do not conflict with row locks, so changes of the machine row are unaffected.
+ */
+export async function retirementLock(tx: Database, machineId: string, mode: "exclusive" | "shared"): Promise<void> {
+  const key = sql`hashtext(${"machine:" + machineId})`;
+  await tx.execute(
+    mode === "exclusive" ? sql`SELECT pg_advisory_xact_lock(${key})` : sql`SELECT pg_advisory_xact_lock_shared(${key})`,
+  );
+}
+
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);

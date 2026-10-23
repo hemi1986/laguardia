@@ -22,6 +22,8 @@ export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTea
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";
+export { retireMachineCommand } from "./retire-machine-command";
+export type { RetireMachineError, RetireMachineInput } from "./retire-machine";
 export { machineStatuses } from "./register-machine";
 export type {
   MachineStatus,
