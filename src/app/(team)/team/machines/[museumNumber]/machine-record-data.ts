@@ -25,7 +25,7 @@ export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retiremen
   recentRepairHistory: ShownEndedRepairHistoryEntry[];
   /** How many entries its whole repair history has – open defects included (ST-033). */
   repairHistoryCount: number;
-  /** What the viewer may do here – the page offers only these (G11). */
+  /** The machine record's own actions the viewer may take (G11) – a section another module decides per item brings its own offer. */
   actions: MachineRecordActions;
 };
 
