@@ -10,7 +10,8 @@ import {
   registerMachineCommand,
   type FileCategory,
 } from "@/modules/collection";
-import { retireMachineForTest, withoutMachines } from "@/modules/collection/machines.test-support";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import {
   claimDefectCommand,
   putDefectOnHoldCommand,
@@ -82,8 +83,8 @@ async function registered(museumNumber: string, at: string) {
 async function retiredMachine(museumNumber: string): Promise<string> {
   const machineId = await registered(museumNumber, "2026-01-15T09:00:00Z");
   const retired = await executeCommand(
-    retireMachineForTest,
-    { machineId, version: 0 },
+    retireMachineCommand,
+    { machineId, version: 0, reason: "Sold" },
     { actor: tom, db, clock: fixedClock("2026-03-01T11:00:00Z"), newId: randomUUID },
   );
   if (!retired.ok) throw new Error("not retired");

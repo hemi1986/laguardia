@@ -6,7 +6,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { machineRecord } from "@/modules/collection";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "./retirement-policies";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { recordDefectCommand, reportProblemCommand, triageList } from ".";
 import { storedDefect, storedProblemReport } from "./command-probes.test-support";
@@ -125,12 +125,14 @@ describe("CMD-RecordDefect", () => {
     const machineId = await aRegisteredMachine(db);
     const problemReportId = await anUntriagedProblemReport(machineId);
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       { actor: tom, db, clock, newId: randomUUID },
     );
     if (!retired.ok) throw new Error("not retired");
     const journalBefore = (await journalOf(db, { machineId })).length;
+    // The retirement dismissed the problem report (ST-039) – this action must leave that triage as it is.
+    const triageBefore = (await storedProblemReport(db, problemReportId))?.triage;
 
     const recorded = await recordDefect(problemReportId, {
       title: "Left flipper weak",
@@ -139,7 +141,7 @@ describe("CMD-RecordDefect", () => {
     });
 
     expect(recorded).toEqual({ ok: false, error: "machine-retired" });
-    expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
+    expect((await storedProblemReport(db, problemReportId))?.triage).toEqual(triageBefore);
     expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
     expect((await machineRecord(db, await museumNumberOf(machineId)))?.statusHistory).toHaveLength(1);
     expect(commandErrorText(teamMessages, "machine-retired")).toContain("ausgemustert");

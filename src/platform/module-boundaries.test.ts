@@ -47,7 +47,7 @@ describe("module boundaries", () => {
 
   it("allow a test – and only a test – another module's test support, and nothing else of its internals", async () => {
     const importTestSupport =
-      'import { retireMachineForTest } from "@/modules/collection/machines.test-support";\nexport const x = retireMachineForTest;\n';
+      'import { correctMuseumNumberForTest } from "@/modules/collection/machines.test-support";\nexport const x = correctMuseumNumberForTest;\n';
     const importInternals = 'import { machines } from "@/modules/collection/machines";\nexport const x = machines;\n';
 
     expect(await boundaryErrors("src/app/deliberate.integration.test.ts", importTestSupport)).toEqual([]);

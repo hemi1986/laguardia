@@ -13,12 +13,8 @@ import {
   type RegisterMachineInput,
 } from ".";
 import { machineStatusHistory } from "./machines";
-import {
-  correctMuseumNumberForTest,
-  retireMachineForTest,
-  storedMachine,
-  withoutMachines,
-} from "./machines.test-support";
+import { correctMuseumNumberForTest, storedMachine, withoutMachines } from "./machines.test-support";
+import { retireMachineCommand } from "./retire-machine-command";
 
 /**
  * CMD-RegisterMachine through the command layer. The museum number is unique among all machines ever registered
@@ -77,7 +73,7 @@ async function museumNumberOf(machineId: string) {
 const asTechnician = { actor: eva, clock, newId: randomUUID };
 
 async function retire(machineId: string) {
-  const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { ...asTechnician, db });
+  const retired = await executeCommand(retireMachineCommand, { machineId, version: 0, reason: "Sold" }, { ...asTechnician, db });
   if (!retired.ok) throw new Error("not retired");
 }
 

@@ -14,7 +14,8 @@ import {
   type MachineStatus,
   type RegisterMachineInput,
 } from ".";
-import { retireMachineForTest, withoutMachines } from "./machines.test-support";
+import { withoutMachines } from "./machines.test-support";
+import { retireMachineCommand } from "./retire-machine-command";
 
 /**
  * RM-MachineOverview as ST-007 builds it: a plain list of the active machines. Its own database – the overview is
@@ -130,7 +131,7 @@ describe("RM-MachineOverview", () => {
 
   it("leaves retired machines out – the overview lists the active machines", async () => {
     const retired = await registered({ museumNumber: "LG-003", location: "Depot", machineStatus: "not-on-display" });
-    await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, asEva());
+    await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
 
     expect(await machineOverview(db)).toEqual([]);
   });
@@ -217,7 +218,7 @@ describe("RM-MachineOverview", () => {
   it("ST-008: Retired machines are not listed", async () => {
     await registered({ museumNumber: "LG-012", location: "Hall 1", machineStatus: "playable" });
     const retired = await registered({ museumNumber: "LG-013", location: "Depot", machineStatus: "playable" });
-    await executeCommand(retireMachineForTest, { machineId: retired, version: 0 }, asEva());
+    await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
 
     expect(museumNumbers(await machineOverview(db))).toEqual(["LG-012"]);
     expect(museumNumbers(await machineOverview(db, { search: "013" }))).toEqual([]);

@@ -12,7 +12,8 @@ import {
   moveMachineCommand,
   registerMachineCommand,
 } from ".";
-import { retireMachineForTest, withoutMachines } from "./machines.test-support";
+import { withoutMachines } from "./machines.test-support";
+import { retireMachineCommand } from "./retire-machine-command";
 
 /**
  * CMD-MoveMachine (ST-034) through the command layer, observed through the machine record, the machine overview and
@@ -88,7 +89,7 @@ describe("CMD-MoveMachine", () => {
 
   it("ST-034: Retired machines cannot be moved", async () => {
     const machineId = await standingAt("LG-013", "Hall 1");
-    const retired = await executeCommand(retireMachineForTest, { machineId, version: 0 }, { actor: eva, ...at() });
+    const retired = await executeCommand(retireMachineCommand, { machineId, version: 0, reason: "Sold" }, { actor: eva, ...at() });
     if (!retired.ok) throw new Error(retired.error);
 
     expect(await move(machineId, "Storage", eva, 1)).toEqual({ ok: false, error: "machine-retired" });

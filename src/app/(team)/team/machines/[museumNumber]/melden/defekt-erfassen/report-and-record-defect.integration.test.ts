@@ -9,7 +9,7 @@ import {
   reportProblemAndTriageCommand,
   reportProblemCommand,
 } from "@/modules/repair";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { commandErrorText, visitorMessages } from "@/platform/messages";
@@ -138,8 +138,8 @@ describe("the form for reporting a problem and recording a defect", () => {
     // The form is open – its action is bound to the machine – when the machine is retired.
     const { action, storage } = formFor(machineId);
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       { actor: tom, db, clock, newId: randomUUID },
     );
     if (!retired.ok) throw new Error("not retired");

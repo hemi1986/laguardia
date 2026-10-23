@@ -50,7 +50,8 @@ export type DefectRecorded = {
   suitableForHelpers: boolean;
 };
 
-export type RecordDefectError = "already-triaged" | "title-required" | "machine-status-not-stricter";
+export type RecordDefectError =
+  "machine-retired" | "already-triaged" | "title-required" | "machine-status-not-stricter";
 
 export function recordDefect(
   report: ProblemReport,
@@ -58,6 +59,9 @@ export function recordDefect(
   { actor, clock, newId }: DecisionContext<RecordingPerson>,
   { machine }: ReportingFacts,
 ): Decision<ProblemReport, DefectRecorded, RecordDefectError> {
+  // A retirement meanwhile dismissed the problem report too (ST-039) – "retired by now" says more than "already
+  // triaged", and is what ST-018 tells the technician.
+  if (machine?.retired) return { ok: false, error: "machine-retired" };
   if (report.triage) return { ok: false, error: "already-triaged" };
   const title = input.title.trim();
   if (!title) return { ok: false, error: "title-required" };

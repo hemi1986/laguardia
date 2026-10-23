@@ -7,7 +7,7 @@ import { problemReportForTriage, problemReportsOfMachine, reportProblemCommand }
 import { changeDescriptionForTest, storedProblemReport } from "./command-probes.test-support";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "./retirement-policies";
 
 const db = testDatabase();
 const visitor: Actor = { kind: "visitor" };
@@ -171,8 +171,8 @@ describe("CMD-ReportProblem by a team member", () => {
     const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
     await anExistingTeamMember(db, technician);
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       { ...deps, actor: technician },
     );
     if (!retired.ok) throw new Error("not retired");

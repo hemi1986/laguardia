@@ -7,7 +7,7 @@ import {
   reportProblemAndTriageCommand,
   resolveDefectCommand,
 } from "@/modules/repair";
-import { retireMachineForTest } from "@/modules/collection/machines.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
@@ -184,8 +184,8 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     const link = linkFormFor(machineId);
     const resolve = resolveFormFor(machineId);
     const retired = await executeCommand(
-      retireMachineForTest,
-      { machineId, version: 0 },
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold" },
       { actor: tom, db, clock, newId: randomUUID },
     );
     if (!retired.ok) throw new Error("not retired");
