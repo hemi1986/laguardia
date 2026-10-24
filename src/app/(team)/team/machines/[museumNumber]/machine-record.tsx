@@ -244,6 +244,8 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.problemReported(record.museumNumber);
     case "file-attached":
       return texts.fileAttached(confirmation.title);
+    case "maintenance-recorded":
+      return teamMessages.recordMaintenance.recorded(record.museumNumber);
     case "triaged":
       return triageConfirmationText(confirmation.triaged);
   }

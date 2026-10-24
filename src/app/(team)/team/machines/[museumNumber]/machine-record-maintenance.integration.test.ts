@@ -13,6 +13,7 @@ import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   changeMaintenancePlanCommand,
   maintenancePlanVersion,
+  maintenanceRecords,
   recordMaintenanceCommand,
   type MaintenanceOutcome,
 } from "@/modules/maintenance";
@@ -24,6 +25,11 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import type { Viewer } from "../../claimant";
 import { loadMachineRecord } from "./machine-record-data";
 import { MachineRecordView } from "./machine-record";
+import { loadMachineConfirmation } from "./machine-confirmation";
+import { formRunner } from "@/app/_actions/form-runner";
+import { post } from "@/test-support/forms";
+import { recordMaintenanceFields, recordMaintenanceInput } from "../../maintenance/erfassen/record-maintenance-input";
+import { addressAfterRecording } from "../../maintenance/erfassen/address-after-recording";
 import { loadAllMaintenanceRecords } from "./wartungseintraege/maintenance-records-data";
 import { MaintenanceRecordsView } from "./wartungseintraege/maintenance-records";
 
@@ -191,6 +197,19 @@ function entryOf(html: string, name: string): string {
   return entry;
 }
 
+/** The machine record at that address – with its query – as that team member sees it on that day (G3). */
+async function pageAt(url: URL, on: string, viewer: Person) {
+  const museumNumber = decodeURIComponent(url.pathname.split("/").at(-1)!);
+  const clock = fixedClock(`${on}T10:00:00Z`);
+  const record = await loadMachineRecord(db, museumNumber, { clock, viewer: viewerOf(viewer) });
+  const confirmation =
+    record &&
+    (await loadMachineConfirmation(db, clock, viewer.teamMemberId, record, Object.fromEntries(url.searchParams)));
+  const html = renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber, confirmation }));
+  const maintenance = section(html, "Wartung");
+  return { html, due: maintenance.slice(0, maintenance.indexOf(">Wartungseinträge<")) };
+}
+
 describe("section 5 „Wartung“ of the machine record", () => {
   it("ST-047: Machine record shows maintenance records", async () => {
     const lg042 = await aMachine("LG-042");
@@ -266,5 +285,51 @@ describe("section 5 „Wartung“ of the machine record", () => {
     expect(clean).not.toContain("Überfällig");
     expect(wax).toContain("fällig seit 01.04.2026");
     expect(wax).toContain("Überfällig");
+  });
+
+  describe("„Wartung erfassen“ from the machine record", () => {
+    /** The form „Wartung erfassen“ opened from the machine record, through the runner, as that team member on that day. */
+    function formOf(actor: Person, on: string) {
+      const landedOn: string[] = [];
+      const action = formRunner({
+        currentPerson: async () => actor,
+        db,
+        clock: fixedClock(`${on}T10:00:00Z`),
+        newId: randomUUID,
+      })(recordMaintenanceCommand, {
+        fields: recordMaintenanceFields,
+        input: recordMaintenanceInput,
+        onSuccess: async (result) => void landedOn.push(await addressAfterRecording(db, "machine", result)),
+      });
+      return { action, landedOn };
+    }
+
+    it("ST-047: Recording maintenance from the machine record", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanPlayfield = await aMaintenanceTask("Clean playfield", {
+        intervalMonths: 3,
+        suitableForHelpers: true,
+        startDate: "2026-03-03",
+      });
+      const before = await page("LG-042", "2026-06-10", anna);
+      expect(entryOf(before.due, "Clean playfield")).toContain(
+        `href="/team/maintenance/erfassen?task=${cleanPlayfield}&amp;machine=LG-042&amp;von=geraet"`,
+      );
+
+      const { action, landedOn } = formOf(anna, "2026-06-10");
+      expect(
+        await action(null, post({ maintenanceTaskId: cleanPlayfield, machineId: lg042, outcome: "done", note: "" })),
+      ).toBeNull();
+
+      expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+        expect.objectContaining({ maintenanceTaskId: cleanPlayfield, outcome: "done", recordedBy: anna.teamMemberId }),
+      ]);
+      const [address] = landedOn;
+      const url = new URL(address, "https://laguardia.example");
+      expect(url.pathname).toBe("/team/machines/LG-042");
+      const after = await pageAt(url, "2026-06-10", anna);
+      expect(after.html).toContain("Wartung an LG-042 eingetragen.");
+      expect(after.due).not.toContain("Clean playfield");
+    });
   });
 });

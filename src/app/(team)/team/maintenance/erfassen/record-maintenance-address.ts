@@ -35,18 +35,20 @@ export function backAddress(
 }
 
 /**
- * Where the team member lands after recording (G3): the machine record or the due maintenance list at the same task –
- * the address says only which record to confirm; the page confirms it from the journal.
+ * Where the team member lands after recording (G3): the machine record when its museum number is given, else the due
+ * maintenance list at the same task – the address says only which record to confirm; the page confirms it from the
+ * journal.
  */
-export function recordedAddress(
-  back: RecordMaintenanceReturn,
-  {
-    maintenanceRecordId,
-    maintenanceTaskId,
-    museumNumber,
-  }: { maintenanceRecordId: string; maintenanceTaskId: string; museumNumber: string },
-): string {
-  if (back === "machine") {
+export function recordedAddress({
+  maintenanceRecordId,
+  maintenanceTaskId,
+  museumNumber,
+}: {
+  maintenanceRecordId: string;
+  maintenanceTaskId: string;
+  museumNumber?: string;
+}): string {
+  if (museumNumber !== undefined) {
     const params = new URLSearchParams({ maintenanceRecorded: maintenanceRecordId });
     return `/team/machines/${encodeURIComponent(museumNumber)}?${params.toString()}`;
   }

@@ -73,7 +73,11 @@ async function museumNumberOf(machineId: string) {
 const asTechnician = { actor: eva, clock, newId: randomUUID };
 
 async function retire(machineId: string) {
-  const retired = await executeCommand(retireMachineCommand, { machineId, version: 0, reason: "Sold" }, { ...asTechnician, db });
+  const retired = await executeCommand(
+    retireMachineCommand,
+    { machineId, version: 0, reason: "Sold" },
+    { ...asTechnician, db },
+  );
   if (!retired.ok) throw new Error("not retired");
 }
 

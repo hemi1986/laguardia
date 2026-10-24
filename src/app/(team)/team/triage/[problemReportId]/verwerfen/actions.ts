@@ -21,9 +21,7 @@ export type DismissRejection = NonNullable<
  * from (`asking: false`) – with what was chosen and typed (G10).
  */
 export type DismissState =
-  | DismissRejection
-  | { asking: boolean; error?: undefined; values: { readonly [F in DismissField]: string } }
-  | null;
+  DismissRejection | { asking: boolean; error?: undefined; values: { readonly [F in DismissField]: string } } | null;
 
 /**
  * CMD-DismissProblemReport from the form „Meldung verwerfen“ (ST-020) – through the Server Action runner (ST-073). A
