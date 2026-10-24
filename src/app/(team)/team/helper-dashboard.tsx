@@ -6,6 +6,7 @@ import { claimantText } from "./claimant";
 import type { OpenDefectsItem } from "./defects/open-defects-data";
 import type { ClaimedByYouItem, HelperDashboardData, ShownChange } from "./helper-dashboard-data";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
+import { NewMark } from "./new-mark";
 
 const { helperDashboard: texts, dueMaintenance: dueMaintenanceTexts } = teamMessages;
 
@@ -66,15 +67,7 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
 type ListedDefect = ClaimedByYouItem | OpenDefectsItem;
 
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
-function DefectsSection({
-  title,
-  none,
-  defects,
-}: {
-  title: string;
-  none: string;
-  defects: ListedDefect[];
-}) {
+function DefectsSection({ title, none, defects }: { title: string; none: string; defects: ListedDefect[] }) {
   return (
     <section>
       <Card>
@@ -103,7 +96,10 @@ function DefectsSection({
                     {"changes" in defect && defect.changes.length > 0 && (
                       <ul className="flex flex-col gap-1">
                         {defect.changes.map((change, index) => (
-                          <li key={index}>{texts.changed(changeText(change), change.hoursAgo)}</li>
+                          <li key={index}>
+                            {texts.changed(changeText(change), change.hoursAgo)}
+                            <NewMark shown={change.newSinceLastVisit} />
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -138,6 +134,8 @@ function changeText(change: ShownChange): string {
     case "resumed":
       return texts.changes.resumed;
     case "released":
-      return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
+      return change.markRemoved
+        ? texts.changes.releasedByRemovingTheMark(change.by)
+        : texts.changes.released(change.by);
   }
 }

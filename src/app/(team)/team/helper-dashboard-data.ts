@@ -1,16 +1,20 @@
 import { machineLabels, machinesForMaintenance } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { changesOnClaimedDefects, openDefects, type ClaimedDefectChange } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
+import { lastVisitOf, teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { elapsedHours } from "@/platform/time";
 import { nameOf, type Viewer } from "./claimant";
 import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
 import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
+import { isNew, type MarkLine } from "./new-since-last-visit";
 
-/** A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, and how many hours ago. */
-export type ShownChange = WithoutTime<ClaimedDefectChange> & { hoursAgo: number };
+/**
+ * A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, how many hours ago, and whether it is
+ * new since the helper's Last visit (ST-050).
+ */
+export type ShownChange = WithoutTime<ClaimedDefectChange> & { hoursAgo: number; newSinceLastVisit: boolean };
 
 // A change without its point in time, kept apart per kind; its "who" – `by`, `to` – holds names on the page.
 type WithoutTime<Change> = Change extends unknown ? Omit<Change, "at"> : never;
@@ -46,6 +50,7 @@ export type HelperDashboardData = {
  * tasks on Collection's machines – the page composes (ST-009) –, computed when it is opened (ADR 0002).
  */
 export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Viewer): Promise<HelperDashboardData> {
+  const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
   const [claimed, suitable, due, changed] = await Promise.all([
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
@@ -77,6 +82,8 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
     changes.map(({ at, ...change }) => ({
       ...named(change, names),
       hoursAgo: elapsedHours(at, now),
+      // Never the helper's own – `changesOnClaimedDefects` leaves those out (G25).
+      newSinceLastVisit: isNew(marks, at),
     }));
   const changesOf = new Map(changed.map((defect) => [defect.defectId, defect.changes]));
   return {
@@ -110,7 +117,7 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
 
 /** The team members a change names – who did it, and whom a defect was assigned to. */
 function peopleOf(change: ClaimedDefectChange): string[] {
-  return [..."by" in change ? [change.by] : [], ..."to" in change ? [change.to] : []];
+  return [...("by" in change ? [change.by] : []), ...("to" in change ? [change.to] : [])];
 }
 
 /** A change with its team members by name. */
