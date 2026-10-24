@@ -245,7 +245,7 @@ function lastWorkLogEntry(column: typeof defectWorkLogEntry.loggedBy | typeof de
 }
 
 /** A claim older than 14 days without a work log entry since it was made (CONTEXT.md: Stale claim) – its machine and claimant by ID. */
-export type StaleClaim = { defectId: string; machineId: string; title: string; claimedBy: string; claimedAt: Date };
+export type StaleClaim = { defectId: string; machineId: string; title: string; claimedBy: string };
 
 /** "Older than 14 days" – more than 336 hours (ST-003). */
 const STALE_AFTER_HOURS = 336;
@@ -274,7 +274,7 @@ export async function staleClaims(db: Database, clock: Clock): Promise<StaleClai
     claimedAt &&
     elapsedMoreThanHours(claimedAt, now, STALE_AFTER_HOURS) &&
     !(lastLoggedAt && lastLoggedAt >= claimedAt)
-      ? [{ ...row, claimedBy, claimedAt }]
+      ? [{ ...row, claimedBy }]
       : [],
   );
 }
@@ -291,7 +291,7 @@ export type ResolvedOrReopened = {
 
 /**
  * Every resolution and reopening since that instant (RM-TechnicianDashboard, ST-058) – one entry each, so a defect
- * resolved and reopened again appears twice. Newest first.
+ * resolved and reopened again appears twice. In no particular order – the page orders them with what it shows beside.
  */
 export async function resolvedOrReopenedSince(db: Database, since: Date): Promise<ResolvedOrReopened[]> {
   const [resolved, reopened] = await Promise.all([
@@ -321,7 +321,7 @@ export async function resolvedOrReopenedSince(db: Database, since: Date): Promis
   return [
     ...resolved.map((entry) => ({ kind: "resolved" as const, ...entry })),
     ...reopened.map((entry) => ({ kind: "reopened" as const, ...entry })),
-  ].sort((a, b) => b.at.getTime() - a.at.getTime());
+  ];
 }
 
 /**
