@@ -10,7 +10,7 @@ import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } fr
 import { lastVisitOf, teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { hoursBefore } from "@/platform/time";
+import { earlierOf, hoursBefore } from "@/platform/time";
 import { nameOf, type Viewer } from "./claimant";
 import { isNew, type MarkLine } from "./new-since-last-visit";
 
@@ -61,6 +61,8 @@ export type TechnicianDashboardData = {
    * longer ago (ST-050) –, newest first; not something that needs attention.
    */
   recentChanges: RecentChange[];
+  /** Whether section 5 reaches back to the Last visit rather than 7 days – what its empty text says (ST-050). */
+  recentSinceLastVisit: boolean;
 };
 
 /**
@@ -83,7 +85,8 @@ export async function loadTechnicianDashboard(
 ): Promise<TechnicianDashboardData> {
   const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
   // Since the Last visit when that is longer ago than the last 7 days (ST-050).
-  const since = new Date(Math.min(hoursBefore(clock.now(), RECENT_HOURS).getTime(), marks.lastVisit.getTime()));
+  const lastSevenDays = hoursBefore(clock.now(), RECENT_HOURS);
+  const since = earlierOf(lastSevenDays, marks.lastVisit);
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
@@ -113,7 +116,11 @@ export async function loadTechnicianDashboard(
       untriaged: toTriage.length,
       waitingLong: toTriage.filter((report) => report.waitingLong).length,
       newSinceLastVisit: toTriage.filter((report) =>
-        isNew(marks, report.reportedAt, report.reporter.kind === "team-member" ? report.reporter.teamMemberId : undefined),
+        isNew(
+          marks,
+          report.reportedAt,
+          report.reporter.kind === "team-member" ? report.reporter.teamMemberId : undefined,
+        ),
       ).length,
     },
     machinesToReturnToPlay: notPlayable
@@ -148,5 +155,6 @@ export async function loadTechnicianDashboard(
         newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),
+    recentSinceLastVisit: since < lastSevenDays,
   };
 }

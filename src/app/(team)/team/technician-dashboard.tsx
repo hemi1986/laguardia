@@ -19,7 +19,8 @@ const { technicianDashboard: texts, machines } = teamMessages;
  * it says so (G7).
  */
 export function TechnicianDashboard({ data }: { data: TechnicianDashboardData }) {
-  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges } = data;
+  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges, recentSinceLastVisit } =
+    data;
   if (
     problemReports.untriaged === 0 &&
     machinesToReturnToPlay.length === 0 &&
@@ -29,7 +30,7 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
     return (
       <>
         <p>{texts.nothingNeedsAttention}</p>
-        {recentChanges.length > 0 && <RecentChanges changes={recentChanges} />}
+        {recentChanges.length > 0 && <RecentChanges changes={recentChanges} sinceLastVisit={recentSinceLastVisit} />}
       </>
     );
   }
@@ -159,13 +160,13 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
           </CardContent>
         </Card>
       </section>
-      <RecentChanges changes={recentChanges} />
+      <RecentChanges changes={recentChanges} sinceLastVisit={recentSinceLastVisit} />
     </>
   );
 }
 
 /** Section 5 – machine status changes and defects resolved or reopened, newest first, each with who and when (ST-058). */
-function RecentChanges({ changes }: { changes: RecentChange[] }) {
+function RecentChanges({ changes, sinceLastVisit }: { changes: RecentChange[]; sinceLastVisit: boolean }) {
   return (
     <section>
       <Card>
@@ -174,7 +175,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
         </CardHeader>
         <CardContent>
           {changes.length === 0 ? (
-            <p className="text-sm">{texts.noRecentChanges}</p>
+            <p className="text-sm">{sinceLastVisit ? texts.noChangesSinceLastVisit : texts.noRecentChanges}</p>
           ) : (
             <ul className="flex flex-col gap-2 text-sm [overflow-wrap:anywhere]">
               {changes.map((change, index) => (

@@ -278,6 +278,17 @@ describe("new since the Last visit on the technician dashboard", () => {
     expect((await tomsDashboard("2026-06-10T12:20:00Z")).data.problemReports.newSinceLastVisit).toBe(0);
   });
 
+  it("says no change since the Last visit when it reaches back further than 7 days and nothing changed", async () => {
+    // A problem report waits – something needs attention, so the sections are shown.
+    await aProblemReport(await aMachine("LG-042"), "2026-05-20T10:00:00Z");
+    await tomOpensHisDashboard("2026-05-29T12:00:00Z");
+
+    const { html } = await tomOpensHisDashboard("2026-06-10T12:00:00Z");
+
+    expect(html).toContain("Keine Änderungen seit deinem letzten Besuch.");
+    expect(html).not.toContain("Keine Änderungen in den letzten 7 Tagen.");
+  });
+
   it("ST-050: Technician dashboard reaches back to the last visit", async () => {
     // Eva is the technician whose dashboard this is – the Tom of this test.
     const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;

@@ -47,6 +47,8 @@ export const dashboardTexts = {
     defectChanged: (kind: "resolved" | "reopened", museumNumber: string, by: string, at: string) =>
       `(${museumNumber}) ${kind === "resolved" ? "behoben" : "wieder geöffnet"} · ${by} · ${at}`,
     noRecentChanges: "Keine Änderungen in den letzten 7 Tagen.",
+    /** When the section reaches back to a Last visit longer ago than 7 days (ST-050). */
+    noChangesSinceLastVisit: "Keine Änderungen seit deinem letzten Besuch.",
   },
   /** The marker next to an entry that is new since the Last visit (ST-050, G6a) – on both dashboards. */
   newSinceLastVisit: "neu seit deinem letzten Besuch",
