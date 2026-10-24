@@ -83,12 +83,20 @@ async function aProblemReport(machineId: string, at: string) {
   );
 }
 
-/** Tom opens his dashboard at that time – on whichever device. */
-const tomOpensHisDashboard = (at: string) => recordVisit(db, fixedClock(at), tom.teamMemberId);
-
+/** Tom's dashboard rendered at that time – a prefetch or the re-render after an action, which records no visit. */
 async function tomsDashboard(at: string) {
   const data = await loadTechnicianDashboard(db, fixedClock(at), { id: tom.teamMemberId, role: "technician" });
   return { data, html: renderToStaticMarkup(createElement(TechnicianDashboard, { data })) };
+}
+
+/**
+ * Tom opens his dashboard at that time, on whichever device, and sees what it shows: the page renders first, then its
+ * client effect records the visit (ADR 0011).
+ */
+async function tomOpensHisDashboard(at: string) {
+  const shown = await tomsDashboard(at);
+  await recordVisit(db, fixedClock(at), tom.teamMemberId);
+  return shown;
 }
 
 describe("new since the Last visit on the technician dashboard", () => {
@@ -100,10 +108,47 @@ describe("new since the Last visit on the technician dashboard", () => {
     await aProblemReport(lg043, "2026-06-09T17:00:00Z");
     await aProblemReport(lg042, "2026-06-10T10:00:00Z");
 
-    await tomOpensHisDashboard("2026-06-10T12:00:00Z");
-    const { data, html } = await tomsDashboard("2026-06-10T12:00:00Z");
+    const { data, html } = await tomOpensHisDashboard("2026-06-10T12:00:00Z");
 
     expect(data.problemReports).toEqual({ untriaged: 3, waitingLong: 0, newSinceLastVisit: 1 });
     expect(html).toContain("1 davon neu seit deinem letzten Besuch.");
+  });
+
+  /** Tom last opened his dashboard yesterday at 18:00, then today at 12:00 – when the report for "LG-042" was new. */
+  async function theReportForLg042WasCountedAsNewAtNoon() {
+    await tomOpensHisDashboard("2026-06-09T18:00:00Z");
+    await aProblemReport(await aMachine("LG-042"), "2026-06-10T10:00:00Z");
+    expect((await tomOpensHisDashboard("2026-06-10T12:00:00Z")).data.problemReports.newSinceLastVisit).toBe(1);
+  }
+
+  it("ST-050: The mark disappears after the visit", async () => {
+    await theReportForLg042WasCountedAsNewAtNoon();
+
+    const { data, html } = await tomOpensHisDashboard("2026-06-10T13:30:00Z");
+
+    expect(data.problemReports.newSinceLastVisit).toBe(0);
+    expect(html).not.toContain("neu seit deinem letzten Besuch");
+  });
+
+  it("ST-050: Coming back within the hour keeps the marks", async () => {
+    await theReportForLg042WasCountedAsNewAtNoon();
+
+    // He opens the problem report – nothing records a visit there – and comes back to his dashboard.
+    const { data, html } = await tomOpensHisDashboard("2026-06-10T12:20:00Z");
+
+    expect(data.problemReports.newSinceLastVisit).toBe(1);
+    expect(html).toContain("Neu seit deinem letzten Besuch.");
+  });
+
+  it("ST-050: The last visit is shared across phone and workshop PC", async () => {
+    await tomOpensHisDashboard("2026-06-09T18:00:00Z");
+    await aProblemReport(await aMachine("LG-042"), "2026-06-10T11:00:00Z");
+    // On the workshop PC – the Last visit is one value per team member, whatever device opens the dashboard.
+    await tomOpensHisDashboard("2026-06-10T12:00:00Z");
+
+    // On his phone.
+    const { data } = await tomOpensHisDashboard("2026-06-10T13:30:00Z");
+
+    expect(data.problemReports).toMatchObject({ untriaged: 1, newSinceLastVisit: 0 });
   });
 });
