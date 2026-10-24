@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-DefectRecorded, EVT-DefectClaimed, EVT-DefectResolved, EVT-DefectDetailsChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue]
 depends_on: [ST-025, ST-028, ST-043]
 labels: [dashboard, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
