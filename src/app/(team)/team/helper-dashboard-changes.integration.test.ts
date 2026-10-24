@@ -217,4 +217,19 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain("Rubber cracked");
     expect(section).toContain("Behoben von Tom · vor 1 Tag");
   });
+
+  it("ST-086: A defect that left her stays listed for 7 days", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(10));
+    await rubber.claim(ben, hoursAgo(7 * 24 - 1));
+    const display = await aDefect("Display flickers");
+    await display.claim(anna, daysAgo(10));
+    await display.resolve(tom, hoursAgo(7 * 24 + 1));
+
+    const { html } = await dashboard();
+
+    expect(sectionOne(html)).toContain("Rubber cracked");
+    expect(sectionOne(html)).toContain("Ben hat übernommen");
+    expect(html).not.toContain("Display flickers");
+  });
 });
