@@ -1,4 +1,4 @@
-import { priorities, priorityRefusal, type Priority } from "@/modules/repair";
+import type { Priority } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 import type { Viewer } from "../../../claimant";
 import { loadDefectForForm, type DefectForForm } from "../defect-form-data";
@@ -10,8 +10,8 @@ export type DefectForPrioritizing = DefectForForm<"prioritize"> & {
 };
 
 /**
- * The defect as every form page of a defect loads it, with the priorities CMD-PrioritizeDefect would accept – its own
- * rule per priority (`priorityRefusal`), never a second copy here. Undefined when there is no such defect.
+ * The defect as every form page of a defect loads it, with the priorities Repair offers – the command's own rule, never
+ * a second copy here. Undefined when there is no such defect.
  */
 export async function loadDefectForPrioritizing(
   db: Database,
@@ -19,9 +19,5 @@ export async function loadDefectForPrioritizing(
   viewer: Viewer,
 ): Promise<DefectForPrioritizing | undefined> {
   const defect = await loadDefectForForm(db, defectId, viewer, "prioritize");
-  if (!defect) return undefined;
-  return {
-    ...defect,
-    priorities: priorities.filter((priority) => priorityRefusal(defect, priority) === undefined),
-  };
+  return defect && { ...defect, priorities: defect.offer.priorities };
 }

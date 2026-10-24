@@ -23,6 +23,7 @@ import {
   type DefectTeamMember,
 } from "./defect-actions";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
+import { defectFormOffer, type DefectFormOffer } from "./defect-form-offers";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defectRepairTimes, type DefectRepairTimes } from "./repair-times";
 import { defect, defectReopening, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
@@ -422,6 +423,8 @@ export async function defectDetails(
 export type DefectForAction<Action extends DefectAction> = Defect & {
   version: number;
   whyNot: DefectActionRefusals[Action];
+  /** What the action's form may offer them – the choices its command would accept (architecture review 2026-10-25). */
+  offer: DefectFormOffer<Action>;
 };
 
 export async function defectForAction<Action extends DefectAction>(
@@ -433,7 +436,8 @@ export async function defectForAction<Action extends DefectAction>(
   const loaded = await loadDefect(db, defectId);
   if (!loaded) return undefined;
   const whyNot = defectActionRefusals(loaded.state, teamMember, await reopeningFacts(db, loaded.state))[action];
-  return { ...loaded.state, version: loaded.version, whyNot };
+  const offer = await defectFormOffer(db, loaded.state, teamMember, action);
+  return { ...loaded.state, version: loaded.version, whyNot, offer };
 }
 
 /**

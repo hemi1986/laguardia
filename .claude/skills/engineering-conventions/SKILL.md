@@ -216,7 +216,11 @@ its own: the commands load the defect store, which asks the refusals). `defectDe
 refusals as `actions`; the defect's page shows what is `offered`, and a form page reads the defect with
 `defectForAction(db, id, teamMember, action)` – the defect as its store loads it, its version and that command's refusal
 – and shows the reason in place of its form (`defect-form-data.ts`) – no page carries a rule or a `can…` flag of its own
-(G11). In the app, `defect-action-pages.ts` says how each action looks – its form page (folder, button text) and its
+(G11). What a form may **offer** comes with it as `offer` (architecture review 2026-10-25, `defect-form-offers.ts`): the
+assignees CMD-ClaimDefect would accept, the priorities CMD-PrioritizeDefect would accept, whether the team member may
+choose a stricter machine status while reopening, whose claim removing the mark would release – each from the
+command's own rule, which stays inside Repair. A new choice on a form is a new entry there, never a filter in the page.
+In the app, `defect-action-pages.ts` says how each action looks – its form page (folder, button text) and its
 confirmation text –, and every Server Action of a defect runs through `defectFormAction(action, { fields, input })`
 (`defect-action.ts`): the access check, the action's command, then `/team/defects/<id>?done=<action>`. The page reads
 `done` back only as an action there is (`doneActionOf`) and confirms it only when the defect's latest journal event is
@@ -257,9 +261,9 @@ is nobody to bind the confirmation to – it says only that a report was sent, n
 native `<details>` that a rejection opens). One command can be two actions – CMD-ClaimDefect is `claim` and, with
 `assignTo`, `assign` – and one action can sit in two places: releasing one's own claim stands where „Übernehmen“ stood,
 releasing someone else's behind „Verwalten“. A one-tap action is a `DefectButtonForm` with `defectVersionInput`. A
-choice of team members comes from Team's `activeTeamMembers`, filtered with the command's own rule per team member
-(`assigneeRefusal`); the command reads the chosen team member's role itself (`activeTeamMemberRole` in its facts) – it
-never trusts the list. A form whose empty choice would mean something else (no `assignTo` is a claim of one's own)
+choice of team members is Repair's offer (`offer.assignees`: Team's active team members filtered with the command's
+own rule per team member, `assigneeRefusal`, by ID – the page names them); the command reads the chosen team member's
+role itself (`activeTeamMemberRole` in its facts) – it never trusts the list. A form whose empty choice would mean something else (no `assignTo` is a claim of one's own)
 sends the empty value, so the command rejects it.
 
 **An action on a defect that needs input** (first: CMD-ResolveDefect, ST-028 – G21): a button-styled link on the
