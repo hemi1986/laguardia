@@ -60,4 +60,51 @@ describe("RM-RepairTimes", () => {
     // Coin door jammed: 40 days − 29 days 23 hours = 10 days 1 hour from report to resolved; Lamp out would be 9 days 23 hours.
     expect((await of("low")).toResolved).toEqual({ median: 10 * DAY + HOUR, defects: 1 });
   });
+
+  it("ST-051: Defects closed on retirement are not counted as resolved", async () => {
+    const displayDead = await aDefect("Display dead", ago(20));
+    await displayDead.logWork(ago(15));
+    await displayDead.retireMachine(ago(5));
+
+    expect(await of("normal")).toEqual({
+      priority: "normal",
+      toFirstWorkLogEntry: { median: 5 * DAY, defects: 1 },
+      toResolved: undefined,
+    });
+  });
+
+  it("ST-051: Defects without work log entries", async () => {
+    const coinDoorJammed = await aDefect("Coin door jammed", ago(6));
+    await coinDoorJammed.resolve(ago(4));
+
+    expect(await of("normal")).toEqual({
+      priority: "normal",
+      toFirstWorkLogEntry: undefined,
+      toResolved: { median: 2 * DAY, defects: 1 },
+    });
+  });
+
+  it("ST-051: The latest resolution counts after a reopen", async () => {
+    const leftFlipperWeak = await aDefect("Left flipper weak", "2026-06-01T09:00:00Z");
+    await leftFlipperWeak.resolve("2026-06-03T09:00:00Z");
+    await leftFlipperWeak.reopen("2026-06-05T09:00:00Z");
+    await leftFlipperWeak.resolve("2026-06-09T09:00:00Z");
+
+    const times = await repairTimes(db, fixedClock("2026-06-20T09:00:00Z"), 30);
+
+    expect(times.find((entry) => entry.priority === "normal")?.toResolved).toEqual({ median: 8 * DAY, defects: 1 });
+  });
+
+  it("ST-051: Period membership", async () => {
+    const displayFlickers = await aDefect("Display flickers", ago(40));
+    await displayFlickers.logWork(ago(35));
+    await displayFlickers.resolve(ago(10));
+
+    expect(await of("normal")).toEqual({
+      priority: "normal",
+      toFirstWorkLogEntry: undefined,
+      toResolved: { median: 30 * DAY, defects: 1 },
+    });
+    expect((await of("normal", 90)).toFirstWorkLogEntry).toEqual({ median: 5 * DAY, defects: 1 });
+  });
 });
