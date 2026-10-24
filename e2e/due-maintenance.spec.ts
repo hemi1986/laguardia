@@ -1,4 +1,4 @@
-import { expect, logIn, pageWidth, test } from "./fixtures";
+import { aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
 
 /**
  * The due maintenance list on a phone (ST-043): „Wartung“ in the navigation's line (G19 row 5), the filter for
@@ -38,5 +38,45 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(/\/team\/maintenance\?helpers=1$/);
     await expect(page.getByLabel("Nur für Helfer:innen geeignet")).toBeChecked();
     await expect(page.getByRole("main")).toContainText("Gerade ist keine Wartung für Helfer:innen fällig.");
+  });
+});
+
+/**
+ * „Für mehrere Geräte erfassen“ (ST-045) without JavaScript: native checkboxes and fields, so a phone without scripts
+ * records too. Nothing is due here (see above), so the machines are ticked under „Weitere Geräte“ – the page is opened
+ * at its address, as the list offers it only on a due task.
+ */
+test.describe("recording for several machines without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("the ticked machines are recorded, and the list confirms them", async ({ page }) => {
+    await logIn(page);
+    const first = await aMachine(page);
+    const second = await aMachine(page);
+    const name = unique("Clean glass (inside & out)");
+    await page.goto("/team/maintenance-plan/new");
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Anleitung").fill("Glass out, clean both sides.");
+    await page.getByLabel("Intervall in Monaten").fill("1");
+    await page.getByLabel("Start").fill(new Date().toISOString().slice(0, 10));
+    await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+    const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
+    const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
+
+    await page.goto(`/team/maintenance/mehrere?task=${maintenanceTaskId}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Für mehrere Geräte erfassen");
+    await page.getByLabel("Ergebnis").selectOption({ label: "Erledigt" });
+    await page.getByRole("button", { name: "Wartung eintragen" }).click();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte mindestens ein Gerät auswählen.");
+
+    // The rejection kept the outcome.
+    await expect(page.getByLabel("Ergebnis")).toHaveValue("done");
+    await page.getByRole("checkbox", { name: new RegExp(first.museumNumber) }).check();
+    await page.getByRole("checkbox", { name: new RegExp(second.museumNumber) }).check();
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+    await page.getByRole("button", { name: "Wartung eintragen" }).click();
+
+    await expect(page).toHaveURL(/\/team\/maintenance\?/);
+    await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ an 2 Geräten eingetragen.`);
   });
 });

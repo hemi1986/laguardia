@@ -191,3 +191,63 @@ describe("the Server Action runner", () => {
     });
   });
 });
+
+describe("the Server Action runner once per chosen item (ST-045)", () => {
+  /** A problem report on each ticked machine – the stand-in for a form run once per chosen item. */
+  function reportOnEach(actor: Actor, outcome: { done?: string[]; rejected?: string[] } = {}) {
+    return runnerActingAs(actor)(reportProblemCommand, {
+      fields: ["description"],
+      each: { field: "machineId" },
+      input: ({ description }, machineId) => ({ machineId, description: description ?? "" }),
+      onSuccess: async ({ done, rejected }) => {
+        outcome.done = done.map(({ item }) => item);
+        outcome.rejected = rejected.map(({ item, error }) => `${item}: ${error}`);
+      },
+    });
+  }
+
+  function ticked(description: string, machineIds: string[]) {
+    const form = post({ description });
+    for (const machineId of machineIds) form.append("machineId", machineId);
+    return form;
+  }
+
+  it("runs the command for each chosen item on its own – a rejected one does not stop the others", async () => {
+    const [first, second] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const unknown = randomUUID();
+    const outcome: { done?: string[]; rejected?: string[] } = {};
+
+    const state = await reportOnEach({ kind: "visitor" }, outcome)(
+      null,
+      ticked("Glass is dirty", [first, unknown, second, first]),
+    );
+
+    expect(state).toBeNull();
+    // A machine ticked twice is reported on once.
+    expect(outcome).toEqual({ done: [first, second], rejected: [`${unknown}: unknown-machine`] });
+    expect(await problemReportsOfMachine(db, first)).toHaveLength(1);
+    expect(await problemReportsOfMachine(db, second)).toHaveLength(1);
+  });
+
+  it("keeps the form when every item is rejected – with each item's reason only when the reasons differ", async () => {
+    const [first, second] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const unknown = randomUUID();
+    const outcome: { done?: string[] } = {};
+
+    const shared = await reportOnEach({ kind: "visitor" }, outcome)(null, ticked(" ", [first, second]));
+    expect(shared).toEqual({ error: "description-required", values: { description: " " }, chosen: [first, second] });
+
+    const own = await reportOnEach({ kind: "visitor" }, outcome)(null, ticked(" ", [first, unknown]));
+    expect(own).toEqual({
+      error: "description-required",
+      values: { description: " " },
+      chosen: [first, unknown],
+      rejected: [
+        { item: first, error: "description-required" },
+        { item: unknown, error: "unknown-machine" },
+      ],
+    });
+    expect(outcome.done).toBeUndefined();
+    expect(await problemReportsOfMachine(db, first)).toEqual([]);
+  });
+});
