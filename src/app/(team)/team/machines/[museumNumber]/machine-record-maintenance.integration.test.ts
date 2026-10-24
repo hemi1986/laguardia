@@ -24,6 +24,8 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import type { Viewer } from "../../claimant";
 import { loadMachineRecord } from "./machine-record-data";
 import { MachineRecordView } from "./machine-record";
+import { loadAllMaintenanceRecords } from "./wartungseintraege/maintenance-records-data";
+import { MaintenanceRecordsView } from "./wartungseintraege/maintenance-records";
 
 /**
  * Section 5 of the machine record, „Wartung“ (ST-047): Maintenance's maintenance records and due maintenance tasks of
@@ -177,6 +179,11 @@ function section(html: string, heading: string): string {
   return html.slice(start, next < 0 ? undefined : next);
 }
 
+/** The notes of the test's maintenance records, in the order the page shows them. */
+function notesIn(html: string): string[] {
+  return [...html.matchAll(/Glass of \d{4}-\d{2}-\d{2}/g)].map(([note]) => note);
+}
+
 describe("section 5 „Wartung“ of the machine record", () => {
   it("ST-047: Machine record shows maintenance records", async () => {
     const lg042 = await aMachine("LG-042");
@@ -198,6 +205,44 @@ describe("section 5 „Wartung“ of the machine record", () => {
     expect(records).toContain(">Erledigt<");
     expect(records).toContain("Anna · 10.06.2026");
     expect(records.indexOf("Clean glass (inside &amp; out)")).toBeGreaterThan(-1);
-    expect(records.indexOf("Clean glass (inside &amp; out)")).toBeLessThan(records.indexOf("Switch test (every switch)"));
+    expect(records.indexOf("Clean glass (inside &amp; out)")).toBeLessThan(
+      records.indexOf("Switch test (every switch)"),
+    );
+  });
+
+  it("ST-047: Only the 5 latest maintenance records are on the machine record", async () => {
+    const lg042 = await aMachine("LG-042");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    for (const day of ["01", "02", "03", "04", "05", "06", "07"]) {
+      await recorded(cleanGlass, lg042, `2026-06-${day}`, { note: `Glass of 2026-06-${day}` });
+    }
+
+    const { records } = await page("LG-042", "2026-06-07");
+
+    expect(notesIn(records)).toEqual([
+      "Glass of 2026-06-07",
+      "Glass of 2026-06-06",
+      "Glass of 2026-06-05",
+      "Glass of 2026-06-04",
+      "Glass of 2026-06-03",
+    ]);
+    expect(records).toMatch(
+      /<a [^>]*href="\/team\/machines\/LG-042\/wartungseintraege"[^>]*>Alle Wartungseinträge \(7\)<\/a>/,
+    );
+
+    const all = await loadAllMaintenanceRecords(db, "LG-042");
+    expect(all?.title).toBe("Wartungseinträge · LG-042");
+    const html = renderToStaticMarkup(createElement(MaintenanceRecordsView, { data: all, museumNumber: "LG-042" }));
+    expect(notesIn(html)).toEqual([
+      "Glass of 2026-06-07",
+      "Glass of 2026-06-06",
+      "Glass of 2026-06-05",
+      "Glass of 2026-06-04",
+      "Glass of 2026-06-03",
+      "Glass of 2026-06-02",
+      "Glass of 2026-06-01",
+    ]);
+    expect(html).toContain("2026 · 7 Einträge");
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>Zurück zum Gerät<\/a>/);
   });
 });

@@ -176,7 +176,7 @@ describe("the machine record", () => {
 
     const html = await page("LG-013");
 
-    expect(html).toContain("<dt class=\"text-muted-foreground\">Status</dt><dd>Ausgemustert</dd>");
+    expect(html).toContain('<dt class="text-muted-foreground">Status</dt><dd>Ausgemustert</dd>');
     // Retirement is no entry of the status history – it still ends with the change to Out of order.
     const newest = html.indexOf("Spielbereit → Außer Betrieb");
     expect(newest).toBeGreaterThan(-1);
