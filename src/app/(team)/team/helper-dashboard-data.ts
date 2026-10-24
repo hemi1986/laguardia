@@ -1,13 +1,14 @@
-import { machineLabels, machinesForMaintenance } from "@/modules/collection";
+import { machinesForMaintenance } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { changesOnClaimedDefects, openDefects, type ClaimedDefectChange } from "@/modules/repair";
-import { lastVisitOf, teamMemberNames } from "@/modules/team";
+import { lastVisitOf } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { elapsedHours } from "@/platform/time";
-import { nameOf, type Viewer } from "./claimant";
-import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
+import type { Viewer } from "./claimant";
+import { openDefectReferences, shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
 import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
+import { named, type Named } from "./named";
 import { isNew, type MarkLine } from "./new-since-last-visit";
 
 /**
@@ -64,27 +65,17 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
   const left = changed
     .flatMap((defect) => (defect.leftAt ? [{ ...defect, leftAt: defect.leftAt }] : []))
     .sort((a, b) => b.leftAt.getTime() - a.leftAt.getTime());
-  const [claimedItems, suitableForHelpers, labels, names] = await Promise.all([
-    shownOpenDefects(db, clock, claimed, viewer),
-    shownOpenDefects(
-      db,
-      clock,
-      suitable.filter((defect) => defect.claimedBy !== viewer.id),
-      viewer,
-    ),
-    machineLabels(
-      db,
-      left.map((defect) => defect.machineId),
-    ),
-    teamMemberNames(
-      db,
-      changed.flatMap((defect) => defect.changes.flatMap(peopleOf)),
-    ),
-  ]);
+  const suitableForOthers = suitable.filter((defect) => defect.claimedBy !== viewer.id);
+  const shownBy = await named(db, openDefectReferences(claimed), openDefectReferences(suitableForOthers), {
+    machines: left.map((defect) => defect.machineId),
+    teamMembers: changed.flatMap((defect) => defect.changes.flatMap(peopleOf)),
+  });
+  const claimedItems = shownOpenDefects(clock, claimed, shownBy, viewer);
+  const suitableForHelpers = shownOpenDefects(clock, suitableForOthers, shownBy, viewer);
   const now = clock.now();
   const shown = (changes: readonly ClaimedDefectChange[] = []): ShownChange[] =>
     changes.map(({ at, ...change }) => ({
-      ...named(change, names),
+      ...withNames(change, shownBy),
       hoursAgo: elapsedHours(at, now),
       // Never the helper's own – `changesOnClaimedDefects` leaves those out (G25).
       newSinceLastVisit: isNew(marks, at),
@@ -102,8 +93,7 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
       ...left.map((defect) => ({
         id: defect.defectId,
         title: defect.title,
-        // Every defect refers to a machine that exists, retired ones included (foreign key).
-        ...labels.get(defect.machineId)!,
+        ...shownBy.label(defect.machineId),
         changes: shown(defect.changes),
       })),
     ],
@@ -129,10 +119,10 @@ function peopleOf(change: ClaimedDefectChange): string[] {
 }
 
 /** A change with its team members by name. */
-function named(change: WithoutTime<ClaimedDefectChange>, names: ReadonlyMap<string, string>) {
+function withNames(change: WithoutTime<ClaimedDefectChange>, { name }: Named) {
   return {
     ...change,
-    ...("by" in change ? { by: nameOf(names, change.by) } : {}),
-    ...("to" in change ? { to: nameOf(names, change.to) } : {}),
+    ...("by" in change ? { by: name(change.by) } : {}),
+    ...("to" in change ? { to: name(change.to) } : {}),
   };
 }

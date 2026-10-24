@@ -1,5 +1,5 @@
 import { openDefects, problemReportForTriage } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
+import { named } from "../../named";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { blobStorage } from "@/platform/storage";
@@ -34,13 +34,13 @@ export async function loadProblemReport(
   if (!found) return undefined;
   const [[report], names, defects] = await Promise.all([
     withNames(db, [found], { clock, storage }),
-    teamMemberNames(db, found.triagedBy ? [found.triagedBy] : []),
+    named(db, { teamMembers: [found.triagedBy] }),
     openDefects(db, { machineId: found.machineId }),
   ]);
   return {
     report,
     triaged: found.triagedBy !== undefined,
-    triagedByName: found.triagedBy && names.get(found.triagedBy),
+    triagedByName: found.triagedBy && names.name(found.triagedBy),
     version: found.version,
     dismissedAsSpam: found.dismissalReason === "spam",
     openDefects: defects.map(({ id, title, openSince }) => ({ id, title, openSince })),

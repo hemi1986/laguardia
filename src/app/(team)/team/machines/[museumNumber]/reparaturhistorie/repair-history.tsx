@@ -63,7 +63,6 @@ export function RepairHistoryView({
 }
 
 function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
-  const who = (name: string | undefined) => name ?? machineRecord.unknownTeamMember;
   if (entry.kind === "resolved-on-the-spot") {
     return (
       <article className="flex flex-col gap-1 text-sm">
@@ -71,7 +70,7 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
         <p className="text-muted-foreground">{terms["Resolved on the spot"]}</p>
         <p className="whitespace-pre-line">{entry.note}</p>
         <p className="text-muted-foreground">
-          {machineRecord.whoAndWhen(who(entry.resolvedBy), formatDateTime(entry.resolvedAt))}
+          {machineRecord.whoAndWhen(entry.resolvedBy, formatDateTime(entry.resolvedAt))}
         </p>
       </article>
     );
@@ -92,12 +91,12 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
             <p className="font-medium">{terms["Closing note"]}</p>
             <p className="whitespace-pre-line">{step.closingNote}</p>
             <p className="text-muted-foreground">
-              {defects.resolvedBy(who(step.resolvedBy), formatDateTime(step.resolvedAt))}
+              {defects.resolvedBy(step.resolvedBy, formatDateTime(step.resolvedAt))}
             </p>
           </div>
         ) : (
           <div key={step.id} className="flex flex-col gap-1">
-            <p className="font-medium">{defects.reopenedBy(who(step.reopenedBy), formatDateTime(step.reopenedAt))}</p>
+            <p className="font-medium">{defects.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}</p>
             <p className="whitespace-pre-line">{step.reason}</p>
           </div>
         ),
@@ -115,7 +114,7 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
                 <p className="whitespace-pre-line">{logged.whatWasDone}</p>
                 {logged.partsUsed && <p className="whitespace-pre-line">{defects.partsUsedLine(logged.partsUsed)}</p>}
                 <p className="text-muted-foreground">
-                  {machineRecord.whoAndWhen(who(logged.loggedBy), formatDateTime(logged.loggedAt))}
+                  {machineRecord.whoAndWhen(logged.loggedBy, formatDateTime(logged.loggedAt))}
                 </p>
               </li>
             ))}

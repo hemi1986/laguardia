@@ -1,4 +1,4 @@
-import { collectionChangesIn, machineLabels, type MachineStatus } from "@/modules/collection";
+import { collectionChangesIn, type MachineStatus } from "@/modules/collection";
 import {
   defectActions,
   defectDetails,
@@ -9,7 +9,6 @@ import {
   type HoldReason,
   type Priority,
 } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import { lastCommandBy, type Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
@@ -17,7 +16,8 @@ import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
 import { photoAt, type PhotoSource } from "../../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../../reporter";
-import { nameOf, shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
+import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
+import { named } from "../../named";
 
 /** A problem report on the defect's page, its reporter named. */
 export type ShownDefectProblemReport = {
@@ -114,27 +114,29 @@ export async function loadDefectDetails(
   const previousClaimant = confirmed?.takenOverFrom;
   const releasedClaimOf = confirmed?.changedDetails?.releasedClaimOf;
   const assignedBy = defect.claim?.assignedBy;
-  const [machines, names, photos] = await Promise.all([
-    machineLabels(db, [defect.machineId]),
-    teamMemberNames(db, [
-      ...defect.problemReports.flatMap(({ reporter }) =>
-        reporter.kind === "team-member" ? [reporter.teamMemberId] : [],
-      ),
-      ...(defect.claim ? [defect.claim.claimedBy] : []),
-      ...(assignedBy ? [assignedBy] : []),
-      ...(previousClaimant ? [previousClaimant] : []),
-      ...(releasedClaimOf ? [releasedClaimOf] : []),
-      ...defect.resolutions.map((resolution) => resolution.resolvedBy),
-      ...defect.reopenings.map((reopening) => reopening.reopenedBy),
-      ...defect.workLog.map((entry) => entry.loggedBy),
-    ]),
+  const [shown, photos] = await Promise.all([
+    named(db, {
+      machines: [defect.machineId],
+      teamMembers: [
+        ...defect.problemReports.map(({ reporter }) =>
+          reporter.kind === "team-member" ? reporter.teamMemberId : undefined,
+        ),
+        defect.claim?.claimedBy,
+        assignedBy,
+        previousClaimant,
+        releasedClaimOf,
+        confirmed?.assignedTo,
+        ...defect.resolutions.map((resolution) => resolution.resolvedBy),
+        ...defect.reopenings.map((reopening) => reopening.reopenedBy),
+        ...defect.workLog.map((entry) => entry.loggedBy),
+      ],
+    }),
     photoViewAddresses(
       storage,
       clock,
       defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
     ),
   ]);
-  const machine = machines.get(defect.machineId);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
   // not the address (architecture review 2026-10-18).
   const reopening =
@@ -144,8 +146,7 @@ export async function loadDefectDetails(
   const newMachineStatus = reopening && collectionChangesIn(reopening, defect.machineId).statusChangedTo;
   return {
     title: defect.title,
-    museumNumber: machine?.museumNumber ?? "",
-    machineModelTitle: machine?.machineModelTitle ?? "",
+    ...shown.label(defect.machineId),
     priority: defect.priority,
     suitableForHelpers: defect.suitableForHelpers,
     recordedAt: defect.recordedAt,
@@ -154,38 +155,38 @@ export async function loadDefectDetails(
     problemReports: defect.problemReports.map((report) => ({
       id: report.id,
       description: report.description,
-      reporter: shownReporter(report.reporter, names),
+      reporter: shownReporter(report.reporter, shown),
       reportedAt: report.reportedAt,
       photo: photoAt(photos, report.photo),
       originating: report.originating,
     })),
     id: defect.id,
     version: defect.version,
-    claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
+    claimant: shownClaimant(defect.claim?.claimedBy, shown, viewer),
     hold: defect.hold && { reason: defect.hold.reason, note: defect.hold.note },
-    assignedBy: shownClaimant(assignedBy, names, viewer),
+    assignedBy: shownClaimant(assignedBy, shown, viewer),
     // The commands' own rules, asked so nobody is shown a control that can only be rejected (G11).
     offered: defectActions.filter((action) => defect.actions && defect.actions[action] === undefined),
     confirmed: confirmed && {
       action: confirmed.action,
-      takenOverFrom: previousClaimant && nameOf(names, previousClaimant),
+      takenOverFrom: previousClaimant && shown.name(previousClaimant),
       // Whom it was assigned to is its claimant: the assignment is the defect's latest event.
-      assignedTo: confirmed.assignedTo && nameOf(names, confirmed.assignedTo),
+      assignedTo: confirmed.assignedTo && shown.name(confirmed.assignedTo),
       newMachineStatus,
       changedDetails: confirmed.changedDetails && {
         ...confirmed.changedDetails,
-        releasedClaimOf: releasedClaimOf && nameOf(names, releasedClaimOf),
+        releasedClaimOf: releasedClaimOf && shown.name(releasedClaimOf),
       },
     },
     resolutionsAndReopenings: resolutionsAndReopenings(defect).map((step) =>
       step.kind === "resolution"
-        ? { ...step, resolvedBy: nameOf(names, step.resolvedBy) }
-        : { ...step, reopenedBy: nameOf(names, step.reopenedBy) },
+        ? { ...step, resolvedBy: shown.name(step.resolvedBy) }
+        : { ...step, reopenedBy: shown.name(step.reopenedBy) },
     ),
     workLog: defect.workLog
       .map((entry) => ({
         ...entry,
-        loggedBy: nameOf(names, entry.loggedBy),
+        loggedBy: shown.name(entry.loggedBy),
       }))
       .reverse(),
   };

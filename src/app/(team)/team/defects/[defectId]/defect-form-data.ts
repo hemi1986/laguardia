@@ -1,4 +1,3 @@
-import { machineLabels } from "@/modules/collection";
 import {
   defectForAction,
   type DefectAction,
@@ -7,6 +6,7 @@ import {
   type Priority,
 } from "@/modules/repair";
 import type { Viewer } from "../../claimant";
+import { named, type Named } from "../../named";
 import type { Database } from "@/platform/command";
 
 /**
@@ -38,21 +38,23 @@ export async function loadDefectForForm<Action extends DefectAction>(
 ): Promise<DefectForForm<Action> | undefined> {
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, action);
   if (!defect) return undefined;
-  return defectForForm(defect, (await machineLabels(db, [defect.machineId])).get(defect.machineId));
+  return defectForForm(defect, await named(db, { machines: [defect.machineId] }));
 }
 
-/** What the form page repeats, from Repair's defect and Collection's machine label – for a page that loads more. */
+/**
+ * What the form page repeats, from Repair's defect and its machine's label (`named`, over at least the defect's
+ * machine) – for a page that loads more.
+ */
 export function defectForForm<Action extends DefectAction>(
   defect: DefectForAction<Action>,
-  machine: { museumNumber: string; machineModelTitle: string } | undefined,
+  { label }: Pick<Named, "label">,
 ): DefectForForm<Action> {
   return {
     id: defect.id,
     version: defect.version,
     title: defect.title,
     priority: defect.priority,
-    museumNumber: machine?.museumNumber ?? "",
-    machineModelTitle: machine?.machineModelTitle ?? "",
+    ...label(defect.machineId),
     whyNot: defect.whyNot,
   };
 }

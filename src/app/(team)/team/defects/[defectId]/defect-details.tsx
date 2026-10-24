@@ -5,7 +5,7 @@ import { defectActions, type DefectAction, type DefectRepairTimes } from "@/modu
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
-import { claimantName, claimantText } from "../../claimant";
+import { claimantText } from "../../claimant";
 import type { ClaimDefectState, ReleaseClaimState, ResumeDefectState } from "./actions";
 import { DefectButtonForm } from "./defect-button-form";
 import { ManageDefect } from "./manage-defect";
@@ -102,7 +102,7 @@ export function DefectDetailsView({
           <p className="text-sm">
             {claimantText(details.claimant)}
             {details.assignedBy &&
-              ` · ${details.assignedBy.you ? texts.assignedByYou : texts.assignedBy(claimantName(details.assignedBy))}`}
+              ` · ${details.assignedBy.you ? texts.assignedByYou : texts.assignedBy(details.assignedBy.name)}`}
           </p>
         )}
         {/* The work on the defect, in Repair's order – offered only to someone its command will not refuse (G11). */}
@@ -115,7 +115,7 @@ export function DefectDetailsView({
                     key={action}
                     action={claimAction}
                     version={details.version}
-                    label={details.claimant ? texts.takeOverFrom(claimantName(details.claimant)) : texts.claim}
+                    label={details.claimant ? texts.takeOverFrom(details.claimant.name) : texts.claim}
                     offered={details.offered.includes(action)}
                   />
                 )
@@ -166,7 +166,7 @@ export function DefectDetailsView({
             releaseAction && {
               action: releaseAction,
               version: details.version,
-              label: details.claimant ? texts.releaseClaimOf(claimantName(details.claimant)) : "",
+              label: details.claimant ? texts.releaseClaimOf(details.claimant.name) : "",
               offered: details.offered.includes("release") && !!details.claimant && !details.claimant.you,
             }
           }

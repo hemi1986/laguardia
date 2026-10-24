@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
-import { machineForTeamForm, machineLabels } from "@/modules/collection";
+import { machineForTeamForm } from "@/modules/collection";
+import { named } from "../../../../named";
 import { openDefects } from "@/modules/repair";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -27,7 +28,7 @@ export default async function ReportAndLinkPage({
   const machine = await machineForTeamForm(db, museumNumber);
   const [label, defects] = machine
     ? await Promise.all([
-        machineLabels(db, [machine.id]).then((labels) => labels.get(machine.id)),
+        named(db, { machines: [machine.id] }).then(({ label }) => label(machine.id)),
         openDefects(db, { machineId: machine.id }),
       ])
     : [undefined, []];

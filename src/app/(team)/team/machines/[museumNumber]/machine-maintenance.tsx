@@ -6,7 +6,7 @@ import { formatCalendarDate } from "@/platform/time";
 import { recordMaintenanceAddress } from "../../maintenance/erfassen/record-maintenance-address";
 import type { MachineMaintenance, ShownMaintenanceRecord } from "./machine-record-data";
 
-const { machineMaintenance: texts, dueMaintenance, recordMaintenance, machineRecord } = teamMessages;
+const { machineMaintenance: texts, dueMaintenance, recordMaintenance } = teamMessages;
 
 /**
  * Section 5 of the machine record, „Wartung“ (ST-047, G18): first the due maintenance tasks – an overdue one marked in
@@ -86,7 +86,7 @@ export function MaintenanceRecordList({ records }: { records: readonly ShownMain
             <p className="font-medium">{record.maintenanceTaskName}</p>
             <p>{recordMaintenance.outcomes[record.outcome]}</p>
             <p className="text-muted-foreground">
-              {texts.whoAndWhen(record.recordedBy ?? machineRecord.unknownTeamMember, formatCalendarDate(record.date))}
+              {texts.whoAndWhen(record.recordedBy, formatCalendarDate(record.date))}
             </p>
             {record.note && <p className="whitespace-pre-line">{record.note}</p>}
           </article>

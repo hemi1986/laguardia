@@ -1,17 +1,12 @@
-import {
-  machineLabels,
-  machineOverview,
-  machinesForMaintenance,
-  statusChangesSince,
-  type MachineStatus,
-} from "@/modules/collection";
+import { machineOverview, machinesForMaintenance, statusChangesSince, type MachineStatus } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
-import { lastVisitOf, teamMemberNames } from "@/modules/team";
+import { lastVisitOf } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { earlierOf, hoursBefore } from "@/platform/time";
-import { nameOf, type Viewer } from "./claimant";
+import type { Viewer } from "./claimant";
+import { named } from "./named";
 import { isNew, type MarkLine } from "./new-since-last-visit";
 
 /** A machine that could return to play – Limited or Out of order, without open defects (POL-ResolvedDefectsReturnMachineToPlay). */
@@ -97,20 +92,20 @@ export async function loadTechnicianDashboard(
     statusChangesSince(db, since),
     resolvedOrReopenedSince(db, since),
   ]);
-  const [openDefects, labels, names] = await Promise.all([
+  const [openDefects, { name, label }] = await Promise.all([
     openDefectCounts(
       db,
       notPlayable.map((machine) => machine.id),
     ),
-    machineLabels(db, [...stale.map((claim) => claim.machineId), ...defectChanges.map((change) => change.machineId)]),
-    teamMemberNames(db, [
-      ...stale.map((claim) => claim.claimedBy),
-      ...statusChanges.map((change) => change.changedBy),
-      ...defectChanges.map((change) => change.by),
-    ]),
+    named(db, {
+      machines: [...stale.map((claim) => claim.machineId), ...defectChanges.map((change) => change.machineId)],
+      teamMembers: [
+        ...stale.map((claim) => claim.claimedBy),
+        ...statusChanges.map((change) => change.changedBy),
+        ...defectChanges.map((change) => change.by),
+      ],
+    }),
   ]);
-  // Every defect refers to a machine that exists, retired ones included (foreign key) – Collection always has its label.
-  const labelOf = (machineId: string) => labels.get(machineId)!;
   return {
     problemReports: {
       untriaged: toTriage.length,
@@ -134,8 +129,8 @@ export async function loadTechnicianDashboard(
     staleClaims: stale.map((claim) => ({
       defectId: claim.defectId,
       title: claim.title,
-      ...labelOf(claim.machineId),
-      claimant: nameOf(names, claim.claimedBy),
+      ...label(claim.machineId),
+      claimant: name(claim.claimedBy),
     })),
     overdueMaintenance: due
       .filter((task) => task.overdueCount > 0)
@@ -144,14 +139,14 @@ export async function loadTechnicianDashboard(
       ...statusChanges.map(({ changedBy, changedAt, ...change }): RecentChange => ({
         kind: "status-change",
         ...change,
-        by: nameOf(names, changedBy),
+        by: name(changedBy),
         at: changedAt,
         newSinceLastVisit: isNew(marks, changedAt, changedBy),
       })),
       ...defectChanges.map(({ machineId, by, ...change }): RecentChange => ({
         ...change,
-        museumNumber: labelOf(machineId).museumNumber,
-        by: nameOf(names, by),
+        museumNumber: label(machineId).museumNumber,
+        by: name(by),
         newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),

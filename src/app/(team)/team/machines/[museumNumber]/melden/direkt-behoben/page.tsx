@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
-import { machineForTeamForm, machineLabels } from "@/modules/collection";
+import { machineForTeamForm } from "@/modules/collection";
+import { named } from "../../../../named";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../../team-session";
@@ -21,7 +22,7 @@ export default async function ReportAndResolvePage({
   const museumNumber = decodeURIComponent((await params).museumNumber);
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
-  const label = machine && (await machineLabels(db, [machine.id])).get(machine.id);
+  const label = machine && (await named(db, { machines: [machine.id] })).label(machine.id);
 
   return (
     <Page title={texts.title(museumNumber)}>

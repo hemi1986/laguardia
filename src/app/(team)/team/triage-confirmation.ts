@@ -1,8 +1,9 @@
-import { collectionChangesIn, machineLabels, type MachineStatus } from "@/modules/collection";
+import { collectionChangesIn, type MachineStatus } from "@/modules/collection";
 import { defectTitle, problemReportForTriage, triageOutcomeIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { named } from "./named";
 
 /**
  * What a page confirms after a triage outcome (G3) – the triage list after triaging (ST-018 – ST-022) and the machine
@@ -50,7 +51,7 @@ export async function loadTriageConfirmation(
   if (triaged?.outcome !== outcome) return undefined;
   const report = await problemReportForTriage(db, clock, problemReportId);
   if (!report || (onMachine && report.machineId !== onMachine)) return undefined;
-  const museumNumber = (await machineLabels(db, [report.machineId])).get(report.machineId)?.museumNumber ?? "";
+  const { museumNumber } = (await named(db, { machines: [report.machineId] })).label(report.machineId);
   if (triaged.outcome === "resolved-on-the-spot" || triaged.outcome === "dismissed") {
     return { outcome: triaged.outcome, museumNumber };
   }

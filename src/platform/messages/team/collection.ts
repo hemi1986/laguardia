@@ -90,7 +90,6 @@ export const collectionTexts = {
     retiredConfirmation: (museumNumber: string) => `${museumNumber} ist ausgemustert.`,
     /** In place of the machine status of a retired machine (user, backlog grooming 2026-10-17, ST-039). */
     retiredInPlaceOfStatus: "Ausgemustert",
-    unknownTeamMember: "unbekannt",
     changeStatus: "Status ändern",
     reportProblem: "Problem melden",
     problemReported: (museumNumber: string) => `Meldung zu ${museumNumber} erfasst – sie wartet auf die Sichtung.`,

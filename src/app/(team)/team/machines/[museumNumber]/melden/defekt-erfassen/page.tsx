@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
-import { machineForTeamForm, machineLabels } from "@/modules/collection";
+import { machineForTeamForm } from "@/modules/collection";
+import { named } from "../../../../named";
 import { stricterMachineStatuses } from "@/modules/repair";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -25,7 +26,7 @@ export default async function ReportAndRecordDefectPage({
   if (member.role !== "technician") redirect(`${record}/melden`);
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
-  const label = machine && (await machineLabels(db, [machine.id])).get(machine.id);
+  const label = machine && (await named(db, { machines: [machine.id] })).label(machine.id);
 
   return (
     <Page title={texts.title(museumNumber)}>

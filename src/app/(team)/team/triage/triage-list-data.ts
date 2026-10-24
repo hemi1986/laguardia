@@ -1,10 +1,9 @@
-import { machineLabels } from "@/modules/collection";
 import { triageList, type TriageListEntry } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
+import { named } from "../named";
 import { photoAt, type PhotoSource } from "../problem-report-photo";
 import { shownReporter, type ShownReporter } from "../reporter";
 
@@ -44,15 +43,13 @@ export async function withNames(
   entries: TriageListEntry[],
   { clock, storage }: { clock: Clock; storage: ContentStorage },
 ): Promise<TriageListItem[]> {
-  const [machines, names, photos] = await Promise.all([
-    machineLabels(
-      db,
-      entries.map((entry) => entry.machineId),
-    ),
-    teamMemberNames(
-      db,
-      entries.flatMap((entry) => (entry.reporter.kind === "team-member" ? [entry.reporter.teamMemberId] : [])),
-    ),
+  const [shown, photos] = await Promise.all([
+    named(db, {
+      machines: entries.map((entry) => entry.machineId),
+      teamMembers: entries.map((entry) =>
+        entry.reporter.kind === "team-member" ? entry.reporter.teamMemberId : undefined,
+      ),
+    }),
     photoViewAddresses(
       storage,
       clock,
@@ -61,10 +58,9 @@ export async function withNames(
   ]);
   return entries.map((entry) => ({
     id: entry.id,
-    museumNumber: machines.get(entry.machineId)?.museumNumber ?? "",
-    machineModelTitle: machines.get(entry.machineId)?.machineModelTitle ?? "",
+    ...shown.label(entry.machineId),
     description: entry.description,
-    reporter: shownReporter(entry.reporter, names),
+    reporter: shownReporter(entry.reporter, shown),
     reportedAt: entry.reportedAt,
     photo: photoAt(photos, entry.photo),
     waitingHours: entry.waitingHours,
