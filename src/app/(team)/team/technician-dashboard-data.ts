@@ -56,13 +56,16 @@ export type TechnicianDashboardData = {
   staleClaims: ShownStaleClaim[];
   /** Each overdue maintenance task with how many machines it is overdue on – not the machines (G18). */
   overdueMaintenance: { id: string; name: string; overdueCount: number }[];
-  /** Machine status changes and defects resolved or reopened of the last 7 days, newest first – not something that needs attention. */
+  /**
+   * Machine status changes and defects resolved or reopened of the last 7 days – or since the Last visit, if that is
+   * longer ago (ST-050) –, newest first; not something that needs attention.
+   */
   recentChanges: RecentChange[];
 };
 
 /**
- * "The last 7 days" – 168 hours, like "older than 14 days" is 336 (user, 2026-10-24, ST-058). The last visit (ST-050)
- * may make it longer.
+ * "The last 7 days" – 168 hours, like "older than 14 days" is 336 (user, 2026-10-24, ST-058) – or longer, back to the
+ * Last visit (ST-050).
  */
 const RECENT_HOURS = 168;
 
@@ -79,7 +82,8 @@ export async function loadTechnicianDashboard(
   viewer: Viewer,
 ): Promise<TechnicianDashboardData> {
   const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
-  const since = hoursBefore(clock.now(), RECENT_HOURS);
+  // Since the Last visit when that is longer ago than the last 7 days (ST-050).
+  const since = new Date(Math.min(hoursBefore(clock.now(), RECENT_HOURS).getTime(), marks.lastVisit.getTime()));
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>

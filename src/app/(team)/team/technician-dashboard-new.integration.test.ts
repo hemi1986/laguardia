@@ -204,4 +204,24 @@ describe("new since the Last visit on the technician dashboard", () => {
     expect(html).toContain("Left flipper weak");
     expect(html.match(/neu seit deinem letzten Besuch/g)).toHaveLength(1);
   });
+
+  it("ST-050: Technician dashboard reaches back to the last visit", async () => {
+    // Eva is the technician whose dashboard this is – the Tom of this test.
+    const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
+    await tomOpensHisDashboard("2026-05-29T12:00:00Z");
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: await aMachine("LG-042"), version: 0, machineStatus: "out-of-order", reason: "No power" },
+        { ...as("2026-05-31T12:00:00Z"), actor: ben },
+      ),
+    );
+
+    const { data, html } = await tomOpensHisDashboard("2026-06-10T12:00:00Z");
+
+    expect(data.recentChanges).toMatchObject([
+      { kind: "status-change", museumNumber: "LG-042", by: "Ben", newSinceLastVisit: true },
+    ]);
+    expect(html).toContain("Spielbereit → Außer Betrieb · Ben · 31.05.2026, 14:00 · <strong");
+  });
 });
