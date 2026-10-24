@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
-import { claimDefectCommand, reportProblemAndTriageCommand } from "@/modules/repair";
+import { changeDefectDetailsCommand, claimDefectCommand, reportProblemAndTriageCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
@@ -120,6 +120,8 @@ async function aDefect(title: string) {
   };
   return {
     claim: (by: Person, when: Date) => step(claimDefectCommand, {}, by, when),
+    changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
+      step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
 }
 
@@ -143,5 +145,20 @@ describe("what changed on the helper's claimed defects", () => {
 
     expect(section).toContain("Rubber cracked");
     expect(section).toContain("Ben hat übernommen · vor 2 Tagen");
+  });
+
+  it("ST-086: A taken-over defect keeps section 1 and the dashboard from saying empty", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.claim(ben, daysAgo(1));
+    // No longer suitable for helpers since – so it is not open among the defects suitable for helpers either.
+    await rubber.changeDetails({ suitableForHelpers: false }, hoursAgo(1));
+
+    const { html } = await dashboard();
+
+    expect(sectionOne(html)).toContain("Rubber cracked");
+    expect(sectionOne(html)).toContain("Ben hat übernommen");
+    expect(html).not.toContain("Du hast keinen Defekt übernommen.");
+    expect(html).not.toContain("Gerade ist nichts für dich offen.");
   });
 });
