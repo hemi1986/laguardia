@@ -1,0 +1,112 @@
+import { randomUUID } from "node:crypto";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { reportProblemAndTriageCommand } from "@/modules/repair";
+import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
+import { fixedClock } from "@/platform/clock";
+import { executeCommand } from "@/platform/command";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadHelperDashboard } from "./helper-dashboard-data";
+import { HelperDashboard } from "./helper-dashboard";
+
+/**
+ * The helper dashboard (RM-HelperDashboard, ST-049): Repair's open defects – claimed by the helper, suitable for helpers
+ * – with Collection's machines, and Maintenance's due maintenance tasks suitable for helpers – the page composes
+ * (ST-009) –, computed when it is opened (ADR 0002). In a database of its own, so "nothing is open" can be arranged.
+ */
+const isolated = isolatedTestDatabase("helper_dashboard");
+let db: NodePgDatabase;
+const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+let machineModelId: string;
+const NOW = "2026-06-10T10:00:00Z";
+
+beforeAll(async () => {
+  db = await isolated.reset();
+  await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, anna, "Anna");
+  const model = await run(
+    executeCommand(
+      createMachineModelCommand,
+      { title: "Medieval Madness", manufacturer: "Williams", machineCategory: "pinball" },
+      { actor: tom, db, newId: randomUUID },
+    ),
+  );
+  machineModelId = model.machineModelId;
+});
+
+afterAll(() => isolated.close());
+
+beforeEach(async () => {
+  await withoutMachines(db);
+  await withoutMaintenanceTasks(db);
+});
+
+async function run<Result>(outcome: Promise<{ ok: true; result: Result } | { ok: false; error: string }>) {
+  const done = await outcome;
+  if (!done.ok) throw new Error(done.error);
+  return done.result;
+}
+
+const as = (at: string) => ({ actor: tom, db, clock: fixedClock(at), newId: randomUUID });
+
+/** A playable machine – with that museum number, or the next one. */
+async function aMachine(museumNumber?: string) {
+  const registered = await run(
+    executeCommand(
+      registerMachineCommand,
+      { machineModelId, museumNumber, serialNumber: undefined, location: "Hall 1", machineStatus: "playable" },
+      as("2026-01-01T09:00:00Z"),
+    ),
+  );
+  return registered.machineId;
+}
+
+/** An open defect Tom reported and recorded in one step (ST-023) – at version 0. */
+async function anOpenDefect(
+  title: string,
+  { suitableForHelpers = false, museumNumber = undefined as string | undefined } = {},
+) {
+  const reported = await run(
+    executeCommand(
+      reportProblemAndTriageCommand,
+      {
+        machineId: await aMachine(museumNumber),
+        description: `${title} – first seen`,
+        triage: {
+          outcome: "defect-recorded",
+          title,
+          priority: undefined,
+          suitableForHelpers,
+          machineStatus: undefined,
+          machineVersion: undefined,
+        },
+      },
+      as("2026-06-01T10:00:00Z"),
+    ),
+  );
+  return reported.defectId!;
+}
+
+async function dashboard() {
+  const data = await loadHelperDashboard(db, fixedClock(NOW), { id: anna.teamMemberId, role: "helper" });
+  return { data, html: renderToStaticMarkup(createElement(HelperDashboard, { data })) };
+}
+
+describe("the helper dashboard", () => {
+  it("ST-049: Helper sees open defects suitable for helpers", async () => {
+    await anOpenDefect("Rubber cracked", { suitableForHelpers: true });
+    await anOpenDefect("Display flickers");
+
+    const { data, html } = await dashboard();
+
+    expect(data.suitableForHelpers.map((defect) => defect.title)).toEqual(["Rubber cracked"]);
+    expect(html).toContain("Rubber cracked");
+    expect(html).not.toContain("Display flickers");
+  });
+});

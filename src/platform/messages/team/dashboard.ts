@@ -22,4 +22,8 @@ export const dashboardTexts = {
     noneToReturnToPlay: "Kein Gerät wartet auf die Rückkehr ins Spiel.",
     nothingNeedsAttention: "Gerade braucht nichts deine Aufmerksamkeit.",
   },
+  /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
+  helperDashboard: {
+    suitableForHelpers: "Für Helfer:innen geeignet",
+  },
 } as const;
