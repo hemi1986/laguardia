@@ -38,5 +38,6 @@ export const dashboardTexts = {
             : `, ${overdue} davon überfällig`
       }.`,
     openDueMaintenance: "Zur Wartung",
+    nothingOpen: "Gerade ist nichts für dich offen.",
   },
 } as const;

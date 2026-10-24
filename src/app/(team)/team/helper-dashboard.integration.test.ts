@@ -68,8 +68,8 @@ async function aMachine(museumNumber?: string, registeredAt = "2026-01-01T09:00:
   return registered.machineId;
 }
 
-/** A maintenance task every 3 months from 2026-01-01 – due from 2026-04-01 on a machine registered before. */
-async function aMaintenanceTask(name: string, suitableForHelpers: boolean) {
+/** A maintenance task every 3 months from its start date – from 2026-01-01, due from 2026-04-01 on a machine registered before. */
+async function aMaintenanceTask(name: string, suitableForHelpers: boolean, startDate = "2026-01-01") {
   await run(
     executeCommand(
       changeMaintenancePlanCommand,
@@ -83,7 +83,7 @@ async function aMaintenanceTask(name: string, suitableForHelpers: boolean) {
           suitableForHelpers,
           machineCategory: undefined,
           technology: undefined,
-          startDate: "2026-01-01",
+          startDate,
         },
       },
       as("2025-12-01T09:00:00Z"),
@@ -165,5 +165,15 @@ describe("the helper dashboard", () => {
     expect(html).toContain("„Clean glass (inside &amp; out)“ ist an 3 Geräten fällig, 1 davon überfällig.");
     expect(html).not.toContain("Check fuses");
     expect(html).toMatch(/<a [^>]*href="\/team\/maintenance\?helpers=1"[^>]*>Zur Wartung<\/a>/);
+  });
+
+  it("ST-049: Nothing is open for a helper", async () => {
+    // A defect not suitable for helpers, and a maintenance task suitable for helpers that is due from 2026-08-01 only.
+    await anOpenDefect("Display flickers");
+    await aMaintenanceTask("Clean glass (inside & out)", true, "2026-05-01");
+
+    const { html } = await dashboard();
+
+    expect(html).toBe("<p>Gerade ist nichts für dich offen.</p>");
   });
 });

@@ -11,9 +11,14 @@ const { helperDashboard: texts } = teamMessages;
  * The helper dashboard (RM-HelperDashboard, ST-049, owner of the page – G18): what a helper can do right now. Section 1
  * lists the defects they claim, section 2 the open defects suitable for helpers – each with its title and machine,
  * leading to the defect's page; section 3 says on how many machines each maintenance task suitable for helpers is due, in
- * words, and leads to the due maintenance list without repeating it (G18, G4a).
+ * words, and leads to the due maintenance list without repeating it (G18, G4a). Nothing open is the good state, and it
+ * says so (G7).
  */
 export function HelperDashboard({ data }: { data: HelperDashboardData }) {
+  const { claimedByYou, suitableForHelpers, dueMaintenance } = data;
+  if (claimedByYou.length === 0 && suitableForHelpers.length === 0 && dueMaintenance.length === 0) {
+    return <p>{texts.nothingOpen}</p>;
+  }
   return (
     <>
       {/* Section 1 – the defects the helper claims. */}
