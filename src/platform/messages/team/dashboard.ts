@@ -60,6 +60,7 @@ export const dashboardTexts = {
     changes: {
       takenOver: (by: string) => `${by} hat übernommen`,
       assigned: (by: string, to: string) => `${by} hat ${to} zugewiesen`,
+      released: (by: string) => `${by} hat die Übernahme aufgehoben`,
     },
     changed: (what: string, hoursAgo: number) =>
       `${what} · ${

@@ -123,5 +123,7 @@ function changeText(change: ShownChange): string {
       return texts.changes.takenOver(change.by);
     case "assigned":
       return texts.changes.assigned(change.by, change.to);
+    case "released":
+      return texts.changes.released(change.by);
   }
 }

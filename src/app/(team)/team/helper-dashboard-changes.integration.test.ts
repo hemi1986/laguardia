@@ -6,7 +6,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
-import { changeDefectDetailsCommand, claimDefectCommand, reportProblemAndTriageCommand } from "@/modules/repair";
+import {
+  changeDefectDetailsCommand,
+  claimDefectCommand,
+  releaseClaimCommand,
+  reportProblemAndTriageCommand,
+} from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
@@ -121,6 +126,7 @@ async function aDefect(title: string) {
   return {
     claim: (by: Person, when: Date) => step(claimDefectCommand, {}, by, when),
     assign: (to: Person, when: Date) => step(claimDefectCommand, { assignTo: to.teamMemberId }, tom, when),
+    release: (by: Person, when: Date) => step(releaseClaimCommand, {}, by, when),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -172,5 +178,16 @@ describe("what changed on the helper's claimed defects", () => {
 
     expect(section).toContain("Rubber cracked");
     expect(section).toContain("Tom hat Ben zugewiesen · vor 1 Tag");
+  });
+
+  it("ST-086: Helper sees that a technician released her claim", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.release(tom, hoursAgo(5));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Rubber cracked");
+    expect(section).toContain("Tom hat die Übernahme aufgehoben · vor 5 Stunden");
   });
 });

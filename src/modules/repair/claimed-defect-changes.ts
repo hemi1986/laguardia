@@ -7,7 +7,9 @@ import { defect } from "./schema";
 
 /** One change by someone else on a defect the team member claimed (ST-086, G25) – who by ID; the page names them. */
 export type ClaimedDefectChange =
-  { kind: "taken-over"; by: string; at: Date } | { kind: "assigned"; by: string; to: string; at: Date };
+  | { kind: "taken-over"; by: string; at: Date }
+  | { kind: "assigned"; by: string; to: string; at: Date }
+  | { kind: "released"; by: string; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -23,7 +25,10 @@ export type ClaimedDefectChanges = {
 /** A defect that left its claimant stays listed for 7 days – 168 hours, as on the technician dashboard (ST-058). */
 const LEFT_HOURS = 168;
 
-type Entry = CatalogueEntry<(typeof repairEvents)["entries"]>;
+/** The journal entries that start or end a claim, or change something on the claimed defect. */
+const TRACKED = ["EVT-DefectClaimed", "EVT-DefectClaimReleased"] as const;
+
+type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[number]>;
 
 /**
  * What changed on the defects a team member claimed (RM-HelperDashboard, ST-086) – read from the event journal: every
@@ -41,12 +46,16 @@ export async function changesOnClaimedDefects(
       .select({ id: defect.id })
       .from(defect)
       .where(and(eq(defect.state, "open"), eq(defect.claimedBy, teamMemberId))),
-    readJournal(db, repairEvents, { types: ["EVT-DefectClaimed"], since, notBy: teamMemberId }),
+    readJournal(db, repairEvents, {
+      types: ["EVT-DefectClaimed", "EVT-DefectClaimReleased"],
+      since,
+      notBy: teamMemberId,
+    }),
   ]);
   const ids = [
     ...new Set([
       ...claimed.map((row) => row.id),
-      ...leaving.filter((entry) => entry.data.takenOverFrom === teamMemberId).map((entry) => entry.aggregate.id),
+      ...leaving.filter((entry) => leftThem(entry, teamMemberId)).map((entry) => entry.aggregate.id),
     ]),
   ];
   if (ids.length === 0) return [];
@@ -55,7 +64,7 @@ export async function changesOnClaimedDefects(
       .select({ id: defect.id, machineId: defect.machineId, title: defect.title })
       .from(defect)
       .where(inArray(defect.id, ids)),
-    readJournal(db, repairEvents, { types: ["EVT-DefectClaimed"], aggregateIds: ids }),
+    readJournal(db, repairEvents, { types: TRACKED, aggregateIds: ids }),
   ]);
   return defects.flatMap((shown) => {
     const changes = changesSinceClaim(
@@ -78,25 +87,47 @@ function changesSinceClaim(
   let mine = false;
   let leftAt: Date | undefined;
   let changes: ClaimedDefectChange[] = [];
+  /** The claim ends – by someone else's change, which stays listed, or by their own doing, which is not listed at all. */
+  const leave = (change: ClaimedDefectChange | undefined, at: Date) => {
+    mine = false;
+    leftAt = change ? at : undefined;
+    if (change) changes.push(change);
+  };
   for (const entry of entries) {
-    if (entry.type === "EVT-DefectClaimed") {
-      const claimedBy = entry.data.claimedBy;
-      if (claimedBy === teamMemberId) {
-        mine = true;
-        leftAt = undefined;
-        changes = [];
-      } else if (mine && claimedBy) {
-        const assignedBy = entry.data.assignedBy;
-        changes.push(
-          assignedBy
-            ? { kind: "assigned", by: assignedBy, to: claimedBy, at: entry.occurredAt }
-            : { kind: "taken-over", by: claimedBy, at: entry.occurredAt },
-        );
-        mine = false;
-        leftAt = entry.occurredAt;
+    const at = entry.occurredAt;
+    const by = entry.actor.kind === "team-member" ? entry.actor.teamMemberId : undefined;
+    switch (entry.type) {
+      case "EVT-DefectClaimed": {
+        const { claimedBy, assignedBy } = entry.data;
+        if (claimedBy === teamMemberId) {
+          mine = true;
+          leftAt = undefined;
+          changes = [];
+        } else if (mine && claimedBy) {
+          leave(
+            assignedBy
+              ? { kind: "assigned", by: assignedBy, to: claimedBy, at }
+              : { kind: "taken-over", by: claimedBy, at },
+            at,
+          );
+        }
+        break;
       }
+      case "EVT-DefectClaimReleased":
+        if (mine) leave(by && by !== teamMemberId ? { kind: "released", by, at } : undefined, at);
+        break;
     }
   }
   if (!mine && !leftAt) return undefined;
   return { leftAt, changes: changes.reverse() };
+}
+
+/** Whether the entry is someone else ending the team member's claim. */
+function leftThem(entry: Entry, teamMemberId: TeamMemberId): boolean {
+  switch (entry.type) {
+    case "EVT-DefectClaimed":
+      return entry.data.takenOverFrom === teamMemberId;
+    case "EVT-DefectClaimReleased":
+      return entry.data.formerClaimant === teamMemberId;
+  }
 }
