@@ -376,6 +376,20 @@ describe("the technician dashboard", () => {
     expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-007"[^>]*>LG-007<\/a>/);
   });
 
+  it("ST-058: Older changes drop off after 7 days", async () => {
+    const lg007 = await aMachine("LG-007");
+    // 8 days before NOW. The last visit is recorded from ST-050 on – until then "since the last visit" is no
+    // longer ago than 7 days, so only the 7-day window decides (user, 2026-10-24).
+    await statusChanged(lg007, 0, "limited", tom, "2026-06-02T10:00:00Z");
+    // Just inside the 7 days.
+    await statusChanged(lg007, 1, "out-of-order", tom, "2026-06-03T10:00:01Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.recentChanges.map((change) => change.at)).toEqual([new Date("2026-06-03T10:00:01Z")]);
+    expect(html).not.toContain("Spielbereit → Eingeschränkt");
+  });
+
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {
     await aMachine("LG-042", "limited");
 
