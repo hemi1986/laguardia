@@ -1,16 +1,20 @@
 import { machineLabels, machinesForMaintenance } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { changesOnClaimedDefects, openDefects, type ClaimedDefectChange } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
+import { lastVisitOf, teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { elapsedHours } from "@/platform/time";
 import { nameOf, type Viewer } from "./claimant";
 import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
 import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
+import { isNew, type MarkLine } from "./new-since-last-visit";
 
-/** A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, and how many hours ago. */
-export type ShownChange = WithoutTime<ClaimedDefectChange> & { hoursAgo: number };
+/**
+ * A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, how many hours ago, and whether it is
+ * new since the helper's Last visit (ST-050).
+ */
+export type ShownChange = WithoutTime<ClaimedDefectChange> & { hoursAgo: number; newSinceLastVisit: boolean };
 
 // A change without its point in time, kept apart per kind; its "who" – `by`, `to` – holds names on the page.
 type WithoutTime<Change> = Change extends unknown ? Omit<Change, "at"> : never;
@@ -34,8 +38,11 @@ export type HelperDashboardData = {
    * them in the last 7 days, the latest to leave first (user, 2026-10-24, ST-086) – each with what changed on it.
    */
   claimedByYou: ClaimedByYouItem[];
-  /** Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1 (user, 2026-10-24). */
-  suitableForHelpers: OpenDefectsItem[];
+  /**
+   * Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1 (user,
+   * 2026-10-24) –, each marked when it was recorded since the helper's Last visit (ST-050).
+   */
+  suitableForHelpers: (OpenDefectsItem & { newSinceLastVisit: boolean })[];
   /** Section 3 – each due maintenance task suitable for helpers, on how many machines it is due and overdue (G18, G4a). */
   dueMaintenance: DueMaintenanceEntry[];
 };
@@ -46,12 +53,14 @@ export type HelperDashboardData = {
  * tasks on Collection's machines – the page composes (ST-009) –, computed when it is opened (ADR 0002).
  */
 export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Viewer): Promise<HelperDashboardData> {
-  const [claimed, suitable, due, changed] = await Promise.all([
+  const [lastVisit, claimed, suitable, due, changed] = await Promise.all([
+    lastVisitOf(db, clock, viewer.id),
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
     machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
     changesOnClaimedDefects(db, clock, viewer.id),
   ]);
+  const marks: MarkLine = { viewer, lastVisit };
   const left = changed
     .flatMap((defect) => (defect.leftAt ? [{ ...defect, leftAt: defect.leftAt }] : []))
     .sort((a, b) => b.leftAt.getTime() - a.leftAt.getTime());
@@ -77,6 +86,8 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
     changes.map(({ at, ...change }) => ({
       ...named(change, names),
       hoursAgo: elapsedHours(at, now),
+      // Never the helper's own – `changesOnClaimedDefects` leaves those out (G25).
+      newSinceLastVisit: isNew(marks, at),
     }));
   const changesOf = new Map(changed.map((defect) => [defect.defectId, defect.changes]));
   return {
@@ -96,7 +107,11 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
         changes: shown(defect.changes),
       })),
     ],
-    suitableForHelpers,
+    // Only technicians record defects – a helper's own is never among them.
+    suitableForHelpers: suitableForHelpers.map((defect) => ({
+      ...defect,
+      newSinceLastVisit: isNew(marks, defect.openSince),
+    })),
     dueMaintenance: due
       .filter((task) => task.suitableForHelpers)
       .map((task) => ({
@@ -110,7 +125,7 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
 
 /** The team members a change names – who did it, and whom a defect was assigned to. */
 function peopleOf(change: ClaimedDefectChange): string[] {
-  return [..."by" in change ? [change.by] : [], ..."to" in change ? [change.to] : []];
+  return [...("by" in change ? [change.by] : []), ...("to" in change ? [change.to] : [])];
 }
 
 /** A change with its team members by name. */

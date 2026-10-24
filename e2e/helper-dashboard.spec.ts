@@ -1,4 +1,5 @@
-import { aHelper, expect, logIn, pageWidth, test } from "./fixtures";
+import type { Page } from "@playwright/test";
+import { aHelper, anOpenDefect, expect, logIn, openMore, pageWidth, test } from "./fixtures";
 
 /**
  * The helper dashboard on a phone (ST-049): where a helper lands after logging in. Needs the e2e technician each local
@@ -25,3 +26,35 @@ test("ST-049: A helper lands on their dashboard after logging in", async ({ page
   );
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
+
+test("the dashboard marks a defect recorded after the helper's first visit as new (ST-050)", async ({ page }) => {
+  await logIn(page);
+  const helper = await aHelper(page);
+  // The dashboard's client effect records the visit with a Server Action – a POST to the page (ADR 0011).
+  const recorded = page.waitForResponse(
+    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/team",
+  );
+  await logIn(page, helper);
+  // The first visit marks nothing.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Übersicht");
+  await expect(page.getByRole("main")).not.toContainText("neu seit deinem letzten Besuch");
+  await recorded;
+  await logOut(page);
+
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page, { suitableForHelpers: true });
+  await logOut(page);
+  await logIn(page, helper);
+
+  // Within the hour of the first visit – the Last visit is still the first one, so the new defect is marked.
+  const entry = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: title }) });
+  await expect(entry).toContainText(`${museumNumber} · `);
+  await expect(entry).toContainText("neu seit deinem letzten Besuch");
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+});
+
+async function logOut(page: Page) {
+  await openMore(page);
+  await page.getByRole("button", { name: "Abmelden" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+}

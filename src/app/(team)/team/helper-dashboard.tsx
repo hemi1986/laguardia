@@ -3,9 +3,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { claimantText } from "./claimant";
-import type { OpenDefectsItem } from "./defects/open-defects-data";
 import type { ClaimedByYouItem, HelperDashboardData, ShownChange } from "./helper-dashboard-data";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
+import { NewMark } from "./new-mark";
 
 const { helperDashboard: texts, dueMaintenance: dueMaintenanceTexts } = teamMessages;
 
@@ -62,19 +62,14 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
   );
 }
 
-/** A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant. */
-type ListedDefect = ClaimedByYouItem | OpenDefectsItem;
+/**
+ * A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant and whether
+ * it is new since the Last visit (ST-050).
+ */
+type ListedDefect = ClaimedByYouItem | HelperDashboardData["suitableForHelpers"][number];
 
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
-function DefectsSection({
-  title,
-  none,
-  defects,
-}: {
-  title: string;
-  none: string;
-  defects: ListedDefect[];
-}) {
+function DefectsSection({ title, none, defects }: { title: string; none: string; defects: ListedDefect[] }) {
   return (
     <section>
       <Card>
@@ -94,6 +89,7 @@ function DefectsSection({
                     </Link>
                     <p className="text-muted-foreground">
                       {defect.museumNumber} · {defect.machineModelTitle}
+                      <NewMark shown={"newSinceLastVisit" in defect && defect.newSinceLastVisit} />
                     </p>
                     {/* Someone else's claim is only a signal (HS-8) – a helper may still take the defect on. */}
                     {"claimant" in defect && defect.claimant && !defect.claimant.you && (
@@ -103,7 +99,10 @@ function DefectsSection({
                     {"changes" in defect && defect.changes.length > 0 && (
                       <ul className="flex flex-col gap-1">
                         {defect.changes.map((change, index) => (
-                          <li key={index}>{texts.changed(changeText(change), change.hoursAgo)}</li>
+                          <li key={index}>
+                            {texts.changed(changeText(change), change.hoursAgo)}
+                            <NewMark shown={change.newSinceLastVisit} />
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -138,6 +137,8 @@ function changeText(change: ShownChange): string {
     case "resumed":
       return texts.changes.resumed;
     case "released":
-      return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
+      return change.markRemoved
+        ? texts.changes.releasedByRemovingTheMark(change.by)
+        : texts.changes.released(change.by);
   }
 }

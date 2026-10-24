@@ -64,6 +64,11 @@ export function hoursBefore(instant: Date, hours: number): Date {
   return new Date(instant.getTime() - hours * 3_600_000);
 }
 
+/** The earlier of two instants – where "the last 7 days" start, or the Last visit if that is longer ago (ST-050). */
+export function earlierOf(a: Date, b: Date): Date {
+  return a <= b ? a : b;
+}
+
 /** Whole hours from `since` to `now` – how long something has been waiting (the triage list, ST-017). */
 export function elapsedHours(since: Date, now: Date): number {
   return Math.floor((now.getTime() - since.getTime()) / 3_600_000);

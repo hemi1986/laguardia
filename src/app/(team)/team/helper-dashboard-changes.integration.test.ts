@@ -355,7 +355,7 @@ describe("what changed on the helper's claimed defects", () => {
 
     // Once, as her claim – not a second time as a defect that left her, and without the old takeover.
     expect(data.claimedByYou.map(({ title, changes }) => ({ title, changes }))).toEqual([
-      { title: "Rubber cracked", changes: [{ kind: "work-logged", by: "Tom", hoursAgo: 24 }] },
+      { title: "Rubber cracked", changes: [{ kind: "work-logged", by: "Tom", hoursAgo: 24, newSinceLastVisit: false }] },
     ]);
   });
 

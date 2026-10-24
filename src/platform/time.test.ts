@@ -3,6 +3,7 @@ import { fixedClock } from "./clock";
 import {
   addMonths,
   calendarDate,
+  earlierOf,
   elapsedHours,
   elapsedMoreThanHours,
   formatCalendarDate,
@@ -140,5 +141,13 @@ describe("elapsedHours", () => {
     ["2026-10-03T16:00:00Z", 0],
   ])("since %s → %i whole hours at 2026-10-03T16:00:00Z", (since, hours) => {
     expect(elapsedHours(new Date(since), new Date("2026-10-03T16:00:00Z"))).toBe(hours);
+  });
+
+  it.each([
+    ["2026-06-03T12:00:00Z", "2026-05-29T12:00:00Z", "2026-05-29T12:00:00Z"],
+    ["2026-06-03T12:00:00Z", "2026-06-09T18:00:00Z", "2026-06-03T12:00:00Z"],
+    ["2026-06-03T12:00:00Z", "2026-06-03T12:00:00Z", "2026-06-03T12:00:00Z"],
+  ])("the earlier of %s and %s is %s", (a, b, earlier) => {
+    expect(earlierOf(new Date(a), new Date(b))).toEqual(new Date(earlier));
   });
 });

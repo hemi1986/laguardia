@@ -7,11 +7,12 @@ import {
 } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
+import { lastVisitOf, teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { hoursBefore } from "@/platform/time";
-import { nameOf } from "./claimant";
+import { earlierOf, hoursBefore } from "@/platform/time";
+import { nameOf, type Viewer } from "./claimant";
+import { isNew, type MarkLine } from "./new-since-last-visit";
 
 /** A machine that could return to play – Limited or Out of order, without open defects (POL-ResolvedDefectsReturnMachineToPlay). */
 export type MachineToReturnToPlay = { museumNumber: string; machineModelTitle: string; machineStatus: MachineStatus };
@@ -25,8 +26,8 @@ export type ShownStaleClaim = {
   claimant: string;
 };
 
-/** A recent change as section 5 names it – who by name. */
-export type RecentChange =
+/** A recent change as section 5 names it – who by name, and whether it is new since the viewer's Last visit (ST-050). */
+export type RecentChange = (
   | {
       kind: "status-change";
       museumNumber: string;
@@ -35,7 +36,8 @@ export type RecentChange =
       by: string;
       at: Date;
     }
-  | { kind: "resolved" | "reopened"; defectId: string; title: string; museumNumber: string; by: string; at: Date };
+  | { kind: "resolved" | "reopened"; defectId: string; title: string; museumNumber: string; by: string; at: Date }
+) & { newSinceLastVisit: boolean };
 
 /**
  * What the technician dashboard shows (RM-TechnicianDashboard, ST-048) – its sections in the order ST-048 fixed (G18):
@@ -43,21 +45,29 @@ export type RecentChange =
  * 4 overdue maintenance tasks, 5 recent changes (ST-058).
  */
 export type TechnicianDashboardData = {
-  /** How many problem reports wait for triage, and how many of them longer than 3 days (HS-2). */
-  problemReports: { untriaged: number; waitingLong: number };
+  /**
+   * How many problem reports wait for triage, how many of them longer than 3 days (HS-2), and how many of them are new
+   * since the viewer's Last visit (ST-050).
+   */
+  problemReports: { untriaged: number; waitingLong: number; newSinceLastVisit: number };
   /** By museum number. */
   machinesToReturnToPlay: MachineToReturnToPlay[];
   /** The oldest claim first. */
   staleClaims: ShownStaleClaim[];
   /** Each overdue maintenance task with how many machines it is overdue on – not the machines (G18). */
   overdueMaintenance: { id: string; name: string; overdueCount: number }[];
-  /** Machine status changes and defects resolved or reopened of the last 7 days, newest first – not something that needs attention. */
+  /**
+   * Machine status changes and defects resolved or reopened of the last 7 days – or since the Last visit, if that is
+   * longer ago (ST-050) –, newest first; not something that needs attention.
+   */
   recentChanges: RecentChange[];
+  /** Whether section 5 reaches back to the Last visit rather than 7 days – what its empty text says (ST-050). */
+  recentSinceLastVisit: boolean;
 };
 
 /**
- * "The last 7 days" – 168 hours, like "older than 14 days" is 336 (user, 2026-10-24, ST-058). The last visit (ST-050)
- * may make it longer.
+ * "The last 7 days" – 168 hours, like "older than 14 days" is 336 (user, 2026-10-24, ST-058) – or longer, back to the
+ * Last visit (ST-050).
  */
 const RECENT_HOURS = 168;
 
@@ -68,8 +78,15 @@ const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
  * by machine status – the page composes (ST-009) –, computed when it is opened (ADR 0002). Maintenance's due maintenance tasks on
  * Collection's machines (the rules of ST-043 and ST-056). The technician decides whether a machine returns to play (HS-6) – the dashboard only shows which ones could.
  */
-export async function loadTechnicianDashboard(db: Database, clock: Clock): Promise<TechnicianDashboardData> {
-  const since = hoursBefore(clock.now(), RECENT_HOURS);
+export async function loadTechnicianDashboard(
+  db: Database,
+  clock: Clock,
+  viewer: Viewer,
+): Promise<TechnicianDashboardData> {
+  const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
+  // Since the Last visit when that is longer ago than the last 7 days (ST-050).
+  const lastSevenDays = hoursBefore(clock.now(), RECENT_HOURS);
+  const since = earlierOf(lastSevenDays, marks.lastVisit);
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
@@ -98,6 +115,13 @@ export async function loadTechnicianDashboard(db: Database, clock: Clock): Promi
     problemReports: {
       untriaged: toTriage.length,
       waitingLong: toTriage.filter((report) => report.waitingLong).length,
+      newSinceLastVisit: toTriage.filter((report) =>
+        isNew(
+          marks,
+          report.reportedAt,
+          report.reporter.kind === "team-member" ? report.reporter.teamMemberId : undefined,
+        ),
+      ).length,
     },
     machinesToReturnToPlay: notPlayable
       .filter((machine) => !openDefects.has(machine.id))
@@ -122,12 +146,15 @@ export async function loadTechnicianDashboard(db: Database, clock: Clock): Promi
         ...change,
         by: nameOf(names, changedBy),
         at: changedAt,
+        newSinceLastVisit: isNew(marks, changedAt, changedBy),
       })),
       ...defectChanges.map(({ machineId, by, ...change }): RecentChange => ({
         ...change,
         museumNumber: labelOf(machineId).museumNumber,
         by: nameOf(names, by),
+        newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),
+    recentSinceLastVisit: since < lastSevenDays,
   };
 }

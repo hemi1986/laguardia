@@ -9,7 +9,7 @@ risk: high
 events: [EVT-ProblemReported, EVT-DefectRecorded, EVT-MachineStatusChanged, EVT-DefectClaimed, EVT-DefectClaimReleased, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
 depends_on: [ST-058, ST-086, ST-087]
 labels: [dashboard, ui]
-status: ready
+status: done
 ---
 
 ## Story

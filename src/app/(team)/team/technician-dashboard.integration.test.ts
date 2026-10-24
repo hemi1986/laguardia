@@ -173,7 +173,7 @@ async function workLogged(defectId: string, version: number, by: typeof tom, at:
 }
 
 async function dashboard() {
-  const data = await loadTechnicianDashboard(db, fixedClock(NOW));
+  const data = await loadTechnicianDashboard(db, fixedClock(NOW), { id: tom.teamMemberId, role: "technician" });
   return { data, html: renderToStaticMarkup(createElement(TechnicianDashboard, { data })) };
 }
 
@@ -187,7 +187,7 @@ describe("the technician dashboard", () => {
 
     const { data, html } = await dashboard();
 
-    expect(data.problemReports).toEqual({ untriaged: 3, waitingLong: 1 });
+    expect(data.problemReports).toEqual({ untriaged: 3, waitingLong: 1, newSinceLastVisit: 0 });
     expect(html).toContain("3 Meldungen warten auf die Sichtung – 1 davon länger als 3 Tage.");
   });
 
@@ -369,6 +369,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-10T09:00:00Z"),
+        newSinceLastVisit: false,
       },
       {
         kind: "resolved",
@@ -377,6 +378,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-09T15:00:00Z"),
+        newSinceLastVisit: false,
       },
       {
         kind: "status-change",
@@ -385,6 +387,7 @@ describe("the technician dashboard", () => {
         newStatus: "out-of-order",
         by: "Anna",
         at: new Date("2026-06-09T12:00:00Z"),
+        newSinceLastVisit: false,
       },
     ]);
     expect(html).toContain("Letzte Änderungen");

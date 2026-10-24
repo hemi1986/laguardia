@@ -17,6 +17,13 @@ export const dashboardTexts = {
               : " – alle länger als 3 Tage"
             : ` – ${waitingLong} davon länger als 3 Tage`
       }.`,
+    /** How many of the waiting problem reports are new since the Last visit (ST-050, G6a) – nothing at zero. */
+    newOfWaiting: (count: number, newCount: number) =>
+      newCount === count
+        ? count === 1
+          ? "Neu seit deinem letzten Besuch."
+          : "Alle neu seit deinem letzten Besuch."
+        : `${newCount} davon neu seit deinem letzten Besuch.`,
     openTriage: "Zur Sichtung",
     noneToTriage: "Keine Meldung wartet auf die Sichtung.",
     toReturnToPlay: "Nicht spielbereit ohne offenen Defekt",
@@ -40,7 +47,11 @@ export const dashboardTexts = {
     defectChanged: (kind: "resolved" | "reopened", museumNumber: string, by: string, at: string) =>
       `(${museumNumber}) ${kind === "resolved" ? "behoben" : "wieder geöffnet"} · ${by} · ${at}`,
     noRecentChanges: "Keine Änderungen in den letzten 7 Tagen.",
+    /** When the section reaches back to a Last visit longer ago than 7 days (ST-050). */
+    noChangesSinceLastVisit: "Keine Änderungen seit deinem letzten Besuch.",
   },
+  /** The marker next to an entry that is new since the Last visit (ST-050, G6a) – on both dashboards. */
+  newSinceLastVisit: "neu seit deinem letzten Besuch",
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {
     claimedByYou: "Von dir übernommen",
@@ -68,7 +79,8 @@ export const dashboardTexts = {
       resumed: "Fortgesetzt",
       resolved: (by: string) => `Behoben von ${by}`,
       released: (by: string) => `${by} hat die Übernahme aufgehoben`,
-      releasedByRemovingTheMark: (by: string) => `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
+      releasedByRemovingTheMark: (by: string) =>
+        `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
     },
     changed: (what: string, hoursAgo: number) => `${what} · vor ${elapsedInWords(hoursAgo)}`,
   },

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
+import { NewMark } from "./new-mark";
 import type { RecentChange, TechnicianDashboardData } from "./technician-dashboard-data";
 
 const { technicianDashboard: texts, machines } = teamMessages;
@@ -18,7 +19,8 @@ const { technicianDashboard: texts, machines } = teamMessages;
  * it says so (G7).
  */
 export function TechnicianDashboard({ data }: { data: TechnicianDashboardData }) {
-  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges } = data;
+  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges, recentSinceLastVisit } =
+    data;
   if (
     problemReports.untriaged === 0 &&
     machinesToReturnToPlay.length === 0 &&
@@ -28,7 +30,7 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
     return (
       <>
         <p>{texts.nothingNeedsAttention}</p>
-        {recentChanges.length > 0 && <RecentChanges changes={recentChanges} />}
+        {recentChanges.length > 0 && <RecentChanges changes={recentChanges} sinceLastVisit={recentSinceLastVisit} />}
       </>
     );
   }
@@ -46,6 +48,11 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
             ) : (
               <>
                 <p className="text-sm">{texts.waiting(problemReports.untriaged, problemReports.waitingLong)}</p>
+                {problemReports.newSinceLastVisit > 0 && (
+                  <p className="text-sm font-medium">
+                    {texts.newOfWaiting(problemReports.untriaged, problemReports.newSinceLastVisit)}
+                  </p>
+                )}
                 <Link href="/team/triage" className={buttonVariants({ variant: "outline", className: "self-start" })}>
                   {texts.openTriage}
                 </Link>
@@ -153,13 +160,13 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
           </CardContent>
         </Card>
       </section>
-      <RecentChanges changes={recentChanges} />
+      <RecentChanges changes={recentChanges} sinceLastVisit={recentSinceLastVisit} />
     </>
   );
 }
 
 /** Section 5 – machine status changes and defects resolved or reopened, newest first, each with who and when (ST-058). */
-function RecentChanges({ changes }: { changes: RecentChange[] }) {
+function RecentChanges({ changes, sinceLastVisit }: { changes: RecentChange[]; sinceLastVisit: boolean }) {
   return (
     <section>
       <Card>
@@ -168,7 +175,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
         </CardHeader>
         <CardContent>
           {changes.length === 0 ? (
-            <p className="text-sm">{texts.noRecentChanges}</p>
+            <p className="text-sm">{sinceLastVisit ? texts.noChangesSinceLastVisit : texts.noRecentChanges}</p>
           ) : (
             <ul className="flex flex-col gap-2 text-sm [overflow-wrap:anywhere]">
               {changes.map((change, index) => (
@@ -187,6 +194,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
                         change.by,
                         formatDateTime(change.at),
                       )}
+                      <NewMark shown={change.newSinceLastVisit} />
                     </>
                   ) : (
                     <>
@@ -197,6 +205,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
                         {change.title}
                       </Link>{" "}
                       {texts.defectChanged(change.kind, change.museumNumber, change.by, formatDateTime(change.at))}
+                      <NewMark shown={change.newSinceLastVisit} />
                     </>
                   )}
                 </li>

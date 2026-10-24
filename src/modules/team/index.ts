@@ -15,3 +15,4 @@ export { setUpFirstTechnician, type FirstTechnicianOutcome } from "./first-techn
 export { renewedSessionCookie } from "./session-cookie";
 export { teamMemberNames } from "./names";
 export { activeTeamMemberRole, activeTeamMembers, teamMemberRole, type ActiveTeamMember } from "./active-team-members";
+export { lastVisitOf, recordVisit } from "./visits";
