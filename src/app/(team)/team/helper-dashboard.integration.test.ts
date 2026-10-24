@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { claimDefectCommand, reportProblemAndTriageCommand } from "@/modules/repair";
+import { claimDefectCommand, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
 import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
@@ -188,5 +188,26 @@ describe("the helper dashboard", () => {
     // The maintenance section says it has nothing too, in the due maintenance list's words – and offers no link.
     expect(html).toContain("Gerade ist keine Wartung für Helfer:innen fällig.");
     expect(html).not.toContain("Zur Wartung");
+  });
+
+  it("ST-049: Resolved defects leave the dashboard", async () => {
+    const defectId = await anOpenDefect("Rubber cracked", { suitableForHelpers: true });
+    // Claimed by Anna first, so it leaves her first section as well.
+    await run(executeCommand(claimDefectCommand, { defectId, version: 0 }, { ...as(NOW), actor: anna }));
+    expect((await dashboard()).data.claimedByYou.map((defect) => defect.title)).toEqual(["Rubber cracked"]);
+
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 1, closingNote: "Rubber replaced" },
+        { ...as(NOW), actor: anna },
+      ),
+    );
+
+    const { data, html } = await dashboard();
+
+    expect(data.suitableForHelpers).toEqual([]);
+    expect(data.claimedByYou).toEqual([]);
+    expect(html).not.toContain("Rubber cracked");
   });
 });
