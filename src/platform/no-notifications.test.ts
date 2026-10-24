@@ -18,7 +18,8 @@ const means: { name: string; pattern: RegExp }[] = [
     name: "the browser's push or notification API",
     pattern: /\b(pushManager|PushManager|new Notification\(|Notification\.requestPermission)/,
   },
-  { name: "a mail address to send to", pattern: /\bmailto:|\bsendMail\(|\bsmtp:\/\//i },
+  // Not `mailto:` – a contact link (the imprint) lets a person write an e-mail; La Guardia sends none.
+  { name: "a mail address to send to", pattern: /\bsendMail\(|\bsmtp:\/\//i },
 ];
 
 const thisFile = "src/platform/no-notifications.test.ts";

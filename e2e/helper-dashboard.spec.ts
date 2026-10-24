@@ -30,11 +30,15 @@ test("ST-049: A helper lands on their dashboard after logging in", async ({ page
 test("the dashboard marks a defect recorded after the helper's first visit as new (ST-050)", async ({ page }) => {
   await logIn(page);
   const helper = await aHelper(page);
+  // The dashboard's client effect records the visit with a Server Action – a POST to the page (ADR 0011).
+  const recorded = page.waitForResponse(
+    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/team",
+  );
   await logIn(page, helper);
-  // The first visit marks nothing; once the page is idle its client effect has recorded the visit (ADR 0011).
+  // The first visit marks nothing.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Übersicht");
   await expect(page.getByRole("main")).not.toContainText("neu seit deinem letzten Besuch");
-  await page.waitForLoadState("networkidle");
+  await recorded;
   await logOut(page);
 
   await logIn(page);

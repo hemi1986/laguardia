@@ -5,7 +5,7 @@ export function NewMark({ shown }: { shown: boolean }) {
   return shown ? (
     <>
       {" · "}
-      <strong className="font-medium">{teamMessages.newSinceLastVisit}</strong>
+      <strong>{teamMessages.newSinceLastVisit}</strong>
     </>
   ) : null;
 }

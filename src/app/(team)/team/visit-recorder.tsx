@@ -10,7 +10,9 @@ import { recordVisitAction } from "./visit-actions";
  */
 export function VisitRecorder() {
   useEffect(() => {
-    void recordVisitAction();
+    // A failed recording keeps the previous Last visit – the marks stay a round longer, the safe side. The server
+    // reports its own errors (ADR 0008); the page has nothing to tell the team member.
+    recordVisitAction().catch(() => undefined);
   }, []);
   return null;
 }

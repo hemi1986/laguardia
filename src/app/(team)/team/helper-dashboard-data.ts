@@ -53,13 +53,14 @@ export type HelperDashboardData = {
  * tasks on Collection's machines – the page composes (ST-009) –, computed when it is opened (ADR 0002).
  */
 export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Viewer): Promise<HelperDashboardData> {
-  const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
-  const [claimed, suitable, due, changed] = await Promise.all([
+  const [lastVisit, claimed, suitable, due, changed] = await Promise.all([
+    lastVisitOf(db, clock, viewer.id),
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
     machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
     changesOnClaimedDefects(db, clock, viewer.id),
   ]);
+  const marks: MarkLine = { viewer, lastVisit };
   const left = changed
     .flatMap((defect) => (defect.leftAt ? [{ ...defect, leftAt: defect.leftAt }] : []))
     .sort((a, b) => b.leftAt.getTime() - a.leftAt.getTime());
