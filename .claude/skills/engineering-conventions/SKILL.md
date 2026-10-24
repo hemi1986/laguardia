@@ -462,11 +462,12 @@ rule `decideVisit(stored, now)` – one visit lasts while the dashboard is opene
 - **The write keeps one visit:** `recordVisit` writes only when a visit begins – the first insert `ON CONFLICT DO
   NOTHING`, a new visit only over the one it read – so a reload, a second tab or two devices at once change nothing twice.
 - **A dashboard reads, never writes:** its data function takes `markLineOf(db, clock, viewer)` (Team's `lastVisitOf` –
-  the same rule, computed) and marks with `isNew(marks, at, by)` (`new-since-last-visit.ts`). Its recent changes start at
-  `recentSince(clock, marks?)` – the one 7-day window, reaching back to the Last visit only when the dashboard passes
-  it (the technician dashboard); a module query takes that instant (`changesOnClaimedDefects(db, since, …)`) instead of
-  a window of its own. A mark is after the Last visit and not the viewer's own doing, by actor. The mark is `NewMark` („· neu seit deinem letzten Besuch“, G6a). Tested at the data
-  function with an open = render first, then `recordVisit` (`technician-dashboard-new.integration.test.ts`).
+  the same rule, computed) and marks with `isNew(marks, at, by)` (`new-since-last-visit.ts`). Its 7-day window
+  is `recentSince(clock, backTo?)` – the technician dashboard's recent changes start there and reach back to the Last
+  visit (it passes its mark line); on the helper dashboard it only bounds how long a defect that left her stays listed
+  (no mark line passed). A module query takes that instant (`changesOnClaimedDefects(db, since, …)`), never a window of
+  its own. A mark is after the Last visit and not the viewer's own doing, by actor. The mark is `NewMark` („· neu seit
+  deinem letzten Besuch“, G6a). Tested at the data function with an open = render first, then `recordVisit` (`technician-dashboard-new.integration.test.ts`).
 - Not every Server Action goes through `formAction`: this one runs no command. Every other write still does.
 
 ## Version check (HS-16)

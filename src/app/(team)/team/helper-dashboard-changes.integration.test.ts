@@ -22,6 +22,7 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { recordVisit } from "@/modules/team";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { HelperDashboard } from "./helper-dashboard";
 import { loadHelperDashboard } from "./helper-dashboard-data";
@@ -250,6 +251,18 @@ describe("what changed on the helper's claimed defects", () => {
     expect(sectionOne(html)).toContain("Rubber cracked");
     expect(sectionOne(html)).toContain("Ben hat übernommen");
     expect(html).not.toContain("Display flickers");
+  });
+
+  it("does not reach back to the Last visit – a defect that left him 8 days ago is gone though he was last here 10 days ago (user, 2026-10-25)", async () => {
+    // Ben, not Anna: his Last visit stays stored, and no other test opens his dashboard.
+    await recordVisit(db, fixedClock(daysAgo(10)), ben.teamMemberId);
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(ben, daysAgo(9));
+    await rubber.claim(anna, daysAgo(8));
+
+    const data = await loadHelperDashboard(db, fixedClock(NOW), { id: ben.teamMemberId, role: "helper" });
+
+    expect(data.claimedByYou.map((defect) => defect.title)).not.toContain("Rubber cracked");
   });
 
   it("ST-086: Helper sees what changed on her claimed defects", async () => {

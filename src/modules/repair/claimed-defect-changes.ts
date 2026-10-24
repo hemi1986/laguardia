@@ -17,7 +17,10 @@ export type ClaimedDefectChange =
   | { kind: "put-on-hold"; reason: HoldReason; at: Date }
   | { kind: "resumed"; at: Date };
 
-/** A defect the team member claims, or one that left them since the given instant, with what others changed since their claim. */
+/**
+ * A defect the team member claims, or one that left them since the given instant, with what others changed since their
+ * claim.
+ */
 export type ClaimedDefectChanges = {
   defectId: string;
   machineId: string;
@@ -45,8 +48,8 @@ type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[n
 
 /**
  * What changed on the defects a team member claimed (RM-HelperDashboard, ST-086) – read from the event journal: every
- * change by someone else since their latest claim, and a defect that left them since `since` (the dashboard's window),
- * with the change that made it leave. Their own actions are never a change (G25). The defects in no particular order – the page orders them.
+ * change by someone else since their latest claim, and a defect that left them since `since`, with the change that made
+ * it leave. Their own actions are never a change (G25). The defects in no particular order – the page orders them.
  */
 export async function changesOnClaimedDefects(
   db: Database,
@@ -130,6 +133,8 @@ function changesSinceClaim(
         if (mine) leave(by && by !== teamMemberId ? { kind: "released", by, markRemoved: false, at } : undefined, at);
         break;
       case "EVT-DefectResolved": {
+        // Read from the journal, not the resolutions: only the replay knows whether it ended *their* claim (architecture
+        // review 2026-10-25 – a claim history, deferred candidate 4, would be the one source).
         const resolvedBy = entry.data.resolvedBy ?? by;
         if (mine)
           leave(resolvedBy && resolvedBy !== teamMemberId ? { kind: "resolved", by: resolvedBy, at } : undefined, at);
