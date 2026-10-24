@@ -289,6 +289,43 @@ describe("section 5 „Wartung“ of the machine record", () => {
     expect(wax).toContain("Überfällig");
   });
 
+  it("ST-047: Helpers record only maintenance suitable for helpers from the machine record", async () => {
+    await aMachine("LG-042");
+    await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
+    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", { suitableForHelpers: false });
+
+    const { due } = await page("LG-042", "2026-06-10", anna);
+
+    expect(entryOf(due, "Clean glass (inside &amp; out)")).toContain(">Wartung erfassen<");
+    expect(entryOf(due, "Check fuses, connectors, boards for burn marks")).toContain("fällig seit 01.04.2026");
+    expect(entryOf(due, "Check fuses, connectors, boards for burn marks")).not.toContain("Wartung erfassen");
+  });
+
+  it("ST-047: Machines not on display show nothing due", async () => {
+    const lg030 = await aMachine("LG-030");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    await recorded(cleanGlass, lg030, "2026-03-15", { note: "Before the restoration" });
+    await statusChanged(lg030, 0, "not-on-display", "2026-03-20");
+
+    const { due, records } = await page("LG-030", "2026-10-01");
+
+    expect(due).not.toContain("Clean glass");
+    expect(due).not.toContain("fällig seit");
+    expect(due).not.toContain("Überfällig");
+    expect(due).toContain("Nicht ausgestellt – es wird keine Wartung fällig.");
+    expect(records).toContain("Before the restoration");
+  });
+
+  it("ST-047: Nothing due and nothing recorded says so", async () => {
+    await aMachine("LG-050");
+    await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 3, startDate: "2026-06-01" });
+
+    const { due, records } = await page("LG-050", "2026-06-10");
+
+    expect(due).toContain("Gerade ist an diesem Gerät keine Wartung fällig.");
+    expect(records).toContain("An diesem Gerät wurde noch keine Wartung eingetragen.");
+  });
+
   describe("„Wartung erfassen“ from the machine record", () => {
     /** The form „Wartung erfassen“ opened from the machine record, through the runner, as that team member on that day. */
     function formOf(actor: Person, on: string) {
