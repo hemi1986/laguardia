@@ -184,6 +184,13 @@ function notesIn(html: string): string[] {
   return [...html.matchAll(/Glass of \d{4}-\d{2}-\d{2}/g)].map(([note]) => note);
 }
 
+/** The entry of the page part that names the maintenance task. */
+function entryOf(html: string, name: string): string {
+  const entry = html.split("<article").find((part) => part.includes(`>${name}<`));
+  if (!entry) throw new Error(`${name} is not shown`);
+  return entry;
+}
+
 describe("section 5 „Wartung“ of the machine record", () => {
   it("ST-047: Machine record shows maintenance records", async () => {
     const lg042 = await aMachine("LG-042");
@@ -244,5 +251,20 @@ describe("section 5 „Wartung“ of the machine record", () => {
     ]);
     expect(html).toContain("2026 · 7 Einträge");
     expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>Zurück zum Gerät<\/a>/);
+  });
+
+  it("ST-047: Machine record shows due and overdue maintenance tasks", async () => {
+    await aMachine("LG-042");
+    await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-03-03" });
+    await aMaintenanceTask("Wax playfield", { intervalMonths: 3, startDate: "2026-01-01" });
+
+    const { due } = await page("LG-042", "2026-06-10");
+
+    const wax = entryOf(due, "Wax playfield");
+    const clean = entryOf(due, "Clean playfield");
+    expect(clean).toContain("fällig seit 03.06.2026");
+    expect(clean).not.toContain("Überfällig");
+    expect(wax).toContain("fällig seit 01.04.2026");
+    expect(wax).toContain("Überfällig");
   });
 });
