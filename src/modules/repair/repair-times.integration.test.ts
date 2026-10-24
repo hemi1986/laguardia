@@ -47,7 +47,7 @@ describe("RM-RepairTimes", () => {
     await displayFlickers.prioritize("high", ago(9));
     await displayFlickers.resolve(ago(7));
 
-    expect((await of("high")).toResolved).toEqual({ median: 3 * DAY, defects: 1 });
+    expect((await of("high")).toResolved).toEqual({ typical: 3 * DAY, defects: 1 });
     expect((await of("normal")).toResolved).toBeUndefined();
   });
 
@@ -58,7 +58,7 @@ describe("RM-RepairTimes", () => {
     await lampOut.resolve(ago(30, 1));
 
     // Coin door jammed: 40 days − 29 days 23 hours = 10 days 1 hour from report to resolved; Lamp out would be 9 days 23 hours.
-    expect((await of("low")).toResolved).toEqual({ median: 10 * DAY + HOUR, defects: 1 });
+    expect((await of("low")).toResolved).toEqual({ typical: 10 * DAY + HOUR, defects: 1 });
   });
 
   it("ST-051: Defects closed on retirement are not counted as resolved", async () => {
@@ -68,7 +68,7 @@ describe("RM-RepairTimes", () => {
 
     expect(await of("normal")).toEqual({
       priority: "normal",
-      toFirstWorkLogEntry: { median: 5 * DAY, defects: 1 },
+      toFirstWorkLogEntry: { typical: 5 * DAY, defects: 1 },
       toResolved: undefined,
     });
   });
@@ -80,7 +80,7 @@ describe("RM-RepairTimes", () => {
     expect(await of("normal")).toEqual({
       priority: "normal",
       toFirstWorkLogEntry: undefined,
-      toResolved: { median: 2 * DAY, defects: 1 },
+      toResolved: { typical: 2 * DAY, defects: 1 },
     });
   });
 
@@ -92,7 +92,7 @@ describe("RM-RepairTimes", () => {
 
     const times = await repairTimes(db, fixedClock("2026-06-20T09:00:00Z"), 30);
 
-    expect(times.find((entry) => entry.priority === "normal")?.toResolved).toEqual({ median: 8 * DAY, defects: 1 });
+    expect(times.find((entry) => entry.priority === "normal")?.toResolved).toEqual({ typical: 8 * DAY, defects: 1 });
   });
 
   it("ST-051: Period membership", async () => {
@@ -103,8 +103,8 @@ describe("RM-RepairTimes", () => {
     expect(await of("normal")).toEqual({
       priority: "normal",
       toFirstWorkLogEntry: undefined,
-      toResolved: { median: 30 * DAY, defects: 1 },
+      toResolved: { typical: 30 * DAY, defects: 1 },
     });
-    expect((await of("normal", 90)).toFirstWorkLogEntry).toEqual({ median: 5 * DAY, defects: 1 });
+    expect((await of("normal", 90)).toFirstWorkLogEntry).toEqual({ typical: 5 * DAY, defects: 1 });
   });
 });

@@ -9,8 +9,8 @@ import { defect, defectResolution, defectWorkLogEntry, problemReport } from "./s
 export const repairTimePeriods = [30, 90] as const;
 export type RepairTimePeriod = (typeof repairTimePeriods)[number];
 
-/** A typical time of one priority (CONTEXT.md: Repair times) – the median in milliseconds, and how many defects it is of. */
-export type RepairTime = { median: number; defects: number };
+/** A typical time of one priority (CONTEXT.md: Repair times – "typical" is the median), in milliseconds, and how many defects it is of. */
+export type RepairTime = { typical: number; defects: number };
 
 /** The repair times of one priority – each time none when no defect of that priority belongs to the period. */
 export type RepairTimesOfPriority = {
@@ -107,23 +107,23 @@ export async function repairTimes(
     const ofPriority = defects.filter((entry) => entry.priority === priority);
     return {
       priority,
-      toFirstWorkLogEntry: typical(
+      toFirstWorkLogEntry: typicalOf(
         ofPriority
           .filter((entry) => inPeriod(entry.milestones.firstWorkLogEntryAt))
           .map((entry) => entry.times.toFirstWorkLogEntry),
       ),
-      toResolved: typical(
+      toResolved: typicalOf(
         ofPriority.filter((entry) => inPeriod(entry.milestones.resolvedAt)).map((entry) => entry.times.toResolved),
       ),
     };
   });
 }
 
-/** The median of the times and how many there are – none without any; of an even number the mean of the middle two. */
-function typical(times: (number | undefined)[]): RepairTime | undefined {
+/** The typical time – the middle one, or of an even number the mean of the middle two – and how many there are; none without any. */
+function typicalOf(times: (number | undefined)[]): RepairTime | undefined {
   const sorted = times.filter((time) => time !== undefined).sort((a, b) => a - b);
   if (sorted.length === 0) return undefined;
   const middle = Math.floor(sorted.length / 2);
-  const median = sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-  return { median, defects: sorted.length };
+  const typical = sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  return { typical, defects: sorted.length };
 }

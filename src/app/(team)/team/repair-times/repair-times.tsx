@@ -51,5 +51,5 @@ export function RepairTimesView({ period, priorities }: RepairTimesData) {
 }
 
 function TimeLine({ label, time }: { label: string; time: RepairTime | undefined }) {
-  return <p className="text-sm">{time ? texts.time(label, time.median, time.defects) : texts.noDefect(label)}</p>;
+  return <p className="text-sm">{time ? texts.time(label, time.typical, time.defects) : texts.noDefect(label)}</p>;
 }
