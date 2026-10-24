@@ -4,7 +4,7 @@ import { backAddress, recordedAddress, recordMaintenanceReturnOf } from "./recor
 describe("where the form „Wartung erfassen“ leads back to (ST-047)", () => {
   it.each([
     ["geraet", "machine"],
-    ["machine", "machine"],
+    ["machine", "list"],
     [undefined, "list"],
     ["", "list"],
     ["https://evil.example/", "list"],

@@ -2,7 +2,7 @@ import { collectionChangesIn, fileAttachedIn } from "@/modules/collection";
 import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintenance";
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
+import { isId, lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
 import { loadTriageConfirmation, oneOf, type AddressQuery, type TriageConfirmation } from "../../triage-confirmation";
 import type { MachineRecordData } from "./machine-record-data";
 
@@ -41,7 +41,8 @@ export async function loadMachineConfirmation(
       : undefined;
   }
   const maintenanceRecordId = oneOf(query.maintenanceRecorded);
-  if (maintenanceRecordId) {
+  if (maintenanceRecordId !== undefined) {
+    if (!isId(maintenanceRecordId)) return undefined;
     const command = await lastCommandBy(db, { aggregateId: maintenanceRecordId }, viewer);
     if (!command || !maintenanceRecordedIn(command, maintenanceRecordId)) return undefined;
     const recorded = await maintenanceRecordById(db, maintenanceRecordId);

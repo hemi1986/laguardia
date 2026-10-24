@@ -24,6 +24,7 @@ export {
   type RecordMaintenanceInput,
 } from "./record-maintenance";
 export {
+  latestMaintenanceRecords,
   maintenanceForRecording,
   maintenanceRecordById,
   maintenanceRecords,

@@ -7,7 +7,7 @@ import {
   type StatusChange,
   retireRefusal,
 } from "@/modules/collection";
-import { dueMaintenance, maintenanceRecords, type NamedMaintenanceRecord } from "@/modules/maintenance";
+import { dueMaintenance, latestMaintenanceRecords, type NamedMaintenanceRecord } from "@/modules/maintenance";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import { systemClock, type Clock } from "@/platform/clock";
@@ -101,13 +101,13 @@ export async function loadMachineRecord(
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
-  const [open, recent, forMaintenance, records] = await Promise.all([
+  const [open, recent, forMaintenance, latest] = await Promise.all([
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
     machinesForMaintenance(db, { machineId: record.id }),
-    maintenanceRecords(db, { machineId: record.id }),
+    latestMaintenanceRecords(db, record.id, LATEST_MAINTENANCE_RECORDS),
   ]);
-  const latestRecords = records.slice(0, LATEST_MAINTENANCE_RECORDS);
+  const latestRecords = latest.records;
   const ids = [
     ...record.statusHistory.map((change) => change.changedBy),
     record.retirement?.retiredBy,
@@ -146,7 +146,7 @@ export async function loadMachineRecord(
         ...maintenance,
         recordedBy: names.get(maintenance.recordedBy),
       })),
-      recordCount: records.length,
+      recordCount: latest.total,
     },
     actions: actionsOf(record, viewer),
   };

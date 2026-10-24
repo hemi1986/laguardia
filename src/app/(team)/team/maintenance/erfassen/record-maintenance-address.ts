@@ -19,9 +19,9 @@ export function recordMaintenanceAddress({
   return `/team/maintenance/erfassen?${params.toString()}`;
 }
 
-/** The return the address or the form names – anything but the machine record is the due maintenance list. */
-export function recordMaintenanceReturnOf(value: unknown): RecordMaintenanceReturn {
-  return value === "geraet" || value === "machine" ? "machine" : "list";
+/** The return the address's `von` names – anything but `geraet` (the machine record) is the due maintenance list. */
+export function recordMaintenanceReturnOf(von: unknown): RecordMaintenanceReturn {
+  return von === "geraet" ? "machine" : "list";
 }
 
 /** Where the form's back link leads. */

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, max } from "drizzle-orm";
+import { and, count, desc, eq, inArray, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
@@ -58,19 +58,33 @@ export type NamedMaintenanceRecord = MaintenanceRecord & { maintenanceTaskName: 
 
 /**
  * The maintenance records of a machine, the newest first – what was done there, by whom (ST-044, ST-047) –, each with
- * its maintenance task's name, a removed task's too.
+ * its maintenance task's name, a removed task's too. With `limit` only that many of the newest.
  */
 export async function maintenanceRecords(
   db: Database,
-  { machineId }: { machineId: string },
+  { machineId, limit }: { machineId: string; limit?: number },
 ): Promise<NamedMaintenanceRecord[]> {
-  const rows = await db
+  const query = db
     .select({ record: maintenanceRecord, maintenanceTaskName: maintenanceTask.name })
     .from(maintenanceRecord)
     .innerJoin(maintenanceTask, eq(maintenanceRecord.maintenanceTaskId, maintenanceTask.id))
     .where(eq(maintenanceRecord.machineId, machineId))
     .orderBy(desc(maintenanceRecord.date), desc(maintenanceRecord.recordedAt));
+  const rows = limit === undefined ? await query : await query.limit(limit);
   return rows.map(({ record, maintenanceTaskName }) => ({ ...toRecord(record), maintenanceTaskName }));
+}
+
+/** The newest maintenance records of a machine – at most `limit` – and how many it has in all (the machine record, ST-047). */
+export async function latestMaintenanceRecords(
+  db: Database,
+  machineId: string,
+  limit: number,
+): Promise<{ records: NamedMaintenanceRecord[]; total: number }> {
+  const [records, [{ total }]] = await Promise.all([
+    maintenanceRecords(db, { machineId, limit }),
+    db.select({ total: count() }).from(maintenanceRecord).where(eq(maintenanceRecord.machineId, machineId)),
+  ]);
+  return { records, total };
 }
 
 /**

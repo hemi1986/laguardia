@@ -29,7 +29,11 @@ export default async function RecordMaintenanceRoute({ searchParams }: PageProps
   return (
     <Page title={data ? texts.title(data.machine.museumNumber) : texts.record}>
       {data ? (
-        <RecordMaintenancePage data={data} back={back} action={recordMaintenanceAction.bind(null, back)} />
+        <RecordMaintenancePage
+          data={data}
+          back={back}
+          action={recordMaintenanceAction.bind(null, typeof von === "string" ? von : undefined)}
+        />
       ) : (
         <>
           <p>{texts.unknown}</p>

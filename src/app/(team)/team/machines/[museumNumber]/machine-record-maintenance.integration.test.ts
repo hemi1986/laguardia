@@ -28,10 +28,10 @@ import { MachineRecordView } from "./machine-record";
 import { loadMachineConfirmation } from "./machine-confirmation";
 import { formRunner } from "@/app/_actions/form-runner";
 import { post } from "@/test-support/forms";
-import { recordMaintenanceFields, recordMaintenanceInput } from "../../maintenance/erfassen/record-maintenance-input";
 import { loadMaintenanceForRecording } from "../../maintenance/erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "../../maintenance/erfassen/record-maintenance-view";
-import { addressAfterRecording } from "../../maintenance/erfassen/address-after-recording";
+import { recordMaintenanceDefinition } from "../../maintenance/erfassen/record-maintenance-definition";
+import { recordMaintenanceReturnOf } from "../../maintenance/erfassen/record-maintenance-address";
 import { loadAllMaintenanceRecords } from "./wartungseintraege/maintenance-records-data";
 import { MaintenanceRecordsView } from "./wartungseintraege/maintenance-records";
 
@@ -226,12 +226,14 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
     const { records } = await page("LG-042", "2026-06-10");
 
-    expect(records).toContain("Switch test (every switch)");
-    expect(records).toContain("Teilweise erledigt");
-    expect(records).toContain("Ben · 02.06.2026");
-    expect(records).toContain("Switch matrix row 3 not tested");
-    expect(records).toContain(">Erledigt<");
-    expect(records).toContain("Anna · 10.06.2026");
+    const switchEntry = entryOf(records, "Switch test (every switch)");
+    expect(switchEntry).toContain(">Teilweise erledigt<");
+    expect(switchEntry).toContain("Ben · 02.06.2026");
+    expect(switchEntry).toContain("Switch matrix row 3 not tested");
+    const glassEntry = entryOf(records, "Clean glass (inside &amp; out)");
+    expect(glassEntry).toContain(">Erledigt<");
+    expect(glassEntry).toContain("Anna · 10.06.2026");
+    expect(glassEntry).not.toContain("Switch matrix");
     expect(records.indexOf("Clean glass (inside &amp; out)")).toBeGreaterThan(-1);
     expect(records.indexOf("Clean glass (inside &amp; out)")).toBeLessThan(
       records.indexOf("Switch test (every switch)"),
@@ -326,6 +328,63 @@ describe("section 5 „Wartung“ of the machine record", () => {
     expect(records).toContain("An diesem Gerät wurde noch keine Wartung eingetragen.");
   });
 
+  it("shows the overdue maintenance tasks first, then the longest due", async () => {
+    await aMachine("LG-042");
+    await aMaintenanceTask("Due last", { intervalMonths: 3, startDate: "2026-03-08" });
+    await aMaintenanceTask("Overdue", { intervalMonths: 3, startDate: "2026-01-01" });
+    await aMaintenanceTask("Due first", { intervalMonths: 3, startDate: "2026-03-03" });
+
+    const { due } = await page("LG-042", "2026-06-10");
+
+    expect([...due.matchAll(/<p class="font-medium">([^<]+)<\/p>/g)].map(([, name]) => name)).toEqual([
+      "Overdue",
+      "Überfällig",
+      "Due first",
+      "Due last",
+    ]);
+  });
+
+  it("groups all maintenance records by the year they were carried out, the newest first", async () => {
+    const lg042 = await aMachine("LG-042");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { startDate: "2025-01-01" });
+    await recorded(cleanGlass, lg042, "2025-11-20", { note: "Glass of 2025-11-20" });
+    await recorded(cleanGlass, lg042, "2026-02-03", { note: "Glass of 2026-02-03" });
+    await recorded(cleanGlass, lg042, "2026-05-04", { note: "Glass of 2026-05-04" });
+
+    const html = renderToStaticMarkup(
+      createElement(MaintenanceRecordsView, {
+        data: await loadAllMaintenanceRecords(db, "LG-042"),
+        museumNumber: "LG-042",
+      }),
+    );
+
+    expect(html.indexOf("2026 · 2 Einträge")).toBeLessThan(html.indexOf("Glass of 2026-05-04"));
+    expect(html.indexOf("Glass of 2026-02-03")).toBeLessThan(html.indexOf("2025 · 1 Eintrag"));
+    expect(html.indexOf("2025 · 1 Eintrag")).toBeLessThan(html.indexOf("Glass of 2025-11-20"));
+  });
+
+  it("confirms a maintenance record only on its own machine", async () => {
+    const lg042 = await aMachine("LG-042");
+    await aMachine("LG-043");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const { maintenanceRecordId } = await recorded(cleanGlass, lg042, "2026-06-10");
+    const at = (address: string) => new URL(address, "https://laguardia.example");
+
+    expect(
+      (await pageAt(at(`/team/machines/LG-042?maintenanceRecorded=${maintenanceRecordId}`), "2026-06-10", tom)).html,
+    ).toContain("Wartung an LG-042 eingetragen.");
+    expect(
+      (await pageAt(at(`/team/machines/LG-043?maintenanceRecorded=${maintenanceRecordId}`), "2026-06-10", tom)).html,
+    ).not.toContain("Wartung an LG-04");
+    expect(
+      (await pageAt(at("/team/machines/LG-042?maintenanceRecorded=not-an-id"), "2026-06-10", tom)).html,
+    ).not.toContain("Wartung an LG-04");
+    // Only the team member who recorded it.
+    expect(
+      (await pageAt(at(`/team/machines/LG-042?maintenanceRecorded=${maintenanceRecordId}`), "2026-06-10", anna)).html,
+    ).not.toContain("Wartung an LG-04");
+  });
+
   describe("„Wartung erfassen“ from the machine record", () => {
     /** The form „Wartung erfassen“ opened from the machine record, through the runner, as that team member on that day. */
     function formOf(actor: Person, on: string) {
@@ -335,11 +394,14 @@ describe("section 5 „Wartung“ of the machine record", () => {
         db,
         clock: fixedClock(`${on}T10:00:00Z`),
         newId: randomUUID,
-      })(recordMaintenanceCommand, {
-        fields: recordMaintenanceFields,
-        input: recordMaintenanceInput,
-        onSuccess: async (result) => void landedOn.push(await addressAfterRecording(db, "machine", result)),
-      });
+      })(
+        recordMaintenanceCommand,
+        recordMaintenanceDefinition(
+          db,
+          recordMaintenanceReturnOf("geraet"),
+          async (address) => void landedOn.push(address),
+        ),
+      );
       return { action, landedOn };
     }
 
@@ -374,6 +436,10 @@ describe("section 5 „Wartung“ of the machine record", () => {
     it("ST-047: A rejected recording still leads back to the machine record", async () => {
       const lg042 = await aMachine("LG-042");
       const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-03-03" });
+      const link = /href="([^"]*)"[^>]*>Wartung erfassen</.exec(
+        entryOf((await page("LG-042", "2026-06-10")).due, "Clean playfield"),
+      )![1];
+      const opened = new URL(link.replaceAll("&amp;", "&"), "https://laguardia.example");
       const { action, landedOn } = formOf(tom, "2026-06-10");
 
       const state = await action(
@@ -397,7 +463,9 @@ describe("section 5 „Wartung“ of the machine record", () => {
         id: tom.teamMemberId,
         role: tom.role,
       });
-      const html = renderToStaticMarkup(createElement(RecordMaintenancePage, { data: data!, back: "machine" }));
+      // The form page as it is rendered again after the rejection – at the address the machine record opened.
+      const back = recordMaintenanceReturnOf(opened.searchParams.get("von"));
+      const html = renderToStaticMarkup(createElement(RecordMaintenancePage, { data: data!, back }));
       expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>Zurück zum Gerät<\/a>/);
       expect(html).not.toContain("Zurück zur fälligen Wartung");
     });
