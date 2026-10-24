@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 44 of 59 domain stories done** · scenarios 387 of 505
+**Progress: 45 of 59 domain stories done** · scenarios 394 of 505
 
-**84 stories** · In Progress: 1 · Ready: 21 · In Review: 0 · Draft: 3 · Done: 59
+**84 stories** · In Progress: 0 · Ready: 21 · In Review: 0 · Draft: 3 · Done: 60
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | should | M | low | ST-024, ST-026, ST-030, ST-043, ST-048 |
 
 ## Ready
 
@@ -109,5 +103,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | should | M | medium | ST-044 |
 | [ST-047](ST-047-maintenance-on-machine-record-and-overview.md) | Maintenance on the machine record | story | Maintenance | should | M | low | ST-009, ST-044, ST-056 |
 | [ST-049](ST-049-helper-dashboard.md) | Helper dashboard – sections, landing after login and the empty case | story | Repair | should | S | medium | ST-025, ST-028, ST-043 |
+| [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | should | M | low | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
