@@ -1,4 +1,5 @@
-import { machineLabels, machineOverview, type MachineStatus } from "@/modules/collection";
+import { machineLabels, machineOverview, machinesForMaintenance, type MachineStatus } from "@/modules/collection";
+import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, staleClaims, triageList } from "@/modules/repair";
 import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
@@ -19,7 +20,8 @@ export type ShownStaleClaim = {
 
 /**
  * What the technician dashboard shows (RM-TechnicianDashboard, ST-048) – its sections in the order ST-048 fixed (G18):
- * 1 problem reports to triage, 2 machines not playable without open defects (ST-048), 3 stale claims (ST-058).
+ * 1 problem reports to triage, 2 machines not playable without open defects (ST-048), 3 stale claims,
+ * 4 overdue maintenance tasks (ST-058).
  */
 export type TechnicianDashboardData = {
   /** How many problem reports wait for triage, and how many of them longer than 3 days (HS-2). */
@@ -28,22 +30,25 @@ export type TechnicianDashboardData = {
   machinesToReturnToPlay: MachineToReturnToPlay[];
   /** The oldest claim first. */
   staleClaims: ShownStaleClaim[];
+  /** Each overdue maintenance task with how many machines it is overdue on – not the machines (G18). */
+  overdueMaintenance: { id: string; name: string; overdueCount: number }[];
 };
 
 const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
 
 /**
  * The technician dashboard's data (RM-TechnicianDashboard): Repair's triage list and open defects, Collection's machines
- * by machine status – the page composes (ST-009) –, computed when it is opened (ADR 0002). The technician decides
- * whether a machine returns to play (HS-6) – the dashboard only shows which ones could.
+ * by machine status – the page composes (ST-009) –, computed when it is opened (ADR 0002). Maintenance's due maintenance tasks on
+ * Collection's machines (the rules of ST-043 and ST-056). The technician decides whether a machine returns to play (HS-6) – the dashboard only shows which ones could.
  */
 export async function loadTechnicianDashboard(db: Database, clock: Clock): Promise<TechnicianDashboardData> {
-  const [toTriage, notPlayable, stale] = await Promise.all([
+  const [toTriage, notPlayable, stale, due] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
       lists.flat(),
     ),
     staleClaims(db, clock),
+    machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
   ]);
   const [openDefects, labels, names] = await Promise.all([
     openDefectCounts(
@@ -79,5 +84,8 @@ export async function loadTechnicianDashboard(db: Database, clock: Clock): Promi
       machineModelTitle: labels.get(claim.machineId)?.machineModelTitle ?? "",
       claimant: nameOf(names, claim.claimedBy),
     })),
+    overdueMaintenance: due
+      .filter((task) => task.overdueCount > 0)
+      .map(({ id, name, overdueCount }) => ({ id, name, overdueCount })),
   };
 }

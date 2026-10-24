@@ -11,6 +11,8 @@ import {
   type MachineStatus,
 } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
+import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
+import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import {
   claimDefectCommand,
   logWorkCommand,
@@ -54,7 +56,10 @@ beforeAll(async () => {
 
 afterAll(() => isolated.close());
 
-beforeEach(() => withoutMachines(db));
+beforeEach(async () => {
+  await withoutMachines(db);
+  await withoutMaintenanceTasks(db);
+});
 
 async function run<Result>(outcome: Promise<{ ok: true; result: Result } | { ok: false; error: string }>) {
   const done = await outcome;
@@ -73,6 +78,29 @@ async function aMachine(museumNumber: string, machineStatus: MachineStatus = "pl
     ),
   );
   return registered.machineId;
+}
+
+/** A maintenance task every 3 months from 2026-01-01 – due from 2026-04-01 and overdue at NOW on every machine. */
+async function aMaintenanceTask(name: string) {
+  await run(
+    executeCommand(
+      changeMaintenancePlanCommand,
+      {
+        version: await maintenancePlanVersion(db),
+        change: "add",
+        task: {
+          name,
+          instruction: `${name} – how to`,
+          intervalMonths: 3,
+          suitableForHelpers: false,
+          machineCategory: undefined,
+          technology: undefined,
+          startDate: "2026-01-01",
+        },
+      },
+      as("2025-12-01T09:00:00Z"),
+    ),
+  );
 }
 
 /** A visitor's problem report, waiting for triage since that time. */
@@ -259,6 +287,21 @@ describe("the technician dashboard", () => {
     const { data } = await dashboard();
 
     expect(data.staleClaims.map((claim) => [claim.title, claim.claimant])).toEqual([["Drop target sticks", "Ben"]]);
+  });
+
+  it("ST-058: Overdue maintenance tasks are counted, not listed by machine", async () => {
+    await aMachine("LG-042");
+    await aMachine("LG-043");
+    await aMaintenanceTask("Wax playfield");
+
+    const { data, html } = await dashboard();
+
+    expect(data.overdueMaintenance.map(({ name, overdueCount }) => ({ name, overdueCount }))).toEqual([
+      { name: "Wax playfield", overdueCount: 2 },
+    ]);
+    expect(html).toContain("„Wax playfield“ ist an 2 Geräten überfällig.");
+    expect(html).not.toContain("LG-042");
+    expect(html).toMatch(/<a [^>]*href="\/team\/maintenance"[^>]*>Zur Wartung<\/a>/);
   });
 
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {

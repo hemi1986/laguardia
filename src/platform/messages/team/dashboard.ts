@@ -25,6 +25,12 @@ export const dashboardTexts = {
     staleClaims: "Liegengeblieben",
     staleBecause: (claimant: string) => `Von ${claimant} vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.`,
     noneStale: "Kein Defekt ist liegengeblieben.",
+    /** Section 4 (ST-058) – counted, never listed by machine (G18). */
+    overdueMaintenance: "Überfällige Wartung",
+    overdue: (name: string, machines: number) =>
+      `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} überfällig.`,
+    openDueMaintenance: "Zur Wartung",
+    noneOverdue: "Keine Wartung ist überfällig.",
   },
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {
