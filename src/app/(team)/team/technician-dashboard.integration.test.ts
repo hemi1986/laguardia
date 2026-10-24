@@ -390,6 +390,41 @@ describe("the technician dashboard", () => {
     expect(html).not.toContain("Spielbereit → Eingeschränkt");
   });
 
+  it("ST-058: An empty section says so next to a filled one", async () => {
+    await aMachine("LG-042");
+    await aMaintenanceTask("Wax playfield");
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Kein Defekt ist liegengeblieben.");
+    expect(html).toContain("„Wax playfield“ ist an 1 Gerät überfällig.");
+    expect(html).not.toContain("Gerade braucht nichts deine Aufmerksamkeit.");
+  });
+
+  it("ST-058: Recent changes are shown below the all-empty sentence", async () => {
+    const lg007 = await aMachine("LG-007", "limited");
+    // Yesterday.
+    await statusChanged(lg007, 0, "playable", tom, "2026-06-09T12:00:00Z");
+
+    const { html } = await dashboard();
+
+    const allEmpty = html.indexOf("Gerade braucht nichts deine Aufmerksamkeit.");
+    const statusChange = html.indexOf("Eingeschränkt → Spielbereit · Tom · 09.06.2026, 14:00");
+    expect(allEmpty).toBeGreaterThan(-1);
+    expect(statusChange).toBeGreaterThan(allEmpty);
+    expect(html).not.toContain("Liegengeblieben");
+    expect(html).not.toContain("Überfällige Wartung");
+  });
+
+  it("says when nothing changed in the last 7 days next to sections that need attention", async () => {
+    const lg042 = await aMachine("LG-042");
+    await aProblemReport(lg042, "2026-06-09T09:00:00Z");
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Keine Änderungen in den letzten 7 Tagen.");
+  });
+
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {
     await aMachine("LG-042", "limited");
 
