@@ -1,13 +1,11 @@
 import { machineOverview, machinesForMaintenance, statusChangesSince, type MachineStatus } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
-import { lastVisitOf } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { earlierOf, hoursBefore } from "@/platform/time";
 import type { Viewer } from "./claimant";
 import { named } from "./named";
-import { isNew, type MarkLine } from "./new-since-last-visit";
+import { isNew, markLineOf, recentSince } from "./new-since-last-visit";
 
 /** A machine that could return to play – Limited or Out of order, without open defects (POL-ResolvedDefectsReturnMachineToPlay). */
 export type MachineToReturnToPlay = { museumNumber: string; machineModelTitle: string; machineStatus: MachineStatus };
@@ -60,12 +58,6 @@ export type TechnicianDashboardData = {
   recentSinceLastVisit: boolean;
 };
 
-/**
- * "The last 7 days" – 168 hours, like "older than 14 days" is 336 (user, 2026-10-24, ST-058) – or longer, back to the
- * Last visit (ST-050).
- */
-const RECENT_HOURS = 168;
-
 const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
 
 /**
@@ -78,10 +70,9 @@ export async function loadTechnicianDashboard(
   clock: Clock,
   viewer: Viewer,
 ): Promise<TechnicianDashboardData> {
-  const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
+  const marks = await markLineOf(db, clock, viewer);
   // Since the Last visit when that is longer ago than the last 7 days (ST-050).
-  const lastSevenDays = hoursBefore(clock.now(), RECENT_HOURS);
-  const since = earlierOf(lastSevenDays, marks.lastVisit);
+  const { since, reachedBack } = recentSince(clock, marks);
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
@@ -150,6 +141,6 @@ export async function loadTechnicianDashboard(
         newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),
-    recentSinceLastVisit: since < lastSevenDays,
+    recentSinceLastVisit: reachedBack,
   };
 }

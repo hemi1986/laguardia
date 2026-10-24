@@ -1,7 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import type { Clock } from "@/platform/clock";
 import { readJournal, type CatalogueEntry, type Database, type TeamMemberId } from "@/platform/command";
-import { hoursBefore } from "@/platform/time";
 import type { HoldReason, Priority } from "./defect";
 import { repairEvents } from "./events";
 import { defect } from "./schema";
@@ -19,7 +17,7 @@ export type ClaimedDefectChange =
   | { kind: "put-on-hold"; reason: HoldReason; at: Date }
   | { kind: "resumed"; at: Date };
 
-/** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
+/** A defect the team member claims, or one that left them since the given instant, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
   defectId: string;
   machineId: string;
@@ -29,9 +27,6 @@ export type ClaimedDefectChanges = {
   /** Newest first. */
   changes: ClaimedDefectChange[];
 };
-
-/** A defect that left its claimant stays listed for 7 days – 168 hours, as on the technician dashboard (ST-058). */
-const LEFT_HOURS = 168;
 
 /** The journal entries that start or end a claim, or change something on the claimed defect. */
 const TRACKED = [
@@ -50,15 +45,14 @@ type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[n
 
 /**
  * What changed on the defects a team member claimed (RM-HelperDashboard, ST-086) – read from the event journal: every
- * change by someone else since their latest claim, and a defect that left them, with the change that made it leave, for
- * 7 days. Their own actions are never a change (G25). The defects in no particular order – the page orders them.
+ * change by someone else since their latest claim, and a defect that left them since `since` (the dashboard's window),
+ * with the change that made it leave. Their own actions are never a change (G25). The defects in no particular order – the page orders them.
  */
 export async function changesOnClaimedDefects(
   db: Database,
-  clock: Clock,
+  since: Date,
   teamMemberId: TeamMemberId,
 ): Promise<ClaimedDefectChanges[]> {
-  const since = hoursBefore(clock.now(), LEFT_HOURS);
   const [claimed, leaving] = await Promise.all([
     db
       .select({ id: defect.id })
@@ -137,7 +131,8 @@ function changesSinceClaim(
         break;
       case "EVT-DefectResolved": {
         const resolvedBy = entry.data.resolvedBy ?? by;
-        if (mine) leave(resolvedBy && resolvedBy !== teamMemberId ? { kind: "resolved", by: resolvedBy, at } : undefined, at);
+        if (mine)
+          leave(resolvedBy && resolvedBy !== teamMemberId ? { kind: "resolved", by: resolvedBy, at } : undefined, at);
         break;
       }
       case "EVT-DefectClosedOnRetirement":
@@ -147,7 +142,11 @@ function changesSinceClaim(
       case "EVT-DefectDetailsChanged": {
         // Removing the mark released the claim in the same step – one point in time, the release journaled first.
         const released = changes.at(-1);
-        if (entry.data.releasedClaimOf === teamMemberId && released?.kind === "released" && released.at.getTime() === at.getTime())
+        if (
+          entry.data.releasedClaimOf === teamMemberId &&
+          released?.kind === "released" &&
+          released.at.getTime() === at.getTime()
+        )
           released.markRemoved = true;
         // A new title in that same step is still a change on their defect.
         const inClaim = mine || leftAt?.getTime() === at.getTime();
