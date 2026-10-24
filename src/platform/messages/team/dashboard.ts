@@ -26,5 +26,17 @@ export const dashboardTexts = {
   helperDashboard: {
     claimedByYou: "Von dir übernommen",
     suitableForHelpers: "Für Helfer:innen geeignet",
+    dueMaintenance: "Fällige Wartung für Helfer:innen",
+    due: (name: string, machines: number, overdue: number) =>
+      `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} fällig${
+        overdue === 0
+          ? ""
+          : overdue === machines
+            ? machines === 1
+              ? " – überfällig"
+              : " – an allen überfällig"
+            : `, ${overdue} davon überfällig`
+      }.`,
+    openDueMaintenance: "Zur Wartung",
   },
 } as const;

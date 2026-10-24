@@ -1,3 +1,5 @@
+import { machinesForMaintenance } from "@/modules/collection";
+import { dueMaintenance } from "@/modules/maintenance";
 import { openDefects } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -12,16 +14,19 @@ export type HelperDashboardData = {
   claimedByYou: OpenDefectsItem[];
   /** Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1. */
   suitableForHelpers: OpenDefectsItem[];
+  /** Section 3 – each due maintenance task suitable for helpers, on how many machines it is due and overdue (G18, G4a). */
+  dueMaintenance: { name: string; machineCount: number; overdueCount: number }[];
 };
 
 /**
- * The helper dashboard's data (RM-HelperDashboard): Repair's open defects with Collection's machines – the page composes
- * (ST-009) –, computed when it is opened from the current state (ADR 0002); no journal read before ST-086.
+ * The helper dashboard's data (RM-HelperDashboard): Repair's open defects with Collection's machines, and Maintenance's due
+ * maintenance tasks on Collection's machines – the page composes (ST-009) –, computed when it is opened from the current state (ADR 0002); no journal read before ST-086.
  */
 export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Viewer): Promise<HelperDashboardData> {
-  const [claimed, suitable] = await Promise.all([
+  const [claimed, suitable, due] = await Promise.all([
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
+    machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
   ]);
   const [claimedByYou, suitableForHelpers] = await Promise.all([
     shownOpenDefects(db, clock, claimed, viewer),
@@ -32,5 +37,11 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
       viewer,
     ),
   ]);
-  return { claimedByYou, suitableForHelpers };
+  return {
+    claimedByYou,
+    suitableForHelpers,
+    dueMaintenance: due
+      .filter((task) => task.suitableForHelpers)
+      .map((task) => ({ name: task.name, machineCount: task.machines.length, overdueCount: task.overdueCount })),
+  };
 }
