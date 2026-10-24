@@ -436,7 +436,7 @@ export async function defectForAction<Action extends DefectAction>(
   const loaded = await loadDefect(db, defectId);
   if (!loaded) return undefined;
   const whyNot = defectActionRefusals(loaded.state, teamMember, await reopeningFacts(db, loaded.state))[action];
-  const offer = await defectFormOffer(db, loaded.state, teamMember, action, whyNot !== undefined);
+  const offer = await defectFormOffer(db, loaded.state, teamMember, action);
   return { ...loaded.state, version: loaded.version, whyNot, offer };
 }
 

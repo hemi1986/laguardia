@@ -28,10 +28,18 @@ export async function loadDefectForAssigning(
 ): Promise<DefectForAssigning | undefined> {
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "assign");
   if (!defect) return undefined;
-  const shown = await named(db, { machines: [defect.machineId], teamMembers: [defect.claim?.claimedBy] });
+  const { assignees } = defect.offer;
+  const shown = await named(db, {
+    machines: [defect.machineId],
+    teamMembers: [defect.claim?.claimedBy, ...assignees.map((assignee) => assignee.teamMemberId)],
+  });
   return {
     ...defectForForm(defect, shown),
     claimant: shownClaimant(defect.claim?.claimedBy, shown, viewer),
-    teamMembers: defect.offer.assignees,
+    teamMembers: assignees.map(({ teamMemberId, role }) => ({
+      id: teamMemberId,
+      name: shown.name(teamMemberId),
+      role,
+    })),
   };
 }
