@@ -446,6 +446,23 @@ the only way:
 - **The event catalogue per module** (`src/modules/<module>/events.ts`, `eventCatalogue` from the command layer; ST-079, architecture review 2026-10-17): per event type its aggregate and its projection – the aggregate ID, the machine and the only fields that reach the journal. Commands pass `<module>Events.journal`; `events.test.ts` next to each catalogue checks it against `events.yaml` (the event exists there, on its own aggregate or on that of a command producing it).
 - Read it typed with `readJournal(db, <module>Events, { types, aggregateIds, machineId, since, notBy })` – the data of each entry is typed by its projection (partial: older entries may lack a later field); `journalOf(db, { aggregateId } | { machineId })` stays for tests and untyped looks. It is never replayed to rebuild state.
 
+## The Last visit – per-member state that is no command (ST-050, ADR 0011)
+
+The one exception to "every write is a command that journals": opening the dashboard is no domain fact. The Team
+module keeps one row per team member (`dashboard_visit`: when the current visit began, the Last visit) and the pure
+rule `decideVisit(stored, now)` – one visit lasts while the dashboard is opened again within an hour of its beginning
+(user, 2026-10-24, decision 3: a table of its own with a conditional write, no `aggregateStore`, no `AGG-` ID).
+- **One writer, from the client:** `VisitRecorder` (`src/app/(team)/team/visit-recorder.tsx`) calls
+  `recordVisitAction` from a `useEffect` – never the page render, which also runs on a prefetch and on the re-render
+  after every Server Action. The action takes no input; whose visit it is comes from `currentPerson()` alone.
+- **The write keeps one visit:** `recordVisit` writes only when a visit begins – the first insert `ON CONFLICT DO
+  NOTHING`, a new visit only over the one it read – so a reload, a second tab or two devices at once change nothing twice.
+- **A dashboard reads, never writes:** its data function takes `lastVisitOf(db, clock, viewer.id)` – the same rule,
+  computed – and marks with `isNew(marks, at, by)` (`new-since-last-visit.ts`): after the Last visit and not the
+  viewer's own doing, by actor. The mark is `NewMark` („· neu seit deinem letzten Besuch“, G6a). Tested at the data
+  function with an open = render first, then `recordVisit` (`technician-dashboard-new.integration.test.ts`).
+- Not every Server Action goes through `formAction`: this one runs no command. Every other write still does.
+
 ## Version check (HS-16)
 
 Every aggregate table has `version integer not null default 0`; `aggregateStore` is the only place that reads or checks it. A page shows the version it loaded, and a command on an existing aggregate passes it in `target`. The layer then (Q11):
@@ -496,6 +513,7 @@ Never call `new Date()` in domain code – use the injected `Clock` (`src/platfo
 | "today", a Berlin calendar date (`YYYY-MM-DD`) | `today(clock)`, `calendarDate(instant)` |
 | "waiting longer than 3 days" (72 h), "older than 14 days" (336 h) | `elapsedMoreThanHours(since, now, hours)` |
 | where "the last 7 days" (168 h) start (ST-058) | `hoursBefore(instant, hours)` |
+| the earlier of two instants – 7 days back or the Last visit (ST-050) | `earlierOf(a, b)` |
 | month arithmetic, clamped to the month end | `addMonths(date, months)` |
 | due date and first overdue day of a maintenance task | `maintenanceDates(lastDone, months)` |
 | grace days from any start (e.g. the return to display, ST-056) | `graceDays(start, months)`, `addDays` |
@@ -593,7 +611,7 @@ Not tested at: internal helpers of a module, Drizzle queries in isolation, mocks
 - [ ] Scenario tests titled exactly, at the seams above; `npm run verify -- --e2e` green
 - [ ] Commands via `aggregateCommand` (load → decide → save), IDs from `events.yaml`, journal `data` without free text
 - [ ] No `new Date()` / `randomUUID()` in domain code; times via `time.ts`
-- [ ] Server Actions only through `formAction`; the actor only from `currentPerson()`
+- [ ] Server Actions only through `formAction` (the one exception: recording the Last visit, ADR 0011); the actor only from `currentPerson()`
 - [ ] Texts from the catalogs; new glossary terms in `CONTEXT.md` first
 - [ ] Only `index.ts` imported across modules
 - [ ] Migration generated and committed when `schema.ts` changed
