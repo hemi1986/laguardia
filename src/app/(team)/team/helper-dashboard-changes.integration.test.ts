@@ -282,4 +282,26 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain("Display flickers");
     expect(section).toContain("<li>Pausiert – Wartet auf Ersatzteil · vor 1 Tag</li>");
   });
+
+  it("ST-086: Change lines are listed newest first, each with when it happened", async () => {
+    const slingshot = await aDefect("Slingshot switch loose");
+    await slingshot.claim(anna, daysAgo(5));
+    await slingshot.logWork(tom, daysAgo(4));
+    await slingshot.changeDetails({ title: "Slingshot switch loose (left)" }, daysAgo(2));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("<li>Titel geändert · vor 2 Tagen</li><li>Neuer Arbeitsschritt von Tom · vor 4 Tagen</li>");
+  });
+
+  it("ST-086: Changes before her claim are not listed", async () => {
+    const slingshot = await aDefect("Slingshot switch loose");
+    await slingshot.changeDetails({ title: "Slingshot switch loose (left)" }, daysAgo(3));
+    await slingshot.claim(anna, daysAgo(2));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Slingshot switch loose (left)");
+    expect(section).not.toContain("Titel geändert");
+  });
 });
