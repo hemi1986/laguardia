@@ -38,7 +38,11 @@ test("ST-048: Returning a machine to play happens on the machine", async ({ page
 
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`${museumNumber} ist jetzt Spielbereit.`);
   await page.goto("/team");
-  await expect(page.getByRole("main")).not.toContainText(museumNumber);
+  // No longer one to return to play – and since ST-058 the change itself is among the recent changes.
+  await expect(entry.filter({ hasText: "kein offener Defekt" })).toHaveCount(0);
+  await expect(page.getByRole("main").locator("section").filter({ hasText: "Letzte Änderungen" })).toContainText(
+    `${museumNumber} Außer Betrieb → Spielbereit`,
+  );
 });
 
 test("ST-048: Helpers cannot open the technician dashboard", async ({ page }) => {
