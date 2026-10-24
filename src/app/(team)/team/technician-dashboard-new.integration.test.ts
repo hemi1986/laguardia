@@ -205,6 +205,49 @@ describe("new since the Last visit on the technician dashboard", () => {
     expect(html.match(/neu seit deinem letzten Besuch/g)).toHaveLength(1);
   });
 
+  it("ST-050: An action on the dashboard does not end the visit", async () => {
+    const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
+    await tomOpensHisDashboard("2026-06-09T18:00:00Z");
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: await aMachine("LG-042"), version: 0, machineStatus: "limited", reason: "Slow ball" },
+        { ...as("2026-06-10T09:00:00Z"), actor: ben },
+      ),
+    );
+    const lg043 = await aMachine("LG-043");
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: lg043, version: 0, machineStatus: "out-of-order", reason: "No power" },
+        { ...as("2026-06-10T08:00:00Z"), actor: ben },
+      ),
+    );
+    expect(
+      (await tomOpensHisDashboard("2026-06-10T12:00:00Z")).data.recentChanges.map((change) => change.newSinceLastVisit),
+    ).toEqual([true, true]);
+
+    // Tom returns LG-043 to play from his dashboard: the Server Action's response renders the dashboard again.
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: lg043, version: 1, machineStatus: "playable", reason: "Fuse replaced" },
+        as("2026-06-10T12:05:00Z"),
+      ),
+    );
+    const shownAgain = await tomsDashboard("2026-06-10T12:05:00Z");
+    // And he comes back to it from the machine's page.
+    const cameBack = await tomOpensHisDashboard("2026-06-10T12:10:00Z");
+
+    for (const { data } of [shownAgain, cameBack]) {
+      expect(data.recentChanges).toMatchObject([
+        { newStatus: "playable", by: "Tom", newSinceLastVisit: false },
+        { newStatus: "limited", by: "Ben", newSinceLastVisit: true },
+        { newStatus: "out-of-order", by: "Ben", newSinceLastVisit: true },
+      ]);
+    }
+  });
+
   it("ST-050: Technician dashboard reaches back to the last visit", async () => {
     // Eva is the technician whose dashboard this is – the Tom of this test.
     const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
