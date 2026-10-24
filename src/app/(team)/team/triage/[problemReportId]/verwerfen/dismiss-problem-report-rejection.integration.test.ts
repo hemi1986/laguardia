@@ -59,7 +59,11 @@ describe("a rejected „Meldung verwerfen“", () => {
   });
 
   it("asks for a reason, and for a description of the reason other, in the catalogue's words", async () => {
-    expect(triageRejectionText({ error: "dismissal-reason-required" })).toBe("Bitte einen Grund auswählen.");
-    expect(triageRejectionText({ error: "dismissal-reason-text-required" })).toBe("Bitte den Grund beschreiben.");
+    expect(triageRejectionText({ error: "dismissal-reason-required" })).toBe(
+      "Bitte einen Grund auswählen.",
+    );
+    expect(triageRejectionText({ error: "dismissal-reason-text-required" })).toBe(
+      "Bitte den Grund beschreiben.",
+    );
   });
 });

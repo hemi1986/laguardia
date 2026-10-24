@@ -11,7 +11,10 @@ export type PutDefectOnHoldField = (typeof putDefectOnHoldFields)[number];
  * Reads the form „Defekt pausieren“ (Q19): no validation, no default. No reason chosen – or an unknown one – is "no
  * reason given", which the command rejects; a version that is not a whole number is one nobody saw.
  */
-export function putDefectOnHoldInput(fields: FormFields<PutDefectOnHoldField>, defectId: string): PutDefectOnHoldInput {
+export function putDefectOnHoldInput(
+  fields: FormFields<PutDefectOnHoldField>,
+  defectId: string,
+): PutDefectOnHoldInput {
   return {
     defectId,
     version: versionSeen(fields.version),

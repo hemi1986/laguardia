@@ -63,10 +63,7 @@ describe("a problem report while the machine is retired", () => {
     expect(await second.reporting).toMatchObject({ ok: true });
     expect(await second.retiring).toMatchObject({ ok: true });
     const [dismissed] = await problemReportsOfMachine(db, lg014);
-    expect((await storedProblemReport(db, dismissed.id))?.triage).toMatchObject({
-      outcome: "dismissed",
-      dismissal: { reason: "machine-retired" },
-    });
+    expect((await storedProblemReport(db, dismissed.id))?.triage).toMatchObject({ outcome: "dismissed", dismissal: { reason: "machine-retired" } });
 
     for (const machineId of [lg013, lg014]) expect(await untriagedProblemReportCount(db, machineId)).toBe(0);
   });

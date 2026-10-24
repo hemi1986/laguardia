@@ -101,11 +101,7 @@ export const repairEvents = eventCatalogue({
   "EVT-DefectClosedOnRetirement": {
     aggregate: "AGG-Defect",
     // Run by the system (POL-RetirementClosesDefects); the retirement's reason stays in the machine.
-    project: (event: DefectClosedOnRetirement) => ({
-      aggregateId: event.defectId,
-      machineId: event.machineId,
-      data: {},
-    }),
+    project: (event: DefectClosedOnRetirement) => ({ aggregateId: event.defectId, machineId: event.machineId, data: {} }),
   },
   "EVT-DefectPutOnHold": {
     aggregate: "AGG-Defect",
