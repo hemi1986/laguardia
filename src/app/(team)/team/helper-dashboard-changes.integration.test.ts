@@ -10,9 +10,12 @@ import {
   changeDefectDetailsCommand,
   claimDefectCommand,
   logWorkCommand,
+  prioritizeDefectCommand,
+  putDefectOnHoldCommand,
   releaseClaimCommand,
   reportProblemAndTriageCommand,
   resolveDefectCommand,
+  resumeDefectCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
@@ -133,6 +136,10 @@ async function aDefect(title: string) {
       step(resolveDefectCommand, { closingNote: `${title} – fixed` }, by, when),
     logWork: (by: Person, when: Date) =>
       step(logWorkCommand, { whatWasDone: `Worked on ${title}`, partsUsed: "" }, by, when),
+    prioritize: (when: Date) => step(prioritizeDefectCommand, { priority: "high" as const }, tom, when),
+    putOnHold: (by: Person, when: Date) =>
+      step(putDefectOnHoldCommand, { reason: "waiting-for-part" as const }, by, when),
+    resume: (by: Person, when: Date) => step(resumeDefectCommand, {}, by, when),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -248,5 +255,20 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain("Slingshot switch loose (left)");
     expect(section).toContain("<li>Neuer Arbeitsschritt von Tom · vor 4 Tagen</li>");
     expect(section).toContain("<li>Titel geändert · vor 2 Tagen</li>");
+  });
+
+  it("ST-086: Priority changes and resuming are listed", async () => {
+    const display = await aDefect("Display flickers");
+    await display.claim(anna, daysAgo(5));
+    await display.prioritize(daysAgo(3));
+    await display.putOnHold(tom, daysAgo(2));
+    await display.resume(tom, hoursAgo(3));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Display flickers");
+    expect(section).toContain(
+      "<li>Fortgesetzt · vor 3 Stunden</li><li>Pausiert – Wartet auf Ersatzteil · vor 2 Tagen</li><li>Priorität: hoch · vor 3 Tagen</li>",
+    );
   });
 });

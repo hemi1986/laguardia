@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import { readJournal, type CatalogueEntry, type Database, type TeamMemberId } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
+import type { HoldReason, Priority } from "./defect";
 import { repairEvents } from "./events";
 import { defect } from "./schema";
 
@@ -13,7 +14,10 @@ export type ClaimedDefectChange =
   | { kind: "released"; by: string; markRemoved: boolean; at: Date }
   | { kind: "resolved"; by: string; at: Date }
   | { kind: "work-logged"; by: string; at: Date }
-  | { kind: "title-changed"; at: Date };
+  | { kind: "title-changed"; at: Date }
+  | { kind: "prioritized"; priority: Priority; at: Date }
+  | { kind: "put-on-hold"; reason: HoldReason; at: Date }
+  | { kind: "resumed"; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -37,6 +41,9 @@ const TRACKED = [
   "EVT-DefectClosedOnRetirement",
   "EVT-DefectDetailsChanged",
   "EVT-WorkLogged",
+  "EVT-DefectPrioritized",
+  "EVT-DefectPutOnHold",
+  "EVT-DefectResumed",
 ] as const;
 
 type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[number]>;
@@ -147,6 +154,19 @@ function changesSinceClaim(
         if (inClaim && entry.data.titleChanged && by !== teamMemberId) changes.push({ kind: "title-changed", at });
         break;
       }
+      case "EVT-DefectPrioritized": {
+        const { priority } = entry.data;
+        if (mine && priority && by !== teamMemberId) changes.push({ kind: "prioritized", priority, at });
+        break;
+      }
+      case "EVT-DefectPutOnHold": {
+        const { reason } = entry.data;
+        if (mine && reason && by !== teamMemberId) changes.push({ kind: "put-on-hold", reason, at });
+        break;
+      }
+      case "EVT-DefectResumed":
+        if (mine && by !== teamMemberId) changes.push({ kind: "resumed", at });
+        break;
       case "EVT-WorkLogged": {
         const loggedBy = entry.data.loggedBy ?? by;
         if (mine && loggedBy && loggedBy !== teamMemberId) changes.push({ kind: "work-logged", by: loggedBy, at });

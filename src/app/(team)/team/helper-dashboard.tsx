@@ -129,6 +129,12 @@ function changeText(change: ShownChange): string {
       return texts.changes.workLogged(change.by);
     case "title-changed":
       return texts.changes.titleChanged;
+    case "prioritized":
+      return texts.changes.prioritized(teamMessages.recordDefect.priorities[change.priority]);
+    case "put-on-hold":
+      return teamMessages.defects.onHold(teamMessages.defects.holdReasons[change.reason]);
+    case "resumed":
+      return texts.changes.resumed;
     case "released":
       return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
   }
