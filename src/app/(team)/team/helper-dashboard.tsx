@@ -121,5 +121,7 @@ function changeText(change: ShownChange): string {
   switch (change.kind) {
     case "taken-over":
       return texts.changes.takenOver(change.by);
+    case "assigned":
+      return texts.changes.assigned(change.by, change.to);
   }
 }

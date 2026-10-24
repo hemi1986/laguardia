@@ -59,6 +59,7 @@ export const dashboardTexts = {
     /** What changed on a claimed defect (ST-086, G25): who and what, then when in words – „vor …“ as the triage list counts. */
     changes: {
       takenOver: (by: string) => `${by} hat übernommen`,
+      assigned: (by: string, to: string) => `${by} hat ${to} zugewiesen`,
     },
     changed: (what: string, hoursAgo: number) =>
       `${what} · ${

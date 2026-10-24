@@ -110,10 +110,12 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
 
 /** The team members a change names. */
 function peopleOf(change: ClaimedDefectChange): string[] {
-  return [change.by];
+  return change.kind === "assigned" ? [change.by, change.to] : [change.by];
 }
 
 /** A change with its team members by name. */
 function named(change: DistributiveNamed<ClaimedDefectChange>, names: ReadonlyMap<string, string>) {
-  return { ...change, by: nameOf(names, change.by) };
+  return change.kind === "assigned"
+    ? { ...change, by: nameOf(names, change.by), to: nameOf(names, change.to) }
+    : { ...change, by: nameOf(names, change.by) };
 }

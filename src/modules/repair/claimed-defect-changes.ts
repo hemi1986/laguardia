@@ -6,7 +6,8 @@ import { repairEvents } from "./events";
 import { defect } from "./schema";
 
 /** One change by someone else on a defect the team member claimed (ST-086, G25) – who by ID; the page names them. */
-export type ClaimedDefectChange = { kind: "taken-over"; by: string; at: Date };
+export type ClaimedDefectChange =
+  { kind: "taken-over"; by: string; at: Date } | { kind: "assigned"; by: string; to: string; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -85,7 +86,12 @@ function changesSinceClaim(
         leftAt = undefined;
         changes = [];
       } else if (mine && claimedBy) {
-        changes.push({ kind: "taken-over", by: claimedBy, at: entry.occurredAt });
+        const assignedBy = entry.data.assignedBy;
+        changes.push(
+          assignedBy
+            ? { kind: "assigned", by: assignedBy, to: claimedBy, at: entry.occurredAt }
+            : { kind: "taken-over", by: claimedBy, at: entry.occurredAt },
+        );
         mine = false;
         leftAt = entry.occurredAt;
       }

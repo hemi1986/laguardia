@@ -120,6 +120,7 @@ async function aDefect(title: string) {
   };
   return {
     claim: (by: Person, when: Date) => step(claimDefectCommand, {}, by, when),
+    assign: (to: Person, when: Date) => step(claimDefectCommand, { assignTo: to.teamMemberId }, tom, when),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -160,5 +161,16 @@ describe("what changed on the helper's claimed defects", () => {
     expect(sectionOne(html)).toContain("Ben hat übernommen");
     expect(html).not.toContain("Du hast keinen Defekt übernommen.");
     expect(html).not.toContain("Gerade ist nichts für dich offen.");
+  });
+
+  it("ST-086: Helper sees that her claimed defect was assigned to someone else", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.assign(ben, daysAgo(1));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Rubber cracked");
+    expect(section).toContain("Tom hat Ben zugewiesen · vor 1 Tag");
   });
 });
