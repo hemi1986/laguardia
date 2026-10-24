@@ -10,10 +10,10 @@ import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-d
 import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
 
 /** A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, and how many hours ago. */
-export type ShownChange = DistributiveNamed<ClaimedDefectChange> & { hoursAgo: number };
+export type ShownChange = WithoutTime<ClaimedDefectChange> & { hoursAgo: number };
 
-// Every "who" of a change – `by`, `to` – by name instead of by ID; `at` becomes `hoursAgo`.
-type DistributiveNamed<Change> = Change extends unknown ? Omit<Change, "at"> : never;
+// A change without its point in time, kept apart per kind; its "who" – `by`, `to` – holds names on the page.
+type WithoutTime<Change> = Change extends unknown ? Omit<Change, "at"> : never;
 
 /** A defect in section 1 – one the helper claims, or one that left them in the last 7 days (ST-086). */
 export type ClaimedByYouItem = {
@@ -114,7 +114,7 @@ function peopleOf(change: ClaimedDefectChange): string[] {
 }
 
 /** A change with its team members by name. */
-function named(change: DistributiveNamed<ClaimedDefectChange>, names: ReadonlyMap<string, string>) {
+function named(change: WithoutTime<ClaimedDefectChange>, names: ReadonlyMap<string, string>) {
   return {
     ...change,
     ...("by" in change ? { by: nameOf(names, change.by) } : {}),

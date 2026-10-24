@@ -1,5 +1,7 @@
+import { elapsedInWords } from "./shared";
+
 /**
- * The dashboards' texts (ST-048, ST-049, ST-058) – it shows what several contexts answer.
+ * The dashboards' texts (ST-048, ST-049, ST-058, ST-086) – it shows what several contexts answer.
  */
 export const dashboardTexts = {
   /** The technician dashboard (ST-048): what needs a technician right now, in words (G6, G6a, G7). */
@@ -68,13 +70,6 @@ export const dashboardTexts = {
       released: (by: string) => `${by} hat die Übernahme aufgehoben`,
       releasedByRemovingTheMark: (by: string) => `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
     },
-    changed: (what: string, hoursAgo: number) =>
-      `${what} · ${
-        hoursAgo < 1
-          ? "vor weniger als 1 Stunde"
-          : hoursAgo < 24
-            ? `vor ${hoursAgo} ${hoursAgo === 1 ? "Stunde" : "Stunden"}`
-            : `vor ${Math.floor(hoursAgo / 24)} ${Math.floor(hoursAgo / 24) === 1 ? "Tag" : "Tagen"}`
-      }`,
+    changed: (what: string, hoursAgo: number) => `${what} · vor ${elapsedInWords(hoursAgo)}`,
   },
 } as const;

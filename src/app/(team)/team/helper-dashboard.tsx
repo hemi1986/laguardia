@@ -62,6 +62,9 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
   );
 }
 
+/** A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant. */
+type ListedDefect = ClaimedByYouItem | OpenDefectsItem;
+
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
 function DefectsSection({
   title,
@@ -70,8 +73,7 @@ function DefectsSection({
 }: {
   title: string;
   none: string;
-  defects: (Pick<OpenDefectsItem, "id" | "title" | "museumNumber" | "machineModelTitle"> &
-    Partial<Pick<OpenDefectsItem, "claimant"> & Pick<ClaimedByYouItem, "changes">>)[];
+  defects: ListedDefect[];
 }) {
   return (
     <section>
@@ -94,11 +96,11 @@ function DefectsSection({
                       {defect.museumNumber} · {defect.machineModelTitle}
                     </p>
                     {/* Someone else's claim is only a signal (HS-8) – a helper may still take the defect on. */}
-                    {defect.claimant && !defect.claimant.you && (
+                    {"claimant" in defect && defect.claimant && !defect.claimant.you && (
                       <p className="text-muted-foreground">{claimantText(defect.claimant)}</p>
                     )}
                     {/* What others changed since the helper claimed it, newest first (ST-086, G25). */}
-                    {defect.changes && defect.changes.length > 0 && (
+                    {"changes" in defect && defect.changes.length > 0 && (
                       <ul className="flex flex-col gap-1">
                         {defect.changes.map((change, index) => (
                           <li key={index}>{texts.changed(changeText(change), change.hoursAgo)}</li>
