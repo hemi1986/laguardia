@@ -187,7 +187,7 @@ describe("the technician dashboard", () => {
 
     const { data, html } = await dashboard();
 
-    expect(data.problemReports).toEqual({ untriaged: 3, waitingLong: 1 });
+    expect(data.problemReports).toEqual({ untriaged: 3, waitingLong: 1, newSinceLastVisit: 0 });
     expect(html).toContain("3 Meldungen warten auf die Sichtung – 1 davon länger als 3 Tage.");
   });
 
