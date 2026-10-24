@@ -304,4 +304,34 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain("Slingshot switch loose (left)");
     expect(section).not.toContain("Titel geändert");
   });
+
+  it("ST-086: A claimed defect without changes has no change lines", async () => {
+    const slingshot = await aDefect("Slingshot switch loose");
+    await slingshot.claim(anna, daysAgo(2));
+
+    const { data, html } = await dashboard();
+
+    expect(data.claimedByYou.map(({ title, changes }) => ({ title, changes }))).toEqual([
+      { title: "Slingshot switch loose", changes: [] },
+    ]);
+    // As ST-049 lists it: title and machine, nothing under them.
+    expect(sectionOne(html)).toMatch(/Slingshot switch loose<\/a><p class="text-muted-foreground">LG-\d+ · Medieval Madness<\/p><\/article>/);
+  });
+
+  it("ST-086: Her own actions are never listed as changes", async () => {
+    const slingshot = await aDefect("Slingshot switch loose");
+    await slingshot.claim(anna, daysAgo(3));
+    await slingshot.logWork(anna, daysAgo(2));
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(3));
+    await rubber.release(anna, daysAgo(1));
+
+    const { data, html } = await dashboard();
+
+    expect(data.claimedByYou.map(({ title, changes }) => ({ title, changes }))).toEqual([
+      { title: "Slingshot switch loose", changes: [] },
+    ]);
+    expect(sectionOne(html)).not.toContain("Arbeitsschritt");
+    expect(sectionOne(html)).not.toContain("Rubber cracked");
+  });
 });
