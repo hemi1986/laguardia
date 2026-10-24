@@ -16,6 +16,7 @@ import {
   reportProblemAndTriageCommand,
   resolveDefectCommand,
   resumeDefectCommand,
+  retireMachineCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
@@ -140,6 +141,14 @@ async function aDefect(title: string) {
     putOnHold: (by: Person, when: Date) =>
       step(putDefectOnHoldCommand, { reason: "waiting-for-part" as const }, by, when),
     resume: (by: Person, when: Date) => step(resumeDefectCommand, {}, by, when),
+    retireMachine: (when: Date) =>
+      run(
+        executeCommand(
+          retireMachineCommand,
+          { machineId, version: 0, reason: "Sold to a collector" },
+          { actor: tom, db, clock: fixedClock(when), newId: randomUUID },
+        ),
+      ),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -333,5 +342,42 @@ describe("what changed on the helper's claimed defects", () => {
     ]);
     expect(sectionOne(html)).not.toContain("Arbeitsschritt");
     expect(sectionOne(html)).not.toContain("Rubber cracked");
+  });
+
+  it("starts the lines again when she claims a defect back that left her", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.claim(ben, daysAgo(4));
+    await rubber.claim(anna, daysAgo(3));
+    await rubber.logWork(tom, daysAgo(1));
+
+    const { data } = await dashboard();
+
+    // Once, as her claim – not a second time as a defect that left her, and without the old takeover.
+    expect(data.claimedByYou.map(({ title, changes }) => ({ title, changes }))).toEqual([
+      { title: "Rubber cracked", changes: [{ kind: "work-logged", by: "Tom", hoursAgo: 24 }] },
+    ]);
+  });
+
+  it("lists a new title given in the same step that removes the mark, above the release", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.changeDetails({ title: "Rubber cracked (left)", suitableForHelpers: false }, daysAgo(2));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain(
+      "<li>Titel geändert · vor 2 Tagen</li><li>Tom hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet · vor 2 Tagen</li>",
+    );
+  });
+
+  it("no longer lists a claimed defect closed with its machine's retirement", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.retireMachine(daysAgo(1));
+
+    const { data } = await dashboard();
+
+    expect(data.claimedByYou).toEqual([]);
   });
 });
