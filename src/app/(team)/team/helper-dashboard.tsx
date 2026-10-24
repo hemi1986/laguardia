@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { claimantText } from "./claimant";
 import type { OpenDefectsItem } from "./defects/open-defects-data";
-import type { HelperDashboardData } from "./helper-dashboard-data";
+import type { ClaimedByYouItem, HelperDashboardData, ShownChange } from "./helper-dashboard-data";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
 
 const { helperDashboard: texts, dueMaintenance: dueMaintenanceTexts } = teamMessages;
@@ -62,8 +62,19 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
   );
 }
 
+/** A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant. */
+type ListedDefect = ClaimedByYouItem | OpenDefectsItem;
+
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
-function DefectsSection({ title, none, defects }: { title: string; none: string; defects: OpenDefectsItem[] }) {
+function DefectsSection({
+  title,
+  none,
+  defects,
+}: {
+  title: string;
+  none: string;
+  defects: ListedDefect[];
+}) {
   return (
     <section>
       <Card>
@@ -85,8 +96,16 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
                       {defect.museumNumber} · {defect.machineModelTitle}
                     </p>
                     {/* Someone else's claim is only a signal (HS-8) – a helper may still take the defect on. */}
-                    {defect.claimant && !defect.claimant.you && (
+                    {"claimant" in defect && defect.claimant && !defect.claimant.you && (
                       <p className="text-muted-foreground">{claimantText(defect.claimant)}</p>
+                    )}
+                    {/* What others changed since the helper claimed it, newest first (ST-086, G25). */}
+                    {"changes" in defect && defect.changes.length > 0 && (
+                      <ul className="flex flex-col gap-1">
+                        {defect.changes.map((change, index) => (
+                          <li key={index}>{texts.changed(changeText(change), change.hoursAgo)}</li>
+                        ))}
+                      </ul>
                     )}
                   </article>
                 </li>
@@ -97,4 +116,28 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
       </Card>
     </section>
   );
+}
+
+/** Who did what to a claimed defect, in the words of G25 (ST-086). */
+function changeText(change: ShownChange): string {
+  switch (change.kind) {
+    case "taken-over":
+      return texts.changes.takenOver(change.by);
+    case "assigned":
+      return texts.changes.assigned(change.by, change.to);
+    case "resolved":
+      return texts.changes.resolved(change.by);
+    case "work-logged":
+      return texts.changes.workLogged(change.by);
+    case "title-changed":
+      return texts.changes.titleChanged;
+    case "prioritized":
+      return texts.changes.prioritized(teamMessages.recordDefect.priorities[change.priority]);
+    case "put-on-hold":
+      return teamMessages.defects.onHold(teamMessages.defects.holdReasons[change.reason]);
+    case "resumed":
+      return texts.changes.resumed;
+    case "released":
+      return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
+  }
 }

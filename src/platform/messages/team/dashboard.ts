@@ -1,5 +1,7 @@
+import { elapsedInWords } from "./shared";
+
 /**
- * The dashboards' texts (ST-048, ST-049, ST-058) – it shows what several contexts answer.
+ * The dashboards' texts (ST-048, ST-049, ST-058, ST-086) – it shows what several contexts answer.
  */
 export const dashboardTexts = {
   /** The technician dashboard (ST-048): what needs a technician right now, in words (G6, G6a, G7). */
@@ -56,5 +58,18 @@ export const dashboardTexts = {
           }.`,
     openDueMaintenance: "Zur Wartung",
     nothingOpen: "Gerade ist nichts für dich offen.",
+    /** What changed on a claimed defect (ST-086, G25): who and what, then when in words – „vor …“ as the triage list counts. */
+    changes: {
+      takenOver: (by: string) => `${by} hat übernommen`,
+      assigned: (by: string, to: string) => `${by} hat ${to} zugewiesen`,
+      workLogged: (by: string) => `Neuer Arbeitsschritt von ${by}`,
+      titleChanged: "Titel geändert",
+      prioritized: (priority: string) => `Priorität: ${priority}`,
+      resumed: "Fortgesetzt",
+      resolved: (by: string) => `Behoben von ${by}`,
+      released: (by: string) => `${by} hat die Übernahme aufgehoben`,
+      releasedByRemovingTheMark: (by: string) => `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
+    },
+    changed: (what: string, hoursAgo: number) => `${what} · vor ${elapsedInWords(hoursAgo)}`,
   },
 } as const;

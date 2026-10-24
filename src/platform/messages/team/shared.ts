@@ -58,6 +58,17 @@ export const sharedTexts = {
 } as const;
 
 /**
+ * How long ago or since when, in words, after „vor“ or „seit“ (G6): under an hour, whole hours under a day, then whole
+ * days – the triage list's waiting time (ST-017) and a dashboard's change lines (ST-086) count alike.
+ */
+export function elapsedInWords(hours: number): string {
+  if (hours < 1) return "weniger als 1 Stunde";
+  if (hours < 24) return `${hours} ${hours === 1 ? "Stunde" : "Stunden"}`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "Tag" : "Tagen"}`;
+}
+
+/**
  * Texts of rejected commands whose codes several areas produce, keyed by their kebab-case error code – an area's own
  * codes are in its file. A code a second area starts to produce moves here.
  */

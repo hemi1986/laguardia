@@ -1,4 +1,4 @@
-import { sharedTexts } from "./shared";
+import { elapsedInWords, sharedTexts } from "./shared";
 
 /**
  * The team UI's texts of the Repair context (BC-Repair): problem reports and their triage, defects, the repair
@@ -27,12 +27,7 @@ export const repairTexts = {
       count === 1 ? "1 Meldung wartet auf die Sichtung." : `${count} Meldungen warten auf die Sichtung.`,
     nothing: "Nichts wartet auf die Sichtung – alle Meldungen sind gesichtet.",
     /** How long a problem report has been waiting, in words (G6). */
-    waitingFor: (hours: number) =>
-      hours < 1
-        ? "wartet seit weniger als 1 Stunde"
-        : hours < 24
-          ? `wartet seit ${hours} ${hours === 1 ? "Stunde" : "Stunden"}`
-          : `wartet seit ${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "Tag" : "Tagen"}`,
+    waitingFor: (hours: number) => `wartet seit ${elapsedInWords(hours)}`,
     /** Waiting longer than 3 days (HS-2) – said in words, not only by a colour (G6a). */
     longWait: "Wartet länger als 3 Tage",
     reportedBy: "Gemeldet von",
