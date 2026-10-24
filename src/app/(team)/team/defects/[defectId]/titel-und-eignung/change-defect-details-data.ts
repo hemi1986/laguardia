@@ -1,8 +1,8 @@
 import { claimReleasedByRemovingTheMark, defectForAction } from "@/modules/repair";
-import { teamMemberRole, teamMemberNames } from "@/modules/team";
-import { machineLabels } from "@/modules/collection";
+import { teamMemberRole } from "@/modules/team";
 import type { Database } from "@/platform/command";
-import { nameOf, type Viewer } from "../../../claimant";
+import type { Viewer } from "../../../claimant";
+import { named } from "../../../named";
 import { defectForForm, type DefectForForm } from "../defect-form-data";
 
 /** What the form page „Titel und Eignung ändern“ shows (ST-031): the defect with its title and mark as they are now. */
@@ -25,14 +25,15 @@ export async function loadDefectForChangingDetails(
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "change-details");
   if (!defect) return undefined;
   const claimant = defect.claim?.claimedBy;
-  const [machines, claimantRole] = await Promise.all([
-    machineLabels(db, [defect.machineId]),
+  // Only the claimant's claim can be released, so naming the claimant names whom it would be.
+  const [shown, claimantRole] = await Promise.all([
+    named(db, { machines: [defect.machineId], teamMembers: [claimant] }),
     claimant ? teamMemberRole(db, claimant) : undefined,
   ]);
   const released = claimReleasedByRemovingTheMark(defect, claimantRole);
   return {
-    ...defectForForm(defect, machines.get(defect.machineId)),
+    ...defectForForm(defect, shown),
     suitableForHelpers: defect.suitableForHelpers,
-    releasesClaimOf: released && nameOf(await teamMemberNames(db, [released]), released),
+    releasesClaimOf: released && shown.name(released),
   };
 }

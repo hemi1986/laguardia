@@ -504,6 +504,17 @@ machine record (`src/app/(team)/team/machines/[museumNumber]/machine-record-data
 other, and there is no database view across modules. A module offers such a query as narrow as the page needs (names
 by ID, not its table). Don't import another module's `schema.ts`.
 
+**Naming what read models return by ID** (architecture review 2026-10-25): a team page names the team members and
+machines its read models refer to only through `named(db, ...parts)` (`src/app/(team)/team/named.ts`) – Team's
+`teamMemberNames` and Collection's `machineLabels` in one round for all parts of the page, each part a `References`
+(`{ teamMembers, machines }`, missing IDs left out; `openDefectReferences(defects)` for open defects). Its `name(id)`
+says „unbekannt“ for an account that is gone – the one rule; its `label(id)` throws for a machine that is not there,
+because read models only return registered machines (foreign keys) – a bug, never a blank. Shared shapes take the
+result, not the database: `shownOpenDefects(clock, defects, named, viewer)`, `shownClaimant`, `shownReporter`,
+`defectForForm`. An ID that comes from the address or a form is no read-model result: the page checks it where it
+reads it (`machineIdOf`, `isId`) and labels it with `machineLabels` itself, where a missing machine is a case to show,
+not a bug (`due-maintenance-data.ts`, `record-maintenance-data.ts`, `address-after-recording.ts`).
+
 ## Time and time-based rules
 
 Never call `new Date()` in domain code – use the injected `Clock` (`src/platform/clock.ts`; `systemClock` in production, `fixedClock("2026-…Z")` in tests). All calendar logic goes through `src/platform/time.ts`:

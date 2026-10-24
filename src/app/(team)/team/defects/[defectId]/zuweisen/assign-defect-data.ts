@@ -1,8 +1,8 @@
-import { machineLabels } from "@/modules/collection";
 import { assigneeRefusal, defectForAction } from "@/modules/repair";
-import { activeTeamMembers, teamMemberNames, type ActiveTeamMember } from "@/modules/team";
+import { activeTeamMembers, type ActiveTeamMember } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../../claimant";
+import { named } from "../../../named";
 import { defectForForm, type DefectForForm } from "../defect-form-data";
 
 /** What the form page „Defekt zuweisen“ shows (ST-026): the defect, who has it now, and whom it can be assigned to. */
@@ -29,14 +29,13 @@ export async function loadDefectForAssigning(
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "assign");
   if (!defect) return undefined;
   const { whyNot } = defect;
-  const [machines, names, active] = await Promise.all([
-    machineLabels(db, [defect.machineId]),
-    teamMemberNames(db, defect.claim ? [defect.claim.claimedBy] : []),
+  const [shown, active] = await Promise.all([
+    named(db, { machines: [defect.machineId], teamMembers: [defect.claim?.claimedBy] }),
     whyNot ? [] : activeTeamMembers(db),
   ]);
   return {
-    ...defectForForm(defect, machines.get(defect.machineId)),
-    claimant: shownClaimant(defect.claim?.claimedBy, names, viewer),
+    ...defectForForm(defect, shown),
+    claimant: shownClaimant(defect.claim?.claimedBy, shown, viewer),
     teamMembers: active.filter(
       ({ id, role }) => id !== viewer.id && assigneeRefusal(defect, { teamMemberId: id, role }) === undefined,
     ),

@@ -1,10 +1,10 @@
-import { machineIdOf, machineLabels } from "@/modules/collection";
+import { machineIdOf } from "@/modules/collection";
 import { openDefects, priorities, type HoldReason, type OpenDefect, type Priority } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
-import { nameOf, shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
+import { shownClaimant, type ShownClaimant, type Viewer } from "../claimant";
+import { named, type Named, type References } from "../named";
 
 /** What the open defects list is narrowed to (ST-021) – all optional, they combine. */
 export type OpenDefectsFilter = {
@@ -94,59 +94,50 @@ export async function loadOpenDefects(
           onHold: filter.onHold,
         }),
   ]);
-  const [entries, labels] = await Promise.all([
-    shownOpenDefects(db, clock, matching, viewer),
-    machineLabels(
-      db,
-      all.map((defect) => defect.machineId),
-    ),
-  ]);
+  const shown = await named(db, openDefectReferences(matching), { machines: all.map((defect) => defect.machineId) });
   return {
-    entries,
+    entries: shownOpenDefects(clock, matching, shown, viewer),
     total: all.length,
-    machines: [...labels.values()].sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
+    machines: [...new Set(all.map((defect) => defect.machineId))]
+      .map(shown.label)
+      .sort((a, b) => a.museumNumber.localeCompare(b.museumNumber)),
     filter,
+  };
+}
+
+/** The team members and machines open defects refer to – for the page's `named`. */
+export function openDefectReferences(defects: readonly OpenDefect[]): References {
+  return {
+    machines: defects.map((defect) => defect.machineId),
+    teamMembers: defects.flatMap((defect) => [defect.claimedBy, defect.lastWorkLogEntry?.loggedBy]),
   };
 }
 
 /**
  * Open defects as the team sees them (RM-OpenDefects, ST-021) – with Collection's museum numbers and titles and Team's
- * names, and how long each has been open, computed when the page loads. Shared by the open defects list and the
- * machine record's open defects (ST-033), so both say the same facts in the same words.
+ * names (`named`, over at least `openDefectReferences(defects)`), and how long each has been open, computed when the
+ * page loads. Shared by the open defects list, the machine record's open defects (ST-033) and the helper dashboard, so
+ * all say the same facts in the same words.
  */
-export async function shownOpenDefects(
-  db: Database,
+export function shownOpenDefects(
   clock: Clock,
-  defects: OpenDefect[],
+  defects: readonly OpenDefect[],
+  shown: Named,
   viewer?: Viewer,
-): Promise<OpenDefectsItem[]> {
-  const [labels, names] = await Promise.all([
-    machineLabels(
-      db,
-      defects.map((defect) => defect.machineId),
-    ),
-    teamMemberNames(
-      db,
-      defects.flatMap((defect) => [
-        ...(defect.claimedBy ? [defect.claimedBy] : []),
-        ...(defect.lastWorkLogEntry ? [defect.lastWorkLogEntry.loggedBy] : []),
-      ]),
-    ),
-  ]);
+): OpenDefectsItem[] {
   const now = today(clock);
   return defects.map((defect) => ({
     id: defect.id,
-    museumNumber: labels.get(defect.machineId)?.museumNumber ?? "",
-    machineModelTitle: labels.get(defect.machineId)?.machineModelTitle ?? "",
+    ...shown.label(defect.machineId),
     title: defect.title,
     priority: defect.priority,
     suitableForHelpers: defect.suitableForHelpers,
     openSince: defect.openSince,
     openDays: daysBetween(calendarDate(defect.openSince), now),
     linkedProblemReports: defect.linkedProblemReports,
-    claimant: shownClaimant(defect.claimedBy, names, viewer),
+    claimant: shownClaimant(defect.claimedBy, shown, viewer),
     lastWorkLogEntry: defect.lastWorkLogEntry && {
-      loggedBy: nameOf(names, defect.lastWorkLogEntry.loggedBy),
+      loggedBy: shown.name(defect.lastWorkLogEntry.loggedBy),
       loggedAt: defect.lastWorkLogEntry.loggedAt,
     },
     holdReason: defect.hold?.reason,

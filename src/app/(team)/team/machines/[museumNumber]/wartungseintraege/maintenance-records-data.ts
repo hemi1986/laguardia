@@ -1,8 +1,8 @@
-import { machineIdOf, machineLabels } from "@/modules/collection";
+import { machineIdOf } from "@/modules/collection";
 import { maintenanceRecords } from "@/modules/maintenance";
-import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { named } from "../../../named";
 import type { ShownMaintenanceRecord } from "../machine-record-data";
 
 export type AllMaintenanceRecordsData = {
@@ -24,14 +24,13 @@ export async function loadAllMaintenanceRecords(
   // A retired machine keeps its maintenance records.
   const machineId = await machineIdOf(db, museumNumber, { retiredToo: true });
   if (!machineId) return undefined;
-  const [labels, records] = await Promise.all([machineLabels(db, [machineId]), maintenanceRecords(db, { machineId })]);
-  const label = labels.get(machineId);
-  if (!label) return undefined;
-  const names = await teamMemberNames(db, [...new Set(records.map((record) => record.recordedBy))]);
+  const records = await maintenanceRecords(db, { machineId });
+  const shownBy = await named(db, { machines: [machineId], teamMembers: records.map((record) => record.recordedBy) });
+  const label = shownBy.label(machineId);
   const years: AllMaintenanceRecordsData["years"] = [];
   for (const record of records) {
     const year = record.date.slice(0, 4);
-    const shown = { ...record, recordedBy: names.get(record.recordedBy) };
+    const shown = { ...record, recordedBy: shownBy.name(record.recordedBy) };
     if (years.at(-1)?.year === year) years.at(-1)!.records.push(shown);
     else years.push({ year, records: [shown] });
   }

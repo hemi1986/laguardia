@@ -49,6 +49,11 @@ export const sharedTexts = {
     defects: "Defekte",
     ownPassword: "Passwort ändern",
   },
+  /** How a page names who did something (architecture review 2026-10-25). */
+  names: {
+    /** A team member whose account is gone. */
+    unknownTeamMember: "unbekannt",
+  },
   /** Texts every form on the form runner shares (architecture review 2026-10-17). */
   forms: {
     /**

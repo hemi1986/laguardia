@@ -45,6 +45,7 @@ export {
   holdAgainstRetirement,
   machineIdOf,
   machineLabels,
+  type MachineLabel,
   machineForMaintenance,
   machinesForMaintenance,
   type MachineForMaintenance,

@@ -59,7 +59,7 @@ export function MachineRecordView({
         <p className="font-medium">
           {texts.retired(
             formatDateTime(record.retirement.retiredAt),
-            record.retirement.retiredBy ?? texts.unknownTeamMember,
+            record.retirement.retiredBy,
             record.retirement.reason,
           )}
         </p>
@@ -266,15 +266,13 @@ function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) 
         {repair.kind === "defect" ? texts.defectResolved : terms["Resolved on the spot"]}
       </p>
       <p className="whitespace-pre-line">{repair.note}</p>
-      <p className="text-muted-foreground">
-        {texts.whoAndWhen(repair.resolvedBy ?? texts.unknownTeamMember, formatDateTime(repair.resolvedAt))}
-      </p>
+      <p className="text-muted-foreground">{texts.whoAndWhen(repair.resolvedBy, formatDateTime(repair.resolvedAt))}</p>
     </article>
   );
 }
 
 function StatusChangeEntry({ change }: { change: NamedStatusChange }) {
-  const who = change.changedBy ?? texts.unknownTeamMember;
+  const who = change.changedBy;
   const when = formatDateTime(change.changedAt);
   if (!change.previousStatus) {
     return (
