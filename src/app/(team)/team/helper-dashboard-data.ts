@@ -1,7 +1,6 @@
 import { machinesForMaintenance } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { changesOnClaimedDefects, openDefects, type ClaimedDefectChange } from "@/modules/repair";
-import { lastVisitOf } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { elapsedHours } from "@/platform/time";
@@ -9,7 +8,7 @@ import type { Viewer } from "./claimant";
 import { openDefectReferences, shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
 import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
 import { named, type Named } from "./named";
-import { isNew, type MarkLine } from "./new-since-last-visit";
+import { isNew, markLineOf, recentSince } from "./new-since-last-visit";
 
 /**
  * A change on a claimed defect as section 1 says it (ST-086, G25) – who by name, how many hours ago, and whether it is
@@ -54,14 +53,15 @@ export type HelperDashboardData = {
  * tasks on Collection's machines – the page composes (ST-009) –, computed when it is opened (ADR 0002).
  */
 export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Viewer): Promise<HelperDashboardData> {
-  const [lastVisit, claimed, suitable, due, changed] = await Promise.all([
-    lastVisitOf(db, clock, viewer.id),
+  // A defect that left the helper stays listed for the last 7 days – this dashboard does not reach back further.
+  const { since } = recentSince(clock);
+  const [marks, claimed, suitable, due, changed] = await Promise.all([
+    markLineOf(db, clock, viewer),
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
     machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
-    changesOnClaimedDefects(db, clock, viewer.id),
+    changesOnClaimedDefects(db, since, viewer.id),
   ]);
-  const marks: MarkLine = { viewer, lastVisit };
   const left = changed
     .flatMap((defect) => (defect.leftAt ? [{ ...defect, leftAt: defect.leftAt }] : []))
     .sort((a, b) => b.leftAt.getTime() - a.leftAt.getTime());
