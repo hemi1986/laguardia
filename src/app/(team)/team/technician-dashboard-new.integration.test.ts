@@ -248,6 +248,36 @@ describe("new since the Last visit on the technician dashboard", () => {
     }
   });
 
+  it("a render that is no visit – a prefetch, the re-render after an action – does not move the Last visit (ADR 0011)", async () => {
+    const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
+    await tomOpensHisDashboard("2026-06-10T12:00:00Z");
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: await aMachine("LG-042"), version: 0, machineStatus: "limited", reason: "Slow ball" },
+        { ...as("2026-06-10T13:00:00Z"), actor: ben },
+      ),
+    );
+    // More than an hour after the visit began – had this render recorded a visit, the Last visit would be 13:30.
+    await tomsDashboard("2026-06-10T13:30:00Z");
+
+    const { data } = await tomOpensHisDashboard("2026-06-10T14:45:00Z");
+
+    expect(data.recentChanges).toMatchObject([{ by: "Ben", newSinceLastVisit: true }]);
+  });
+
+  it("two devices opening the dashboard for the first time at the same moment begin one visit", async () => {
+    await aProblemReport(await aMachine("LG-042"), "2026-06-10T10:00:00Z");
+
+    await Promise.all([
+      recordVisit(db, fixedClock("2026-06-10T12:00:00Z"), tom.teamMemberId),
+      recordVisit(db, fixedClock("2026-06-10T12:00:01Z"), tom.teamMemberId),
+    ]);
+
+    // Neither failed, and whichever wrote first began the visit: the report from before it is not new.
+    expect((await tomsDashboard("2026-06-10T12:20:00Z")).data.problemReports.newSinceLastVisit).toBe(0);
+  });
+
   it("ST-050: Technician dashboard reaches back to the last visit", async () => {
     // Eva is the technician whose dashboard this is – the Tom of this test.
     const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
