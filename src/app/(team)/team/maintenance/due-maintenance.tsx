@@ -34,6 +34,15 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
           )}
           <p className="text-sm">{texts.counts(chosen.machines.length, chosen.overdueCount)}</p>
         </div>
+        {/* One action for a whole hall (ST-045) – offered to whoever may record the task (G11). */}
+        {chosen.machines.some((machine) => machine.recordOffered) && (
+          <Link
+            href={`/team/maintenance/mehrere?task=${encodeURIComponent(chosen.id)}`}
+            className={buttonVariants({ variant: "outline", className: "self-start" })}
+          >
+            {severalTexts.start}
+          </Link>
+        )}
         <ol className="flex flex-col gap-4">
           {chosen.machines.map((machine) => (
             <li key={machine.machineId}>
