@@ -161,7 +161,9 @@ describe("the helper dashboard", () => {
 
     const { data, html } = await dashboard();
 
-    expect(data.dueMaintenance).toEqual([{ name: "Clean glass (inside & out)", machineCount: 3, overdueCount: 1 }]);
+    expect(data.dueMaintenance).toEqual([
+      { id: expect.any(String), name: "Clean glass (inside & out)", machineCount: 3, overdueCount: 1 },
+    ]);
     expect(html).toContain("„Clean glass (inside &amp; out)“ ist an 3 Geräten fällig, 1 davon überfällig.");
     expect(html).not.toContain("Check fuses");
     expect(html).toMatch(/<a [^>]*href="\/team\/maintenance\?helpers=1"[^>]*>Zur Wartung<\/a>/);
@@ -209,5 +211,16 @@ describe("the helper dashboard", () => {
     expect(data.suitableForHelpers).toEqual([]);
     expect(data.claimedByYou).toEqual([]);
     expect(html).not.toContain("Rubber cracked");
+  });
+
+  it("keeps a defect someone else claims among the defects suitable for helpers, saying who claims it", async () => {
+    const defectId = await anOpenDefect("Rubber cracked", { suitableForHelpers: true });
+    await run(executeCommand(claimDefectCommand, { defectId, version: 0 }, as(NOW)));
+
+    const { data, html } = await dashboard();
+
+    expect(data.claimedByYou).toEqual([]);
+    expect(data.suitableForHelpers.map((defect) => defect.title)).toEqual(["Rubber cracked"]);
+    expect(html.indexOf("Rubber cracked")).toBeLessThan(html.indexOf("Übernommen von Tom"));
   });
 });

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
+import { claimantText } from "./claimant";
 import type { OpenDefectsItem } from "./defects/open-defects-data";
 import type { HelperDashboardData } from "./helper-dashboard-data";
+import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
 
 const { helperDashboard: texts, dueMaintenance: dueMaintenanceTexts } = teamMessages;
 
@@ -38,11 +40,11 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
               <>
                 <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
                   {dueMaintenance.map((task) => (
-                    <li key={task.name}>{texts.due(task.name, task.machineCount, task.overdueCount)}</li>
+                    <li key={task.id}>{texts.due(task.name, task.machineCount, task.overdueCount)}</li>
                   ))}
                 </ul>
                 <Link
-                  href="/team/maintenance?helpers=1"
+                  href={dueMaintenanceAddress({ suitableForHelpers: true })}
                   className={buttonVariants({ variant: "outline", className: "self-start" })}
                 >
                   {texts.openDueMaintenance}
@@ -78,6 +80,10 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
                     <p className="text-muted-foreground">
                       {defect.museumNumber} · {defect.machineModelTitle}
                     </p>
+                    {/* Someone else's claim is only a signal (HS-8) – a helper may still take the defect on. */}
+                    {defect.claimant && !defect.claimant.you && (
+                      <p className="text-muted-foreground">{claimantText(defect.claimant)}</p>
+                    )}
                   </article>
                 </li>
               ))}

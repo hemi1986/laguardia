@@ -30,15 +30,11 @@ export const dashboardTexts = {
     noneSuitable: "Gerade ist kein Defekt für Helfer:innen offen.",
     dueMaintenance: "Fällige Wartung für Helfer:innen",
     due: (name: string, machines: number, overdue: number) =>
-      `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} fällig${
-        overdue === 0
-          ? ""
-          : overdue === machines
-            ? machines === 1
-              ? " – überfällig"
-              : " – an allen überfällig"
-            : `, ${overdue} davon überfällig`
-      }.`,
+      machines === 1
+        ? `„${name}“ ist an 1 Gerät ${overdue === 0 ? "fällig" : "überfällig"}.`
+        : `„${name}“ ist an ${machines} Geräten fällig${
+            overdue === 0 ? "" : overdue === machines ? " – an allen überfällig" : `, ${overdue} davon überfällig`
+          }.`,
     openDueMaintenance: "Zur Wartung",
     nothingOpen: "Gerade ist nichts für dich offen.",
   },

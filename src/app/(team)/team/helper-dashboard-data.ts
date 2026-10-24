@@ -5,6 +5,7 @@ import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import type { Viewer } from "./claimant";
 import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-data";
+import type { DueMaintenanceEntry } from "./maintenance/due-maintenance-data";
 
 /**
  * What the helper dashboard shows (RM-HelperDashboard, ST-049) – its sections in the order ST-049 fixed (G18).
@@ -12,10 +13,10 @@ import { shownOpenDefects, type OpenDefectsItem } from "./defects/open-defects-d
 export type HelperDashboardData = {
   /** Section 1 – the open defects the helper claims right now, as the open defects list says them. */
   claimedByYou: OpenDefectsItem[];
-  /** Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1. */
+  /** Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1 (user, 2026-10-24). */
   suitableForHelpers: OpenDefectsItem[];
   /** Section 3 – each due maintenance task suitable for helpers, on how many machines it is due and overdue (G18, G4a). */
-  dueMaintenance: { name: string; machineCount: number; overdueCount: number }[];
+  dueMaintenance: DueMaintenanceEntry[];
 };
 
 /**
@@ -42,6 +43,11 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
     suitableForHelpers,
     dueMaintenance: due
       .filter((task) => task.suitableForHelpers)
-      .map((task) => ({ name: task.name, machineCount: task.machines.length, overdueCount: task.overdueCount })),
+      .map((task) => ({
+        id: task.id,
+        name: task.name,
+        machineCount: task.machines.length,
+        overdueCount: task.overdueCount,
+      })),
   };
 }
