@@ -30,3 +30,4 @@ export {
   type MaintenanceForRecording,
 } from "./maintenance-records";
 export { maintenancePlanChangedBy, maintenanceRecordedIn } from "./in-command";
+export { maintenanceForSeveral, type MachineToChoose, type MaintenanceForSeveral } from "./maintenance-for-several";

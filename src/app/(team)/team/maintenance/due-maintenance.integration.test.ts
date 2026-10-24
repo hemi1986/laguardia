@@ -35,6 +35,8 @@ import { dueMaintenanceFilterOf, loadDueMaintenance, type DueMaintenanceFilter }
 import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
+import { loadRecordForSeveral } from "./mehrere/record-for-several-data";
+import { RecordForSeveralPage } from "./mehrere/record-for-several-view";
 import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
 import {
   recordedForSeveralAddress,
@@ -938,5 +940,41 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     expect(after.html).toContain("„Clean glass (inside &amp; out)“ an 3 Geräten eingetragen.");
     // Only the team member who recorded them sees the confirmation.
     expect((await landedOn(form.address, "2026-06-10", tom)).html).not.toContain("eingetragen");
+  });
+  /** The selection page „Für mehrere Geräte erfassen“ of that task on that day, as that team member sees it. */
+  async function selection(on: string, maintenanceTaskId: string, viewer: typeof tom | typeof anna) {
+    const data = await loadRecordForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
+      id: viewer.teamMemberId,
+      role: viewer.role,
+    });
+    return { data, html: data ? renderToStaticMarkup(createElement(RecordForSeveralPage, { data })) : "" };
+  }
+
+  /** The checkbox of that machine in the rendered selection – none when it is not offered. */
+  function checkboxOf(html: string, machineId: string) {
+    return html.match(new RegExp(`<input type="checkbox"[^>]*value="${machineId}"[^>]*>`))?.[0];
+  }
+
+  it("ST-045: Due machines are preselected, all applicable machines can be selected", async () => {
+    const lg042 = await aMachine("LG-042", { location: "Hall 2, row 1" });
+    const lg045 = await aMachine("LG-045", { location: "Hall 1, row 3" });
+    const lg090 = await aMachine("LG-090", { machineCategory: "arcade", technology: "crt" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      intervalMonths: 3,
+      machineCategory: "pinball",
+      suitableForHelpers: true,
+    });
+    await recorded(cleanGlass, lg045, "2026-03-30");
+    expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
+
+    const { data, html } = await selection("2026-04-02", cleanGlass, anna);
+
+    expect(data?.due.map((machine) => machine.museumNumber)).toEqual(["LG-042"]);
+    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045"]);
+    expect(checkboxOf(html, lg042)).toContain("checked");
+    expect(checkboxOf(html, lg045)).not.toContain("checked");
+    expect(html).toContain("Weitere Geräte");
+    expect(html).not.toContain(lg090);
+    expect(html).not.toContain("LG-090");
   });
 });
