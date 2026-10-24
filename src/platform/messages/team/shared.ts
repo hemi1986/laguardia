@@ -73,6 +73,8 @@ export const sharedErrors = {
   /** Content uploaded from the browser (ST-037, ADR 0009). */
   "file-required": "Bitte eine Datei auswählen.",
   "content-gone": "Die hochgeladene Datei ist nicht mehr da.",
+  /** A form run once per chosen machine with none ticked (ST-045) – the words of the sticker selection. */
+  "nothing-chosen": "Bitte mindestens ein Gerät auswählen.",
   /** Collection, Repair and Maintenance. */
   "title-required": "Bitte einen Titel angeben.",
   "unknown-machine": "Dieses Gerät gibt es nicht.",

@@ -31,6 +31,23 @@ export const maintenanceTexts = {
     unknown: "Diese Wartungsaufgabe oder dieses Gerät gibt es nicht.",
     back: "Zurück zur fälligen Wartung",
   },
+  /** Recording one maintenance task for several machines at once (ST-045): a selection page of its own (G4a). */
+  recordForSeveral: {
+    start: "Für mehrere Geräte erfassen",
+    title: "Für mehrere Geräte erfassen",
+    due: "Fällig",
+    others: "Weitere Geräte",
+    none: "Für diese Wartungsaufgabe gibt es kein Gerät.",
+    submit: "Wartung eintragen",
+    recorded: (name: string, count: number) =>
+      `„${name}“ an ${count === 1 ? "1 Gerät" : `${count} Geräten`} eingetragen.`,
+    notRecorded: (museumNumber: string, reason: string) => `${museumNumber} nicht eingetragen: ${reason}`,
+    /** A machine left out that Maintenance would accept now – a command failed on the way, or the rules changed. */
+    notRecordedWithoutReason: (museumNumber: string) => `${museumNumber} nicht eingetragen – bitte noch einmal erfassen.`,
+    /** A rejected machine no longer on the page (retired meanwhile). */
+    aMachine: "Ein Gerät",
+    unknown: "Diese Wartungsaufgabe gibt es nicht.",
+  },
   /** The maintenance plan (ST-040): its page, the form page of adding a maintenance task, and the confirmation (G3). */
   maintenancePlan: {
     add: "Wartungsaufgabe hinzufügen",

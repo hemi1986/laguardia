@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MaintenanceRecorded]
 depends_on: [ST-044]
 labels: [mvp, maintenance, ui]
-status: ready
+status: done
 ---
 
 ## Story

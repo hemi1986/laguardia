@@ -30,12 +30,20 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { formRunner } from "@/app/_actions/form-runner";
 import { commandErrorText, teamMessages } from "@/platform/messages";
+import { rejectionText } from "@/app/_actions/rejection-text";
 import { post } from "@/test-support/forms";
-import { loadDueMaintenance, type DueMaintenanceFilter } from "./due-maintenance-data";
+import { dueMaintenanceFilterOf, loadDueMaintenance, type DueMaintenanceFilter } from "./due-maintenance-data";
 import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
+import { loadRecordForSeveral } from "./mehrere/record-for-several-data";
+import { RecordForSeveralPage } from "./mehrere/record-for-several-view";
 import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
+import {
+  recordedForSeveralAddress,
+  recordForSeveralFields,
+  recordForSeveralInput,
+} from "./mehrere/record-for-several-input";
 import { loadMaintenancePlan } from "../maintenance-plan/maintenance-plan-data";
 import { MaintenancePlanView } from "../maintenance-plan/maintenance-plan";
 
@@ -578,11 +586,11 @@ describe("the due maintenance list", () => {
       expect(await form.action(null, post(fields))).toBeNull();
 
       expect(form.recordedIds).toHaveLength(1);
-      const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: form.recordedIds[0] }, anna);
+      const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: [form.recordedIds[0]] }, anna);
       expect(after.html).toContain("Wartung an LG-042 eingetragen.");
       // An address naming someone else's record, or no record, confirms nothing.
-      expect((await page("2026-06-10", { recorded: form.recordedIds[0] }, tom)).html).not.toContain("eingetragen");
-      expect((await page("2026-06-10", { recorded: randomUUID() }, anna)).html).not.toContain("eingetragen");
+      expect((await page("2026-06-10", { recorded: [form.recordedIds[0]] }, tom)).html).not.toContain("eingetragen");
+      expect((await page("2026-06-10", { recorded: [randomUUID()] }, anna)).html).not.toContain("eingetragen");
     });
 
     it("keeps what was typed when it is rejected – a forged role is not read", async () => {
@@ -873,5 +881,205 @@ describe("changing and removing a maintenance task (ST-041)", () => {
       ["LG-042", "2027-04-01"],
       ["LG-043", "2027-05-01"],
     ]);
+  });
+});
+
+describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
+  /**
+   * The form „Für mehrere Geräte erfassen“ through the Server Action runner, as that team member on that day – one
+   * CMD-RecordMaintenance per chosen machine. `address` is where the action sends the team member afterwards.
+   */
+  function severalFormOf(actor: typeof tom | typeof anna, on: string) {
+    const form: { address?: string } = {};
+    const action = formRunner({
+      currentPerson: async () => actor,
+      db,
+      clock: fixedClock(`${on}T10:00:00Z`),
+      newId: randomUUID,
+    })(recordMaintenanceCommand, {
+      fields: recordForSeveralFields,
+      each: { field: "machineId" },
+      input: recordForSeveralInput,
+      onSuccess: async (outcome) => void (form.address = recordedForSeveralAddress(outcome)),
+    });
+    return Object.assign(form, { action });
+  }
+
+  /** The form as the browser posts it: its fields, and one `machineId` per ticked machine. */
+  function ticked(fields: Record<string, string>, machineIds: readonly string[]) {
+    const form = post(fields);
+    for (const machineId of machineIds) form.append("machineId", machineId);
+    return form;
+  }
+
+  /** The due maintenance list at the address the action sent the team member to. */
+  async function landedOn(address: string | undefined, on: string, viewer: typeof tom | typeof anna) {
+    const url = new URL(address ?? "/", "http://localhost");
+    expect(url.pathname).toBe("/team/maintenance");
+    const params = Object.fromEntries([...url.searchParams.keys()].map((key) => [key, url.searchParams.getAll(key)]));
+    return page(on, dueMaintenanceFilterOf(params), viewer);
+  }
+
+  it("ST-045: Helper records a maintenance task for several machines", async () => {
+    const machines = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      intervalMonths: 1,
+      suitableForHelpers: true,
+    });
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042", "LG-043", "LG-044"]);
+    const form = severalFormOf(anna, "2026-06-10");
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-10", note: "" };
+    expect(await form.action(null, ticked(fields, machines))).toBeNull();
+
+    for (const machineId of machines)
+      expect(await maintenanceRecords(db, { machineId })).toEqual([
+        expect.objectContaining({ maintenanceTaskId: cleanGlass, outcome: "done", recordedBy: anna.teamMemberId }),
+      ]);
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual([]);
+    const after = await landedOn(form.address, "2026-06-10", anna);
+    expect(after.html).toContain("„Clean glass (inside &amp; out)“ an 3 Geräten eingetragen.");
+    // Only the team member who recorded them sees the confirmation.
+    expect((await landedOn(form.address, "2026-06-10", tom)).html).not.toContain("eingetragen");
+  });
+  /** The selection page „Für mehrere Geräte erfassen“ of that task on that day, as that team member sees it. */
+  async function selection(on: string, maintenanceTaskId: string, viewer: typeof tom | typeof anna) {
+    const data = await loadRecordForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
+      id: viewer.teamMemberId,
+      role: viewer.role,
+    });
+    return { data, html: data ? renderToStaticMarkup(createElement(RecordForSeveralPage, { data })) : "" };
+  }
+
+  /** The checkbox of that machine in the rendered selection – none when it is not offered. */
+  function checkboxOf(html: string, machineId: string) {
+    return html.match(new RegExp(`<input type="checkbox"[^>]*value="${machineId}"[^>]*>`))?.[0];
+  }
+
+  it("ST-045: Due machines are preselected, all applicable machines can be selected", async () => {
+    const lg042 = await aMachine("LG-042", { location: "Hall 2, row 1" });
+    const lg045 = await aMachine("LG-045", { location: "Hall 1, row 3" });
+    const lg046 = await aMachine("LG-046", { location: "Hall 1, row 10" });
+    const lg090 = await aMachine("LG-090", { machineCategory: "arcade", technology: "crt" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      intervalMonths: 3,
+      machineCategory: "pinball",
+      suitableForHelpers: true,
+    });
+    await recorded(cleanGlass, lg045, "2026-03-30");
+    await recorded(cleanGlass, lg046, "2026-03-30");
+    expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
+
+    const { data, html } = await selection("2026-04-02", cleanGlass, anna);
+
+    expect(data?.due.map((machine) => machine.museumNumber)).toEqual(["LG-042"]);
+    // By location as people read it: row 3 before row 10.
+    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045", "LG-046"]);
+    expect(checkboxOf(html, lg042)).toContain("checked");
+    expect(checkboxOf(html, lg045)).not.toContain("checked");
+    expect(html).toContain("Weitere Geräte");
+    expect(html).not.toContain(lg090);
+    expect(html).not.toContain("LG-090");
+  });
+  it("ST-045: Machines that are not due can be included", async () => {
+    const lg042 = await aMachine("LG-042");
+    const lg045 = await aMachine("LG-045");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+    await recorded(cleanGlass, lg045, "2026-06-01");
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042"]);
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-08", note: "" };
+    expect(await severalFormOf(tom, "2026-06-10").action(null, ticked(fields, [lg042, lg045]))).toBeNull();
+
+    for (const machineId of [lg042, lg045])
+      expect((await maintenanceRecords(db, { machineId }))[0]).toEqual(
+        expect.objectContaining({ maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-08" }),
+      );
+    // Both count from the day it was carried out, not from the day it was recorded.
+    expect(await listedOn("2026-07-07", cleanGlass)).toEqual([]);
+    expect((await page("2026-07-08", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-06-08", dueSince: "2026-07-08" }),
+      expect.objectContaining({ museumNumber: "LG-045", lastDone: "2026-06-08", dueSince: "2026-07-08" }),
+    ]);
+  });
+
+  it("ST-045: A machine that fails a rule does not stop the others", async () => {
+    const [lg042, lg043, lg044] = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      intervalMonths: 1,
+      suitableForHelpers: true,
+    });
+    const form = severalFormOf(anna, "2026-06-10");
+    // Anna has the selection open; a moment later a technician retires LG-044.
+    await run(
+      executeCommand(
+        retireMachineCommand,
+        { machineId: lg044, version: 0, reason: "Sold" },
+        { actor: tom, db, clock: fixedClock("2026-06-10T09:59:00Z"), newId: randomUUID },
+      ),
+    );
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "" };
+    expect(await form.action(null, ticked(fields, [lg042, lg043, lg044]))).toBeNull();
+
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toHaveLength(1);
+    expect(await maintenanceRecords(db, { machineId: lg043 })).toHaveLength(1);
+    expect(await maintenanceRecords(db, { machineId: lg044 })).toEqual([]);
+    const { html } = await landedOn(form.address, "2026-06-10", anna);
+    expect(html).toContain("„Clean glass (inside &amp; out)“ an 2 Geräten eingetragen.");
+    expect(html).toContain("LG-044 nicht eingetragen: Dieses Gerät ist ausgemustert");
+    expect(html.indexOf("an 2 Geräten")).toBeLessThan(html.indexOf("LG-044 nicht eingetragen"));
+  });
+
+  it("names a machine left out even when Maintenance would accept it now", async () => {
+    const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+    const form = severalFormOf(tom, "2026-06-10");
+    expect(
+      await form.action(null, ticked({ maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "" }, [lg042])),
+    ).toBeNull();
+    const address = `${form.address}&notRecorded=${lg043}`;
+
+    const { html } = await landedOn(address, "2026-06-10", tom);
+
+    expect(html).toContain("LG-043 nicht eingetragen – bitte noch einmal erfassen.");
+  });
+
+  it("ST-045: Nothing selected is rejected", async () => {
+    const lg042 = await aMachine("LG-042");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
+    const form = severalFormOf(anna, "2026-04-02");
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "Hall 1" };
+    const state = await form.action(null, ticked(fields, []));
+
+    expect(state).toEqual({ error: "nothing-chosen", values: fields, chosen: [] });
+    expect(form.address).toBeUndefined();
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+    expect(rejectionText(state!.error)).toBe("Bitte mindestens ein Gerät auswählen.");
+  });
+
+  it("ST-045: Helpers cannot record several machines for a task not suitable for helpers", async () => {
+    const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
+    const psu = await aMaintenanceTask("Check PSU voltages, connectors, board");
+    const form = severalFormOf(anna, "2026-04-02");
+
+    const fields = { maintenanceTaskId: psu, outcome: "done", date: "", note: "", role: "technician" };
+    const state = await form.action(null, ticked(fields, [lg042, lg043]));
+
+    expect(state?.error).toBe("maintenance-not-suitable-for-helpers");
+    expect(state?.rejected).toBeUndefined();
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+    expect(await maintenanceRecords(db, { machineId: lg043 })).toEqual([]);
+    // The selection says why in place of the form, and the list does not offer it.
+    expect((await selection("2026-04-02", psu, anna)).html).toContain(
+      "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
+    );
+    expect((await page("2026-04-02", { maintenanceTaskId: psu }, anna)).html).not.toContain(
+      "/team/maintenance/mehrere",
+    );
+    expect((await page("2026-04-02", { maintenanceTaskId: psu }, tom)).html).toContain(
+      `href="/team/maintenance/mehrere?task=${psu}"`,
+    );
   });
 });

@@ -135,7 +135,10 @@ function appliesSinceCorrection(
 }
 
 /** By location as people read it – "row 2" before "row 10" –, then by museum number. */
-function byLocation(a: DueMachine, b: DueMachine): number {
+export function byLocation(
+  a: { location: string; museumNumber: string },
+  b: { location: string; museumNumber: string },
+): number {
   return (
     a.location.localeCompare(b.location, "de", { numeric: true }) ||
     a.museumNumber.localeCompare(b.museumNumber, "de", { numeric: true })

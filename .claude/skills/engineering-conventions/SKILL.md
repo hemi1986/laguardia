@@ -375,7 +375,14 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   cannot cross to a client component – pass the sections the form shows (`{ reportForm, commandErrors }`).
 - **Never declare a password (or another secret) in `fields`** – the declared fields are sent back to the browser after a rejection. A form with a password field gets an option to keep it out of `values` when it first moves onto the runner (ST-073 code review).
 - Page access checks (`requireTeamMember()`, `requireTechnician()`) run in the Server Action before the runner – authorization proper stays in `allowedActors`.
-- **One runner, an optional content step** (architecture review 2026-10-18): every form calls `formAction(command, definition)`; the definition chooses the step – none, `photo` or `upload` (below). There is no second runner.
+- **One runner, an optional content step** (architecture review 2026-10-18): every form calls `formAction(command, definition)`; the definition chooses the step – none, `photo`, `upload` (below) or `each`. There is no second runner.
+- **A form that runs its command once per chosen item** (first: ST-045, one maintenance task on several machines) passes
+  `each: { field }` – the field the browser posts once per ticked native checkbox – and `input: (fields, item) => …`.
+  The runner runs the command for each item in its own transaction, one after the other, so one item's rejection
+  does not stop the others; `onSuccess` gets `{ done, rejected }` once at least one was done. Nothing ticked is
+  `nothing-chosen`; when every item is rejected the form stays (`EachFormState`: the ticked `chosen` items, and
+  `rejected` per item only when the reasons differ). The page landed on confirms each record by `lastCommandBy` (G3);
+  the items left out are named in the address, but their reason is the owning module's answer now – never the address's.
 - **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo) => …`: the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
 - **After a rejection the photo must be chosen again** (UX guideline G8a; ST-023, ST-084): the browser cannot put a
   file back into the form. The runner's photo step marks the state `photoAgain: true` – a photo was attached and the

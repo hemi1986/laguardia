@@ -82,6 +82,41 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
 };
 
 /**
+ * A form that runs its command once per chosen item (ST-045: one maintenance task on several machines) – the field the
+ * browser posts once per ticked checkbox, and the input for one of them. `onSuccess` gets what was done and what was
+ * rejected, item by item, as soon as one was done.
+ */
+export type EachFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
+  FormDefinition<Input, Result, Field>,
+  "input" | "removesPhoto" | "onSuccess"
+> & {
+  each: { field: string };
+  input: (fields: FormFields<Field>, item: string) => Input;
+  onSuccess: (outcome: EachOutcome<Result, Error>) => Promise<void>;
+};
+
+/**
+ * What a form run once per chosen item did: the items done with their results, the rejected ones with why, and those
+ * never run because a command failed on the way (it is logged) – the ones done stay done.
+ */
+export type EachOutcome<Result, Error extends string> = {
+  done: readonly { item: string; result: Result }[];
+  rejected: readonly { item: string; error: Error }[];
+  notRun: readonly string[];
+};
+
+/**
+ * After a form run once per chosen item recorded nothing: the items that were chosen (a ticked checkbox is no field
+ * the state can echo) and – only when the items were rejected for different reasons – each item's reason.
+ */
+export type EachFormState<Error extends string, Field extends string> =
+  | (NonNullable<FormState<Error | "nothing-chosen", Field>> & {
+      chosen: readonly string[];
+      rejected?: readonly { item: string; error: Error }[];
+    })
+  | null;
+
+/**
  * Which photo errors are rejections of the photo itself (ST-016): their texts already say to choose another photo or
  * leave it out. A photo that could not be stored (`not-stored`) is not one of them – the photo was fine, and "try
  * again" needs it again. A new photo error has to be decided here.
@@ -107,9 +142,16 @@ const isPhotoError = (error: string): error is PhotoError => Object.hasOwn(rejec
  *   the chosen file is still attached for the next send (user, 2026-10-18); then the command runs through the upload
  *   module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no content behind,
  *   and the form state no longer names it – the file must be chosen again.
+ * - **`each`** (ST-045) – the command once per chosen item, each in its own transaction: a rejected item does not stop
+ *   the others. Nothing chosen is rejected (`nothing-chosen`); when every item is rejected the form stays, with the
+ *   one reason they share or each item's own.
  * Each step is its own function, typed with the state its overload promises; `formAction` only picks the step.
  */
 export function formRunner(dependencies: RunnerDependencies) {
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition: EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
+  ): FormStateAction<EachFormState<CommandError<typeof command>, Field>>;
   function formAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: UploadFormDefinition<Input, Result, Field, Refusal>,
@@ -127,8 +169,10 @@ export function formRunner(dependencies: RunnerDependencies) {
     definition:
       | FormDefinition<Input, Result, Field>
       | PhotoFormDefinition<Input, Result, Field>
-      | UploadFormDefinition<Input, Result, Field, Error>,
+      | UploadFormDefinition<Input, Result, Field, Error>
+      | EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ) {
+    if ("each" in definition) return eachStep(dependencies, command, definition);
     if ("upload" in definition) return uploadStep(dependencies, command, definition);
     if ("photo" in definition) return photoStep(dependencies, command, definition);
     return withoutContent(dependencies, command, definition);
@@ -216,6 +260,45 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
       return { error: outcome.error, values };
     }
     await definition.onSuccess(outcome.result);
+    return null;
+  };
+}
+
+function eachStep<Input, Result, Error extends string, Field extends string>(
+  { currentPerson, storage: _storage, ...dependencies }: RunnerDependencies,
+  command: Command<Input, Result, Error>,
+  definition: EachFormDefinition<Input, Result, CommandError<typeof command>, Field>,
+): FormStateAction<EachFormState<CommandError<typeof command>, Field>> {
+  return async (_previous, formData) => {
+    const fields = fieldsOf(formData, definition.fields);
+    const chosen = [
+      ...new Set(formData.getAll(definition.each.field).filter((item): item is string => typeof item === "string")),
+    ];
+    if (chosen.length === 0) return { error: "nothing-chosen", values: valuesOf(fields), chosen };
+    const actor = await currentPerson();
+    const done: { item: string; result: Result }[] = [];
+    const rejected: { item: string; error: CommandError<typeof command> }[] = [];
+    // One after the other, each in its own transaction (ST-045): what one machine's rules reject stays its own.
+    let notRun: string[] = [];
+    for (const [index, item] of chosen.entries()) {
+      try {
+        const outcome = await executeCommand(command, definition.input(fields, item), { ...dependencies, actor });
+        if (outcome.ok) done.push({ item, result: outcome.result });
+        else rejected.push({ item, error: outcome.error });
+      } catch (error) {
+        // Nothing done yet: the form fails as any other. Otherwise what was done must still be confirmed, or the team
+        // member sends it again and records it twice – the rest is named as not run.
+        if (done.length === 0) throw error;
+        console.error("form stopped after a failed command:", error instanceof Error ? error.message : error);
+        notRun = chosen.slice(index);
+        break;
+      }
+    }
+    if (done.length === 0) {
+      const shared = rejected.every(({ error }) => error === rejected[0].error);
+      return { error: rejected[0].error, values: valuesOf(fields), chosen, ...(shared ? {} : { rejected }) };
+    }
+    await definition.onSuccess({ done, rejected, notRun });
     return null;
   };
 }
