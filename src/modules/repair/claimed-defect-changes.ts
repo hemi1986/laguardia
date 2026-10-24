@@ -9,7 +9,8 @@ import { defect } from "./schema";
 export type ClaimedDefectChange =
   | { kind: "taken-over"; by: string; at: Date }
   | { kind: "assigned"; by: string; to: string; at: Date }
-  | { kind: "released"; by: string; at: Date };
+  /** Released by a technician – by removing the suitable-for-helpers mark, too (ST-031), which the line says. */
+  | { kind: "released"; by: string; markRemoved: boolean; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -26,7 +27,7 @@ export type ClaimedDefectChanges = {
 const LEFT_HOURS = 168;
 
 /** The journal entries that start or end a claim, or change something on the claimed defect. */
-const TRACKED = ["EVT-DefectClaimed", "EVT-DefectClaimReleased"] as const;
+const TRACKED = ["EVT-DefectClaimed", "EVT-DefectClaimReleased", "EVT-DefectDetailsChanged"] as const;
 
 type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[number]>;
 
@@ -114,8 +115,15 @@ function changesSinceClaim(
         break;
       }
       case "EVT-DefectClaimReleased":
-        if (mine) leave(by && by !== teamMemberId ? { kind: "released", by, at } : undefined, at);
+        if (mine) leave(by && by !== teamMemberId ? { kind: "released", by, markRemoved: false, at } : undefined, at);
         break;
+      case "EVT-DefectDetailsChanged": {
+        // Removing the mark released the claim in the same step – one point in time, the release journaled first.
+        const released = changes.at(-1);
+        if (entry.data.releasedClaimOf === teamMemberId && released?.kind === "released" && released.at.getTime() === at.getTime())
+          released.markRemoved = true;
+        break;
+      }
     }
   }
   if (!mine && !leftAt) return undefined;
@@ -129,5 +137,7 @@ function leftThem(entry: Entry, teamMemberId: TeamMemberId): boolean {
       return entry.data.takenOverFrom === teamMemberId;
     case "EVT-DefectClaimReleased":
       return entry.data.formerClaimant === teamMemberId;
+    default:
+      return false;
   }
 }

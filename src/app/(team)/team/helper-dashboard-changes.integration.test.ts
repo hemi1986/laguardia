@@ -190,4 +190,17 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain("Rubber cracked");
     expect(section).toContain("Tom hat die Übernahme aufgehoben · vor 5 Stunden");
   });
+
+  it("ST-086: Removing the mark says why her claim was released", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.changeDetails({ suitableForHelpers: false }, daysAgo(3));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Rubber cracked");
+    expect(section).toContain(
+      "<li>Tom hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet · vor 3 Tagen</li></ul>",
+    );
+  });
 });

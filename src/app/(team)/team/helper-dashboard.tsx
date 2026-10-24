@@ -124,6 +124,6 @@ function changeText(change: ShownChange): string {
     case "assigned":
       return texts.changes.assigned(change.by, change.to);
     case "released":
-      return texts.changes.released(change.by);
+      return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
   }
 }
