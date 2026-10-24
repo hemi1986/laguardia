@@ -32,7 +32,7 @@ export async function loadProblemReport(
 ): Promise<ProblemReportData> {
   const found = await problemReportForTriage(db, clock, problemReportId);
   if (!found) return undefined;
-  const [[report], names, defects] = await Promise.all([
+  const [[report], shown, defects] = await Promise.all([
     withNames(db, [found], { clock, storage }),
     named(db, { teamMembers: [found.triagedBy] }),
     openDefects(db, { machineId: found.machineId }),
@@ -40,7 +40,7 @@ export async function loadProblemReport(
   return {
     report,
     triaged: found.triagedBy !== undefined,
-    triagedByName: found.triagedBy && names.name(found.triagedBy),
+    triagedByName: found.triagedBy && shown.name(found.triagedBy),
     version: found.version,
     dismissedAsSpam: found.dismissalReason === "spam",
     openDefects: defects.map(({ id, title, openSince }) => ({ id, title, openSince })),

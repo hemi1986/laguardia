@@ -9,7 +9,7 @@ import type { Database } from "@/platform/command";
 import { calendarDate } from "@/platform/time";
 import { named } from "../../../named";
 
-/** A team member's ID replaced by their name – undefined for an account that is gone. */
+/** A team member's ID replaced by their name – „unbekannt“ for an account that is gone (`named`). */
 type WithName<Entry, Key extends keyof Entry> = Omit<Entry, Key> & { [K in Key]: string };
 
 type DefectEntry = Extract<RepairHistoryEntry, { kind: "defect" }>;

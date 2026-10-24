@@ -75,7 +75,7 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
   const now = clock.now();
   const shown = (changes: readonly ClaimedDefectChange[] = []): ShownChange[] =>
     changes.map(({ at, ...change }) => ({
-      ...withNames(change, shownBy),
+      ...changeWithNames(change, shownBy),
       hoursAgo: elapsedHours(at, now),
       // Never the helper's own – `changesOnClaimedDefects` leaves those out (G25).
       newSinceLastVisit: isNew(marks, at),
@@ -119,7 +119,7 @@ function peopleOf(change: ClaimedDefectChange): string[] {
 }
 
 /** A change with its team members by name. */
-function withNames(change: WithoutTime<ClaimedDefectChange>, { name }: Named) {
+function changeWithNames(change: WithoutTime<ClaimedDefectChange>, { name }: Named) {
   return {
     ...change,
     ...("by" in change ? { by: name(change.by) } : {}),

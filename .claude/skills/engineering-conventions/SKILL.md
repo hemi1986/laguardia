@@ -511,8 +511,9 @@ machines its read models refer to only through `named(db, ...parts)` (`src/app/(
 says „unbekannt“ for an account that is gone – the one rule; its `label(id)` throws for a machine that is not there,
 because read models only return registered machines (foreign keys) – a bug, never a blank. Shared shapes take the
 result, not the database: `shownOpenDefects(clock, defects, named, viewer)`, `shownClaimant`, `shownReporter`,
-`defectForForm`. An ID that comes from the address or a form is no read-model result – it is checked where it is read
-(`machineIdOf`, `isId`), and a page that shows a choice of machines may still call `machineLabels` itself.
+`defectForForm`. An ID that comes from the address or a form is no read-model result: the page checks it where it
+reads it (`machineIdOf`, `isId`) and labels it with `machineLabels` itself, where a missing machine is a case to show,
+not a bug (`due-maintenance-data.ts`, `record-maintenance-data.ts`, `address-after-recording.ts`).
 
 ## Time and time-based rules
 

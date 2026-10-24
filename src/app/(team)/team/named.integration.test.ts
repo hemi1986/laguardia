@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { machineLabels } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { named } from "./named";
 
@@ -14,18 +14,42 @@ import { named } from "./named";
 const db = testDatabase();
 
 describe("named", () => {
-  it("names team members and machines in one round, each ID once", async () => {
+  it("names the team members and machines of all the parts of a page in one call", async () => {
     const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+    const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
     await anExistingTeamMember(db, tom, "Tom");
-    const machineId = await aRegisteredMachine(db);
+    await anExistingTeamMember(db, eva, "Eva");
+    const title = `Medieval Madness ${randomUUID().slice(0, 8)}`;
+    const model = await executeCommand(
+      createMachineModelCommand,
+      { title, manufacturer: "Williams", machineCategory: "pinball" },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!model.ok) throw new Error(model.error);
+    const machine = await executeCommand(
+      registerMachineCommand,
+      {
+        machineModelId: model.result.machineModelId,
+        museumNumber: undefined,
+        serialNumber: undefined,
+        location: "Hall 2",
+        machineStatus: "playable",
+      },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!machine.ok) throw new Error(machine.error);
+    // The museum number is assigned by the command – the one it says it gave.
+    const { machineId, museumNumber } = machine.result;
 
-    const shown = await named(db, {
-      teamMembers: [tom.teamMemberId, undefined, tom.teamMemberId],
-      machines: [machineId, machineId],
-    });
+    const shown = await named(
+      db,
+      { teamMembers: [tom.teamMemberId, undefined], machines: [machineId] },
+      { teamMembers: [eva.teamMemberId, tom.teamMemberId], machines: [machineId, null] },
+    );
 
     expect(shown.name(tom.teamMemberId)).toBe("Tom");
-    expect(shown.label(machineId)).toEqual((await machineLabels(db, [machineId])).get(machineId));
+    expect(shown.name(eva.teamMemberId)).toBe("Eva");
+    expect(shown.label(machineId)).toEqual({ museumNumber, machineModelTitle: title });
   });
 
   it("says „unbekannt“ for an account that is not there", async () => {

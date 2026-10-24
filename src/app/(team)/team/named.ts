@@ -1,17 +1,14 @@
-import { machineLabels } from "@/modules/collection";
+import { machineLabels, type MachineLabel } from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 
-/** How a page names a machine – its museum number and its machine model's title (Collection's `machineLabels`). */
-export type MachineLabel = { museumNumber: string; machineModelTitle: string };
-
 /** The names and labels of what a page shows, looked up once. */
 export type Named = {
   /** A team member's name – „unbekannt“ for an account that is gone. */
-  name(teamMemberId: string): string;
+  name: (teamMemberId: string) => string;
   /** A machine's label. Read models only return registered machines (foreign keys), so a missing one is a bug. */
-  label(machineId: string): MachineLabel;
+  label: (machineId: string) => MachineLabel;
 };
 
 /** The IDs a part of a page refers to – missing ones are left out. */
