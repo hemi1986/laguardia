@@ -80,3 +80,47 @@ test.describe("recording for several machines without JavaScript", () => {
     await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ an 2 Geräten eingetragen.`);
   });
 });
+
+/**
+ * „Wartung erfassen“ opened from the machine record (ST-047) without JavaScript: the form leads back to the machine
+ * record, which confirms the record and lists it in section 5 „Wartung“. Nothing is due here (see above), so the form
+ * is opened at the address the machine record's „Wartung erfassen“ has.
+ */
+test.describe("recording from the machine record without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("the form leads back to the machine record, which confirms and shows the maintenance record", async ({
+    page,
+  }) => {
+    await logIn(page);
+    const machine = await aMachine(page);
+    const name = unique("Clean playfield");
+    await page.goto("/team/maintenance-plan/new");
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Anleitung").fill("Wipe the playfield.");
+    await page.getByLabel("Intervall in Monaten").fill("3");
+    await page.getByLabel("Start").fill(new Date().toISOString().slice(0, 10));
+    await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+    const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
+    const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
+
+    await page.goto(
+      `/team/maintenance/erfassen?task=${maintenanceTaskId}&machine=${encodeURIComponent(machine.museumNumber)}&von=geraet`,
+    );
+    await expect(page.getByRole("link", { name: "Zurück zum Gerät" })).toHaveAttribute(
+      "href",
+      `/team/machines/${encodeURIComponent(machine.museumNumber)}`,
+    );
+    await page.getByLabel("Ergebnis").selectOption({ label: "Erledigt" });
+    await page.getByLabel("Notiz (optional)").fill("Playfield wiped from the machine record");
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+    await page.getByRole("button", { name: "Wartung eintragen" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/team/machines/${encodeURIComponent(machine.museumNumber)}\\?`));
+    await expect(page.getByRole("main").getByRole("status")).toHaveText(
+      `Wartung an ${machine.museumNumber} eingetragen.`,
+    );
+    await expect(page.getByRole("main")).toContainText("Playfield wiped from the machine record");
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+  });
+});

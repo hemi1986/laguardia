@@ -414,8 +414,14 @@ export type MachineForMaintenance = {
 
 const NOT_ON_DISPLAY: MachineStatus = "not-on-display";
 
-/** Every machine that is not retired, as maintenance needs it (ST-043) – retired machines are never due. */
-export async function machinesForMaintenance(db: Database): Promise<MachineForMaintenance[]> {
+/**
+ * Every machine that is not retired, as maintenance needs it (ST-043) – retired machines are never due. With
+ * `machineId` only that machine, if it is not retired (the machine record, ST-047).
+ */
+export async function machinesForMaintenance(
+  db: Database,
+  { machineId }: { machineId?: string } = {},
+): Promise<MachineForMaintenance[]> {
   const rows = await db
     .select({
       id: machine.id,
@@ -435,7 +441,7 @@ export async function machinesForMaintenance(db: Database): Promise<MachineForMa
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
-    .where(isNull(machine.retiredAt));
+    .where(and(isNull(machine.retiredAt), machineId === undefined ? undefined : eq(machine.id, machineId)));
   const histories = await categoryHistory.load(db, [...new Set(rows.map((row) => row.machineModelId))]);
   return rows.map(({ machineModelId, ...row }) => ({
     ...row,

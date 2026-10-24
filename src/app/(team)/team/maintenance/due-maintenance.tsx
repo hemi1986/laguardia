@@ -3,6 +3,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { formatCalendarDate } from "@/platform/time";
 import { commandErrorText, teamMessages } from "@/platform/messages";
+import { recordMaintenanceAddress } from "./erfassen/record-maintenance-address";
 import { dueMaintenanceAddress, type Confirmed, type DueMaintenanceData } from "./due-maintenance-data";
 
 const { dueMaintenance: texts, recordForSeveral: severalTexts, terms } = teamMessages;
@@ -64,7 +65,11 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
                 {/* The one action people come to the list for (G5), offered only where it will be accepted (G11). */}
                 {machine.recordOffered && (
                   <Link
-                    href={`/team/maintenance/erfassen?task=${encodeURIComponent(chosen.id)}&machine=${encodeURIComponent(machine.museumNumber)}`}
+                    href={recordMaintenanceAddress({
+                      maintenanceTaskId: chosen.id,
+                      museumNumber: machine.museumNumber,
+                      back: "list",
+                    })}
                     className={buttonVariants({ variant: "outline", size: "sm", className: "mt-1 self-start" })}
                   >
                     {teamMessages.recordMaintenance.record}

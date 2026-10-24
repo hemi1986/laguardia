@@ -16,5 +16,9 @@ export const recordMaintenanceCommand = aggregateCommand({
   facts: maintenanceFacts,
   decide: recordMaintenance,
   journal: maintenanceEvents.journal,
-  result: (record) => ({ maintenanceRecordId: record.id, maintenanceTaskId: record.maintenanceTaskId }),
+  result: (record) => ({
+    maintenanceRecordId: record.id,
+    maintenanceTaskId: record.maintenanceTaskId,
+    machineId: record.machineId,
+  }),
 });

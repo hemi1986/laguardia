@@ -9,6 +9,7 @@ import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
 import { triageConfirmationText } from "../../triage-confirmation";
 import type { MachineRecordConfirmation } from "./machine-confirmation";
+import { MachineMaintenanceSection } from "./machine-maintenance";
 
 const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
@@ -122,6 +123,8 @@ export function MachineRecordView({
           </CardContent>
         </Card>
       </section>
+      {/* Section 5 (ST-047): due maintenance and the latest maintenance records. */}
+      <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
       <section>
         <Card>
           <CardHeader>
@@ -191,7 +194,9 @@ export function MachineRecordView({
                           <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
                             {file.title}
                           </a>
-                          {file.ofMachineModel && <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>}
+                          {file.ofMachineModel && (
+                            <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -239,6 +244,8 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.problemReported(record.museumNumber);
     case "file-attached":
       return texts.fileAttached(confirmation.title);
+    case "maintenance-recorded":
+      return teamMessages.recordMaintenance.recorded(record.museumNumber);
     case "triaged":
       return triageConfirmationText(confirmation.triaged);
   }

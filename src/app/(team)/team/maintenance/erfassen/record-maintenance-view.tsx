@@ -3,6 +3,7 @@ import { teamMessages } from "@/platform/messages";
 import type { RecordMaintenanceState } from "./actions";
 import type { RecordMaintenancePageData } from "./record-maintenance-data";
 import { RecordMaintenanceForm } from "./record-maintenance-form";
+import { backAddress, type RecordMaintenanceReturn } from "./record-maintenance-address";
 
 const { recordMaintenance: texts } = teamMessages;
 
@@ -12,9 +13,12 @@ const { recordMaintenance: texts } = teamMessages;
  */
 export function RecordMaintenancePage({
   data,
+  back = "list",
   action,
 }: {
   data: RecordMaintenancePageData;
+  /** Where it was opened from – the back link leads there, also after a rejection (ST-047, G17). */
+  back?: RecordMaintenanceReturn;
   /** The Server Action – none where the page is only looked at (a test of its data). */
   action?: (previous: RecordMaintenanceState, formData: FormData) => Promise<RecordMaintenanceState>;
 }) {
@@ -37,10 +41,10 @@ export function RecordMaintenancePage({
         whyNot={data.whyNot}
       />
       <Link
-        href={`/team/maintenance?task=${encodeURIComponent(maintenanceTask.id)}`}
+        href={backAddress(back, { maintenanceTaskId: maintenanceTask.id, museumNumber: machine.museumNumber })}
         className="self-start text-sm underline underline-offset-4"
       >
-        {texts.back}
+        {back === "machine" ? teamMessages.machineMaintenance.backToMachine : texts.back}
       </Link>
     </>
   );

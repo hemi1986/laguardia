@@ -31,6 +31,23 @@ export const maintenanceTexts = {
     unknown: "Diese Wartungsaufgabe oder dieses Gerät gibt es nicht.",
     back: "Zurück zur fälligen Wartung",
   },
+  /**
+   * Section 5 „Wartung“ of the machine record (ST-047): the machine's due maintenance tasks and its latest maintenance
+   * records; all of them on a page of their own.
+   */
+  machineMaintenance: {
+    title: "Wartung",
+    dueSince: (date: string) => `fällig seit ${date}`,
+    nothingDue: "Gerade ist an diesem Gerät keine Wartung fällig.",
+    notOnDisplay: "Nicht ausgestellt – es wird keine Wartung fällig.",
+    records: "Wartungseinträge",
+    nothingRecorded: "An diesem Gerät wurde noch keine Wartung eingetragen.",
+    whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
+    allRecords: (count: number) => `Alle Wartungseinträge (${count})`,
+    recordsTitle: (museumNumber: string) => `Wartungseinträge · ${museumNumber}`,
+    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
+    backToMachine: "Zurück zum Gerät",
+  },
   /** Recording one maintenance task for several machines at once (ST-045): a selection page of its own (G4a). */
   recordForSeveral: {
     start: "Für mehrere Geräte erfassen",

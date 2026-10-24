@@ -1,13 +1,14 @@
 import { collectionChangesIn, fileAttachedIn } from "@/modules/collection";
+import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintenance";
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
+import { isId, lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
 import { loadTriageConfirmation, oneOf, type AddressQuery, type TriageConfirmation } from "../../triage-confirmation";
 import type { MachineRecordData } from "./machine-record-data";
 
 /**
  * What the machine record confirms (G3): the status change (ST-012), the move (ST-034), the problem report (ST-015),
- * the file attached (ST-037), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
+ * the file attached (ST-037), the maintenance recorded from it (ST-047), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
  */
 export type MachineRecordConfirmation =
   | { kind: "status-changed" }
@@ -15,6 +16,7 @@ export type MachineRecordConfirmation =
   | { kind: "retired" }
   | { kind: "problem-reported" }
   | { kind: "file-attached"; title: string }
+  | { kind: "maintenance-recorded" }
   | { kind: "triaged"; triaged: TriageConfirmation };
 
 /**
@@ -34,9 +36,21 @@ export async function loadMachineConfirmation(
   if (fileId) {
     const file = record.files.find((shown) => shown.id === fileId);
     const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
-    return file && command && fileAttachedIn(command, fileId) ? { kind: "file-attached", title: file.title } : undefined;
+    return file && command && fileAttachedIn(command, fileId)
+      ? { kind: "file-attached", title: file.title }
+      : undefined;
   }
-  const asked = (["statusChanged", "moved", "retired", "problemReported"] as const).find((name) => query[name] !== undefined);
+  const maintenanceRecordId = oneOf(query.maintenanceRecorded);
+  if (maintenanceRecordId !== undefined) {
+    if (!isId(maintenanceRecordId)) return undefined;
+    const command = await lastCommandBy(db, { aggregateId: maintenanceRecordId }, viewer);
+    if (!command || !maintenanceRecordedIn(command, maintenanceRecordId)) return undefined;
+    const recorded = await maintenanceRecordById(db, maintenanceRecordId);
+    return recorded?.machineId === record.id ? { kind: "maintenance-recorded" } : undefined;
+  }
+  const asked = (["statusChanged", "moved", "retired", "problemReported"] as const).find(
+    (name) => query[name] !== undefined,
+  );
   if (!asked) return undefined;
   const command = await lastCommandBy(db, { machineId: record.id }, viewer);
   if (!command) return undefined;
