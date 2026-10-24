@@ -124,3 +124,15 @@ export const failedLogin = pgTable(
   },
   (table) => [index("failed_login_username_failed_at_idx").on(table.username, table.failedAt)],
 );
+
+/**
+ * Each team member's dashboard visits (ST-050, ADR 0011): one row per team member, shared across all their devices –
+ * when the current visit began and the Last visit. Not journaled: opening the dashboard is no domain fact.
+ */
+export const dashboardVisit = pgTable("dashboard_visit", {
+  teamMemberId: uuid("team_member_id")
+    .primaryKey()
+    .references(() => teamMember.id, { onDelete: "cascade" }),
+  currentVisitStartedAt: timestamp("current_visit_started_at", { withTimezone: true }).notNull(),
+  lastVisit: timestamp("last_visit", { withTimezone: true }).notNull(),
+});

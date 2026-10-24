@@ -46,6 +46,11 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
             ) : (
               <>
                 <p className="text-sm">{texts.waiting(problemReports.untriaged, problemReports.waitingLong)}</p>
+                {problemReports.newSinceLastVisit > 0 && (
+                  <p className="text-sm font-medium">
+                    {texts.newOfWaiting(problemReports.untriaged, problemReports.newSinceLastVisit)}
+                  </p>
+                )}
                 <Link href="/team/triage" className={buttonVariants({ variant: "outline", className: "self-start" })}>
                   {texts.openTriage}
                 </Link>

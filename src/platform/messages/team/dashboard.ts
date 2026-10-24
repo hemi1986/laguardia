@@ -17,6 +17,13 @@ export const dashboardTexts = {
               : " – alle länger als 3 Tage"
             : ` – ${waitingLong} davon länger als 3 Tage`
       }.`,
+    /** How many of the waiting problem reports are new since the Last visit (ST-050, G6a) – nothing at zero. */
+    newOfWaiting: (count: number, newCount: number) =>
+      newCount === count
+        ? count === 1
+          ? "Neu seit deinem letzten Besuch."
+          : "Alle neu seit deinem letzten Besuch."
+        : `${newCount} davon neu seit deinem letzten Besuch.`,
     openTriage: "Zur Sichtung",
     noneToTriage: "Keine Meldung wartet auf die Sichtung.",
     toReturnToPlay: "Nicht spielbereit ohne offenen Defekt",
@@ -68,7 +75,8 @@ export const dashboardTexts = {
       resumed: "Fortgesetzt",
       resolved: (by: string) => `Behoben von ${by}`,
       released: (by: string) => `${by} hat die Übernahme aufgehoben`,
-      releasedByRemovingTheMark: (by: string) => `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
+      releasedByRemovingTheMark: (by: string) =>
+        `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
     },
     changed: (what: string, hoursAgo: number) => `${what} · vor ${elapsedInWords(hoursAgo)}`,
   },

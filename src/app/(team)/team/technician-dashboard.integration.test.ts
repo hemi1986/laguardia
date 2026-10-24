@@ -173,7 +173,7 @@ async function workLogged(defectId: string, version: number, by: typeof tom, at:
 }
 
 async function dashboard() {
-  const data = await loadTechnicianDashboard(db, fixedClock(NOW));
+  const data = await loadTechnicianDashboard(db, fixedClock(NOW), { id: tom.teamMemberId, role: "technician" });
   return { data, html: renderToStaticMarkup(createElement(TechnicianDashboard, { data })) };
 }
 

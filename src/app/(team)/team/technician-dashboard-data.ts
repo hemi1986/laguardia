@@ -7,11 +7,12 @@ import {
 } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
-import { teamMemberNames } from "@/modules/team";
+import { lastVisitOf, teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
-import { nameOf } from "./claimant";
+import { nameOf, type Viewer } from "./claimant";
+import { isNew, type MarkLine } from "./new-since-last-visit";
 
 /** A machine that could return to play – Limited or Out of order, without open defects (POL-ResolvedDefectsReturnMachineToPlay). */
 export type MachineToReturnToPlay = { museumNumber: string; machineModelTitle: string; machineStatus: MachineStatus };
@@ -43,8 +44,11 @@ export type RecentChange =
  * 4 overdue maintenance tasks, 5 recent changes (ST-058).
  */
 export type TechnicianDashboardData = {
-  /** How many problem reports wait for triage, and how many of them longer than 3 days (HS-2). */
-  problemReports: { untriaged: number; waitingLong: number };
+  /**
+   * How many problem reports wait for triage, how many of them longer than 3 days (HS-2), and how many of them are new
+   * since the viewer's Last visit (ST-050).
+   */
+  problemReports: { untriaged: number; waitingLong: number; newSinceLastVisit: number };
   /** By museum number. */
   machinesToReturnToPlay: MachineToReturnToPlay[];
   /** The oldest claim first. */
@@ -68,7 +72,12 @@ const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
  * by machine status – the page composes (ST-009) –, computed when it is opened (ADR 0002). Maintenance's due maintenance tasks on
  * Collection's machines (the rules of ST-043 and ST-056). The technician decides whether a machine returns to play (HS-6) – the dashboard only shows which ones could.
  */
-export async function loadTechnicianDashboard(db: Database, clock: Clock): Promise<TechnicianDashboardData> {
+export async function loadTechnicianDashboard(
+  db: Database,
+  clock: Clock,
+  viewer: Viewer,
+): Promise<TechnicianDashboardData> {
+  const marks: MarkLine = { viewer, lastVisit: await lastVisitOf(db, clock, viewer.id) };
   const since = hoursBefore(clock.now(), RECENT_HOURS);
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
@@ -98,6 +107,9 @@ export async function loadTechnicianDashboard(db: Database, clock: Clock): Promi
     problemReports: {
       untriaged: toTriage.length,
       waitingLong: toTriage.filter((report) => report.waitingLong).length,
+      newSinceLastVisit: toTriage.filter((report) =>
+        isNew(marks, report.reportedAt, report.reporter.kind === "team-member" ? report.reporter.teamMemberId : undefined),
+      ).length,
     },
     machinesToReturnToPlay: notPlayable
       .filter((machine) => !openDefects.has(machine.id))

@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   if (member.role === "technician") {
     return (
       <Page title={team.dashboard} wide>
-        <TechnicianDashboard data={await loadTechnicianDashboard(database(), systemClock)} />
+        <TechnicianDashboard data={await loadTechnicianDashboard(database(), systemClock, member)} />
       </Page>
     );
   }
