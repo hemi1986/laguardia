@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { reportProblemAndTriageCommand } from "@/modules/repair";
+import { claimDefectCommand, reportProblemAndTriageCommand } from "@/modules/repair";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -108,5 +108,22 @@ describe("the helper dashboard", () => {
     expect(data.suitableForHelpers.map((defect) => defect.title)).toEqual(["Rubber cracked"]);
     expect(html).toContain("Rubber cracked");
     expect(html).not.toContain("Display flickers");
+  });
+
+  it("ST-049: Helper sees her claimed defects first", async () => {
+    const defectId = await anOpenDefect("Slingshot switch loose", { suitableForHelpers: true, museumNumber: "LG-042" });
+    await run(executeCommand(claimDefectCommand, { defectId, version: 0 }, { ...as(NOW), actor: anna }));
+
+    const { data, html } = await dashboard();
+
+    expect(data.claimedByYou.map(({ title, museumNumber }) => ({ title, museumNumber }))).toEqual([
+      { title: "Slingshot switch loose", museumNumber: "LG-042" },
+    ]);
+    // The first section, and only there – her claim is not repeated among the defects suitable for helpers (user, 2026-10-24).
+    expect(html.indexOf("Von dir übernommen")).toBeGreaterThanOrEqual(0);
+    expect(html.indexOf("Von dir übernommen")).toBeLessThan(html.indexOf("Slingshot switch loose"));
+    expect(html.indexOf("Slingshot switch loose")).toBeLessThan(html.indexOf("Für Helfer:innen geeignet"));
+    expect(html.split("Slingshot switch loose")).toHaveLength(2);
+    expect(html).toContain("LG-042 · Medieval Madness");
   });
 });

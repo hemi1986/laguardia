@@ -24,6 +24,7 @@ export const dashboardTexts = {
   },
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {
+    claimedByYou: "Von dir übernommen",
     suitableForHelpers: "Für Helfer:innen geeignet",
   },
 } as const;
