@@ -26,8 +26,8 @@ export type ShownStaleClaim = {
   claimant: string;
 };
 
-/** A recent change as section 5 names it – who by name. */
-export type RecentChange =
+/** A recent change as section 5 names it – who by name, and whether it is new since the viewer's Last visit (ST-050). */
+export type RecentChange = (
   | {
       kind: "status-change";
       museumNumber: string;
@@ -36,7 +36,8 @@ export type RecentChange =
       by: string;
       at: Date;
     }
-  | { kind: "resolved" | "reopened"; defectId: string; title: string; museumNumber: string; by: string; at: Date };
+  | { kind: "resolved" | "reopened"; defectId: string; title: string; museumNumber: string; by: string; at: Date }
+) & { newSinceLastVisit: boolean };
 
 /**
  * What the technician dashboard shows (RM-TechnicianDashboard, ST-048) – its sections in the order ST-048 fixed (G18):
@@ -134,11 +135,13 @@ export async function loadTechnicianDashboard(
         ...change,
         by: nameOf(names, changedBy),
         at: changedAt,
+        newSinceLastVisit: isNew(marks, changedAt, changedBy),
       })),
       ...defectChanges.map(({ machineId, by, ...change }): RecentChange => ({
         ...change,
         museumNumber: labelOf(machineId).museumNumber,
         by: nameOf(names, by),
+        newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),
   };

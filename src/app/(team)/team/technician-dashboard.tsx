@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
+import { NewMark } from "./new-mark";
 import type { RecentChange, TechnicianDashboardData } from "./technician-dashboard-data";
 
 const { technicianDashboard: texts, machines } = teamMessages;
@@ -192,6 +193,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
                         change.by,
                         formatDateTime(change.at),
                       )}
+                      <NewMark shown={change.newSinceLastVisit} />
                     </>
                   ) : (
                     <>
@@ -202,6 +204,7 @@ function RecentChanges({ changes }: { changes: RecentChange[] }) {
                         {change.title}
                       </Link>{" "}
                       {texts.defectChanged(change.kind, change.museumNumber, change.by, formatDateTime(change.at))}
+                      <NewMark shown={change.newSinceLastVisit} />
                     </>
                   )}
                 </li>

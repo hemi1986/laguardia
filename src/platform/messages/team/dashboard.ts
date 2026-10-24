@@ -48,6 +48,8 @@ export const dashboardTexts = {
       `(${museumNumber}) ${kind === "resolved" ? "behoben" : "wieder geöffnet"} · ${by} · ${at}`,
     noRecentChanges: "Keine Änderungen in den letzten 7 Tagen.",
   },
+  /** The marker next to an entry that is new since the Last visit (ST-050, G6a) – on both dashboards. */
+  newSinceLastVisit: "neu seit deinem letzten Besuch",
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {
     claimedByYou: "Von dir übernommen",

@@ -3,9 +3,9 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { changeMachineStatusCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { reportProblemCommand } from "@/modules/repair";
+import { recordDefectCommand, reportProblemCommand, resolveDefectCommand } from "@/modules/repair";
 import { recordVisit } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -74,13 +74,35 @@ async function aMachine(museumNumber: string) {
 
 /** A visitor's problem report, waiting for triage since that time. */
 async function aProblemReport(machineId: string, at: string) {
-  await run(
+  const reported = await run(
     executeCommand(
       reportProblemCommand,
       { machineId, description: "Something is wrong" },
       { ...as(at), actor: { kind: "visitor" } },
     ),
   );
+  return reported.problemReportId;
+}
+
+/** An open defect recorded by Tom at that time from a visitor's problem report – at version 0. */
+async function anOpenDefect(machineId: string, title: string, at: string) {
+  const problemReportId = await aProblemReport(machineId, at);
+  const recorded = await run(
+    executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId,
+        version: 0,
+        title,
+        priority: "normal",
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      as(at),
+    ),
+  );
+  return recorded.defectId!;
 }
 
 /** Tom's dashboard rendered at that time – a prefetch or the re-render after an action, which records no visit. */
@@ -150,5 +172,36 @@ describe("new since the Last visit on the technician dashboard", () => {
     const { data } = await tomOpensHisDashboard("2026-06-10T13:30:00Z");
 
     expect(data.problemReports).toMatchObject({ untriaged: 1, newSinceLastVisit: 0 });
+  });
+
+  it("ST-050: Own actions are not marked", async () => {
+    const ben = { kind: "team-member", teamMemberId: await aTechnician("Ben"), role: "technician" } as const;
+    await tomOpensHisDashboard("2026-06-09T18:00:00Z");
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Left flipper weak", "2026-06-09T09:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        as("2026-06-10T09:00:00Z"),
+      ),
+    );
+    // Someone else's change in the same section is marked.
+    await run(
+      executeCommand(
+        changeMachineStatusCommand,
+        { machineId: await aMachine("LG-043"), version: 0, machineStatus: "limited", reason: "Slow ball" },
+        { ...as("2026-06-10T09:30:00Z"), actor: ben },
+      ),
+    );
+
+    const { data, html } = await tomOpensHisDashboard("2026-06-10T12:00:00Z");
+
+    expect(data.recentChanges.map(({ kind, by, newSinceLastVisit }) => ({ kind, by, newSinceLastVisit }))).toEqual([
+      { kind: "status-change", by: "Ben", newSinceLastVisit: true },
+      { kind: "resolved", by: "Tom", newSinceLastVisit: false },
+    ]);
+    expect(html).toContain("Left flipper weak");
+    expect(html.match(/neu seit deinem letzten Besuch/g)).toHaveLength(1);
   });
 });

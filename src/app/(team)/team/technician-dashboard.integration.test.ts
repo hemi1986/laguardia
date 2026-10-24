@@ -369,6 +369,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-10T09:00:00Z"),
+        newSinceLastVisit: false,
       },
       {
         kind: "resolved",
@@ -377,6 +378,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-09T15:00:00Z"),
+        newSinceLastVisit: false,
       },
       {
         kind: "status-change",
@@ -385,6 +387,7 @@ describe("the technician dashboard", () => {
         newStatus: "out-of-order",
         by: "Anna",
         at: new Date("2026-06-09T12:00:00Z"),
+        newSinceLastVisit: false,
       },
     ]);
     expect(html).toContain("Letzte Änderungen");
