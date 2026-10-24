@@ -136,4 +136,34 @@ describe("new since the Last visit on the helper dashboard", () => {
     ]);
     expect(html).toContain("Ben hat übernommen · vor 2 Tagen · <strong");
   });
+
+  it("marks a defect suitable for helpers recorded since the Last visit (user, 2026-10-24)", async () => {
+    const anna = await aHelper("Anna");
+    await aDefect("Rubber cracked", daysAgo(4));
+    await opensTheirDashboard(anna, daysAgo(3));
+    await aDefect("Ball stuck in the shooter lane", daysAgo(1));
+
+    const { data, html } = await opensTheirDashboard(anna, NOW);
+
+    expect(data.suitableForHelpers.map(({ title, newSinceLastVisit }) => ({ title, newSinceLastVisit }))).toEqual([
+      { title: "Rubber cracked", newSinceLastVisit: false },
+      { title: "Ball stuck in the shooter lane", newSinceLastVisit: true },
+    ]);
+    expect(html.match(/neu seit deinem letzten Besuch/g)).toHaveLength(1);
+  });
+
+  it("ST-050: Nothing is marked on the first visit", async () => {
+    const ben = await aHelper("Ben");
+    await aDefect("Rubber cracked", daysAgo(4));
+    await aDefect("Ball stuck in the shooter lane", daysAgo(1));
+
+    const { data, html } = await opensTheirDashboard(ben, NOW);
+
+    expect(data.suitableForHelpers.map(({ title, newSinceLastVisit }) => ({ title, newSinceLastVisit }))).toEqual([
+      { title: "Rubber cracked", newSinceLastVisit: false },
+      { title: "Ball stuck in the shooter lane", newSinceLastVisit: false },
+    ]);
+    expect(html).toContain("Ball stuck in the shooter lane");
+    expect(html).not.toContain("neu seit deinem letzten Besuch");
+  });
 });

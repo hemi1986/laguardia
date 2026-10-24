@@ -3,7 +3,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { claimantText } from "./claimant";
-import type { OpenDefectsItem } from "./defects/open-defects-data";
 import type { ClaimedByYouItem, HelperDashboardData, ShownChange } from "./helper-dashboard-data";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
 import { NewMark } from "./new-mark";
@@ -63,8 +62,11 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
   );
 }
 
-/** A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant. */
-type ListedDefect = ClaimedByYouItem | OpenDefectsItem;
+/**
+ * A defect as a section lists it – section 1 with what changed on it (ST-086), section 2 with its claimant and whether
+ * it is new since the Last visit (ST-050).
+ */
+type ListedDefect = ClaimedByYouItem | HelperDashboardData["suitableForHelpers"][number];
 
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
 function DefectsSection({ title, none, defects }: { title: string; none: string; defects: ListedDefect[] }) {
@@ -87,6 +89,7 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
                     </Link>
                     <p className="text-muted-foreground">
                       {defect.museumNumber} · {defect.machineModelTitle}
+                      <NewMark shown={"newSinceLastVisit" in defect && defect.newSinceLastVisit} />
                     </p>
                     {/* Someone else's claim is only a signal (HS-8) – a helper may still take the defect on. */}
                     {"claimant" in defect && defect.claimant && !defect.claimant.you && (

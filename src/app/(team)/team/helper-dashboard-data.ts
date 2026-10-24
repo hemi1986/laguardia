@@ -38,8 +38,11 @@ export type HelperDashboardData = {
    * them in the last 7 days, the latest to leave first (user, 2026-10-24, ST-086) – each with what changed on it.
    */
   claimedByYou: ClaimedByYouItem[];
-  /** Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1 (user, 2026-10-24). */
-  suitableForHelpers: OpenDefectsItem[];
+  /**
+   * Section 2 – open defects suitable for helpers, without the helper's own claims – they are in section 1 (user,
+   * 2026-10-24) –, each marked when it was recorded since the helper's Last visit (ST-050).
+   */
+  suitableForHelpers: (OpenDefectsItem & { newSinceLastVisit: boolean })[];
   /** Section 3 – each due maintenance task suitable for helpers, on how many machines it is due and overdue (G18, G4a). */
   dueMaintenance: DueMaintenanceEntry[];
 };
@@ -103,7 +106,11 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
         changes: shown(defect.changes),
       })),
     ],
-    suitableForHelpers,
+    // Only technicians record defects – a helper's own is never among them.
+    suitableForHelpers: suitableForHelpers.map((defect) => ({
+      ...defect,
+      newSinceLastVisit: isNew(marks, defect.openSince),
+    })),
     dueMaintenance: due
       .filter((task) => task.suitableForHelpers)
       .map((task) => ({
