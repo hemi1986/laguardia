@@ -176,4 +176,17 @@ describe("the helper dashboard", () => {
 
     expect(html).toBe("<p>Gerade ist nichts für dich offen.</p>");
   });
+
+  it("ST-049: An empty section says so next to a filled one", async () => {
+    await anOpenDefect("Rubber cracked", { suitableForHelpers: true });
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Du hast keinen Defekt übernommen.");
+    expect(html.indexOf("Du hast keinen Defekt übernommen.")).toBeLessThan(html.indexOf("Für Helfer:innen geeignet"));
+    expect(html.indexOf("Für Helfer:innen geeignet")).toBeLessThan(html.indexOf("Rubber cracked"));
+    // The maintenance section says it has nothing too, in the due maintenance list's words – and offers no link.
+    expect(html).toContain("Gerade ist keine Wartung für Helfer:innen fällig.");
+    expect(html).not.toContain("Zur Wartung");
+  });
 });

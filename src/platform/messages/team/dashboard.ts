@@ -25,7 +25,9 @@ export const dashboardTexts = {
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {
     claimedByYou: "Von dir übernommen",
+    noneClaimed: "Du hast keinen Defekt übernommen.",
     suitableForHelpers: "Für Helfer:innen geeignet",
+    noneSuitable: "Gerade ist kein Defekt für Helfer:innen offen.",
     dueMaintenance: "Fällige Wartung für Helfer:innen",
     due: (name: string, machines: number, overdue: number) =>
       `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} fällig${
