@@ -64,15 +64,12 @@ export type { DismissalReason } from "./report-problem";
 export { linkProblemReportToDefectCommand } from "./link-problem-report-to-defect-command";
 export type { LinkProblemReportToDefectError, LinkProblemReportToDefectInput } from "./link-problem-report-to-defect";
 export { claimDefectCommand } from "./claim-defect-command";
-export { assigneeRefusal } from "./claim-defect";
 export type { ClaimDefectError, ClaimDefectInput } from "./claim-defect";
 export { releaseClaimCommand } from "./release-claim-command";
 export type { ReleaseClaimError, ReleaseClaimInput } from "./release-claim";
 export { prioritizeDefectCommand } from "./prioritize-defect-command";
 export { changeDefectDetailsCommand } from "./change-defect-details-command";
-export { claimReleasedByRemovingTheMark } from "./change-defect-details";
 export type { ChangeDefectDetailsError, ChangeDefectDetailsInput, DefectDetail } from "./change-defect-details";
-export { priorityRefusal } from "./prioritize-defect";
 export type { PrioritizeDefectError, PrioritizeDefectInput } from "./prioritize-defect";
 export { resolveDefectCommand } from "./resolve-defect-command";
 export type { ResolveDefectError, ResolveDefectInput } from "./resolve-defect";
@@ -97,3 +94,4 @@ export {
   type RepairTimePeriod,
   type RepairTimesOfPriority,
 } from "./repair-times";
+export type { DefectFormOffer, DefectFormOffers } from "./defect-form-offers";

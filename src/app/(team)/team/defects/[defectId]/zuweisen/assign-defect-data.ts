@@ -1,5 +1,5 @@
-import { assigneeRefusal, defectForAction } from "@/modules/repair";
-import { activeTeamMembers, type ActiveTeamMember } from "@/modules/team";
+import { defectForAction } from "@/modules/repair";
+import type { ActiveTeamMember } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../../claimant";
 import { named } from "../../../named";
@@ -18,8 +18,8 @@ export type DefectForAssigning = DefectForForm<"assign"> & {
 };
 
 /**
- * Repair's defect and its rule about whom it can be assigned to, Team's active team members and names, Collection's
- * museum number and title – the page composes (ST-009). Undefined when there is no such defect.
+ * Repair's defect with whom it can be assigned to (its command's own rule, G11), named with Team's names and
+ * Collection's museum number and title – the page composes (ST-009). Undefined when there is no such defect.
  */
 export async function loadDefectForAssigning(
   db: Database,
@@ -28,16 +28,10 @@ export async function loadDefectForAssigning(
 ): Promise<DefectForAssigning | undefined> {
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "assign");
   if (!defect) return undefined;
-  const { whyNot } = defect;
-  const [shown, active] = await Promise.all([
-    named(db, { machines: [defect.machineId], teamMembers: [defect.claim?.claimedBy] }),
-    whyNot ? [] : activeTeamMembers(db),
-  ]);
+  const shown = await named(db, { machines: [defect.machineId], teamMembers: [defect.claim?.claimedBy] });
   return {
     ...defectForForm(defect, shown),
     claimant: shownClaimant(defect.claim?.claimedBy, shown, viewer),
-    teamMembers: active.filter(
-      ({ id, role }) => id !== viewer.id && assigneeRefusal(defect, { teamMemberId: id, role }) === undefined,
-    ),
+    teamMembers: defect.offer.assignees,
   };
 }

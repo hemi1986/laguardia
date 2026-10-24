@@ -3,6 +3,7 @@ import {
   type DefectAction,
   type DefectActionRefusals,
   type DefectForAction,
+  type DefectFormOffer,
   type Priority,
 } from "@/modules/repair";
 import type { Viewer } from "../../claimant";
@@ -23,6 +24,8 @@ export type DefectForForm<Action extends DefectAction> = {
   machineModelTitle: string;
   /** Why the form's command would refuse this team member – the command's own reason (G11); none if it would not. */
   whyNot: DefectActionRefusals[Action];
+  /** The choices the form may offer them – Repair's answer from the command's own rules (G11). */
+  offer: DefectFormOffer<Action>;
 };
 
 /**
@@ -56,5 +59,6 @@ export function defectForForm<Action extends DefectAction>(
     priority: defect.priority,
     ...label(defect.machineId),
     whyNot: defect.whyNot,
+    offer: defect.offer,
   };
 }

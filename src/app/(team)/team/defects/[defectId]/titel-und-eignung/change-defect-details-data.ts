@@ -1,5 +1,4 @@
-import { claimReleasedByRemovingTheMark, defectForAction } from "@/modules/repair";
-import { teamMemberRole } from "@/modules/team";
+import { defectForAction } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 import type { Viewer } from "../../../claimant";
 import { named } from "../../../named";
@@ -13,9 +12,8 @@ export type DefectForChangingDetails = DefectForForm<"change-details"> & {
 };
 
 /**
- * Repair's defect with Collection's machine label and Team's claimant – the page composes (ST-009). Whose claim removing
- * the mark releases is Repair's rule (`claimReleasedByRemovingTheMark`), asked with the claimant's role as Team knows it
- * now. Undefined when there is no such defect.
+ * Repair's defect with Collection's machine label and Team's names – the page composes (ST-009). Whose claim removing
+ * the mark releases is Repair's answer (the command's own rule, G11). Undefined when there is no such defect.
  */
 export async function loadDefectForChangingDetails(
   db: Database,
@@ -24,13 +22,8 @@ export async function loadDefectForChangingDetails(
 ): Promise<DefectForChangingDetails | undefined> {
   const defect = await defectForAction(db, defectId, { teamMemberId: viewer.id, role: viewer.role }, "change-details");
   if (!defect) return undefined;
-  const claimant = defect.claim?.claimedBy;
-  // Only the claimant's claim can be released, so naming the claimant names whom it would be.
-  const [shown, claimantRole] = await Promise.all([
-    named(db, { machines: [defect.machineId], teamMembers: [claimant] }),
-    claimant ? teamMemberRole(db, claimant) : undefined,
-  ]);
-  const released = claimReleasedByRemovingTheMark(defect, claimantRole);
+  const released = defect.offer.releasesClaimOf;
+  const shown = await named(db, { machines: [defect.machineId], teamMembers: [released] });
   return {
     ...defectForForm(defect, shown),
     suitableForHelpers: defect.suitableForHelpers,

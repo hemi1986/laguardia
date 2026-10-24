@@ -216,7 +216,10 @@ its own: the commands load the defect store, which asks the refusals). `defectDe
 refusals as `actions`; the defect's page shows what is `offered`, and a form page reads the defect with
 `defectForAction(db, id, teamMember, action)` – the defect as its store loads it, its version and that command's refusal
 – and shows the reason in place of its form (`defect-form-data.ts`) – no page carries a rule or a `can…` flag of its own
-(G11). In the app, `defect-action-pages.ts` says how each action looks – its form page (folder, button text) and its
+(G11). What a form may **offer** comes with it as `offer` (architecture review 2026-10-25, `defect-form-offers.ts`): the
+assignees CMD-ClaimDefect would accept, the priorities CMD-PrioritizeDefect would accept, whether the team member may
+choose a stricter machine status while reopening, whose claim removing the mark would release – each from the
+command's own rule, which stays inside Repair. A new choice on a form is a new entry there, never a filter in the page. In the app, `defect-action-pages.ts` says how each action looks – its form page (folder, button text) and its
 confirmation text –, and every Server Action of a defect runs through `defectFormAction(action, { fields, input })`
 (`defect-action.ts`): the access check, the action's command, then `/team/defects/<id>?done=<action>`. The page reads
 `done` back only as an action there is (`doneActionOf`) and confirms it only when the defect's latest journal event is

@@ -27,16 +27,16 @@ export async function loadDefectForReopening(
 ): Promise<DefectForReopening | undefined> {
   const defect = await loadDefectForForm(db, defectId, viewer, "reopen");
   if (!defect) return undefined;
-  const machine = await machineForTeamForm(db, defect.museumNumber);
+  // Whether they may choose a status is Repair's rule (G11); the machine is read only then.
+  const machine = defect.offer.mayChangeMachineStatus ? await machineForTeamForm(db, defect.museumNumber) : undefined;
   return {
     ...defect,
-    machine:
-      viewer.role === "technician" && machine
-        ? {
-            status: machine.machineStatus,
-            version: machine.version,
-            stricter: stricterMachineStatuses(machine.machineStatus),
-          }
-        : undefined,
+    machine: machine
+      ? {
+          status: machine.machineStatus,
+          version: machine.version,
+          stricter: stricterMachineStatuses(machine.machineStatus),
+        }
+      : undefined,
   };
 }

@@ -1,5 +1,5 @@
 import type { MachineStatus } from "@/modules/collection";
-import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
 import type { Defect } from "./defect";
 import { stricterMachineStatuses } from "./record-defect";
 
@@ -57,6 +57,11 @@ export function reopenRefusal(
   return undefined;
 }
 
+/** Whether this team member may set the machine to a stricter status while reopening – technicians only (ST-030). */
+export function mayChangeMachineStatusWhileReopening(teamMember: { role: Role }): boolean {
+  return teamMember.role === "technician";
+}
+
 export function reopenDefect(
   defect: Defect,
   input: ReopenDefectInput,
@@ -69,7 +74,7 @@ export function reopenDefect(
   if (!reason) return { ok: false, error: "reopen-reason-required" };
   if (input.machineStatus) {
     // Helpers cannot change the machine status while reopening (POL-DefectMayChangeMachineStatus).
-    if (actor.role !== "technician") return { ok: false, error: "not-authorized" };
+    if (!mayChangeMachineStatusWhileReopening(actor)) return { ok: false, error: "not-authorized" };
     if (!facts.machine || !stricterMachineStatuses(facts.machine.machineStatus).includes(input.machineStatus))
       return { ok: false, error: "machine-status-not-stricter" };
   }
