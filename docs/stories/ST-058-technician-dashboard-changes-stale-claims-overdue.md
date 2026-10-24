@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MachineStatusChanged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClaimed, EVT-WorkLogged, EVT-MaintenanceTaskOverdue]
 depends_on: [ST-024, ST-026, ST-030, ST-043, ST-048]
 labels: [mvp, dashboard, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story

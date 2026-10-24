@@ -4,15 +4,20 @@
 
 **Progress: 44 of 59 domain stories done** · scenarios 387 of 505
 
-**84 stories** · In Progress: 0 · Ready: 22 · In Review: 0 · Draft: 3 · Done: 59
+**84 stories** · In Progress: 1 · Ready: 21 · In Review: 0 · Draft: 3 · Done: 59
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | should | M | low | ST-024, ST-026, ST-030, ST-043, ST-048 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-058](ST-058-technician-dashboard-changes-stale-claims-overdue.md) | Technician dashboard – recent changes, stale claims and overdue maintenance | story | Repair | should | M | low | ST-024, ST-026, ST-030, ST-043, ST-048 |
 | [ST-086](ST-086-helper-dashboard-claimed-defects-what-changed.md) | Helper dashboard – my claimed defects and what changed on them | story | Repair | should | M | medium | ST-049, ST-026, ST-027, ST-029, ST-031 |
 | [ST-087](ST-087-spike-how-a-dashboard-visit-is-recorded.md) | How a dashboard visit is recorded | spike | Team | should | XS | medium | – |
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards mark what is new since the last visit | story | Repair | should | L | high | ST-058, ST-086, ST-087 |
