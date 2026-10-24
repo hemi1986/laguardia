@@ -95,10 +95,14 @@ export type EachFormDefinition<Input, Result, Error extends string, Field extend
   onSuccess: (outcome: EachOutcome<Result, Error>) => Promise<void>;
 };
 
-/** What a form run once per chosen item did: the items done with their results, and the rejected ones with why. */
+/**
+ * What a form run once per chosen item did: the items done with their results, the rejected ones with why, and those
+ * never run because a command failed on the way (it is logged) – the ones done stay done.
+ */
 export type EachOutcome<Result, Error extends string> = {
   done: readonly { item: string; result: Result }[];
   rejected: readonly { item: string; error: Error }[];
+  notRun: readonly string[];
 };
 
 /**
@@ -275,16 +279,26 @@ function eachStep<Input, Result, Error extends string, Field extends string>(
     const done: { item: string; result: Result }[] = [];
     const rejected: { item: string; error: CommandError<typeof command> }[] = [];
     // One after the other, each in its own transaction (ST-045): what one machine's rules reject stays its own.
-    for (const item of chosen) {
-      const outcome = await executeCommand(command, definition.input(fields, item), { ...dependencies, actor });
-      if (outcome.ok) done.push({ item, result: outcome.result });
-      else rejected.push({ item, error: outcome.error });
+    let notRun: string[] = [];
+    for (const [index, item] of chosen.entries()) {
+      try {
+        const outcome = await executeCommand(command, definition.input(fields, item), { ...dependencies, actor });
+        if (outcome.ok) done.push({ item, result: outcome.result });
+        else rejected.push({ item, error: outcome.error });
+      } catch (error) {
+        // Nothing done yet: the form fails as any other. Otherwise what was done must still be confirmed, or the team
+        // member sends it again and records it twice – the rest is named as not run.
+        if (done.length === 0) throw error;
+        console.error("form stopped after a failed command:", error instanceof Error ? error.message : error);
+        notRun = chosen.slice(index);
+        break;
+      }
     }
     if (done.length === 0) {
       const shared = rejected.every(({ error }) => error === rejected[0].error);
       return { error: rejected[0].error, values: valuesOf(fields), chosen, ...(shared ? {} : { rejected }) };
     }
-    await definition.onSuccess({ done, rejected });
+    await definition.onSuccess({ done, rejected, notRun });
     return null;
   };
 }

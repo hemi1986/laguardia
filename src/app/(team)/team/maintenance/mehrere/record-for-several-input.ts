@@ -1,5 +1,6 @@
 import type { RecordMaintenanceInput } from "@/modules/maintenance";
 import type { EachOutcome, FormFields } from "@/app/_actions/form-action";
+import { dueMaintenanceAddress } from "../due-maintenance-data";
 import { recordMaintenanceInput } from "../erfassen/record-maintenance-input";
 
 /**
@@ -26,10 +27,11 @@ export function recordForSeveralInput(
 export function recordedForSeveralAddress({
   done,
   rejected,
+  notRun,
 }: EachOutcome<{ maintenanceRecordId: string; maintenanceTaskId: string }, string>): string {
-  const params = new URLSearchParams();
-  if (done[0]) params.set("task", done[0].result.maintenanceTaskId);
-  for (const { result } of done) params.append("recorded", result.maintenanceRecordId);
-  for (const { item } of rejected) params.append("notRecorded", item);
-  return `/team/maintenance?${params.toString()}`;
+  return dueMaintenanceAddress({
+    maintenanceTaskId: done[0]?.result.maintenanceTaskId,
+    recorded: done.map(({ result }) => result.maintenanceRecordId),
+    notRecorded: [...rejected.map(({ item }) => item), ...notRun],
+  });
 }

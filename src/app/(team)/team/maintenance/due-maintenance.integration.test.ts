@@ -959,6 +959,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
   it("ST-045: Due machines are preselected, all applicable machines can be selected", async () => {
     const lg042 = await aMachine("LG-042", { location: "Hall 2, row 1" });
     const lg045 = await aMachine("LG-045", { location: "Hall 1, row 3" });
+    const lg046 = await aMachine("LG-046", { location: "Hall 1, row 10" });
     const lg090 = await aMachine("LG-090", { machineCategory: "arcade", technology: "crt" });
     const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
       intervalMonths: 3,
@@ -966,12 +967,14 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
       suitableForHelpers: true,
     });
     await recorded(cleanGlass, lg045, "2026-03-30");
+    await recorded(cleanGlass, lg046, "2026-03-30");
     expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
 
     const { data, html } = await selection("2026-04-02", cleanGlass, anna);
 
     expect(data?.due.map((machine) => machine.museumNumber)).toEqual(["LG-042"]);
-    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045"]);
+    // By location as people read it: row 3 before row 10.
+    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045", "LG-046"]);
     expect(checkboxOf(html, lg042)).toContain("checked");
     expect(checkboxOf(html, lg045)).not.toContain("checked");
     expect(html).toContain("Weitere Geräte");
@@ -1028,6 +1031,20 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     expect(html.indexOf("an 2 Geräten")).toBeLessThan(html.indexOf("LG-044 nicht eingetragen"));
   });
 
+  it("names a machine left out even when Maintenance would accept it now", async () => {
+    const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+    const form = severalFormOf(tom, "2026-06-10");
+    expect(
+      await form.action(null, ticked({ maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "" }, [lg042])),
+    ).toBeNull();
+    const address = `${form.address}&notRecorded=${lg043}`;
+
+    const { html } = await landedOn(address, "2026-06-10", tom);
+
+    expect(html).toContain("LG-043 nicht eingetragen – bitte noch einmal erfassen.");
+  });
+
   it("ST-045: Nothing selected is rejected", async () => {
     const lg042 = await aMachine("LG-042");
     const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
@@ -1058,7 +1075,9 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     expect((await selection("2026-04-02", psu, anna)).html).toContain(
       "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
     );
-    expect((await page("2026-04-02", { maintenanceTaskId: psu }, anna)).html).not.toContain("/team/maintenance/mehrere");
+    expect((await page("2026-04-02", { maintenanceTaskId: psu }, anna)).html).not.toContain(
+      "/team/maintenance/mehrere",
+    );
     expect((await page("2026-04-02", { maintenanceTaskId: psu }, tom)).html).toContain(
       `href="/team/maintenance/mehrere?task=${psu}"`,
     );

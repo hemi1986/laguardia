@@ -42,6 +42,10 @@ export const maintenanceTexts = {
     recorded: (name: string, count: number) =>
       `„${name}“ an ${count === 1 ? "1 Gerät" : `${count} Geräten`} eingetragen.`,
     notRecorded: (museumNumber: string, reason: string) => `${museumNumber} nicht eingetragen: ${reason}`,
+    /** A machine left out that Maintenance would accept now – a command failed on the way, or the rules changed. */
+    notRecordedWithoutReason: (museumNumber: string) => `${museumNumber} nicht eingetragen – bitte noch einmal erfassen.`,
+    /** A rejected machine no longer on the page (retired meanwhile). */
+    aMachine: "Ein Gerät",
     unknown: "Diese Wartungsaufgabe gibt es nicht.",
   },
   /** The maintenance plan (ST-040): its page, the form page of adding a maintenance task, and the confirmation (G3). */

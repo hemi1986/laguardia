@@ -194,14 +194,22 @@ describe("the Server Action runner", () => {
 
 describe("the Server Action runner once per chosen item (ST-045)", () => {
   /** A problem report on each ticked machine – the stand-in for a form run once per chosen item. */
-  function reportOnEach(actor: Actor, outcome: { done?: string[]; rejected?: string[] } = {}) {
+  function reportOnEach(
+    actor: Actor,
+    outcome: { done?: string[]; rejected?: string[]; notRun?: readonly string[] } = {},
+    failsOn?: string,
+  ) {
     return runnerActingAs(actor)(reportProblemCommand, {
       fields: ["description"],
       each: { field: "machineId" },
-      input: ({ description }, machineId) => ({ machineId, description: description ?? "" }),
-      onSuccess: async ({ done, rejected }) => {
+      input: ({ description }, machineId) => {
+        if (machineId === failsOn) throw new Error("the database went away");
+        return { machineId, description: description ?? "" };
+      },
+      onSuccess: async ({ done, rejected, notRun }) => {
         outcome.done = done.map(({ item }) => item);
         outcome.rejected = rejected.map(({ item, error }) => `${item}: ${error}`);
+        outcome.notRun = notRun;
       },
     });
   }
@@ -224,7 +232,7 @@ describe("the Server Action runner once per chosen item (ST-045)", () => {
 
     expect(state).toBeNull();
     // A machine ticked twice is reported on once.
-    expect(outcome).toEqual({ done: [first, second], rejected: [`${unknown}: unknown-machine`] });
+    expect(outcome).toEqual({ done: [first, second], rejected: [`${unknown}: unknown-machine`], notRun: [] });
     expect(await problemReportsOfMachine(db, first)).toHaveLength(1);
     expect(await problemReportsOfMachine(db, second)).toHaveLength(1);
   });
@@ -249,5 +257,26 @@ describe("the Server Action runner once per chosen item (ST-045)", () => {
     });
     expect(outcome.done).toBeUndefined();
     expect(await problemReportsOfMachine(db, first)).toEqual([]);
+  });
+
+  it("confirms what was done when a command fails on the way – the rest is named as not run", async () => {
+    const [first, second, third] = [
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+    ];
+    const outcome: { done?: string[]; notRun?: readonly string[] } = {};
+
+    expect(
+      await reportOnEach({ kind: "visitor" }, outcome, second)(null, ticked("Glass", [first, second, third])),
+    ).toBeNull();
+
+    expect(outcome).toEqual(expect.objectContaining({ done: [first], notRun: [second, third] }));
+    expect(await problemReportsOfMachine(db, first)).toHaveLength(1);
+    expect(await problemReportsOfMachine(db, third)).toEqual([]);
+    // Failing before anything was done fails the form, as any other.
+    await expect(reportOnEach({ kind: "visitor" }, {}, first)(null, ticked("Glass", [first]))).rejects.toThrow(
+      "the database went away",
+    );
   });
 });

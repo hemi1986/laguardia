@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Confirmation } from "@/components/ui/message";
+import { Confirmation, Rejection } from "@/components/ui/message";
 import { formatCalendarDate } from "@/platform/time";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { dueMaintenanceAddress, type Confirmed, type DueMaintenanceData } from "./due-maintenance-data";
@@ -130,11 +130,17 @@ function RecordedConfirmation({ confirmed }: { confirmed: Confirmed }) {
           : teamMessages.recordMaintenance.recorded(museumNumbers[0])}
       </Confirmation>
       {notRecorded.length > 0 && (
-        <ul className="flex flex-col gap-1 text-sm">
-          {notRecorded.map(({ museumNumber, reason }) => (
-            <li key={museumNumber}>{severalTexts.notRecorded(museumNumber, commandErrorText(teamMessages, reason))}</li>
-          ))}
-        </ul>
+        <Rejection>
+          <ul className="flex flex-col gap-1">
+            {notRecorded.map(({ museumNumber, reason }) => (
+              <li key={museumNumber}>
+                {reason
+                  ? severalTexts.notRecorded(museumNumber, commandErrorText(teamMessages, reason))
+                  : severalTexts.notRecordedWithoutReason(museumNumber)}
+              </li>
+            ))}
+          </ul>
+        </Rejection>
       )}
     </div>
   );

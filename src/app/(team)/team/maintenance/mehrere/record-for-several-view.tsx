@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { MaintenanceForSeveral } from "@/modules/maintenance";
 import { teamMessages } from "@/platform/messages";
+import { dueMaintenanceAddress } from "../due-maintenance-data";
 import type { RecordForSeveralState } from "./actions";
 import { RecordForSeveralForm } from "./record-for-several-form";
 
@@ -35,7 +36,7 @@ export function RecordForSeveralPage({
         whyNot={data.whyNot}
       />
       <Link
-        href={`/team/maintenance?task=${encodeURIComponent(maintenanceTask.id)}`}
+        href={dueMaintenanceAddress({ maintenanceTaskId: maintenanceTask.id })}
         className="self-start text-sm underline underline-offset-4"
       >
         {texts.back}

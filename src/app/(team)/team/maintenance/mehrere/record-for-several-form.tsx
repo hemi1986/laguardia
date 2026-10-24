@@ -91,7 +91,7 @@ export function RecordForSeveralForm({
               <ul className="flex flex-col gap-1">
                 {state.rejected.map(({ item, error }) => (
                   <li key={item}>
-                    {texts.notRecorded(museumNumberOf.get(item) ?? "", rejectionText(error))}
+                    {texts.notRecorded(museumNumberOf.get(item) ?? texts.aMachine, rejectionText(error))}
                   </li>
                 ))}
               </ul>

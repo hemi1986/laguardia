@@ -41,14 +41,22 @@ export type DueMaintenanceData = {
 export type Confirmed = {
   maintenanceTaskName: string;
   museumNumbers: string[];
-  notRecorded: { museumNumber: string; reason: TeamCommandErrorCode }[];
+  /** Without a reason when Maintenance would accept it now – it was still not recorded (G23). */
+  notRecorded: { museumNumber: string; reason: TeamCommandErrorCode | undefined }[];
 };
 
 /** The list's address with the filter – the counterpart of `dueMaintenanceFilterOf`. */
-export function dueMaintenanceAddress({ suitableForHelpers, maintenanceTaskId }: DueMaintenanceFilter): string {
+export function dueMaintenanceAddress({
+  suitableForHelpers,
+  maintenanceTaskId,
+  recorded = [],
+  notRecorded = [],
+}: DueMaintenanceFilter): string {
   const params = new URLSearchParams();
   if (maintenanceTaskId) params.set("task", maintenanceTaskId);
   if (suitableForHelpers) params.set("helpers", "1");
+  for (const recordId of recorded) params.append("recorded", recordId);
+  for (const machineId of notRecorded) params.append("notRecorded", machineId);
   const query = params.toString();
   return `/team/maintenance${query ? `?${query}` : ""}`;
 }
@@ -99,7 +107,8 @@ export async function loadDueMaintenance(
 /**
  * The machines of the maintenance records the address names – each only when recording it was the latest command on it
  * and the viewer ran it, as everywhere (G3, architecture review 2026-10-18). The machines named as not recorded get a
- * line only next to a confirmation, and only with the reason Maintenance gives the viewer now (ST-045, G23).
+ * line only next to a confirmation, with the reason Maintenance gives the viewer now – none when it would accept them
+ * now, they were still not recorded (ST-045, G23).
  */
 async function confirmedRecords(
   db: Database,
@@ -124,13 +133,14 @@ async function confirmedRecords(
     machineLabels(db, [...records.map((record) => record.machineId), ...leftOut]),
     Promise.all(leftOut.map((machineId) => reasonNotRecorded(db, clock, maintenanceTaskId, machineId, viewer))),
   ]);
+  const museumNumbers = records.flatMap((record) => labels.get(record.machineId)?.museumNumber ?? []);
+  if (!maintenanceTaskName || museumNumbers.length === 0) return undefined;
   return {
-    maintenanceTaskName: maintenanceTaskName ?? "",
-    museumNumbers: records.flatMap((record) => labels.get(record.machineId)?.museumNumber ?? []),
+    maintenanceTaskName,
+    museumNumbers,
     notRecorded: leftOut.flatMap((machineId, index) => {
       const museumNumber = labels.get(machineId)?.museumNumber;
-      const reason = reasons[index];
-      return museumNumber && reason ? [{ museumNumber, reason }] : [];
+      return museumNumber ? [{ museumNumber, reason: reasons[index] }] : [];
     }),
   };
 }
