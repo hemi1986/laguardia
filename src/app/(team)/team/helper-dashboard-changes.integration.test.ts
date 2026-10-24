@@ -271,4 +271,15 @@ describe("what changed on the helper's claimed defects", () => {
       "<li>Fortgesetzt · vor 3 Stunden</li><li>Pausiert – Wartet auf Ersatzteil · vor 2 Tagen</li><li>Priorität: hoch · vor 3 Tagen</li>",
     );
   });
+
+  it("ST-086: A hold on her claimed defect is shown with its reason", async () => {
+    const display = await aDefect("Display flickers");
+    await display.claim(anna, daysAgo(5));
+    await display.putOnHold(tom, daysAgo(1));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Display flickers");
+    expect(section).toContain("<li>Pausiert – Wartet auf Ersatzteil · vor 1 Tag</li>");
+  });
 });
