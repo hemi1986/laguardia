@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
 import { elapsedMoreThanHours } from "@/platform/time";
@@ -277,6 +277,51 @@ export async function staleClaims(db: Database, clock: Clock): Promise<StaleClai
       ? [{ ...row, claimedBy, claimedAt }]
       : [],
   );
+}
+
+/** A defect resolved (EVT-DefectResolved) or reopened (EVT-DefectReopened) – its machine and who by ID. */
+export type ResolvedOrReopened = {
+  kind: "resolved" | "reopened";
+  defectId: string;
+  machineId: string;
+  title: string;
+  by: string;
+  at: Date;
+};
+
+/**
+ * Every resolution and reopening since that instant (RM-TechnicianDashboard, ST-058) – one entry each, so a defect
+ * resolved and reopened again appears twice. Newest first.
+ */
+export async function resolvedOrReopenedSince(db: Database, since: Date): Promise<ResolvedOrReopened[]> {
+  const [resolved, reopened] = await Promise.all([
+    db
+      .select({
+        defectId: defect.id,
+        machineId: defect.machineId,
+        title: defect.title,
+        by: defectResolution.resolvedBy,
+        at: defectResolution.resolvedAt,
+      })
+      .from(defectResolution)
+      .innerJoin(defect, eq(defectResolution.defectId, defect.id))
+      .where(gte(defectResolution.resolvedAt, since)),
+    db
+      .select({
+        defectId: defect.id,
+        machineId: defect.machineId,
+        title: defect.title,
+        by: defectReopening.reopenedBy,
+        at: defectReopening.reopenedAt,
+      })
+      .from(defectReopening)
+      .innerJoin(defect, eq(defectReopening.defectId, defect.id))
+      .where(gte(defectReopening.reopenedAt, since)),
+  ]);
+  return [
+    ...resolved.map((entry) => ({ kind: "resolved" as const, ...entry })),
+    ...reopened.map((entry) => ({ kind: "reopened" as const, ...entry })),
+  ].sort((a, b) => b.at.getTime() - a.at.getTime());
 }
 
 /**

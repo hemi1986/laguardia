@@ -18,6 +18,7 @@ import {
   logWorkCommand,
   openDefects,
   recordDefectCommand,
+  reopenDefectCommand,
   reportProblemCommand,
   resolveDefectCommand,
 } from "@/modules/repair";
@@ -37,6 +38,7 @@ const isolated = isolatedTestDatabase("technician_dashboard");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 let machineModelId: string;
 const NOW = "2026-06-10T10:00:00Z";
 
@@ -44,6 +46,7 @@ beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, ben, "Ben");
+  await anExistingTeamMember(db, anna, "Anna");
   const model = await run(
     executeCommand(
       createMachineModelCommand,
@@ -133,6 +136,23 @@ async function anOpenDefect(machineId: string, title: string, day = "2026-06-01"
     ),
   );
   return recorded.defectId!;
+}
+
+/** That team member sets the machine – at that version – to that machine status at that time. */
+async function statusChanged(
+  machineId: string,
+  version: number,
+  machineStatus: MachineStatus,
+  by: typeof tom | typeof anna,
+  at: string,
+) {
+  await run(
+    executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version, machineStatus, reason: "Checked it" },
+      { ...as(at), actor: by },
+    ),
+  );
 }
 
 /** The defect is claimed by that team member at that time – the defect at that version. */
@@ -302,6 +322,58 @@ describe("the technician dashboard", () => {
     expect(html).toContain("„Wax playfield“ ist an 2 Geräten überfällig.");
     expect(html).not.toContain("LG-042");
     expect(html).toMatch(/<a [^>]*href="\/team\/maintenance"[^>]*>Zur Wartung<\/a>/);
+  });
+
+  it("ST-058: Machine status changes and resolved or reopened defects", async () => {
+    const lg007 = await aMachine("LG-007");
+    const defectId = await anOpenDefect(lg007, "Left flipper weak");
+    // Yesterday.
+    await statusChanged(lg007, 0, "out-of-order", anna, "2026-06-09T12:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        as("2026-06-09T15:00:00Z"),
+      ),
+    );
+    // Today.
+    await run(
+      executeCommand(reopenDefectCommand, { defectId, version: 1, reason: "Weak again" }, as("2026-06-10T09:00:00Z")),
+    );
+
+    const { data, html } = await dashboard();
+
+    expect(data.recentChanges).toEqual([
+      {
+        kind: "reopened",
+        defectId,
+        title: "Left flipper weak",
+        museumNumber: "LG-007",
+        by: "Tom",
+        at: new Date("2026-06-10T09:00:00Z"),
+      },
+      {
+        kind: "resolved",
+        defectId,
+        title: "Left flipper weak",
+        museumNumber: "LG-007",
+        by: "Tom",
+        at: new Date("2026-06-09T15:00:00Z"),
+      },
+      {
+        kind: "status-change",
+        museumNumber: "LG-007",
+        previousStatus: "playable",
+        newStatus: "out-of-order",
+        by: "Anna",
+        at: new Date("2026-06-09T12:00:00Z"),
+      },
+    ]);
+    expect(html).toContain("Letzte Änderungen");
+    expect(html).toContain("Spielbereit → Außer Betrieb · Anna · 09.06.2026, 14:00");
+    expect(html).toContain("(LG-007) wieder geöffnet · Tom · 10.06.2026, 11:00");
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Left flipper weak</a>`));
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-007"[^>]*>LG-007<\/a>/);
   });
 
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {

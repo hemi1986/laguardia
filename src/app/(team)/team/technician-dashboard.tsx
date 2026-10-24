@@ -2,8 +2,9 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
+import { formatDateTime } from "@/platform/time";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
-import type { TechnicianDashboardData } from "./technician-dashboard-data";
+import type { RecentChange, TechnicianDashboardData } from "./technician-dashboard-data";
 
 const { technicianDashboard: texts, machines } = teamMessages;
 
@@ -12,18 +13,24 @@ const { technicianDashboard: texts, machines } = teamMessages;
  * reports wait for triage and how many of them long, in words, and leads to the triage list without repeating it (G5,
  * G6, G6a); section 2 lists the machines that could return to play, each with its one action, „Status ändern“ on the
  * machine (HS-6). ST-058 fills sections 3 to 5: 3 the stale claims, each with the reason in words; 4 how many
- * machines each overdue maintenance task is overdue on, leading to „Wartung“ without repeating it (G18). Empty is the good
- * state, and it says so (G7).
+ * machines each overdue maintenance task is overdue on, leading to „Wartung“ without repeating it (G18); 5 the recent
+ * changes – not something that needs attention, so they stay below the all-empty sentence. Empty is the good state, and
+ * it says so (G7).
  */
 export function TechnicianDashboard({ data }: { data: TechnicianDashboardData }) {
-  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance } = data;
+  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges } = data;
   if (
     problemReports.untriaged === 0 &&
     machinesToReturnToPlay.length === 0 &&
     staleClaims.length === 0 &&
     overdueMaintenance.length === 0
   ) {
-    return <p>{texts.nothingNeedsAttention}</p>;
+    return (
+      <>
+        <p>{texts.nothingNeedsAttention}</p>
+        {recentChanges.length > 0 && <RecentChanges changes={recentChanges} />}
+      </>
+    );
   }
   return (
     <>
@@ -146,6 +153,58 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
           </CardContent>
         </Card>
       </section>
+      <RecentChanges changes={recentChanges} />
     </>
+  );
+}
+
+/** Section 5 – machine status changes and defects resolved or reopened, newest first, each with who and when (ST-058). */
+function RecentChanges({ changes }: { changes: RecentChange[] }) {
+  return (
+    <section>
+      <Card>
+        <CardHeader>
+          <CardTitle>{texts.recentChanges}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {changes.length === 0 ? (
+            <p className="text-sm">{texts.noRecentChanges}</p>
+          ) : (
+            <ul className="flex flex-col gap-2 text-sm [overflow-wrap:anywhere]">
+              {changes.map((change, index) => (
+                <li key={index}>
+                  {change.kind === "status-change" ? (
+                    <>
+                      <Link
+                        href={`/team/machines/${encodeURIComponent(change.museumNumber)}`}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        {change.museumNumber}
+                      </Link>{" "}
+                      {texts.statusChanged(
+                        machines.statuses[change.previousStatus],
+                        machines.statuses[change.newStatus],
+                        change.by,
+                        formatDateTime(change.at),
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/team/defects/${change.defectId}`}
+                        className="font-medium underline underline-offset-4"
+                      >
+                        {change.title}
+                      </Link>{" "}
+                      {texts.defectChanged(change.kind, change.museumNumber, change.by, formatDateTime(change.at))}
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }

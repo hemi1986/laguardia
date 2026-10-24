@@ -23,7 +23,8 @@ export const dashboardTexts = {
     nothingNeedsAttention: "Gerade braucht nichts deine Aufmerksamkeit.",
     /** Section 3 (ST-058) – the reason in words (G6a). */
     staleClaims: "Liegengeblieben",
-    staleBecause: (claimant: string) => `Von ${claimant} vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.`,
+    staleBecause: (claimant: string) =>
+      `Von ${claimant} vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.`,
     noneStale: "Kein Defekt ist liegengeblieben.",
     /** Section 4 (ST-058) – counted, never listed by machine (G18). */
     overdueMaintenance: "Überfällige Wartung",
@@ -31,6 +32,12 @@ export const dashboardTexts = {
       `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} überfällig.`,
     openDueMaintenance: "Zur Wartung",
     noneOverdue: "Keine Wartung ist überfällig.",
+    /** Section 5 (ST-058) – after the machine's museum number or the defect's title. */
+    recentChanges: "Letzte Änderungen",
+    statusChanged: (from: string, to: string, by: string, at: string) => `${from} → ${to} · ${by} · ${at}`,
+    defectChanged: (kind: "resolved" | "reopened", museumNumber: string, by: string, at: string) =>
+      `(${museumNumber}) ${kind === "resolved" ? "behoben" : "wieder geöffnet"} · ${by} · ${at}`,
+    noRecentChanges: "Keine Änderungen in den letzten 7 Tagen.",
   },
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {

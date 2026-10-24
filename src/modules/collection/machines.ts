@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import { filesOfMachine, type FileOfMachine } from "./files";
@@ -292,6 +292,35 @@ export function holdAgainstRetirement(tx: Database, machineId: string): Promise<
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
 export function machineStatusHistory(db: Database, machineId: string): Promise<StatusChange[]> {
   return statusHistoryOf(db, machineId);
+}
+
+/** A machine status change (EVT-MachineStatusChanged) with its machine – who by ID; the page names them. */
+export type RecentStatusChange = {
+  museumNumber: string;
+  previousStatus: MachineStatus;
+  newStatus: MachineStatus;
+  changedBy: string;
+  changedAt: Date;
+};
+
+/**
+ * Every machine status change since that instant, newest first (RM-TechnicianDashboard, ST-058) – retired machines
+ * included. The first entry of a status history is the registration, not a status change: it has no previous status.
+ */
+export async function statusChangesSince(db: Database, since: Date): Promise<RecentStatusChange[]> {
+  const rows = await db
+    .select({
+      museumNumber: machine.museumNumber,
+      previousStatus: machineStatusChange.previousStatus,
+      newStatus: machineStatusChange.newStatus,
+      changedBy: machineStatusChange.changedBy,
+      changedAt: machineStatusChange.changedAt,
+    })
+    .from(machineStatusChange)
+    .innerJoin(machine, eq(machineStatusChange.machineId, machine.id))
+    .where(and(isNotNull(machineStatusChange.previousStatus), gte(machineStatusChange.changedAt, since)))
+    .orderBy(desc(machineStatusChange.changedAt), desc(machineStatusChange.position));
+  return rows.flatMap(({ previousStatus, ...row }) => (previousStatus ? [{ ...row, previousStatus }] : []));
 }
 
 /** What a team form on a machine shows of it – the status change (ST-012), the problem report (ST-015), the move (ST-034) – with the version the team member saw (HS-16). */
