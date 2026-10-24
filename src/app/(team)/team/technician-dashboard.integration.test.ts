@@ -233,6 +233,34 @@ describe("the technician dashboard", () => {
     expect((await openDefects(db, { claimedBy: ben.teamMemberId })).map((defect) => defect.id)).toEqual([defectId]);
   });
 
+  it("ST-058: A work log entry by someone else keeps a claim from being stale", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+    await workLogged(defectId, 1, tom, "2026-06-07T10:00:00Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.staleClaims).toEqual([]);
+    expect(html).not.toContain("Display flickers");
+  });
+
+  it("a claim becomes stale only after more than 14 days, and work logged before it was claimed does not count", async () => {
+    const lg042 = await aMachine("LG-042");
+    // Exactly 336 hours before NOW – not more.
+    const justNotStale = await anOpenDefect(lg042, "Coil hot", "2026-05-20");
+    await claimed(justNotStale, 0, ben, "2026-05-27T10:00:00Z");
+    // Tom logged work, then Ben took it over: the claim is Ben's, made after the work log entry.
+    const takenOver = await anOpenDefect(lg042, "Drop target sticks", "2026-05-20");
+    await claimed(takenOver, 0, tom, "2026-05-21T10:00:00Z");
+    await workLogged(takenOver, 1, tom, "2026-05-22T10:00:00Z");
+    await claimed(takenOver, 2, ben, "2026-05-25T10:00:00Z");
+
+    const { data } = await dashboard();
+
+    expect(data.staleClaims.map((claim) => [claim.title, claim.claimant])).toEqual([["Drop target sticks", "Ben"]]);
+  });
+
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {
     await aMachine("LG-042", "limited");
 
