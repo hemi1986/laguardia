@@ -495,6 +495,7 @@ Never call `new Date()` in domain code – use the injected `Clock` (`src/platfo
 |---|---|
 | "today", a Berlin calendar date (`YYYY-MM-DD`) | `today(clock)`, `calendarDate(instant)` |
 | "waiting longer than 3 days" (72 h), "older than 14 days" (336 h) | `elapsedMoreThanHours(since, now, hours)` |
+| where "the last 7 days" (168 h) start (ST-058) | `hoursBefore(instant, hours)` |
 | month arithmetic, clamped to the month end | `addMonths(date, months)` |
 | due date and first overdue day of a maintenance task | `maintenanceDates(lastDone, months)` |
 | grace days from any start (e.g. the return to display, ST-056) | `graceDays(start, months)`, `addDays` |

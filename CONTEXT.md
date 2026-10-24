@@ -168,7 +168,8 @@ _Avoid_: Unclaim, unassign, drop
 _UI (de)_: Abgeben (eigene Übernahme) / Übernahme aufheben (durch Techniker:in)
 
 **Stale claim**:
-A claim older than 14 days without a work log entry since it was made.
+A claim older than 14 days without a work log entry since it was made. A defect on hold waits on purpose, so its claim is
+never stale (user, 2026-10-24, ST-058 code review).
 _Avoid_: Old claim, abandoned claim, dead claim
 _UI (de)_: Liegengeblieben
 

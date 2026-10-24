@@ -59,6 +59,11 @@ export function elapsedMoreThanHours(since: Date, now: Date, hours: number): boo
   return now.getTime() - since.getTime() > hours * 3_600_000;
 }
 
+/** The instant that many hours before `instant` – where "the last 7 days" (168 h) start (ST-058). */
+export function hoursBefore(instant: Date, hours: number): Date {
+  return new Date(instant.getTime() - hours * 3_600_000);
+}
+
 /** Whole hours from `since` to `now` – how long something has been waiting (the triage list, ST-017). */
 export function elapsedHours(since: Date, now: Date): number {
   return Math.floor((now.getTime() - since.getTime()) / 3_600_000);

@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MachineStatusChanged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClaimed, EVT-WorkLogged, EVT-MaintenanceTaskOverdue]
 depends_on: [ST-024, ST-026, ST-030, ST-043, ST-048]
 labels: [mvp, dashboard, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -18,7 +18,7 @@ As a technician, I want the technician dashboard to also show recent machine sta
 ## Context
 Read model `RM-TechnicianDashboard`, second part of the split of ST-048 (story review 2026-09-26).
 - Machine status changes and defects resolved or reopened of the last 7 days – or since the technician's previous dashboard visit, if that is longer ago (the previous visit is recorded from ST-050 on; until then 7 days).
-- *Stale claims* (`CONTEXT.md`): claims older than 14 days (more than 336 hours, ST-003) without a work log entry – by anyone – since the claim. Stale claims are only singled out, never released automatically.
+- *Stale claims* (`CONTEXT.md`): claims older than 14 days (more than 336 hours, ST-003) without a work log entry – by anyone – since the claim. Stale claims are only singled out, never released automatically. A defect on hold is never a stale claim – it waits on purpose (user, 2026-10-24, code review); "the last 7 days" are 168 hours (user, 2026-10-24, test plan).
 - Overdue maintenance tasks (rules of ST-043 and ST-056).
 All values are computed when the dashboard is opened.
 UI wording (de): Liegengeblieben (stale claim).

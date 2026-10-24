@@ -1,5 +1,7 @@
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
+import { elapsedMoreThanHours } from "@/platform/time";
 import {
   priorities,
   type Claim,
@@ -240,6 +242,87 @@ export async function openDefects(
 /** One column of the work log entry stored last for the defect of the surrounding query. */
 function lastWorkLogEntry(column: typeof defectWorkLogEntry.loggedBy | typeof defectWorkLogEntry.loggedAt) {
   return sql`SELECT ${column} FROM ${defectWorkLogEntry} WHERE ${defectWorkLogEntry.defectId} = ${defect.id} ORDER BY ${defectWorkLogEntry.position} DESC LIMIT 1`;
+}
+
+/** A claim older than 14 days without a work log entry since it was made, not on hold (CONTEXT.md: Stale claim) – its machine and claimant by ID. */
+export type StaleClaim = { defectId: string; machineId: string; title: string; claimedBy: string };
+
+/** "Older than 14 days" – more than 336 hours (ST-003). */
+const STALE_AFTER_HOURS = 336;
+
+/**
+ * The stale claims (RM-TechnicianDashboard, ST-058): open defects claimed more than 14 days ago on which nobody has
+ * logged work since the claim – by anyone, not only the claimant –, and that are not on hold: those wait on purpose
+ * (user, 2026-10-24). Computed when it is read (ADR 0002); a stale claim is
+ * only singled out, never released. The oldest claim first.
+ */
+export async function staleClaims(db: Database, clock: Clock): Promise<StaleClaim[]> {
+  const now = clock.now();
+  const rows = await db
+    .select({
+      defectId: defect.id,
+      machineId: defect.machineId,
+      title: defect.title,
+      claimedBy: defect.claimedBy,
+      claimedAt: defect.claimedAt,
+      lastLoggedAt: sql`(${lastWorkLogEntry(defectWorkLogEntry.loggedAt)})`.mapWith(defectWorkLogEntry.loggedAt),
+    })
+    .from(defect)
+    .where(and(eq(defect.state, "open"), isNotNull(defect.claimedBy), isNull(defect.holdReason)))
+    .orderBy(asc(defect.claimedAt), asc(defect.id));
+  return rows.flatMap(({ claimedBy, claimedAt, lastLoggedAt, ...row }) =>
+    claimedBy &&
+    claimedAt &&
+    elapsedMoreThanHours(claimedAt, now, STALE_AFTER_HOURS) &&
+    !(lastLoggedAt && lastLoggedAt >= claimedAt)
+      ? [{ ...row, claimedBy }]
+      : [],
+  );
+}
+
+/** A defect resolved (EVT-DefectResolved) or reopened (EVT-DefectReopened) – its machine and who by ID. */
+export type ResolvedOrReopened = {
+  kind: "resolved" | "reopened";
+  defectId: string;
+  machineId: string;
+  title: string;
+  by: string;
+  at: Date;
+};
+
+/**
+ * Every resolution and reopening since that instant (RM-TechnicianDashboard, ST-058) – one entry each, so a defect
+ * resolved and reopened again appears twice. In no particular order – the page orders them with what it shows beside.
+ */
+export async function resolvedOrReopenedSince(db: Database, since: Date): Promise<ResolvedOrReopened[]> {
+  const [resolved, reopened] = await Promise.all([
+    db
+      .select({
+        defectId: defect.id,
+        machineId: defect.machineId,
+        title: defect.title,
+        by: defectResolution.resolvedBy,
+        at: defectResolution.resolvedAt,
+      })
+      .from(defectResolution)
+      .innerJoin(defect, eq(defectResolution.defectId, defect.id))
+      .where(gte(defectResolution.resolvedAt, since)),
+    db
+      .select({
+        defectId: defect.id,
+        machineId: defect.machineId,
+        title: defect.title,
+        by: defectReopening.reopenedBy,
+        at: defectReopening.reopenedAt,
+      })
+      .from(defectReopening)
+      .innerJoin(defect, eq(defectReopening.defectId, defect.id))
+      .where(gte(defectReopening.reopenedAt, since)),
+  ]);
+  return [
+    ...resolved.map((entry) => ({ kind: "resolved" as const, ...entry })),
+    ...reopened.map((entry) => ({ kind: "reopened" as const, ...entry })),
+  ];
 }
 
 /**

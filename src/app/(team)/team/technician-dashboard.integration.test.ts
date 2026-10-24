@@ -11,7 +11,18 @@ import {
   type MachineStatus,
 } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand, resolveDefectCommand } from "@/modules/repair";
+import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
+import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
+import {
+  claimDefectCommand,
+  logWorkCommand,
+  openDefects,
+  putDefectOnHoldCommand,
+  recordDefectCommand,
+  reopenDefectCommand,
+  reportProblemCommand,
+  resolveDefectCommand,
+} from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -27,12 +38,16 @@ import { TechnicianDashboard } from "./technician-dashboard";
 const isolated = isolatedTestDatabase("technician_dashboard");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 let machineModelId: string;
 const NOW = "2026-06-10T10:00:00Z";
 
 beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, ben, "Ben");
+  await anExistingTeamMember(db, anna, "Anna");
   const model = await run(
     executeCommand(
       createMachineModelCommand,
@@ -45,7 +60,10 @@ beforeAll(async () => {
 
 afterAll(() => isolated.close());
 
-beforeEach(() => withoutMachines(db));
+beforeEach(async () => {
+  await withoutMachines(db);
+  await withoutMaintenanceTasks(db);
+});
 
 async function run<Result>(outcome: Promise<{ ok: true; result: Result } | { ok: false; error: string }>) {
   const done = await outcome;
@@ -66,6 +84,29 @@ async function aMachine(museumNumber: string, machineStatus: MachineStatus = "pl
   return registered.machineId;
 }
 
+/** A maintenance task every 3 months from 2026-01-01 – due from 2026-04-01 and overdue at NOW on every machine. */
+async function aMaintenanceTask(name: string) {
+  await run(
+    executeCommand(
+      changeMaintenancePlanCommand,
+      {
+        version: await maintenancePlanVersion(db),
+        change: "add",
+        task: {
+          name,
+          instruction: `${name} – how to`,
+          intervalMonths: 3,
+          suitableForHelpers: false,
+          machineCategory: undefined,
+          technology: undefined,
+          startDate: "2026-01-01",
+        },
+      },
+      as("2025-12-01T09:00:00Z"),
+    ),
+  );
+}
+
 /** A visitor's problem report, waiting for triage since that time. */
 async function aProblemReport(machineId: string, at: string) {
   const reported = await run(
@@ -78,13 +119,13 @@ async function aProblemReport(machineId: string, at: string) {
   return reported.problemReportId;
 }
 
-/** An open defect recorded from a problem report – at version 0. */
-async function anOpenDefect(machineId: string, title: string) {
+/** An open defect recorded from a problem report – at version 0; recorded on 2026-06-01 unless the day is given. */
+async function anOpenDefect(machineId: string, title: string, day = "2026-06-01") {
   const recorded = await run(
     executeCommand(
       recordDefectCommand,
       {
-        problemReportId: await aProblemReport(machineId, "2026-06-01T09:00:00Z"),
+        problemReportId: await aProblemReport(machineId, `${day}T09:00:00Z`),
         version: 0,
         title,
         priority: "normal",
@@ -92,10 +133,43 @@ async function anOpenDefect(machineId: string, title: string) {
         machineStatus: undefined,
         machineVersion: undefined,
       },
-      as("2026-06-01T10:00:00Z"),
+      as(`${day}T10:00:00Z`),
     ),
   );
   return recorded.defectId!;
+}
+
+/** That team member sets the machine – at that version – to that machine status at that time. */
+async function statusChanged(
+  machineId: string,
+  version: number,
+  machineStatus: MachineStatus,
+  by: typeof tom | typeof anna,
+  at: string,
+) {
+  await run(
+    executeCommand(
+      changeMachineStatusCommand,
+      { machineId, version, machineStatus, reason: "Checked it" },
+      { ...as(at), actor: by },
+    ),
+  );
+}
+
+/** The defect is claimed by that team member at that time – the defect at that version. */
+async function claimed(defectId: string, version: number, by: typeof ben, at: string) {
+  await run(executeCommand(claimDefectCommand, { defectId, version }, { ...as(at), actor: by }));
+}
+
+/** That team member logs work on the defect at that time – the defect at that version. */
+async function workLogged(defectId: string, version: number, by: typeof tom, at: string) {
+  await run(
+    executeCommand(
+      logWorkCommand,
+      { defectId, version, whatWasDone: "Measured the voltages", partsUsed: "" },
+      { ...as(at), actor: by },
+    ),
+  );
 }
 
 async function dashboard() {
@@ -183,6 +257,190 @@ describe("the technician dashboard", () => {
     expect(html).toMatch(/<a [^>]*href="\/team\/triage"[^>]*>Zur Sichtung<\/a>/);
     // The other section says it has nothing, in a sentence of its own.
     expect(html).toContain("Kein Gerät wartet auf die Rückkehr ins Spiel.");
+  });
+
+  it("ST-058: Stale claims are singled out", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    // 15 days before NOW.
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.staleClaims).toEqual([
+      {
+        defectId,
+        title: "Display flickers",
+        museumNumber: "LG-042",
+        machineModelTitle: "Medieval Madness",
+        claimant: "Ben",
+      },
+    ]);
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Display flickers</a>`));
+    expect(html).toContain("Von Ben vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.");
+    // Only singled out, never released.
+    expect((await openDefects(db, { claimedBy: ben.teamMemberId })).map((defect) => defect.id)).toEqual([defectId]);
+  });
+
+  it("ST-058: A work log entry by someone else keeps a claim from being stale", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+    await workLogged(defectId, 1, tom, "2026-06-07T10:00:00Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.staleClaims).toEqual([]);
+    expect(html).not.toContain("Display flickers");
+  });
+
+  it("a claim becomes stale only after more than 14 days, and work logged before it was claimed does not count", async () => {
+    const lg042 = await aMachine("LG-042");
+    // Exactly 336 hours before NOW – not more.
+    const justNotStale = await anOpenDefect(lg042, "Coil hot", "2026-05-20");
+    await claimed(justNotStale, 0, ben, "2026-05-27T10:00:00Z");
+    // Tom logged work, then Ben took it over: the claim is Ben's, made after the work log entry.
+    const takenOver = await anOpenDefect(lg042, "Drop target sticks", "2026-05-20");
+    await claimed(takenOver, 0, tom, "2026-05-21T10:00:00Z");
+    await workLogged(takenOver, 1, tom, "2026-05-22T10:00:00Z");
+    await claimed(takenOver, 2, ben, "2026-05-25T10:00:00Z");
+
+    const { data } = await dashboard();
+
+    expect(data.staleClaims.map((claim) => [claim.title, claim.claimant])).toEqual([["Drop target sticks", "Ben"]]);
+  });
+
+  it("a claim on a defect on hold is never stale – the defect waits on purpose", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+    await run(
+      executeCommand(
+        putDefectOnHoldCommand,
+        { defectId, version: 1, reason: "waiting-for-part" },
+        { ...as("2026-05-27T10:00:00Z"), actor: ben },
+      ),
+    );
+
+    const { data } = await dashboard();
+
+    expect(data.staleClaims).toEqual([]);
+  });
+
+  it("ST-058: Overdue maintenance tasks are counted, not listed by machine", async () => {
+    await aMachine("LG-042");
+    await aMachine("LG-043");
+    await aMaintenanceTask("Wax playfield");
+
+    const { data, html } = await dashboard();
+
+    expect(data.overdueMaintenance.map(({ name, overdueCount }) => ({ name, overdueCount }))).toEqual([
+      { name: "Wax playfield", overdueCount: 2 },
+    ]);
+    expect(html).toContain("„Wax playfield“ ist an 2 Geräten überfällig.");
+    expect(html).not.toContain("LG-042");
+    expect(html).toMatch(/<a [^>]*href="\/team\/maintenance"[^>]*>Zur Wartung<\/a>/);
+  });
+
+  it("ST-058: Machine status changes and resolved or reopened defects", async () => {
+    const lg007 = await aMachine("LG-007");
+    const defectId = await anOpenDefect(lg007, "Left flipper weak");
+    // Yesterday.
+    await statusChanged(lg007, 0, "out-of-order", anna, "2026-06-09T12:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        as("2026-06-09T15:00:00Z"),
+      ),
+    );
+    // Today.
+    await run(
+      executeCommand(reopenDefectCommand, { defectId, version: 1, reason: "Weak again" }, as("2026-06-10T09:00:00Z")),
+    );
+
+    const { data, html } = await dashboard();
+
+    expect(data.recentChanges).toEqual([
+      {
+        kind: "reopened",
+        defectId,
+        title: "Left flipper weak",
+        museumNumber: "LG-007",
+        by: "Tom",
+        at: new Date("2026-06-10T09:00:00Z"),
+      },
+      {
+        kind: "resolved",
+        defectId,
+        title: "Left flipper weak",
+        museumNumber: "LG-007",
+        by: "Tom",
+        at: new Date("2026-06-09T15:00:00Z"),
+      },
+      {
+        kind: "status-change",
+        museumNumber: "LG-007",
+        previousStatus: "playable",
+        newStatus: "out-of-order",
+        by: "Anna",
+        at: new Date("2026-06-09T12:00:00Z"),
+      },
+    ]);
+    expect(html).toContain("Letzte Änderungen");
+    expect(html).toContain("Spielbereit → Außer Betrieb · Anna · 09.06.2026, 14:00");
+    expect(html).toContain("(LG-007) wieder geöffnet · Tom · 10.06.2026, 11:00");
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Left flipper weak</a>`));
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-007"[^>]*>LG-007<\/a>/);
+  });
+
+  it("ST-058: Older changes drop off after 7 days", async () => {
+    const lg007 = await aMachine("LG-007");
+    // 8 days before NOW. The last visit is recorded from ST-050 on – until then "since the last visit" is no
+    // longer ago than 7 days, so only the 7-day window decides (user, 2026-10-24).
+    await statusChanged(lg007, 0, "limited", tom, "2026-06-02T10:00:00Z");
+    // Just inside the 7 days.
+    await statusChanged(lg007, 1, "out-of-order", tom, "2026-06-03T10:00:01Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.recentChanges.map((change) => change.at)).toEqual([new Date("2026-06-03T10:00:01Z")]);
+    expect(html).not.toContain("Spielbereit → Eingeschränkt");
+  });
+
+  it("ST-058: An empty section says so next to a filled one", async () => {
+    await aMachine("LG-042");
+    await aMaintenanceTask("Wax playfield");
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Kein Defekt ist liegengeblieben.");
+    expect(html).toContain("„Wax playfield“ ist an 1 Gerät überfällig.");
+    expect(html).not.toContain("Gerade braucht nichts deine Aufmerksamkeit.");
+  });
+
+  it("ST-058: Recent changes are shown below the all-empty sentence", async () => {
+    const lg007 = await aMachine("LG-007", "limited");
+    // Yesterday.
+    await statusChanged(lg007, 0, "playable", tom, "2026-06-09T12:00:00Z");
+
+    const { html } = await dashboard();
+
+    const allEmpty = html.indexOf("Gerade braucht nichts deine Aufmerksamkeit.");
+    const statusChange = html.indexOf("Eingeschränkt → Spielbereit · Tom · 09.06.2026, 14:00");
+    expect(allEmpty).toBeGreaterThan(-1);
+    expect(statusChange).toBeGreaterThan(allEmpty);
+    expect(html).not.toContain("Liegengeblieben");
+    expect(html).not.toContain("Überfällige Wartung");
+  });
+
+  it("says when nothing changed in the last 7 days next to sections that need attention", async () => {
+    const lg042 = await aMachine("LG-042");
+    await aProblemReport(lg042, "2026-06-09T09:00:00Z");
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Keine Änderungen in den letzten 7 Tagen.");
   });
 
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {

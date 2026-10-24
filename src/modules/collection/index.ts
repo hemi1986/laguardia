@@ -51,6 +51,8 @@ export {
   type MachineForTeamForm,
   visitorMachine,
   machineStatusCounts,
+  statusChangesSince,
+  type RecentStatusChange,
   type MachineOverviewEntry,
   type MachineRecord,
   type VisitorMachine,
