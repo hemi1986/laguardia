@@ -22,4 +22,22 @@ export const dashboardTexts = {
     noneToReturnToPlay: "Kein Gerät wartet auf die Rückkehr ins Spiel.",
     nothingNeedsAttention: "Gerade braucht nichts deine Aufmerksamkeit.",
   },
+  /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
+  helperDashboard: {
+    claimedByYou: "Von dir übernommen",
+    noneClaimed: "Du hast keinen Defekt übernommen.",
+    suitableForHelpers: "Für Helfer:innen geeignet",
+    noneSuitable: "Gerade ist kein Defekt für Helfer:innen offen.",
+    /** Section 2 leaves out the helper's own claims, so next to them it says „weiterer“ (user, 2026-10-24). */
+    noFurtherSuitable: "Gerade ist kein weiterer Defekt für Helfer:innen offen.",
+    dueMaintenance: "Fällige Wartung für Helfer:innen",
+    due: (name: string, machines: number, overdue: number) =>
+      machines === 1
+        ? `„${name}“ ist an 1 Gerät ${overdue === 0 ? "fällig" : "überfällig"}.`
+        : `„${name}“ ist an ${machines} Geräten fällig${
+            overdue === 0 ? "" : overdue === machines ? " – an allen überfällig" : `, ${overdue} davon überfällig`
+          }.`,
+    openDueMaintenance: "Zur Wartung",
+    nothingOpen: "Gerade ist nichts für dich offen.",
+  },
 } as const;

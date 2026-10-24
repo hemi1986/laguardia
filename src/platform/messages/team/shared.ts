@@ -35,8 +35,6 @@ export const sharedTexts = {
     menu: "Navigation",
     dashboard: "Übersicht",
     more: "Mehr",
-    start: "La Guardia – Team",
-    loggedInAs: "Angemeldet als",
     logout: "Abmelden",
     accounts: "Teammitglieder",
     maintenance: "Wartung",
