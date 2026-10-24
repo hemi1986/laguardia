@@ -26,7 +26,11 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
       {/* Section 1 – the defects the helper claims. */}
       <DefectsSection title={texts.claimedByYou} none={texts.noneClaimed} defects={claimedByYou} />
       {/* Section 2 – open defects suitable for helpers. */}
-      <DefectsSection title={texts.suitableForHelpers} none={texts.noneSuitable} defects={suitableForHelpers} />
+      <DefectsSection
+        title={texts.suitableForHelpers}
+        none={claimedByYou.length === 0 ? texts.noneSuitable : texts.noFurtherSuitable}
+        defects={suitableForHelpers}
+      />
       {/* Section 3 – due maintenance tasks suitable for helpers, as counts. */}
       <section>
         <Card>

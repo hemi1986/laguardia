@@ -223,4 +223,14 @@ describe("the helper dashboard", () => {
     expect(data.suitableForHelpers.map((defect) => defect.title)).toEqual(["Rubber cracked"]);
     expect(html.indexOf("Rubber cracked")).toBeLessThan(html.indexOf("Übernommen von Tom"));
   });
+
+  it("says no further defect is open for helpers when the helper claims the only one (user, 2026-10-24)", async () => {
+    const defectId = await anOpenDefect("Rubber cracked", { suitableForHelpers: true });
+    await run(executeCommand(claimDefectCommand, { defectId, version: 0 }, { ...as(NOW), actor: anna }));
+
+    const { html } = await dashboard();
+
+    expect(html).toContain("Gerade ist kein weiterer Defekt für Helfer:innen offen.");
+    expect(html).not.toContain("Gerade ist kein Defekt für Helfer:innen offen.");
+  });
 });

@@ -28,6 +28,8 @@ export const dashboardTexts = {
     noneClaimed: "Du hast keinen Defekt übernommen.",
     suitableForHelpers: "Für Helfer:innen geeignet",
     noneSuitable: "Gerade ist kein Defekt für Helfer:innen offen.",
+    /** Section 2 leaves out the helper's own claims, so next to them it says „weiterer“ (user, 2026-10-24). */
+    noFurtherSuitable: "Gerade ist kein weiterer Defekt für Helfer:innen offen.",
     dueMaintenance: "Fällige Wartung für Helfer:innen",
     due: (name: string, machines: number, overdue: number) =>
       machines === 1
