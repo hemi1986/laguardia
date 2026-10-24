@@ -29,6 +29,8 @@ import { loadMachineConfirmation } from "./machine-confirmation";
 import { formRunner } from "@/app/_actions/form-runner";
 import { post } from "@/test-support/forms";
 import { recordMaintenanceFields, recordMaintenanceInput } from "../../maintenance/erfassen/record-maintenance-input";
+import { loadMaintenanceForRecording } from "../../maintenance/erfassen/record-maintenance-data";
+import { RecordMaintenancePage } from "../../maintenance/erfassen/record-maintenance-view";
 import { addressAfterRecording } from "../../maintenance/erfassen/address-after-recording";
 import { loadAllMaintenanceRecords } from "./wartungseintraege/maintenance-records-data";
 import { MaintenanceRecordsView } from "./wartungseintraege/maintenance-records";
@@ -330,6 +332,37 @@ describe("section 5 „Wartung“ of the machine record", () => {
       const after = await pageAt(url, "2026-06-10", anna);
       expect(after.html).toContain("Wartung an LG-042 eingetragen.");
       expect(after.due).not.toContain("Clean playfield");
+    });
+
+    it("ST-047: A rejected recording still leads back to the machine record", async () => {
+      const lg042 = await aMachine("LG-042");
+      const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-03-03" });
+      const { action, landedOn } = formOf(tom, "2026-06-10");
+
+      const state = await action(
+        null,
+        post({
+          maintenanceTaskId: cleanPlayfield,
+          machineId: lg042,
+          outcome: "partially-done",
+          date: "2026-06-02",
+          note: "Only the left half",
+        }),
+      );
+
+      expect(state).toMatchObject({
+        error: "date-too-early",
+        values: { outcome: "partially-done", note: "Only the left half" },
+      });
+      expect(landedOn).toEqual([]);
+      expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+      const data = await loadMaintenanceForRecording(db, fixedClock("2026-06-10T10:00:00Z"), cleanPlayfield, "LG-042", {
+        id: tom.teamMemberId,
+        role: tom.role,
+      });
+      const html = renderToStaticMarkup(createElement(RecordMaintenancePage, { data: data!, back: "machine" }));
+      expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>Zurück zum Gerät<\/a>/);
+      expect(html).not.toContain("Zurück zur fälligen Wartung");
     });
   });
 });
