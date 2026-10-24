@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { claimantText } from "./claimant";
 import type { OpenDefectsItem } from "./defects/open-defects-data";
-import type { HelperDashboardData } from "./helper-dashboard-data";
+import type { ClaimedByYouItem, HelperDashboardData, ShownChange } from "./helper-dashboard-data";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
 
 const { helperDashboard: texts, dueMaintenance: dueMaintenanceTexts } = teamMessages;
@@ -63,7 +63,16 @@ export function HelperDashboard({ data }: { data: HelperDashboardData }) {
 }
 
 /** A section of defects – or, when it has none, a short sentence of its own (G7, ST-048's pattern). */
-function DefectsSection({ title, none, defects }: { title: string; none: string; defects: OpenDefectsItem[] }) {
+function DefectsSection({
+  title,
+  none,
+  defects,
+}: {
+  title: string;
+  none: string;
+  defects: (Pick<OpenDefectsItem, "id" | "title" | "museumNumber" | "machineModelTitle"> &
+    Partial<Pick<OpenDefectsItem, "claimant"> & Pick<ClaimedByYouItem, "changes">>)[];
+}) {
   return (
     <section>
       <Card>
@@ -88,6 +97,14 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
                     {defect.claimant && !defect.claimant.you && (
                       <p className="text-muted-foreground">{claimantText(defect.claimant)}</p>
                     )}
+                    {/* What others changed since the helper claimed it, newest first (ST-086, G25). */}
+                    {defect.changes && defect.changes.length > 0 && (
+                      <ul className="flex flex-col gap-1">
+                        {defect.changes.map((change, index) => (
+                          <li key={index}>{texts.changed(changeText(change), change.hoursAgo)}</li>
+                        ))}
+                      </ul>
+                    )}
                   </article>
                 </li>
               ))}
@@ -97,4 +114,12 @@ function DefectsSection({ title, none, defects }: { title: string; none: string;
       </Card>
     </section>
   );
+}
+
+/** Who did what to a claimed defect, in the words of G25 (ST-086). */
+function changeText(change: ShownChange): string {
+  switch (change.kind) {
+    case "taken-over":
+      return texts.changes.takenOver(change.by);
+  }
 }

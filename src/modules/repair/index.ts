@@ -46,6 +46,7 @@ export {
   type StaleClaim,
 } from "./defects";
 export type { DefectProblemReport } from "./problem-reports";
+export { changesOnClaimedDefects, type ClaimedDefectChange, type ClaimedDefectChanges } from "./claimed-defect-changes";
 export {
   recentRepairHistory,
   repairHistory,

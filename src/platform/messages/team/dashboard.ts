@@ -56,5 +56,17 @@ export const dashboardTexts = {
           }.`,
     openDueMaintenance: "Zur Wartung",
     nothingOpen: "Gerade ist nichts für dich offen.",
+    /** What changed on a claimed defect (ST-086, G25): who and what, then when in words – „vor …“ as the triage list counts. */
+    changes: {
+      takenOver: (by: string) => `${by} hat übernommen`,
+    },
+    changed: (what: string, hoursAgo: number) =>
+      `${what} · ${
+        hoursAgo < 1
+          ? "vor weniger als 1 Stunde"
+          : hoursAgo < 24
+            ? `vor ${hoursAgo} ${hoursAgo === 1 ? "Stunde" : "Stunden"}`
+            : `vor ${Math.floor(hoursAgo / 24)} ${Math.floor(hoursAgo / 24) === 1 ? "Tag" : "Tagen"}`
+      }`,
   },
 } as const;
