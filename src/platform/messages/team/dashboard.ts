@@ -60,6 +60,7 @@ export const dashboardTexts = {
     changes: {
       takenOver: (by: string) => `${by} hat übernommen`,
       assigned: (by: string, to: string) => `${by} hat ${to} zugewiesen`,
+      resolved: (by: string) => `Behoben von ${by}`,
       released: (by: string) => `${by} hat die Übernahme aufgehoben`,
       releasedByRemovingTheMark: (by: string) => `${by} hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet`,
     },

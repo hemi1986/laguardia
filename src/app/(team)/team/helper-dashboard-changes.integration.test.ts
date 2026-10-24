@@ -11,6 +11,7 @@ import {
   claimDefectCommand,
   releaseClaimCommand,
   reportProblemAndTriageCommand,
+  resolveDefectCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Command } from "@/platform/command";
@@ -127,6 +128,8 @@ async function aDefect(title: string) {
     claim: (by: Person, when: Date) => step(claimDefectCommand, {}, by, when),
     assign: (to: Person, when: Date) => step(claimDefectCommand, { assignTo: to.teamMemberId }, tom, when),
     release: (by: Person, when: Date) => step(releaseClaimCommand, {}, by, when),
+    resolve: (by: Person, when: Date) =>
+      step(resolveDefectCommand, { closingNote: `${title} – fixed` }, by, when),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -202,5 +205,16 @@ describe("what changed on the helper's claimed defects", () => {
     expect(section).toContain(
       "<li>Tom hat die Übernahme aufgehoben – nicht mehr für Helfer:innen geeignet · vor 3 Tagen</li></ul>",
     );
+  });
+
+  it("ST-086: Helper sees that someone else resolved her claimed defect", async () => {
+    const rubber = await aDefect("Rubber cracked");
+    await rubber.claim(anna, daysAgo(5));
+    await rubber.resolve(tom, daysAgo(1));
+
+    const section = sectionOne((await dashboard()).html);
+
+    expect(section).toContain("Rubber cracked");
+    expect(section).toContain("Behoben von Tom · vor 1 Tag");
   });
 });

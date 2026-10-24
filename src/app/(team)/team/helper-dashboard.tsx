@@ -123,6 +123,8 @@ function changeText(change: ShownChange): string {
       return texts.changes.takenOver(change.by);
     case "assigned":
       return texts.changes.assigned(change.by, change.to);
+    case "resolved":
+      return texts.changes.resolved(change.by);
     case "released":
       return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
   }

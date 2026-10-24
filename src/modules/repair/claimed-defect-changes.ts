@@ -10,7 +10,8 @@ export type ClaimedDefectChange =
   | { kind: "taken-over"; by: string; at: Date }
   | { kind: "assigned"; by: string; to: string; at: Date }
   /** Released by a technician – by removing the suitable-for-helpers mark, too (ST-031), which the line says. */
-  | { kind: "released"; by: string; markRemoved: boolean; at: Date };
+  | { kind: "released"; by: string; markRemoved: boolean; at: Date }
+  | { kind: "resolved"; by: string; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -27,7 +28,13 @@ export type ClaimedDefectChanges = {
 const LEFT_HOURS = 168;
 
 /** The journal entries that start or end a claim, or change something on the claimed defect. */
-const TRACKED = ["EVT-DefectClaimed", "EVT-DefectClaimReleased", "EVT-DefectDetailsChanged"] as const;
+const TRACKED = [
+  "EVT-DefectClaimed",
+  "EVT-DefectClaimReleased",
+  "EVT-DefectResolved",
+  "EVT-DefectClosedOnRetirement",
+  "EVT-DefectDetailsChanged",
+] as const;
 
 type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[number]>;
 
@@ -48,7 +55,8 @@ export async function changesOnClaimedDefects(
       .from(defect)
       .where(and(eq(defect.state, "open"), eq(defect.claimedBy, teamMemberId))),
     readJournal(db, repairEvents, {
-      types: ["EVT-DefectClaimed", "EVT-DefectClaimReleased"],
+      // A resolution names no former claimant – whether it ended their claim the journal of that defect says.
+      types: ["EVT-DefectClaimed", "EVT-DefectClaimReleased", "EVT-DefectResolved"],
       since,
       notBy: teamMemberId,
     }),
@@ -117,6 +125,15 @@ function changesSinceClaim(
       case "EVT-DefectClaimReleased":
         if (mine) leave(by && by !== teamMemberId ? { kind: "released", by, markRemoved: false, at } : undefined, at);
         break;
+      case "EVT-DefectResolved": {
+        const resolvedBy = entry.data.resolvedBy ?? by;
+        if (mine) leave(resolvedBy && resolvedBy !== teamMemberId ? { kind: "resolved", by: resolvedBy, at } : undefined, at);
+        break;
+      }
+      case "EVT-DefectClosedOnRetirement":
+        // Closed with its machine's retirement – not a change the dashboard names; the defect simply is gone.
+        if (mine) leave(undefined, at);
+        break;
       case "EVT-DefectDetailsChanged": {
         // Removing the mark released the claim in the same step – one point in time, the release journaled first.
         const released = changes.at(-1);
@@ -137,6 +154,8 @@ function leftThem(entry: Entry, teamMemberId: TeamMemberId): boolean {
       return entry.data.takenOverFrom === teamMemberId;
     case "EVT-DefectClaimReleased":
       return entry.data.formerClaimant === teamMemberId;
+    case "EVT-DefectResolved":
+      return true;
     default:
       return false;
   }
