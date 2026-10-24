@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
-import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
-import { dueMaintenanceAddress, type DueMaintenanceData } from "./due-maintenance-data";
+import { commandErrorText, teamMessages } from "@/platform/messages";
+import { dueMaintenanceAddress, type Confirmed, type DueMaintenanceData } from "./due-maintenance-data";
 
-const { dueMaintenance: texts, terms } = teamMessages;
+const { dueMaintenance: texts, recordForSeveral: severalTexts, terms } = teamMessages;
 
 /**
  * The due maintenance list (RM-DueMaintenance, ST-043, G4a): first every due maintenance task with on how many machines
@@ -14,9 +14,7 @@ const { dueMaintenance: texts, terms } = teamMessages;
  */
 export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   const { filter, chosen } = data;
-  const confirmation = data.confirmed && (
-    <Confirmation>{teamMessages.recordMaintenance.recorded(data.confirmed.museumNumber)}</Confirmation>
-  );
+  const confirmation = data.confirmed && <RecordedConfirmation confirmed={data.confirmed} />;
   if (chosen) {
     return (
       <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
@@ -105,5 +103,30 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
         </ul>
       )}
     </>
+  );
+}
+
+/**
+ * The confirmation after recording (G3): one machine by its museum number (ST-044), several by their count (ST-045) –
+ * followed by one line per machine that was not recorded, with its reason (G23).
+ */
+function RecordedConfirmation({ confirmed }: { confirmed: Confirmed }) {
+  const { museumNumbers, maintenanceTaskName, notRecorded } = confirmed;
+  const several = museumNumbers.length > 1 || notRecorded.length > 0;
+  return (
+    <div className="flex flex-col gap-2 [overflow-wrap:anywhere]">
+      <Confirmation>
+        {several
+          ? severalTexts.recorded(maintenanceTaskName, museumNumbers.length)
+          : teamMessages.recordMaintenance.recorded(museumNumbers[0])}
+      </Confirmation>
+      {notRecorded.length > 0 && (
+        <ul className="flex flex-col gap-1 text-sm">
+          {notRecorded.map(({ museumNumber, reason }) => (
+            <li key={museumNumber}>{severalTexts.notRecorded(museumNumber, commandErrorText(teamMessages, reason))}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

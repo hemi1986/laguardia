@@ -31,11 +31,16 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { formRunner } from "@/app/_actions/form-runner";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { post } from "@/test-support/forms";
-import { loadDueMaintenance, type DueMaintenanceFilter } from "./due-maintenance-data";
+import { dueMaintenanceFilterOf, loadDueMaintenance, type DueMaintenanceFilter } from "./due-maintenance-data";
 import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
 import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
+import {
+  recordedForSeveralAddress,
+  recordForSeveralFields,
+  recordForSeveralInput,
+} from "./mehrere/record-for-several-input";
 import { loadMaintenancePlan } from "../maintenance-plan/maintenance-plan-data";
 import { MaintenancePlanView } from "../maintenance-plan/maintenance-plan";
 
@@ -578,11 +583,11 @@ describe("the due maintenance list", () => {
       expect(await form.action(null, post(fields))).toBeNull();
 
       expect(form.recordedIds).toHaveLength(1);
-      const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: form.recordedIds[0] }, anna);
+      const after = await page("2026-06-10", { maintenanceTaskId: cleanGlass, recorded: [form.recordedIds[0]] }, anna);
       expect(after.html).toContain("Wartung an LG-042 eingetragen.");
       // An address naming someone else's record, or no record, confirms nothing.
-      expect((await page("2026-06-10", { recorded: form.recordedIds[0] }, tom)).html).not.toContain("eingetragen");
-      expect((await page("2026-06-10", { recorded: randomUUID() }, anna)).html).not.toContain("eingetragen");
+      expect((await page("2026-06-10", { recorded: [form.recordedIds[0]] }, tom)).html).not.toContain("eingetragen");
+      expect((await page("2026-06-10", { recorded: [randomUUID()] }, anna)).html).not.toContain("eingetragen");
     });
 
     it("keeps what was typed when it is rejected – a forged role is not read", async () => {
@@ -873,5 +878,65 @@ describe("changing and removing a maintenance task (ST-041)", () => {
       ["LG-042", "2027-04-01"],
       ["LG-043", "2027-05-01"],
     ]);
+  });
+});
+
+describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
+  /**
+   * The form „Für mehrere Geräte erfassen“ through the Server Action runner, as that team member on that day – one
+   * CMD-RecordMaintenance per chosen machine. `address` is where the action sends the team member afterwards.
+   */
+  function severalFormOf(actor: typeof tom | typeof anna, on: string) {
+    const form: { address?: string } = {};
+    const action = formRunner({
+      currentPerson: async () => actor,
+      db,
+      clock: fixedClock(`${on}T10:00:00Z`),
+      newId: randomUUID,
+    })(recordMaintenanceCommand, {
+      fields: recordForSeveralFields,
+      each: { field: "machineId" },
+      input: recordForSeveralInput,
+      onSuccess: async (outcome) => void (form.address = recordedForSeveralAddress(outcome)),
+    });
+    return Object.assign(form, { action });
+  }
+
+  /** The form as the browser posts it: its fields, and one `machineId` per ticked machine. */
+  function ticked(fields: Record<string, string>, machineIds: readonly string[]) {
+    const form = post(fields);
+    for (const machineId of machineIds) form.append("machineId", machineId);
+    return form;
+  }
+
+  /** The due maintenance list at the address the action sent the team member to. */
+  async function landedOn(address: string | undefined, on: string, viewer: typeof tom | typeof anna) {
+    const url = new URL(address ?? "/", "http://localhost");
+    expect(url.pathname).toBe("/team/maintenance");
+    const params = Object.fromEntries([...url.searchParams.keys()].map((key) => [key, url.searchParams.getAll(key)]));
+    return page(on, dueMaintenanceFilterOf(params), viewer);
+  }
+
+  it("ST-045: Helper records a maintenance task for several machines", async () => {
+    const machines = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      intervalMonths: 1,
+      suitableForHelpers: true,
+    });
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042", "LG-043", "LG-044"]);
+    const form = severalFormOf(anna, "2026-06-10");
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-10", note: "" };
+    expect(await form.action(null, ticked(fields, machines))).toBeNull();
+
+    for (const machineId of machines)
+      expect(await maintenanceRecords(db, { machineId })).toEqual([
+        expect.objectContaining({ maintenanceTaskId: cleanGlass, outcome: "done", recordedBy: anna.teamMemberId }),
+      ]);
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual([]);
+    const after = await landedOn(form.address, "2026-06-10", anna);
+    expect(after.html).toContain("„Clean glass (inside &amp; out)“ an 3 Geräten eingetragen.");
+    // Only the team member who recorded them sees the confirmation.
+    expect((await landedOn(form.address, "2026-06-10", tom)).html).not.toContain("eingetragen");
   });
 });

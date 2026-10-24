@@ -9,4 +9,11 @@ import { formRunner } from "./form-runner";
  */
 export const formAction = formRunner({ currentPerson });
 
-export type { FormFields, FormState, PhotoFormState, UploadFormDefinition } from "./form-runner";
+export type {
+  EachFormState,
+  EachOutcome,
+  FormFields,
+  FormState,
+  PhotoFormState,
+  UploadFormDefinition,
+} from "./form-runner";
