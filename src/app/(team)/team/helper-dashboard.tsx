@@ -125,6 +125,10 @@ function changeText(change: ShownChange): string {
       return texts.changes.assigned(change.by, change.to);
     case "resolved":
       return texts.changes.resolved(change.by);
+    case "work-logged":
+      return texts.changes.workLogged(change.by);
+    case "title-changed":
+      return texts.changes.titleChanged;
     case "released":
       return change.markRemoved ? texts.changes.releasedByRemovingTheMark(change.by) : texts.changes.released(change.by);
   }

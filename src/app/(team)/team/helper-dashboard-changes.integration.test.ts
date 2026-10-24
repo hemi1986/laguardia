@@ -9,6 +9,7 @@ import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-
 import {
   changeDefectDetailsCommand,
   claimDefectCommand,
+  logWorkCommand,
   releaseClaimCommand,
   reportProblemAndTriageCommand,
   resolveDefectCommand,
@@ -130,6 +131,8 @@ async function aDefect(title: string) {
     release: (by: Person, when: Date) => step(releaseClaimCommand, {}, by, when),
     resolve: (by: Person, when: Date) =>
       step(resolveDefectCommand, { closingNote: `${title} – fixed` }, by, when),
+    logWork: (by: Person, when: Date) =>
+      step(logWorkCommand, { whatWasDone: `Worked on ${title}`, partsUsed: "" }, by, when),
     changeDetails: (details: { title?: string; suitableForHelpers?: boolean }, when: Date) =>
       step(changeDefectDetailsCommand, { title, suitableForHelpers: true, ...details }, tom, when),
   };
@@ -231,5 +234,19 @@ describe("what changed on the helper's claimed defects", () => {
     expect(sectionOne(html)).toContain("Rubber cracked");
     expect(sectionOne(html)).toContain("Ben hat übernommen");
     expect(html).not.toContain("Display flickers");
+  });
+
+  it("ST-086: Helper sees what changed on her claimed defects", async () => {
+    const slingshot = await aDefect("Slingshot switch loose");
+    await slingshot.claim(anna, daysAgo(5));
+    await slingshot.logWork(tom, daysAgo(4));
+    await slingshot.changeDetails({ title: "Slingshot switch loose (left)" }, daysAgo(2));
+
+    const section = sectionOne((await dashboard()).html);
+
+    // The title as it is now – the line only says it changed.
+    expect(section).toContain("Slingshot switch loose (left)");
+    expect(section).toContain("<li>Neuer Arbeitsschritt von Tom · vor 4 Tagen</li>");
+    expect(section).toContain("<li>Titel geändert · vor 2 Tagen</li>");
   });
 });

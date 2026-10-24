@@ -108,14 +108,16 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
   };
 }
 
-/** The team members a change names. */
+/** The team members a change names – who did it, and whom a defect was assigned to. */
 function peopleOf(change: ClaimedDefectChange): string[] {
-  return change.kind === "assigned" ? [change.by, change.to] : [change.by];
+  return [..."by" in change ? [change.by] : [], ..."to" in change ? [change.to] : []];
 }
 
 /** A change with its team members by name. */
 function named(change: DistributiveNamed<ClaimedDefectChange>, names: ReadonlyMap<string, string>) {
-  return change.kind === "assigned"
-    ? { ...change, by: nameOf(names, change.by), to: nameOf(names, change.to) }
-    : { ...change, by: nameOf(names, change.by) };
+  return {
+    ...change,
+    ...("by" in change ? { by: nameOf(names, change.by) } : {}),
+    ...("to" in change ? { to: nameOf(names, change.to) } : {}),
+  };
 }

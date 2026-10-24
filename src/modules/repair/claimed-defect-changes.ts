@@ -11,7 +11,9 @@ export type ClaimedDefectChange =
   | { kind: "assigned"; by: string; to: string; at: Date }
   /** Released by a technician – by removing the suitable-for-helpers mark, too (ST-031), which the line says. */
   | { kind: "released"; by: string; markRemoved: boolean; at: Date }
-  | { kind: "resolved"; by: string; at: Date };
+  | { kind: "resolved"; by: string; at: Date }
+  | { kind: "work-logged"; by: string; at: Date }
+  | { kind: "title-changed"; at: Date };
 
 /** A defect the team member claims, or one that left them in the last 7 days, with what others changed since their claim. */
 export type ClaimedDefectChanges = {
@@ -34,6 +36,7 @@ const TRACKED = [
   "EVT-DefectResolved",
   "EVT-DefectClosedOnRetirement",
   "EVT-DefectDetailsChanged",
+  "EVT-WorkLogged",
 ] as const;
 
 type Entry = CatalogueEntry<(typeof repairEvents)["entries"], (typeof TRACKED)[number]>;
@@ -139,6 +142,14 @@ function changesSinceClaim(
         const released = changes.at(-1);
         if (entry.data.releasedClaimOf === teamMemberId && released?.kind === "released" && released.at.getTime() === at.getTime())
           released.markRemoved = true;
+        // A new title in that same step is still a change on their defect.
+        const inClaim = mine || leftAt?.getTime() === at.getTime();
+        if (inClaim && entry.data.titleChanged && by !== teamMemberId) changes.push({ kind: "title-changed", at });
+        break;
+      }
+      case "EVT-WorkLogged": {
+        const loggedBy = entry.data.loggedBy ?? by;
+        if (mine && loggedBy && loggedBy !== teamMemberId) changes.push({ kind: "work-logged", by: loggedBy, at });
         break;
       }
     }
