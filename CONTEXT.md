@@ -42,7 +42,7 @@ _UI (de)_: Übersicht
 One round on the floor: it begins when a team member opens their dashboard and lasts while they open it again within
 an hour of that beginning; opening it later begins the next dashboard visit. One per team member across all their
 devices; a prefetch or a re-render after an action on the dashboard is no opening.
-_Avoid_: Session, login, page view
+_Avoid_: Dashboard session, page view
 _UI (de)_: Besuch der Übersicht
 
 **Last visit**:
@@ -50,7 +50,7 @@ The moment the team member's previous dashboard visit began, recorded by the Tea
 visit the dashboard marks everything that happened since then as new. On the very first dashboard visit it is that
 visit's own beginning, so nothing is marked. Deliberately not the moment they last signed in – team members stay
 signed in for weeks.
-_Avoid_: Last login, last seen, session start, last opened
+_Avoid_: Last login, last seen, session start
 _UI (de)_: Letzter Besuch der Übersicht
 
 **Suitable for helpers**:

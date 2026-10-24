@@ -21,3 +21,38 @@ What holds: the Last visit is written only by the client effect's Server Action,
 
 ready to merge
 Most important: #1, the test for "An action on the dashboard does not end the visit" would still pass if the render wrote the Last visit, so ADR 0011's central guarantee is unguarded. A 15-minute test fixes it. None of the findings meets the follow-up hurdle.
+
+## Resolution (implementer, 2026-10-24)
+
+| # | Outcome |
+|---|---|
+| 1 | fixed – new test "a render that is no visit … does not move the Last visit (ADR 0011)"; it fails when the render records the visit (mutation checked) |
+| 2 | fixed – section *The Last visit* in the engineering conventions, the checklist line names the exception; **awaits the user's approval** at acceptance |
+| 3 | skipped – the action takes no input and acts only for the session's team member; a visitor's or deactivated account's call records nothing (security review: no findings). The convention from #2 names it |
+| 4, 5 | fixed by the domain-architect (`docs/architecture/data-model.md`, `CONTEXT.md`) |
+| 6 | accepted as ADR 0011's consequence – no change |
+| 7 | fixed – „Keine Änderungen seit deinem letzten Besuch.“ when section 5 reaches back to the Last visit |
+| 8 | fixed – plain `<strong>` (bold) |
+| 9 | fixed – `earlierOf` in `src/platform/time.ts`, with a table test |
+| 10 | fixed – `mailto:` dropped from the scan |
+| 11 | fixed – the browser test waits for the recorder's POST to `/team` |
+
+### `/code-review` (medium), same day
+
+| Finding | Outcome |
+|---|---|
+| Render and effect read the clock separately – near the one-hour boundary marks seen and visit recorded can differ by seconds | skipped minor – passing the render's time would mean an input from the browser; the window is seconds |
+| A new visit's Last visit is where the previous visit began, so entries of the previous visit are marked once more | no change – ADR 0011 and decision 2 as accepted |
+| Section 5 has no upper bound after a long absence | skipped minor – ~60 machines; revisit when a dashboard load gets slow |
+| Empty text of section 5 | fixed (#7 above) |
+| `void recordVisitAction()` leaves a rejection unhandled | fixed – caught; a failed recording keeps the previous Last visit |
+| `lastVisitOf` awaited before the other queries | fixed on the helper dashboard (in the `Promise.all`); the technician dashboard needs it for the window first |
+| Reopened or newly suitable defects, maintenance and stale claims are not marked | no change – the user's decision 1a at the test plan checkpoint (2026-10-24) |
+| `<VisitRecorder />` in both branches | fixed – one `Page`, one recorder |
+
+### Found while fixing
+
+Every dashboard open renders the dashboard a second time: the recorder's Server Action gets the proxy's renewed session
+cookie, and a cookie change makes Next.js re-render the route in the action's response (engineering conventions,
+*Server Actions and forms*). Navigating away before that response ends shows as `aborted` / `ECONNRESET` in the server
+log (seen in the local browser tests; none without the recorder). Harmless for the marks; named for the user at acceptance.

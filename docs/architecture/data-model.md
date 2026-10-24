@@ -397,8 +397,19 @@ Not an aggregate of this model; listed only because all contexts reference it (`
 | ID | `TeamMemberId` | yes | every "… by" in events |
 | Name | `Text` | yes | *Claimed by*, *Reporter* in RM-OpenDefects, RM-TriageList |
 | Role | *Helper* \| *Technician* | yes | command rules (e.g. CMD-ClaimDefect, CMD-ChangeMachineStatus) |
-| Last visit | `Timestamp` | no | *New since last visit* in RM-TechnicianDashboard, RM-HelperDashboard – the previous time the team member opened their dashboard (HS-21) |
+| Current dashboard visit began at | `Timestamp` | no | beginning of the team member's current *dashboard visit*; set on the first visit and whenever a new dashboard visit begins (more than one hour after this value) – ST-050, `docs/adr/0011-recording-the-last-visit.md` |
+| Last visit | `Timestamp` | no | *New since last visit* in RM-TechnicianDashboard, RM-HelperDashboard – where the previous dashboard visit began; on the first visit the first visit's own beginning (HS-21, ST-050, ADR 0011) |
+
+Both visit values are absent until the team member's first dashboard visit, are one pair per team member shared across all devices, and are owned and written only by the Team area. They are per-member state, **not journaled**: opening the dashboard appends no event (ADR 0011). One rule derives both from the stored pair and the moment of opening (story review 2026-10-17, decision 2):
+
+| Situation when the dashboard is opened | Current dashboard visit began at | Last visit |
+|---|---|---|
+| never visited | the opening | the opening (nothing is marked) |
+| at most one hour after the current visit's beginning | unchanged | unchanged |
+| more than one hour after the current visit's beginning | the opening | the previous *Current dashboard visit began at* |
+
+The dashboards compute their mark line with this rule at display time and never write it.
 
 ## Open points
-HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the previous dashboard visit.
+HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the Last visit – where the previous dashboard visit began.
 - Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen; whether removed file content is deleted.

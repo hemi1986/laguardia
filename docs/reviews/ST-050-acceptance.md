@@ -53,3 +53,13 @@ Remarks (none blocks, none passes the follow-up hurdle):
 2. ADR 0011 is still `proposed`; the user must accept it with this PR.
 3. The mechanism "an action re-render does not record a visit" is tested only by calling the loader; the browser test only covers first visit + marked defect. A technician browser check on the phone (new count line, bold marker, section 5 heading/empty text) is left to the acceptance on the preview.
 4. No concurrency test for two devices opening in the same instant.
+
+## Resolution (implementer, 2026-10-24)
+
+- 1 – no change: no way to send a notification exists to be called; the scan catches one being added.
+- 2 – not so: ADR 0011 is `accepted` (ST-087, 2026-10-24).
+- 3 – the render-without-visit case got its own test (code review #1); the marks on the technician dashboard are checked by the integration tests' rendered HTML; the user checks the phone at acceptance.
+- 4 – fixed: „Keine Änderungen seit deinem letzten Besuch.“
+- 5 – fixed: test "two devices opening the dashboard for the first time at the same moment begin one visit" (fails without `ON CONFLICT DO NOTHING`).
+- 6 – the rejection is caught now; a failed recording keeps the previous Last visit.
+- 7 – the user's decision 1a; named in the pull request.
