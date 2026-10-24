@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
-import { defectActions, type DefectAction } from "@/modules/repair";
+import { defectActions, type DefectAction, type DefectRepairTimes } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
@@ -91,6 +91,7 @@ export function DefectDetailsView({
           {texts.recordedAt(formatDateTime(details.recordedAt))}
           {details.openDays !== undefined && ` · ${texts.openFor(details.openDays)}`}
         </p>
+        <RepairTimesLine times={details.repairTimes} />
         {details.hold && (
           <p className="text-sm font-medium">
             {texts.onHold(texts.holdReasons[details.hold.reason])}
@@ -239,4 +240,14 @@ export function DefectDetailsView({
       </Link>
     </div>
   );
+}
+
+/** The defect's two times (ST-051) in one line – a time that does not exist yet is left out, and so is the line. */
+function RepairTimesLine({ times }: { times: DefectRepairTimes }) {
+  const shown = [
+    times.toFirstWorkLogEntry !== undefined &&
+      texts.repairTime(terms["Time to first work log entry"], times.toFirstWorkLogEntry),
+    times.toResolved !== undefined && texts.repairTime(terms["Time to resolved"], times.toResolved),
+  ].filter((time) => time !== false);
+  return shown.length > 0 && <p className="text-muted-foreground text-sm">{shown.join(" · ")}</p>;
 }

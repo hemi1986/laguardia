@@ -130,8 +130,26 @@ export const repairTexts = {
     title: (museumNumber: string) => `Problem melden und als direkt behoben eintragen · ${museumNumber}`,
     submit: "Melden und als direkt behoben eintragen",
   },
+  /** The repair times (ST-051, RM-RepairTimes) – technicians only; the word "median" is never shown (user, 2026-10-17). */
+  repairTimes: {
+    period: "Zeitraum",
+    /** In this order, the last 30 days preselected (G20). */
+    periods: { 30: "Letzte 30 Tage", 90: "Letzte 90 Tage" },
+    measured:
+      "Beide Zeiten zählen ab der frühesten Meldung eines Defekts – bis zu seinem ersten Arbeitsschritt und bis er behoben ist.",
+    typical: "Typische Dauer: Die Hälfte der Defekte ging schneller, die Hälfte langsamer.",
+    priority: (priority: string) => `Priorität ${priority}`,
+    /** A typical time with its number of defects (G6), e.g. „Bis behoben: 5,0 Tage · 3 Defekte“. */
+    time: (label: string, milliseconds: number, defects: number) =>
+      `${label}: ${daysOf(milliseconds)} · ${defects === 1 ? "1 Defekt" : `${defects} Defekte`}`,
+    noDefect: (label: string) => `${label}: kein Defekt in diesem Zeitraum`,
+    /** A priority without any defect in the period (G7) – instead of its two times. */
+    noDefects: "Keine Defekte in diesem Zeitraum.",
+  },
   /** The open defects list and a defect's own page (ST-021). */
   defects: {
+    /** A defect's own times (ST-051), e.g. „Bis zum ersten Arbeitsschritt: 1,5 Tage“ – joined with „ · “. */
+    repairTime: (label: string, milliseconds: number) => `${label}: ${daysOf(milliseconds)}`,
     title: "Defekte",
     /** All open defects, whatever the filter (G6). */
     open: (count: number) => (count === 1 ? "1 Defekt ist offen." : `${count} Defekte sind offen.`),
@@ -325,3 +343,11 @@ export const repairErrors = {
   "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
   "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
 } as const;
+
+const DAY_MS = 86_400_000;
+const oneDecimal = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** A duration in days with one decimal, in German number format (G13) – „2,5 Tage“, and „1,0 Tage“ alike (ST-051). */
+function daysOf(milliseconds: number): string {
+  return `${oneDecimal.format(milliseconds / DAY_MS)} Tage`;
+}

@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 47 of 59 domain stories done** · scenarios 418 of 505
+**Progress: 48 of 59 domain stories done** · scenarios 436 of 505
 
-**84 stories** · In Progress: 0 · Ready: 18 · In Review: 0 · Draft: 3 · Done: 63
+**84 stories** · In Progress: 0 · Ready: 17 · In Review: 0 · Draft: 3 · Done: 64
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-027, ST-028, ST-030, ST-039 |
 | [ST-053](ST-053-link-reopens-resolved-defect.md) | Linking a problem report to a recently resolved defect reopens it | story | Repair | should | S | medium | ST-022, ST-030, ST-052 |
 | [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
@@ -104,5 +103,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-086](ST-086-helper-dashboard-claimed-defects-what-changed.md) | Helper dashboard – my claimed defects and what changed on them | story | Repair | should | M | medium | ST-049, ST-026, ST-027, ST-029, ST-031 |
 | [ST-087](ST-087-spike-how-a-dashboard-visit-is-recorded.md) | How a dashboard visit is recorded | spike | Team | should | XS | medium | – |
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards mark what is new since the last visit | story | Repair | should | L | high | ST-058, ST-086, ST-087 |
+| [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-027, ST-028, ST-030, ST-039 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |

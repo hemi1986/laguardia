@@ -22,6 +22,7 @@ import {
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
+import { aDefectWithHistory } from "@/test-support/defects";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadDefectDetails } from "./defect-details-data";
@@ -921,6 +922,44 @@ describe("a defect's own page", () => {
       expect(html).toContain(
         `<img src="memory://${photo}?valid-until=2027-10-04T10:05:00.000Z" alt="Foto zur Meldung"`,
       );
+    });
+  });
+
+  describe("its repair times (ST-051)", () => {
+    const leftFlipperWeak = (recordedAt: string) => aDefectWithHistory(db, { by: tom, title: "Left flipper weak", recordedAt });
+    const timesOn = async (defectId: string) =>
+      (await page(defectId)).match(/Bis zum ersten Arbeitsschritt[^<]*|Bis behoben[^<]*/g)?.join(" | ");
+
+    it("ST-051: Both times in the defect details", async () => {
+      const defect = await leftFlipperWeak("2026-09-20T08:00:00Z");
+      await defect.logWork("2026-09-21T20:00:00Z");
+      await defect.resolve("2026-09-24T08:00:00Z");
+
+      expect(await timesOn(defect.defectId)).toBe("Bis zum ersten Arbeitsschritt: 1,5 Tage · Bis behoben: 4,0 Tage");
+    });
+
+    it("ST-051: Earliest problem report counts", async () => {
+      const defect = await leftFlipperWeak("2026-06-10T09:00:00Z");
+      await defect.linkedReport("2026-06-08T09:00:00Z", "2026-06-10T10:00:00Z");
+      await defect.logWork("2026-06-11T09:00:00Z");
+
+      expect(await timesOn(defect.defectId)).toBe("Bis zum ersten Arbeitsschritt: 3,0 Tage");
+    });
+
+    it("ST-051: The first work log entry stays the first after a reopen", async () => {
+      const defect = await leftFlipperWeak("2026-06-01T09:00:00Z");
+      await defect.logWork("2026-06-02T09:00:00Z");
+      await defect.resolve("2026-06-03T09:00:00Z");
+      await defect.reopen("2026-06-05T09:00:00Z");
+      await defect.logWork("2026-06-06T09:00:00Z");
+
+      expect(await timesOn(defect.defectId)).toBe("Bis zum ersten Arbeitsschritt: 1,0 Tage");
+    });
+
+    it("shows no times before there is any", async () => {
+      const defect = await leftFlipperWeak("2026-06-01T09:00:00Z");
+
+      expect(await timesOn(defect.defectId)).toBeUndefined();
     });
   });
 });

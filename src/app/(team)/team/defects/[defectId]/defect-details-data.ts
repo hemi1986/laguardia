@@ -5,6 +5,7 @@ import {
   lastDefectActionBy,
   resolutionsAndReopenings,
   type DefectAction,
+  type DefectRepairTimes,
   type HoldReason,
   type Priority,
 } from "@/modules/repair";
@@ -39,6 +40,8 @@ export type DefectDetailsData = {
   recordedAt: Date;
   /** Berlin calendar days it has been open – only for an open defect; resolved ones are shown by ST-028. */
   openDays: number | undefined;
+  /** Its two times (ST-051), in milliseconds – each only once it exists. */
+  repairTimes: DefectRepairTimes;
   problemReports: ShownDefectProblemReport[];
   /** The defect and the version this page shows – what its claim form posts (ST-025, HS-16). */
   id: string;
@@ -101,11 +104,7 @@ export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  {
-    storage = blobStorage(),
-    viewer,
-    done,
-  }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
+  { storage = blobStorage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
@@ -139,7 +138,9 @@ export async function loadDefectDetails(
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
   // not the address (architecture review 2026-10-18).
   const reopening =
-    confirmed?.action === "reopen" && viewer ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id) : undefined;
+    confirmed?.action === "reopen" && viewer
+      ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id)
+      : undefined;
   const newMachineStatus = reopening && collectionChangesIn(reopening, defect.machineId).statusChangedTo;
   return {
     title: defect.title,
@@ -148,6 +149,7 @@ export async function loadDefectDetails(
     priority: defect.priority,
     suitableForHelpers: defect.suitableForHelpers,
     recordedAt: defect.recordedAt,
+    repairTimes: defect.repairTimes,
     openDays: defect.state === "open" ? daysBetween(calendarDate(defect.recordedAt), today(clock)) : undefined,
     problemReports: defect.problemReports.map((report) => ({
       id: report.id,

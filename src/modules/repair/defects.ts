@@ -24,6 +24,7 @@ import {
 } from "./defect-actions";
 import type { LinkingFacts } from "./link-problem-report-to-defect";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
+import { defectRepairTimes, type DefectRepairTimes } from "./repair-times";
 import { defect, defectReopening, defectResolution, defectWorkLogEntry, problemReport } from "./schema";
 
 /** The work log of a defect (ST-024) – append-only (Q13). */
@@ -369,6 +370,8 @@ export type DefectDetails = {
   resolutions: Resolution[];
   reopenings: Reopening[];
   problemReports: DefectProblemReport[];
+  /** Its time to the first work log entry and to resolved (ST-051, RM-RepairTimes) – each only once it exists. */
+  repairTimes: DefectRepairTimes;
 };
 
 /**
@@ -384,6 +387,7 @@ export async function defectDetails(
   if (!loaded) return undefined;
   const { state: stored, version } = loaded;
   const resolution = stored.state === "resolved" ? stored.resolutions.at(-1) : undefined;
+  const problemReports = await problemReportsOfDefect(db, stored);
   return {
     id: stored.id,
     machineId: stored.machineId,
@@ -404,7 +408,8 @@ export async function defectDetails(
     },
     resolutions: stored.resolutions,
     reopenings: stored.reopenings,
-    problemReports: await problemReportsOfDefect(db, stored),
+    problemReports,
+    repairTimes: defectRepairTimes({ ...stored, problemReports }),
   };
 }
 

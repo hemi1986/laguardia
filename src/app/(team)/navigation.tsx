@@ -13,9 +13,9 @@ const link = "text-sm font-medium underline-offset-4 hover:underline";
 /**
  * The one navigation of the team area (ST-076), decided for the whole MVP in ST-008 (UX guideline G19, user
  * 2026-10-02): the daily destinations in one line – Übersicht, Geräte, Sichtung (everyone since 2026-10-03), Defekte, Wartung –,
- * everything that manages behind "Mehr" – Wartungsplan, Modelle, Teammitglieder (technicians), Passwort ändern,
+ * everything that manages behind "Mehr" – Wartungsplan, Reparaturzeiten, Modelle, Teammitglieder (technicians), Passwort ändern,
  * Abmelden. A destination appears with the story that builds it (Sichtung ST-017, Defekte ST-021, Wartung ST-043,
- * Wartungsplan ST-040), at its place in this order. "Mehr" is a native `<details>`, so it opens without JavaScript.
+ * Wartungsplan ST-040, Reparaturzeiten ST-051), at its place in this order. "Mehr" is a native `<details>`, so it opens without JavaScript.
  * Technician-only destinations are hidden from helpers; the pages and the modules check the role again (G11).
  */
 export function TeamNavigation({ role }: { role: Role }) {
@@ -45,6 +45,11 @@ export function TeamNavigation({ role }: { role: Role }) {
                 <li>
                   <Link href="/team/maintenance-plan" className={link}>
                     {team.maintenancePlan}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/team/repair-times" className={link}>
+                    {team.repairTimes}
                   </Link>
                 </li>
                 <li>

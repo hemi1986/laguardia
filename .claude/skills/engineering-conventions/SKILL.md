@@ -551,7 +551,9 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
 - **Titles:** every Gherkin scenario of a story has exactly one test titled `ST-NNN: <scenario title>` (checked by `verify.ts`). Tech-task tests describe behaviour without the prefix.
 - **Things that exist** (architecture review 2026-10-11): what a scenario's "Given" names comes from `src/test-support/`,
   set up through the commands – `aRegisteredMachine(db, status)` (`machines.ts`), `anOpenDefectIn(db, { recordedBy, at,
-  title, suitableForHelpers, machineStatus })` (`defects.ts`, returns machine, defect and problem report IDs),
+  title, suitableForHelpers, machineStatus, priority })` (`defects.ts`, returns machine, defect and problem report IDs),
+  `aDefectWithHistory(db, { by, recordedAt, title, priority })` for a defect whose history a test lays out step by step,
+  each step at its own instant – `linkedReport`, `logWork`, `prioritize`, `resolve`, `reopen`, `retireMachine` (ST-051),
   `post(fields, photo?)` for a posted form (`forms.ts`). A test binds its database, acting people and clock once in a
   one-line helper of its own (`const anOpenDefect = (title) => anOpenDefectIn(db, { title, recordedBy: tom, at })`) – it
   does not copy the command call. A page test in an isolated database that needs "LG-042" of a given machine model

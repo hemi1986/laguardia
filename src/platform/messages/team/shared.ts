@@ -29,6 +29,9 @@ export const sharedTexts = {
     "Closing note": "Abschlussnotiz",
     "Closed on retirement": "Geschlossen (ausgemustert)",
     "Work log entry": "Arbeitsschritt",
+    "Repair times": "Reparaturzeiten",
+    "Time to first work log entry": "Bis zum ersten Arbeitsschritt",
+    "Time to resolved": "Bis behoben",
   },
   /** The team UI's frame: the navigation (G19) and who is logged in. */
   team: {
@@ -39,6 +42,7 @@ export const sharedTexts = {
     accounts: "Teammitglieder",
     maintenance: "Wartung",
     maintenancePlan: "Wartungsplan",
+    repairTimes: "Reparaturzeiten",
     machineModels: "Modelle",
     machines: "Geräte",
     triage: "Sichtung",
