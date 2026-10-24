@@ -2,8 +2,8 @@ import { aHelper, aMachine, expect, logIn, pageWidth, test } from "./fixtures";
 
 /**
  * The technician dashboard on a phone (ST-048): where a technician lands after logging in, „Status ändern“ on a machine
- * that could return to play, and what a helper sees under „Übersicht“ instead. Needs the e2e technician each local run
- * creates (ST-083); the preview database has none before ST-068, so this runs locally only.
+ * that could return to play, and that a helper sees their own dashboard under „Übersicht“ instead (ST-049). Needs the
+ * e2e technician each local run creates (ST-083); the preview database has none before ST-068, so this runs locally only.
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
@@ -49,7 +49,10 @@ test("ST-048: Helpers cannot open the technician dashboard", async ({ page }) =>
   await logIn(page, helper);
 
   await expect(page).toHaveURL(/\/team$/);
-  await expect(page.getByRole("main")).toContainText("Angemeldet als");
+  // Helpers land on their own dashboard instead (ST-049).
+  await expect(page.getByRole("main")).toContainText(
+    /Du hast keinen Defekt übernommen\.|Gerade ist nichts für dich offen\./,
+  );
   await expect(page.getByRole("main")).not.toContainText("Nicht spielbereit ohne offenen Defekt");
   await expect(page.getByRole("main")).not.toContainText("Meldungen zur Sichtung");
 });
