@@ -50,4 +50,14 @@ describe("RM-RepairTimes", () => {
     expect((await of("high")).toResolved).toEqual({ median: 3 * DAY, defects: 1 });
     expect((await of("normal")).toResolved).toBeUndefined();
   });
+
+  it("ST-051: The period is counted in elapsed hours", async () => {
+    const coinDoorJammed = await aDefect("Coin door jammed", ago(40), "low");
+    await coinDoorJammed.resolve(ago(29, 23));
+    const lampOut = await aDefect("Lamp out", ago(40), "low");
+    await lampOut.resolve(ago(30, 1));
+
+    // Coin door jammed: 40 days − 29 days 23 hours = 10 days 1 hour from report to resolved; Lamp out would be 9 days 23 hours.
+    expect((await of("low")).toResolved).toEqual({ median: 10 * DAY + HOUR, defects: 1 });
+  });
 });
