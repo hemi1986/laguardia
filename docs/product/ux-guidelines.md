@@ -327,10 +327,11 @@ question for the user, not a line a story adds on its way past.
 | 4 | Open defects | Defekte | ST-021 | everyone | line |
 | 5 | Due maintenance | Wartung | ST-043 | everyone | line |
 | 6 | Maintenance plan | Wartungsplan | ST-040 | technicians | "Mehr" |
-| 7 | Machine models | Modelle | ST-006 | technicians | "Mehr" |
-| 8 | Team members | Teammitglieder | ST-005 | technicians | "Mehr" |
-| 9 | Own password | Passwort ändern | ST-004 | everyone | "Mehr" |
-| 10 | Log out | Abmelden (button) | ST-004 | everyone | "Mehr" |
+| 7 | Repair times | Reparaturzeiten | ST-051 | technicians | "Mehr" |
+| 8 | Machine models | Modelle | ST-006 | technicians | "Mehr" |
+| 9 | Team members | Teammitglieder | ST-005 | technicians | "Mehr" |
+| 10 | Own password | Passwort ändern | ST-004 | everyone | "Mehr" |
+| 11 | Log out | Abmelden (button) | ST-004 | everyone | "Mehr" |
 
 The daily destinations stand in one line that may wrap; everything that manages sits behind **"Mehr"**, a native
 `<details>` that opens without JavaScript. A destination appears with the story that builds it, at its place in this
@@ -338,6 +339,9 @@ order – no story adds, renames or reorders one. Implemented in `src/app/(team)
 *Changed 2026-10-03 (user):* row 3 (Sichtung) is shown to everyone, not only technicians. Helpers use the triage
 list to resolve problems on the spot (ST-019; ST-017's scenario "Helpers see the triage list without technician
 actions"); the technician-only triage outcomes are hidden on the problem report's page instead (G11).
+*Changed 2026-10-17 (user, backlog grooming):* row 7 (Reparaturzeiten, ST-051) added right after „Wartungsplan“,
+technicians only – the repair times had no destination (`docs/reviews/2026-10-17-backlog-grooming.md`, section 9
+item 3). Recorded here when ST-051 was built (2026-10-25).
 *Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
 navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
 happens at ten.
