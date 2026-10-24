@@ -1,5 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
+import { elapsedMoreThanHours } from "@/platform/time";
 import {
   priorities,
   type Claim,
@@ -240,6 +242,41 @@ export async function openDefects(
 /** One column of the work log entry stored last for the defect of the surrounding query. */
 function lastWorkLogEntry(column: typeof defectWorkLogEntry.loggedBy | typeof defectWorkLogEntry.loggedAt) {
   return sql`SELECT ${column} FROM ${defectWorkLogEntry} WHERE ${defectWorkLogEntry.defectId} = ${defect.id} ORDER BY ${defectWorkLogEntry.position} DESC LIMIT 1`;
+}
+
+/** A claim older than 14 days without a work log entry since it was made (CONTEXT.md: Stale claim) – its machine and claimant by ID. */
+export type StaleClaim = { defectId: string; machineId: string; title: string; claimedBy: string; claimedAt: Date };
+
+/** "Older than 14 days" – more than 336 hours (ST-003). */
+const STALE_AFTER_HOURS = 336;
+
+/**
+ * The stale claims (RM-TechnicianDashboard, ST-058): open defects claimed more than 14 days ago on which nobody has
+ * logged work since the claim – by anyone, not only the claimant. Computed when it is read (ADR 0002); a stale claim is
+ * only singled out, never released. The oldest claim first.
+ */
+export async function staleClaims(db: Database, clock: Clock): Promise<StaleClaim[]> {
+  const now = clock.now();
+  const rows = await db
+    .select({
+      defectId: defect.id,
+      machineId: defect.machineId,
+      title: defect.title,
+      claimedBy: defect.claimedBy,
+      claimedAt: defect.claimedAt,
+      lastLoggedAt: sql`(${lastWorkLogEntry(defectWorkLogEntry.loggedAt)})`.mapWith(defectWorkLogEntry.loggedAt),
+    })
+    .from(defect)
+    .where(and(eq(defect.state, "open"), isNotNull(defect.claimedBy)))
+    .orderBy(asc(defect.claimedAt), asc(defect.id));
+  return rows.flatMap(({ claimedBy, claimedAt, lastLoggedAt, ...row }) =>
+    claimedBy &&
+    claimedAt &&
+    elapsedMoreThanHours(claimedAt, now, STALE_AFTER_HOURS) &&
+    !(lastLoggedAt && lastLoggedAt >= claimedAt)
+      ? [{ ...row, claimedBy, claimedAt }]
+      : [],
+  );
 }
 
 /**

@@ -11,7 +11,14 @@ import {
   type MachineStatus,
 } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand, resolveDefectCommand } from "@/modules/repair";
+import {
+  claimDefectCommand,
+  logWorkCommand,
+  openDefects,
+  recordDefectCommand,
+  reportProblemCommand,
+  resolveDefectCommand,
+} from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -27,12 +34,14 @@ import { TechnicianDashboard } from "./technician-dashboard";
 const isolated = isolatedTestDatabase("technician_dashboard");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 let machineModelId: string;
 const NOW = "2026-06-10T10:00:00Z";
 
 beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, ben, "Ben");
   const model = await run(
     executeCommand(
       createMachineModelCommand,
@@ -78,13 +87,13 @@ async function aProblemReport(machineId: string, at: string) {
   return reported.problemReportId;
 }
 
-/** An open defect recorded from a problem report – at version 0. */
-async function anOpenDefect(machineId: string, title: string) {
+/** An open defect recorded from a problem report – at version 0; recorded on 2026-06-01 unless the day is given. */
+async function anOpenDefect(machineId: string, title: string, day = "2026-06-01") {
   const recorded = await run(
     executeCommand(
       recordDefectCommand,
       {
-        problemReportId: await aProblemReport(machineId, "2026-06-01T09:00:00Z"),
+        problemReportId: await aProblemReport(machineId, `${day}T09:00:00Z`),
         version: 0,
         title,
         priority: "normal",
@@ -92,10 +101,26 @@ async function anOpenDefect(machineId: string, title: string) {
         machineStatus: undefined,
         machineVersion: undefined,
       },
-      as("2026-06-01T10:00:00Z"),
+      as(`${day}T10:00:00Z`),
     ),
   );
   return recorded.defectId!;
+}
+
+/** The defect is claimed by that team member at that time – the defect at that version. */
+async function claimed(defectId: string, version: number, by: typeof ben, at: string) {
+  await run(executeCommand(claimDefectCommand, { defectId, version }, { ...as(at), actor: by }));
+}
+
+/** That team member logs work on the defect at that time – the defect at that version. */
+async function workLogged(defectId: string, version: number, by: typeof tom, at: string) {
+  await run(
+    executeCommand(
+      logWorkCommand,
+      { defectId, version, whatWasDone: "Measured the voltages", partsUsed: "" },
+      { ...as(at), actor: by },
+    ),
+  );
 }
 
 async function dashboard() {
@@ -183,6 +208,29 @@ describe("the technician dashboard", () => {
     expect(html).toMatch(/<a [^>]*href="\/team\/triage"[^>]*>Zur Sichtung<\/a>/);
     // The other section says it has nothing, in a sentence of its own.
     expect(html).toContain("Kein Gerät wartet auf die Rückkehr ins Spiel.");
+  });
+
+  it("ST-058: Stale claims are singled out", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    // 15 days before NOW.
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+
+    const { data, html } = await dashboard();
+
+    expect(data.staleClaims).toEqual([
+      {
+        defectId,
+        title: "Display flickers",
+        museumNumber: "LG-042",
+        machineModelTitle: "Medieval Madness",
+        claimant: "Ben",
+      },
+    ]);
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Display flickers</a>`));
+    expect(html).toContain("Von Ben vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.");
+    // Only singled out, never released.
+    expect((await openDefects(db, { claimedBy: ben.teamMemberId })).map((defect) => defect.id)).toEqual([defectId]);
   });
 
   it("offers the status change on each machine it lists, and says when no problem report waits", async () => {

@@ -36,10 +36,12 @@ export {
   openDefectCounts,
   openDefects,
   openDefectTitles,
+  staleClaims,
   type DefectDetails,
   type DefectForAction,
   type OpenDefect,
   type OpenDefectsQuery,
+  type StaleClaim,
 } from "./defects";
 export type { DefectProblemReport } from "./problem-reports";
 export {

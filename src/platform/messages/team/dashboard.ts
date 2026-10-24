@@ -1,5 +1,5 @@
 /**
- * The technician dashboard's texts (ST-048) – it shows what several contexts answer.
+ * The dashboards' texts (ST-048, ST-049, ST-058) – it shows what several contexts answer.
  */
 export const dashboardTexts = {
   /** The technician dashboard (ST-048): what needs a technician right now, in words (G6, G6a, G7). */
@@ -21,6 +21,10 @@ export const dashboardTexts = {
     withoutOpenDefects: (status: string) => `${status} · kein offener Defekt`,
     noneToReturnToPlay: "Kein Gerät wartet auf die Rückkehr ins Spiel.",
     nothingNeedsAttention: "Gerade braucht nichts deine Aufmerksamkeit.",
+    /** Section 3 (ST-058) – the reason in words (G6a). */
+    staleClaims: "Liegengeblieben",
+    staleBecause: (claimant: string) => `Von ${claimant} vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.`,
+    noneStale: "Kein Defekt ist liegengeblieben.",
   },
   /** The helper dashboard (ST-049): what a helper can do right now, in words (G7, G18). */
   helperDashboard: {

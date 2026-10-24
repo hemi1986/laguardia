@@ -1,20 +1,33 @@
-import { machineOverview, type MachineStatus } from "@/modules/collection";
-import { openDefectCounts, triageList } from "@/modules/repair";
+import { machineLabels, machineOverview, type MachineStatus } from "@/modules/collection";
+import { openDefectCounts, staleClaims, triageList } from "@/modules/repair";
+import { teamMemberNames } from "@/modules/team";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
+import { nameOf } from "./claimant";
 
 /** A machine that could return to play – Limited or Out of order, without open defects (POL-ResolvedDefectsReturnMachineToPlay). */
 export type MachineToReturnToPlay = { museumNumber: string; machineModelTitle: string; machineStatus: MachineStatus };
 
+/** A stale claim (CONTEXT.md) as section 3 names it – the defect, its machine and its claimant. */
+export type ShownStaleClaim = {
+  defectId: string;
+  title: string;
+  museumNumber: string;
+  machineModelTitle: string;
+  claimant: string;
+};
+
 /**
  * What the technician dashboard shows (RM-TechnicianDashboard, ST-048) – its sections in the order ST-048 fixed (G18):
- * 1 problem reports to triage, 2 machines not playable without open defects; 3 to 5 follow with ST-058.
+ * 1 problem reports to triage, 2 machines not playable without open defects (ST-048), 3 stale claims (ST-058).
  */
 export type TechnicianDashboardData = {
   /** How many problem reports wait for triage, and how many of them longer than 3 days (HS-2). */
   problemReports: { untriaged: number; waitingLong: number };
   /** By museum number. */
   machinesToReturnToPlay: MachineToReturnToPlay[];
+  /** The oldest claim first. */
+  staleClaims: ShownStaleClaim[];
 };
 
 const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
@@ -25,16 +38,27 @@ const NOT_PLAYABLE: MachineStatus[] = ["limited", "out-of-order"];
  * whether a machine returns to play (HS-6) – the dashboard only shows which ones could.
  */
 export async function loadTechnicianDashboard(db: Database, clock: Clock): Promise<TechnicianDashboardData> {
-  const [toTriage, notPlayable] = await Promise.all([
+  const [toTriage, notPlayable, stale] = await Promise.all([
     triageList(db, clock),
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
       lists.flat(),
     ),
+    staleClaims(db, clock),
   ]);
-  const openDefects = await openDefectCounts(
-    db,
-    notPlayable.map((machine) => machine.id),
-  );
+  const [openDefects, labels, names] = await Promise.all([
+    openDefectCounts(
+      db,
+      notPlayable.map((machine) => machine.id),
+    ),
+    machineLabels(
+      db,
+      stale.map((claim) => claim.machineId),
+    ),
+    teamMemberNames(
+      db,
+      stale.map((claim) => claim.claimedBy),
+    ),
+  ]);
   return {
     problemReports: {
       untriaged: toTriage.length,
@@ -48,5 +72,12 @@ export async function loadTechnicianDashboard(db: Database, clock: Clock): Promi
         machineModelTitle,
         machineStatus,
       })),
+    staleClaims: stale.map((claim) => ({
+      defectId: claim.defectId,
+      title: claim.title,
+      museumNumber: labels.get(claim.machineId)?.museumNumber ?? "",
+      machineModelTitle: labels.get(claim.machineId)?.machineModelTitle ?? "",
+      claimant: nameOf(names, claim.claimedBy),
+    })),
   };
 }
