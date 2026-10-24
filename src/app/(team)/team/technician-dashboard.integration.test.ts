@@ -17,6 +17,7 @@ import {
   claimDefectCommand,
   logWorkCommand,
   openDefects,
+  putDefectOnHoldCommand,
   recordDefectCommand,
   reopenDefectCommand,
   reportProblemCommand,
@@ -307,6 +308,23 @@ describe("the technician dashboard", () => {
     const { data } = await dashboard();
 
     expect(data.staleClaims.map((claim) => [claim.title, claim.claimant])).toEqual([["Drop target sticks", "Ben"]]);
+  });
+
+  it("a claim on a defect on hold is never stale – the defect waits on purpose", async () => {
+    const lg042 = await aMachine("LG-042");
+    const defectId = await anOpenDefect(lg042, "Display flickers", "2026-05-20");
+    await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+    await run(
+      executeCommand(
+        putDefectOnHoldCommand,
+        { defectId, version: 1, reason: "waiting-for-part" },
+        { ...as("2026-05-27T10:00:00Z"), actor: ben },
+      ),
+    );
+
+    const { data } = await dashboard();
+
+    expect(data.staleClaims).toEqual([]);
   });
 
   it("ST-058: Overdue maintenance tasks are counted, not listed by machine", async () => {

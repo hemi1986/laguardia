@@ -19,3 +19,11 @@ Base: main · Commits: 8 · Date: 2026-10-24
 
 **Verdict: ready to merge**
 Most important finding: #1 – whether a defect on hold can be a stale claim is not decided anywhere. Ask the user instead of letting the code decide implicitly.
+
+## Outcome (refactor, 2026-10-24)
+- #1 fixed – user decided (1a): a defect on hold is never a stale claim. `CONTEXT.md` (Stale claim), the story's context and `staleClaims` say so; test "a claim on a defect on hold is never stale – the defect waits on purpose".
+- #2 fixed – `resolvedOrReopenedSince` no longer sorts; the page orders the merged recent changes once.
+- #3 fixed – `StaleClaim` no longer carries `claimedAt`.
+- #4 fixed – one `labelOf` in the page data; every defect's machine exists (foreign key), so there is no empty fallback.
+- #5 fixed – user approved (2a): `hoursBefore` added to the time table of the engineering conventions.
+- Acceptance remarks: the changed ST-048 browser spec ran green locally; ST-050 already widens the 7-day window by the last visit (its context, line 25) – no note needed.

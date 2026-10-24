@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
 import { elapsedMoreThanHours } from "@/platform/time";
@@ -244,7 +244,7 @@ function lastWorkLogEntry(column: typeof defectWorkLogEntry.loggedBy | typeof de
   return sql`SELECT ${column} FROM ${defectWorkLogEntry} WHERE ${defectWorkLogEntry.defectId} = ${defect.id} ORDER BY ${defectWorkLogEntry.position} DESC LIMIT 1`;
 }
 
-/** A claim older than 14 days without a work log entry since it was made (CONTEXT.md: Stale claim) – its machine and claimant by ID. */
+/** A claim older than 14 days without a work log entry since it was made, not on hold (CONTEXT.md: Stale claim) – its machine and claimant by ID. */
 export type StaleClaim = { defectId: string; machineId: string; title: string; claimedBy: string };
 
 /** "Older than 14 days" – more than 336 hours (ST-003). */
@@ -252,7 +252,8 @@ const STALE_AFTER_HOURS = 336;
 
 /**
  * The stale claims (RM-TechnicianDashboard, ST-058): open defects claimed more than 14 days ago on which nobody has
- * logged work since the claim – by anyone, not only the claimant. Computed when it is read (ADR 0002); a stale claim is
+ * logged work since the claim – by anyone, not only the claimant –, and that are not on hold: those wait on purpose
+ * (user, 2026-10-24). Computed when it is read (ADR 0002); a stale claim is
  * only singled out, never released. The oldest claim first.
  */
 export async function staleClaims(db: Database, clock: Clock): Promise<StaleClaim[]> {
@@ -267,7 +268,7 @@ export async function staleClaims(db: Database, clock: Clock): Promise<StaleClai
       lastLoggedAt: sql`(${lastWorkLogEntry(defectWorkLogEntry.loggedAt)})`.mapWith(defectWorkLogEntry.loggedAt),
     })
     .from(defect)
-    .where(and(eq(defect.state, "open"), isNotNull(defect.claimedBy)))
+    .where(and(eq(defect.state, "open"), isNotNull(defect.claimedBy), isNull(defect.holdReason)))
     .orderBy(asc(defect.claimedAt), asc(defect.id));
   return rows.flatMap(({ claimedBy, claimedAt, lastLoggedAt, ...row }) =>
     claimedBy &&
