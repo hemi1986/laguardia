@@ -1,4 +1,4 @@
-import { eq, or, sql } from "drizzle-orm";
+import { and, eq, exists, gte, or, sql } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { hoursBefore } from "@/platform/time";
@@ -93,7 +93,27 @@ export async function repairTimes(
           defect.id,
         )}) END`.mapWith(defectResolution.resolvedAt),
     })
-    .from(defect);
+    .from(defect)
+    // Only the defects that can belong to the period – work logged or resolved since it began; the rest is decided below.
+    .where(
+      or(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(defectWorkLogEntry)
+            .where(and(eq(defectWorkLogEntry.defectId, defect.id), gte(defectWorkLogEntry.loggedAt, since))),
+        ),
+        and(
+          eq(defect.state, "resolved"),
+          exists(
+            db
+              .select({ one: sql`1` })
+              .from(defectResolution)
+              .where(and(eq(defectResolution.defectId, defect.id), gte(defectResolution.resolvedAt, since))),
+          ),
+        ),
+      ),
+    );
   const inPeriod = (instant: Date | undefined) => instant !== undefined && instant >= since && instant <= now;
   const defects = rows.map((row) => {
     const milestones = {

@@ -90,7 +90,6 @@ export { defectActionCommands } from "./defect-action-commands";
 export { problemReportedIn, triageOutcomeIn, type TriagedInCommand } from "./in-command";
 export { retireMachineCommand, retirementConsequences } from "./retirement-policies";
 export {
-  defectRepairTimes,
   repairTimePeriods,
   repairTimes,
   type DefectRepairTimes,

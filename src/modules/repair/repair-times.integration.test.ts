@@ -5,7 +5,7 @@ import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { fixedClock } from "@/platform/clock";
 import { aDefectWithHistory } from "@/test-support/defects";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
-import { repairTimes, type Priority } from ".";
+import { defectDetails, repairTimes, type Priority } from ".";
 
 /**
  * RM-RepairTimes (ST-051): per priority the typical time from a defect's earliest problem report to its first work log
@@ -62,8 +62,11 @@ describe("RM-RepairTimes", () => {
   });
 
   it("ST-051: Defects closed on retirement are not counted as resolved", async () => {
+    // Resolved once, then reopened – so it was resolved in the period, but its retirement closed it.
     const displayDead = await aDefect("Display dead", ago(20));
     await displayDead.logWork(ago(15));
+    await displayDead.resolve(ago(10));
+    await displayDead.reopen(ago(8));
     await displayDead.retireMachine(ago(5));
 
     expect(await of("normal")).toEqual({
@@ -106,5 +109,22 @@ describe("RM-RepairTimes", () => {
       toResolved: { typical: 30 * DAY, defects: 1 },
     });
     expect((await of("normal", 90)).toFirstWorkLogEntry).toEqual({ typical: 5 * DAY, defects: 1 });
+  });
+
+  it("gives a defect the same times in the view as on its own page", async () => {
+    const leftFlipperWeak = await aDefect("Left flipper weak", ago(12));
+    await leftFlipperWeak.linkedReport(ago(14), ago(11));
+    await leftFlipperWeak.logWork(ago(10));
+    await leftFlipperWeak.resolve(ago(8));
+    await leftFlipperWeak.reopen(ago(6));
+    await leftFlipperWeak.logWork(ago(5));
+    await leftFlipperWeak.resolve(ago(3));
+
+    const view = await of("normal");
+    const page = (await defectDetails(db, leftFlipperWeak.defectId))?.repairTimes;
+
+    expect(page).toEqual({ toFirstWorkLogEntry: 4 * DAY, toResolved: 11 * DAY });
+    expect(view.toFirstWorkLogEntry?.typical).toBe(page?.toFirstWorkLogEntry);
+    expect(view.toResolved?.typical).toBe(page?.toResolved);
   });
 });

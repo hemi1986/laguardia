@@ -132,7 +132,6 @@ export const repairTexts = {
   },
   /** The repair times (ST-051, RM-RepairTimes) – technicians only; the word "median" is never shown (user, 2026-10-17). */
   repairTimes: {
-    title: sharedTexts.terms["Repair times"],
     period: "Zeitraum",
     /** In this order, the last 30 days preselected (G20). */
     periods: { 30: "Letzte 30 Tage", 90: "Letzte 90 Tage" },
