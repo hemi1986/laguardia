@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WorkLogPhotos } from "../../../problem-report-photo";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { RepairHistoryData, ShownRepairHistoryEntry } from "./repair-history-data";
@@ -118,6 +119,7 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
                 <p className="text-muted-foreground">
                   {machineRecord.whoAndWhen(logged.loggedBy, formatDateTime(logged.loggedAt))}
                 </p>
+                <WorkLogPhotos photos={logged.photos} />
               </li>
             ))}
           </ol>
