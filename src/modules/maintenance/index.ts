@@ -14,7 +14,7 @@ export {
   maintenanceTaskName,
   type ListedMaintenanceTask,
 } from "./maintenance-plans";
-export { dueMaintenance, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";
+export { dueMaintenance, overdueMaintenanceCounts, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";
 export { machineMaintenance, type MachineMaintenance } from "./machine-maintenance";
 export { recordMaintenanceCommand } from "./record-maintenance-command";
 export {

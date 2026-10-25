@@ -1,5 +1,6 @@
 import { Page } from "@/components/page";
 import { machineRegisteredIn, machineStatuses, type MachineStatus } from "@/modules/collection";
+import { systemClock } from "@/platform/clock";
 import { lastCommandBy } from "@/platform/command";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -11,7 +12,7 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 /**
  * The machine overview (ST-007, ST-008) – every team member sees it; registering is for technicians (G11). Each
- * machine shows its open defects (ST-021).
+ * machine shows its open defects (ST-021) and overdue maintenance tasks (ST-057).
  */
 export default async function MachinesPage({ searchParams }: { searchParams: SearchParams }) {
   const member = await requireTeamMember();
@@ -21,7 +22,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
     machineStatus: statusOf(single(params.machineStatus)),
     retired: single(params.retired) === "1",
   };
-  const { machines, counts, retiredCount } = await loadMachineOverview(database(), query);
+  const { machines, counts, retiredCount } = await loadMachineOverview(database(), systemClock, query);
   // Confirmed only when registering it was the latest command on it and this technician ran it (G3).
   const registeredId = single(params.registered);
   const registering = registeredId && (await lastCommandBy(database(), { aggregateId: registeredId }, member.id));

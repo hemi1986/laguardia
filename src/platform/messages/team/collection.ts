@@ -69,6 +69,9 @@ export const collectionTexts = {
     retired: "Ausgemustert",
     /** The open defects of a machine (ST-021) – never zero, a zero is not shown. */
     openDefects: (count: number) => (count === 1 ? "1 offener Defekt" : `${count} offene Defekte`),
+    /** The overdue maintenance tasks of a machine (ST-057) – never zero, a zero is not shown (G6). */
+    overdueMaintenance: (count: number) =>
+      count === 1 ? "1 Wartungsaufgabe überfällig" : `${count} Wartungsaufgaben überfällig`,
   },
   stickers: {
     title: "QR-Sticker drucken",

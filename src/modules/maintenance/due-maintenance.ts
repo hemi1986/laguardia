@@ -64,6 +64,21 @@ export async function dueMaintenance(
   return dueOn(db, clock, await machinesForMaintenance(db), teamMember);
 }
 
+/**
+ * RM-MachineOverview's number of overdue maintenance tasks (ST-057): per machine Collection publishes for maintenance,
+ * how many maintenance tasks are overdue on it today, as RM-DueMaintenance computes them – a machine with none is left
+ * out.
+ */
+export async function overdueMaintenanceCounts(db: Database, clock: Clock): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (const task of await dueMaintenance(db, clock)) {
+    for (const machine of task.machines) {
+      if (machine.overdue) counts.set(machine.machineId, (counts.get(machine.machineId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 /** RM-DueMaintenance on the given machines – for the module's answers that already hold Collection's machines. */
 export async function dueOn(
   db: Database,
