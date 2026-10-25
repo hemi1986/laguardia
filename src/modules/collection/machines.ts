@@ -327,6 +327,7 @@ export async function statusChangesSince(db: Database, since: Date): Promise<Rec
 export type MachineForTeamForm = {
   id: string;
   museumNumber: string;
+  serialNumber?: string;
   machineStatus: MachineStatus;
   location: string;
   version: number;
@@ -339,6 +340,7 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
     .select({
       id: machine.id,
       museumNumber: machine.museumNumber,
+      serialNumber: machine.serialNumber,
       machineStatus: machine.machineStatus,
       location: machine.location,
       version: machine.version,
@@ -350,6 +352,7 @@ export async function machineForTeamForm(db: Database, museumNumber: string): Pr
     row && {
       id: row.id,
       museumNumber: row.museumNumber,
+      serialNumber: row.serialNumber ?? undefined,
       machineStatus: row.machineStatus,
       location: row.location,
       version: row.version,

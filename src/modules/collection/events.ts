@@ -1,6 +1,7 @@
 import { eventCatalogue } from "@/platform/command";
 import type { FileAttached } from "./attach-file";
 import type { MachineStatusChanged } from "./change-machine-status";
+import type { MachineDetailsCorrected } from "./correct-machine-details";
 import type { MachineModelCorrected } from "./correct-machine-model";
 import type { MachineModelCreated } from "./create-machine-model";
 import type { MachineMoved } from "./move-machine";
@@ -55,6 +56,16 @@ export const collectionEvents = eventCatalogue({
     aggregate: "AGG-Machine",
     // The new location is typed text and stays in the aggregate; the journal names the machine and who moved it.
     project: (event: MachineMoved) => ({ aggregateId: event.machineId, machineId: event.machineId, data: {} }),
+  },
+  "EVT-MachineDetailsCorrected": {
+    aggregate: "AGG-Machine",
+    // The museum numbers are references the stickers print – the confirmation names both (ST-035); the serial
+    // number is typed text and stays in the aggregate.
+    project: (event: MachineDetailsCorrected) => ({
+      aggregateId: event.machineId,
+      machineId: event.machineId,
+      data: { museumNumber: event.museumNumber, previousMuseumNumber: event.previousMuseumNumber },
+    }),
   },
   "EVT-MachineRetired": {
     aggregate: "AGG-Machine",
