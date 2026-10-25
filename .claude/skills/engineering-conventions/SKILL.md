@@ -107,14 +107,12 @@ still fine where the interaction needs JavaScript anyway (the camera photo, ST-0
 `label` and `separator` dependencies – for `data-invalid` on the field, `aria-invalid` on the control and a
 `FieldError` with `role="alert"`, which is what UX guidelines G8/G9 need. shadcn's Field supports `NativeSelect`
 explicitly, so this costs us none of the no-JavaScript guarantee.
-Until the migration is finished **both patterns exist, and that is the one thing to avoid spreading**: the first
-form on the new pattern is ST-007 (`src/app/(team)/team/machines/new/register-machine-form.tsx` – `Field` with
+The first form on the new pattern is ST-007 (`src/app/(team)/team/machines/new/register-machine-form.tsx` – `Field` with
 `data-invalid`, `FieldLabel htmlFor`, the control with `aria-invalid` and `aria-describedby` pointing at the
 rejection, `FieldDescription` for a hint). Of the four forms that predate it, the login and the own-password page were
 moved directly (backlog grooming 2026-10-11), the machine models form with ST-036 (`MachineModelFields`, shared by
 creating and correcting – `src/app/(team)/team/machine-models/machine-model-fields.tsx`); the team members page
-follows with ST-081. The hand-rolled field is renamed `LabelledField` (`src/components/ui/labelled-field.tsx`) until
-then. Write no new form on `LabelledField`. Put a field's `key` before a spread of its props – after a spread, React's
+with ST-081, which removed the hand-rolled field – every form is on `Field` now. Put a field's `key` before a spread of its props – after a spread, React's
 JSX transform falls back to `createElement` and warns about the select's option list (ST-036).
 **A form whose action is not a command** (the login – `logIn` of the Team module, backed by Better Auth) cannot use
 `formAction`; its Server Action mirrors the contract by hand: `(previous, formData) => { error, values } | null`, used
@@ -266,8 +264,12 @@ once** and hands it to each module's `…In` (architecture review 2026-10-25): t
 and no other module answers about its commands. The triage outcomes share one module,
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
 `loadMachineConfirmation` and shows one `confirmation`.
-**The one exception** is the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
-is nobody to bind the confirmation to – it says only that a report was sent, nothing stored.
+**The two exceptions:** the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
+is nobody to bind the confirmation to – it says only that a report was sent, nothing stored. And the team members'
+accounts (ST-081, user 2026-10-25): the Team module's account functions are no commands and journal nothing, so the
+address names the action (`?done=role|password|deactivated|activated`, `?created=<id>`) and the page confirms it only
+when the account's state agrees – a deactivation only on a deactivated account, a creation only for an account the
+list has.
 
 **Where an action sits on the defect's page** (G22, first: ST-026): the work – `claim`, `release`, `log-work`,
 `resolve` – as buttons under the header; what manages the defect behind the fold „Verwalten“ (`manage-defect.tsx`, a

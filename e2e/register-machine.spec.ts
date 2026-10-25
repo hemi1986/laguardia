@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, openMore, pageWidth, test, unique } from "./fixtures";
+import { expect, logIn, pageWidth, test, unique, aHelper } from "./fixtures";
 
 /**
  * Registering a machine on a phone (ST-007) and the Server Action runner in the browser (ST-073, proof moved here by
@@ -91,15 +91,7 @@ test("ST-007: After registering, the technician is back on the machine overview"
 
 test("ST-007: Helpers are not offered registering", async ({ page }) => {
   await logIn(page);
-  const helper = { username: unique("helper").replace(" ", "_"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  const helper = await aHelper(page);
 
   await logIn(page, helper);
   await page.getByRole("navigation").getByRole("link", { name: "Geräte" }).click();
