@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
-import { fileOfMachinePage, machineForTeamForm, removeFileRefusal } from "@/modules/collection";
+import { machineFile, machineForTeamForm, removeFileRefusal } from "@/modules/collection";
 import { isId } from "@/platform/command";
 import { database } from "@/platform/database";
 import { commandErrorText, teamMessages } from "@/platform/messages";
@@ -23,7 +23,7 @@ export default async function RemoveFilePage({
   const museumNumber = decodeURIComponent(encoded);
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
-  const file = machine && isId(fileId) ? await fileOfMachinePage(db, { fileId, machineId: machine.id }) : undefined;
+  const file = machine && isId(fileId) ? await machineFile(db, { fileId, machineId: machine.id }) : undefined;
   const refusal = file && removeFileRefusal(file, viewer);
   const back = `/team/machines/${encodeURIComponent(museumNumber)}`;
 
@@ -47,7 +47,7 @@ export default async function RemoveFilePage({
       )}
       {(!machine || !file) && (
         <Link href={back} className="self-start text-sm underline underline-offset-4">
-          {teamMessages.attachFile.back}
+          {texts.backToMachine}
         </Link>
       )}
     </Page>

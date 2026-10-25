@@ -69,7 +69,7 @@ export async function filesOfMachine(
   const rows = await db
     .select({ id: file.id, title: file.title, fileCategory: file.fileCategory, machineId: file.machineId })
     .from(file)
-    .where(and(or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId)), isNull(file.removedAt)))
+    .where(and(ofMachineOrModel({ machineId, machineModelId }), isNull(file.removedAt)))
     .orderBy(asc(file.title), asc(file.attachedAt));
   return rows
     .map((row) => ({ id: row.id, title: row.title, fileCategory: row.fileCategory, ofMachineModel: !row.machineId }))
@@ -92,22 +92,29 @@ export async function fileToOpen(
 }
 
 /** A file of one machine's page (ST-038): what the question before removing it shows and posts, removed or not. */
-export type FileOfMachinePage = { id: string; title: string; version: number; removed: boolean };
+export type MachineFile = { id: string; title: string; version: number; removed: boolean };
 
 /**
  * A file of a machine or of its machine model, removed or not – none for any other file (ST-038): the question before
  * removing it, and the confirmation afterwards, which names the file the machine record no longer lists.
  */
-export async function fileOfMachinePage(
+export async function machineFile(
   db: Database,
   { fileId, machineId }: { fileId: string; machineId: string },
-): Promise<FileOfMachinePage | undefined> {
+): Promise<MachineFile | undefined> {
+  const [owner] = await db
+    .select({ machineModelId: machine.machineModelId })
+    .from(machine)
+    .where(eq(machine.id, machineId));
+  if (!owner) return undefined;
   const [row] = await db
     .select({ id: file.id, title: file.title, version: file.version, removedAt: file.removedAt })
     .from(file)
-    .innerJoin(machine, eq(machine.id, machineId))
-    .where(
-      and(eq(file.id, fileId), or(eq(file.machineId, machine.id), eq(file.machineModelId, machine.machineModelId))),
-    );
+    .where(and(eq(file.id, fileId), ofMachineOrModel({ machineId, machineModelId: owner.machineModelId })));
   return row && { id: row.id, title: row.title, version: row.version, removed: row.removedAt !== null };
+}
+
+/** The files of a machine and those of its machine model – what its machine record shows. */
+function ofMachineOrModel({ machineId, machineModelId }: { machineId: string; machineModelId: string }) {
+  return or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId));
 }

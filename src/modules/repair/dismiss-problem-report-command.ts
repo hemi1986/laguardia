@@ -24,6 +24,7 @@ export const dismissProblemReportCommand = aggregateCommand({
     problemReportId: report.id,
     removedPhoto: events.find((event) => event.removedPhoto)?.removedPhoto,
   }),
+  removesContent: ({ removedPhoto }) => removedPhoto,
 });
 
 /**

@@ -13,7 +13,8 @@ const { removeFile: texts } = teamMessages;
 /**
  * The two buttons under the question (G10b): „Endgültig entfernen“ posts the version of the file the page showed and
  * carries the removal out; „Zurück“ is a link back to the machine record and changes nothing. Works without
- * JavaScript. A refusal – the file was removed meanwhile – takes the place of „Endgültig entfernen“ (G11).
+ * JavaScript. A refusal – the file was removed meanwhile – takes the place of „Endgültig entfernen“ (G11); after a
+ * conflict the button stays, and the re-rendered page posts the version stored now.
  */
 export function RemoveFileButton({
   action: run,
@@ -27,14 +28,15 @@ export function RemoveFileButton({
   back: string;
 }) {
   const [state, action, pending] = useActionState(run, null);
-  const shownRefusal = state ? commandErrorText(teamMessages, state.error) : refusal;
+  // The refusal is the page's answer now; a rejection (a conflict) keeps the button, posting the version shown now.
+  const shownRefusal = refusal ?? (state ? commandErrorText(teamMessages, state.error) : undefined);
 
   return (
     <form action={action} className="flex flex-col gap-2">
       <VersionField version={version} />
       {shownRefusal && <Rejection>{shownRefusal}</Rejection>}
       <div className="flex flex-wrap items-start gap-2">
-        {!shownRefusal && (
+        {!refusal && (
           <Button type="submit" variant="destructive" disabled={pending}>
             {texts.confirm}
           </Button>

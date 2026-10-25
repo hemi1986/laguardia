@@ -53,8 +53,7 @@ export function retireMachine(
 ): Decision<Machine, MachineRetired, RetireMachineError> {
   // Deciding without the lock would let a problem report slip past the retirement policies (ADR 0010).
   if (facts.lock !== "held") throw new Error("CMD-RetireMachine decides only while holding the retirement lock");
-  const refusal =
-    retireRefusal({ retired: machine.retirement !== undefined }, actor) ?? retireReasonRefusal(input.reason);
+  const refusal = retireRefusal({ retired: machine.retirement !== undefined }, actor) ?? retireReasonRefusal(input.reason);
   if (refusal) return { ok: false, error: refusal };
   const reason = input.reason.trim();
   return {

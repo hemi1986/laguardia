@@ -9,9 +9,9 @@ export type {
   FileCategory,
   FileContent,
 } from "./attach-file";
-export { fileOfMachinePage, fileToOpen, type FileOfMachine, type FileOfMachinePage } from "./files";
+export { fileToOpen, machineFile, type FileOfMachine, type MachineFile } from "./files";
 export { removeFileCommand } from "./remove-file-command";
-export { removeFileRefusal } from "./remove-file";
+export { mayRemoveFiles, removeFileRefusal } from "./remove-file";
 export type { RemoveFileError, RemoveFileInput } from "./remove-file";
 export { changeMachineStatusCommand } from "./change-machine-status-command";
 export { machineStatusesToChangeTo } from "./change-machine-status";

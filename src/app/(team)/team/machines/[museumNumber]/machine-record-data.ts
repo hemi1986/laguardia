@@ -3,7 +3,7 @@ import {
   type MachineRecord,
   machineRecord,
   machineStatusesToChangeTo,
-  removeFileRefusal,
+  mayRemoveFiles,
   type Retirement,
   retireRefusal,
   type StatusChange,
@@ -129,7 +129,7 @@ function actionsOf(record: MachineRecord, viewer: Viewer): MachineRecordActions 
       machineStatusesToChangeTo(viewer.role, { machineStatus: record.machineStatus, retired: !active }).length > 0,
     correctDetails: correctDetailsRefusal({ retired: !active }, viewer) === undefined,
     attachFile: true,
-    removeFile: removeFileRefusal({ removed: false }, viewer) === undefined,
+    removeFile: mayRemoveFiles(viewer),
     retire: retireRefusal({ retired: !active }, viewer) === undefined,
   };
 }

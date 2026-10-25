@@ -42,7 +42,7 @@ test("ST-038: Removal needs a confirmation", async ({ page }) => {
 
   await filesSection(page).getByRole("link", { name: "„MM Operations Manual“ entfernen" }).click();
   await expect(page.getByText("„MM Operations Manual“ entfernen? Die Datei wird endgültig gelöscht.")).toBeVisible();
-  await page.getByRole("link", { name: "Zurück" }).click();
+  await page.getByRole("link", { name: "Zurück", exact: true }).click();
 
   await expect(filesSection(page).getByRole("link", { name: "MM Operations Manual", exact: true })).toBeVisible();
 });

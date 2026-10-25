@@ -5,7 +5,7 @@ import { removeFile, removingActors } from "./remove-file";
 
 /**
  * CMD-RemoveFile through the command layer: a changing command on AGG-File, at the version the technician saw; emits
- * EVT-FileRemoved. Technicians only. Its result names the removed content, which the form deletes from the storage
+ * EVT-FileRemoved. Technicians only. Its result names the removed content, which the runner deletes from the storage
  * after the commit (ADR 0009: deleting content only for a deliberate removal).
  */
 export const removeFileCommand = aggregateCommand({
@@ -16,4 +16,5 @@ export const removeFileCommand = aggregateCommand({
   decide: removeFile,
   journal: collectionEvents.journal,
   result: (file) => ({ removedContent: file.content.name }),
+  removesContent: ({ removedContent }) => removedContent,
 });

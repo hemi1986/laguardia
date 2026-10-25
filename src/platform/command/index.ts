@@ -117,6 +117,13 @@ export type Command<Input, Result, Error extends string> = {
   id: `CMD-${string}`;
   allowedActors: readonly AllowedActor[];
   run: (input: Input, context: CommandContext) => Promise<CommandOutcome<Result, Error>>;
+  /**
+   * The stored content the command removed on purpose, named by its result (ST-020: a spam dismissal's photo; ST-038:
+   * a removed file's content). Whoever runs the command for a person deletes it after the commit – the Server Action
+   * runner, for every form (ST-038 code review: no form can forget it). A method, so a command stays assignable to
+   * `Command<…, unknown, …>` like before.
+   */
+  removesContent?(result: Result): string | undefined;
 };
 
 export type CommandResult<Result, Error extends string> =

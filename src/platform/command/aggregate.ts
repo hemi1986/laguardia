@@ -154,6 +154,8 @@ type Common<
   journal: (event: Event, state: State) => JournalEvent;
   /** What the caller gets back – from the new state, and from the events where the state no longer holds it (ST-020). */
   result: (state: State, events: Event[]) => Result;
+  /** The stored content the command removed on purpose, named by its result – deleted after the commit (`Command`). */
+  removesContent?: (result: Result) => string | undefined;
   /**
    * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
    * A rejection of one rejects the whole command; its errors are part of this command's result type.
@@ -238,6 +240,7 @@ export function aggregateCommand<
   return {
     id: definition.id,
     allowedActors: definition.allowedActors,
+    removesContent: definition.removesContent,
     run: async (input: Input, context: CommandContext) => {
       const { tx, actor, clock, newId } = context;
       // executeCommand runs a command only for an actor in its allowedActors (policies: only as the system).

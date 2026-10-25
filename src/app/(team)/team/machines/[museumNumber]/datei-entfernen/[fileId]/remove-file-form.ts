@@ -17,7 +17,6 @@ export function removeFileForm(
   return {
     fields: removeFileFields,
     input: (fields) => ({ fileId, version: versionSeen(fields.version) }),
-    removesContent: ({ removedContent }) => removedContent,
     onSuccess,
   };
 }

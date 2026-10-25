@@ -31,8 +31,13 @@ export function removeFileRefusal(
   file: { removed: boolean },
   teamMember: { role: Role },
 ): "not-authorized" | RemoveFileError | undefined {
-  if (!removingActors.some((actor) => actor === teamMember.role)) return "not-authorized";
+  if (!mayRemoveFiles(teamMember)) return "not-authorized";
   return file.removed ? "file-removed" : undefined;
+}
+
+/** Whether the team member may remove files at all – what the machine record asks before it offers „Entfernen“ (G11). */
+export function mayRemoveFiles(teamMember: { role: Role }): boolean {
+  return removingActors.some((actor) => actor === teamMember.role);
 }
 
 export function removeFile(

@@ -157,6 +157,7 @@ export const collectionTexts = {
     confirm: "Endgültig entfernen",
     back: "Zurück",
     unknown: (museumNumber: string) => `Diese Datei gehört nicht zu ${museumNumber}.`,
+    backToMachine: "Zurück zum Gerät",
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status von ${museumNumber} ändern`,

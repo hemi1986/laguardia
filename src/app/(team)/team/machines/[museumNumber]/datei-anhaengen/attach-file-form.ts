@@ -34,12 +34,7 @@ function attachFileInput(fields: FormFields<AttachFileField>, content?: FileCont
  */
 export function attachFileForm(
   onSuccess: (result: { fileId: string }) => Promise<void>,
-): UploadFormDefinition<
-  AttachFileInput,
-  { fileId: string },
-  AttachFileField,
-  NonNullable<ReturnType<typeof attachFileRefusal>>
-> {
+): UploadFormDefinition<AttachFileInput, { fileId: string }, AttachFileField, NonNullable<ReturnType<typeof attachFileRefusal>>> {
   return {
     fields: attachFileFields,
     upload: { field: "content", clearedWith: ["fileName"], owner: (fields) => ({ machineId: fields.machineId ?? "" }) },

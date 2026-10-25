@@ -1,4 +1,4 @@
-import { collectionChangesIn, fileAttachedIn, fileOfMachinePage, fileRemovedIn } from "@/modules/collection";
+import { collectionChangesIn, fileAttachedIn, machineFile, fileRemovedIn } from "@/modules/collection";
 import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintenance";
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
@@ -48,7 +48,7 @@ export async function loadMachineConfirmation(
   if (removedFileId !== undefined) {
     if (!isId(removedFileId)) return undefined;
     // The machine record lists the file no more – its title comes from the kept record, only for a file of this page.
-    const file = await fileOfMachinePage(db, { fileId: removedFileId, machineId: record.id });
+    const file = await machineFile(db, { fileId: removedFileId, machineId: record.id });
     const command = file && (await lastCommandBy(db, { aggregateId: removedFileId }, viewer));
     return file && command && fileRemovedIn(command, removedFileId)
       ? { kind: "file-removed", title: file.title }

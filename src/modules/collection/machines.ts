@@ -79,8 +79,7 @@ export const machines: AggregateStore<Machine> = {
       return true;
     });
   },
-  update: (tx, state, expectedVersion) =>
-    withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
+  update: (tx, state, expectedVersion) => withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
 };
 
 async function statusHistoryOf(db: Database, machineId: string): Promise<StatusChange[]> {
@@ -395,7 +394,10 @@ export type MachineLabel = { museumNumber: string; machineModelTitle: string };
  * What another module's page shows to name machines – the museum number and the machine model's title, by machine ID
  * (e.g. the triage list, ST-017; the page composes, ST-009). Retired machines included: their history stays readable.
  */
-export async function machineLabels(db: Database, machineIds: readonly string[]): Promise<Map<string, MachineLabel>> {
+export async function machineLabels(
+  db: Database,
+  machineIds: readonly string[],
+): Promise<Map<string, MachineLabel>> {
   const unique = [...new Set(machineIds)];
   if (unique.length === 0) return new Map();
   const rows = await db
