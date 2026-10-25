@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { named } from "../../../../named";
-import { openDefects } from "@/modules/repair";
+import { defectsToLinkTo } from "@/modules/repair";
+import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../../team-session";
@@ -14,7 +15,7 @@ const { machineRecord, reportAndLink: texts, reportProblem } = teamMessages;
 
 /**
  * „Problem melden und mit Defekt verknüpfen“ (ST-052, G21a) – the form page of the triage outcome *linked* a
- * technician chose when reporting: the problem report and the machine's open defects on one page, back on the machine
+ * technician chose when reporting: the problem report and the machine's open and recently resolved (ST-053) defects on one page, back on the machine
  * record afterwards. Technicians only: a helper lands on the plain report form (G11; the command refuses them anyway).
  */
 export default async function ReportAndLinkPage({
@@ -29,9 +30,9 @@ export default async function ReportAndLinkPage({
   const [label, defects] = machine
     ? await Promise.all([
         named(db, { machines: [machine.id] }).then(({ label }) => label(machine.id)),
-        openDefects(db, { machineId: machine.id }),
+        defectsToLinkTo(db, systemClock, machine.id),
       ])
-    : [undefined, []];
+    : [undefined, { open: [], recentlyResolved: [] }];
 
   return (
     <Page title={texts.title(museumNumber)}>
@@ -49,7 +50,7 @@ export default async function ReportAndLinkPage({
             action={reportAndLinkAction.bind(null, museumNumber)}
             museumNumber={museumNumber}
             retired={machine.retired}
-            openDefects={defects.map(({ id, title, openSince }) => ({ id, title, openSince }))}
+            defects={defects}
           />
         </>
       )}

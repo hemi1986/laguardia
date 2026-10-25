@@ -1,7 +1,11 @@
 import { holdAgainstRetirement } from "@/modules/collection";
 import { aggregateCommand, run } from "@/platform/command";
 import { linkingFacts } from "./defects";
-import { linkingActors, linkProblemReportToDefect } from "./link-problem-report-to-defect";
+import {
+  linkingActors,
+  linkProblemReportToDefect,
+  type LinkProblemReportToDefectInput,
+} from "./link-problem-report-to-defect";
 import { problemReports } from "./problem-reports";
 import { repairEvents } from "./events";
 import { reopenDefectCommand } from "./reopen-defect-command";
@@ -18,6 +22,29 @@ import { reopenDefectCommand } from "./reopen-defect-command";
  * reason and the defect's version the technician saw – and with it a stricter machine status chosen in the same step
  * (POL-DefectMayChangeMachineStatus). Its rejection rejects the link: nothing is stored.
  */
+/**
+ * POL-LinkReopensResolvedDefect: the reopening a link runs when the technician chose a defect offered as recently
+ * resolved – CMD-ReopenDefect at the version they saw, the problem report as the reason, with a stricter machine status
+ * if one was chosen. None for a defect offered as open. Shared with CMD-ReportProblem (ST-052).
+ */
+export function reopeningByLink(
+  problemReportId: string,
+  defectId: string,
+  chosen: Pick<LinkProblemReportToDefectInput, "resolvedDefectVersion" | "machineStatus" | "machineVersion">,
+) {
+  if (chosen.resolvedDefectVersion === undefined) return [];
+  return [
+    run(reopenDefectCommand, {
+      defectId,
+      version: chosen.resolvedDefectVersion,
+      reason: "",
+      problemReportId,
+      machineStatus: chosen.machineStatus,
+      machineVersion: chosen.machineVersion,
+    }),
+  ];
+}
+
 export const linkProblemReportToDefectCommand = aggregateCommand({
   id: "CMD-LinkProblemReportToDefect",
   allowedActors: linkingActors,
@@ -29,18 +56,6 @@ export const linkProblemReportToDefectCommand = aggregateCommand({
   },
   decide: linkProblemReportToDefect,
   journal: repairEvents.journal,
-  runs: (report, events, input) =>
-    input.resolvedDefectVersion === undefined
-      ? []
-      : events.map((event) =>
-          run(reopenDefectCommand, {
-            defectId: event.defectId,
-            version: input.resolvedDefectVersion ?? -1,
-            reason: "",
-            problemReportId: report.id,
-            machineStatus: input.machineStatus,
-            machineVersion: input.machineVersion,
-          }),
-        ),
+  runs: (report, events, input) => events.flatMap((event) => reopeningByLink(report.id, event.defectId, input)),
   result: (report) => ({ problemReportId: report.id, defectId: report.triage?.defectId ?? "" }),
 });

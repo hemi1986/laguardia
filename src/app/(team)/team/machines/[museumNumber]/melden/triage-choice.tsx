@@ -7,7 +7,7 @@ const { reportAndTriage: texts, triage, link, terms } = teamMessages;
 
 /**
  * What a technician sees instead of the plain report form (ST-023, ST-052, G21a): the triage outcomes to choose from,
- * one button each, in the order of the triage page – „Mit Defekt verknüpfen“ (only with open defects; otherwise the
+ * one button each, in the order of the triage page – „Mit Defekt verknüpfen“ (only with open or recently resolved defects, ST-053; otherwise the
  * page says that there are none, G7), „Defekt erfassen“, „Direkt behoben“. A technician's own problem report is
  * triaged in the same step, so nothing can be sent from here.
  */

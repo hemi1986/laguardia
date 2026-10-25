@@ -279,7 +279,7 @@ commands:
       - A helper may add only the triage outcome resolve on the spot, or none; a helper's problem report with any other triage outcome is rejected and nothing is stored
       - A visitor's problem report carries no triage outcome
       - "The triage outcome in the same step follows all rules of its own command: CMD-RecordDefect (incl. only a stricter machine status), CMD-LinkProblemReportToDefect, CMD-ResolveProblemOnTheSpot; the reporter is the one who triages"
-      - In the same step a problem report can only be linked to an open defect of the same machine
+      - "In the same step a problem report can only be linked to an open or recently resolved defect (resolved within the last 30 days) of the same machine; linking to a resolved one reopens it (POL-LinkReopensResolvedDefect, ST-053)"
       - If the triage outcome is rejected, the problem report is not stored either
   - id: CMD-RecordDefect
     aggregate: AGG-ProblemReport
@@ -301,6 +301,11 @@ commands:
     actor: ACT-Technician
     produces: [EVT-ProblemReportLinkedToDefect]
     description: Triage outcome. Linking to a resolved defect reopens it (see POL-LinkReopensResolvedDefect).
+    rules:
+      - If another technician triaged the problem report meanwhile, the command is rejected
+      - The defect belongs to the same machine and is open or recently resolved – resolved within the last 30 days, Europe/Berlin calendar days (ST-053); a defect closed on retirement cannot be linked
+      - "A defect the technician saw open and that was resolved meanwhile is not linked (ST-022); one chosen as recently resolved is reopened, with the problem report as the reason"
+      - "The machine status can change in the same step only when the link reopens the defect, and only to a stricter one – as when reopening (user, 2026-10-25)"
   - id: CMD-ResolveProblemOnTheSpot
     aggregate: AGG-ProblemReport
     name: Resolve problem on the spot
