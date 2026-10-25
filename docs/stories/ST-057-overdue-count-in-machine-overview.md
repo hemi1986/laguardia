@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded]
 depends_on: [ST-008, ST-043]
 labels: [maintenance, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

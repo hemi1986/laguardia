@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 55 of 59 domain stories done** · scenarios 491 of 505
+**Progress: 56 of 59 domain stories done** · scenarios 493 of 505
 
-**84 stories** · In Progress: 1 · Ready: 9 · In Review: 0 · Draft: 3 · Done: 71
+**84 stories** · In Progress: 0 · Ready: 9 · In Review: 0 · Draft: 3 · Done: 72
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
 
 ## Ready
 
@@ -110,4 +104,5 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 | [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |
+| [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
