@@ -1,5 +1,14 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
+import {
+  anOpenDefect,
+  expect,
+  logIn,
+  openDefect,
+  pageWidth,
+  reportAsVisitor,
+  test,
+  uniqueId as unique,
+} from "./fixtures";
 
 /**
  * Linking a problem report to an open defect on a phone (ST-022): a technician goes from the triage list to the problem
@@ -99,4 +108,37 @@ test("ST-022: After linking, the technician is back on the triage list", async (
   await expect(page.getByRole("main").getByRole("article").filter({ hasText: defect })).toContainText(
     "1 verknüpfte Meldung",
   );
+});
+
+// ST-053 on a phone: a defect resolved today is offered after the open ones; linking reopens it, with a stricter status.
+test("linking a problem report to a resolved defect reopens it and changes the status in the same step", async ({
+  page,
+}) => {
+  await logIn(page);
+  const { museumNumber, title: defect } = await anOpenDefect(page);
+  await openDefect(page, museumNumber, defect);
+  await page.getByRole("main").getByRole("link", { name: "Beheben", exact: true }).click();
+  await page.getByLabel("Abschlussnotiz").fill("Coil replaced");
+  await page.getByRole("button", { name: "Als behoben eintragen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toContainText("behoben");
+  await report(page, museumNumber, "Left flipper dead again");
+
+  await page.goto("/team/triage");
+  await page.getByRole("link", { name: new RegExp(museumNumber) }).click();
+  await page.getByRole("link", { name: "Mit Defekt verknüpfen" }).click();
+  const resolved = page.getByRole("radio", { name: new RegExp(`${defect}.*heute behoben`) });
+  await expect(resolved).not.toBeChecked();
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+  await resolved.check();
+  await page.getByLabel("Status").selectOption({ label: "Außer Betrieb" });
+  await page.getByRole("button", { name: "Mit Defekt verknüpfen" }).click();
+
+  await expect(page).toHaveURL(/\/team\/triage\?/);
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
+    `Meldung zu ${museumNumber} mit Defekt „${defect}“ verknüpft. Der Defekt ist wieder offen.`,
+  );
+  await openDefect(page, museumNumber, defect);
+  await expect(page.getByRole("main")).toContainText("Wegen der Meldung: „Left flipper dead again“");
+  await page.goto(`/team/machines/${museumNumber}`);
+  await expect(page.getByRole("main")).toContainText("Außer Betrieb");
 });
