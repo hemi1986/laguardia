@@ -1,4 +1,4 @@
-import { collectionChangesIn, fileAttachedIn } from "@/modules/collection";
+import { collectionChangesIn, fileAttachedIn, fileOfMachinePage, fileRemovedIn } from "@/modules/collection";
 import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintenance";
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
@@ -9,7 +9,7 @@ import type { MachineRecordData } from "./machine-record-data";
 /**
  * What the machine record confirms (G3): the status change (ST-012), the move (ST-034), the correction of its details
  * – under a new museum number or not (ST-035), the problem report (ST-015),
- * the file attached (ST-037), the maintenance recorded from it (ST-047), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
+ * the file attached (ST-037) or removed (ST-038), the maintenance recorded from it (ST-047), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
  */
 export type MachineRecordConfirmation =
   | { kind: "status-changed" }
@@ -19,6 +19,7 @@ export type MachineRecordConfirmation =
   | { kind: "retired" }
   | { kind: "problem-reported" }
   | { kind: "file-attached"; title: string }
+  | { kind: "file-removed"; title: string }
   | { kind: "maintenance-recorded" }
   | { kind: "triaged"; triaged: TriageConfirmation };
 
@@ -41,6 +42,16 @@ export async function loadMachineConfirmation(
     const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
     return file && command && fileAttachedIn(command, fileId)
       ? { kind: "file-attached", title: file.title }
+      : undefined;
+  }
+  const removedFileId = oneOf(query.fileRemoved);
+  if (removedFileId !== undefined) {
+    if (!isId(removedFileId)) return undefined;
+    // The machine record lists the file no more – its title comes from the kept record, only for a file of this page.
+    const file = await fileOfMachinePage(db, { fileId: removedFileId, machineId: record.id });
+    const command = file && (await lastCommandBy(db, { aggregateId: removedFileId }, viewer));
+    return file && command && fileRemovedIn(command, removedFileId)
+      ? { kind: "file-removed", title: file.title }
       : undefined;
   }
   const maintenanceRecordId = oneOf(query.maintenanceRecorded);

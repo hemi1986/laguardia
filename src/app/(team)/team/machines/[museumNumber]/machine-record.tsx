@@ -214,6 +214,18 @@ export function MachineRecordView({
                           {file.ofMachineModel && (
                             <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
                           )}
+                          {actions.removeFile && (
+                            <>
+                              {" · "}
+                              <Link
+                                href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
+                                aria-label={texts.removeFileLabel(file.title)}
+                                className="text-muted-foreground underline underline-offset-4"
+                              >
+                                {texts.removeFile}
+                              </Link>
+                            </>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -263,6 +275,8 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.detailsCorrected(record.museumNumber);
     case "problem-reported":
       return texts.problemReported(record.museumNumber);
+    case "file-removed":
+      return texts.fileRemoved(confirmation.title);
     case "file-attached":
       return texts.fileAttached(confirmation.title);
     case "maintenance-recorded":

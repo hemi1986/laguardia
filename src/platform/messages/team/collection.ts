@@ -119,6 +119,10 @@ export const collectionTexts = {
     /** Next to a file of the machine model – every machine of that model shows it. */
     ofMachineModel: "Modell",
     fileAttached: (title: string) => `„${title}“ angehängt.`,
+    /** Next to each file, technicians only (ST-038) – leads to the question before removing it (G10b). */
+    removeFile: "Entfernen",
+    removeFileLabel: (title: string) => `„${title}“ entfernen`,
+    fileRemoved: (title: string) => `„${title}“ entfernt.`,
   },
   /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
   fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
@@ -145,6 +149,14 @@ export const collectionTexts = {
       notUploaded: "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal auswählen.",
     },
     back: "Zurück zum Gerät",
+  },
+  /** Removing a file (ST-038): the question once, on a page of its own (G10, G10b). */
+  removeFile: {
+    title: "Datei entfernen",
+    question: (title: string) => `„${title}“ entfernen? Die Datei wird endgültig gelöscht.`,
+    confirm: "Endgültig entfernen",
+    back: "Zurück",
+    unknown: (museumNumber: string) => `Diese Datei gehört nicht zu ${museumNumber}.`,
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status von ${museumNumber} ändern`,
@@ -233,4 +245,6 @@ export const collectionErrors = {
   /** Attaching a file (ST-037). */
   "file-category-required": "Bitte eine Dateikategorie wählen.",
   "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
+  /** Removing a file (ST-038): another technician was quicker. */
+  "file-removed": "Diese Datei wurde schon entfernt.",
 } as const;

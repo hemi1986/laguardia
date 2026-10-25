@@ -90,3 +90,24 @@ export async function fileToOpen(
     .where(and(eq(file.id, fileId), isNull(file.removedAt)));
   return row && { content: row.content, download: !opensInBrowser(row.contentType) };
 }
+
+/** A file of one machine's page (ST-038): what the question before removing it shows and posts, removed or not. */
+export type FileOfMachinePage = { id: string; title: string; version: number; removed: boolean };
+
+/**
+ * A file of a machine or of its machine model, removed or not – none for any other file (ST-038): the question before
+ * removing it, and the confirmation afterwards, which names the file the machine record no longer lists.
+ */
+export async function fileOfMachinePage(
+  db: Database,
+  { fileId, machineId }: { fileId: string; machineId: string },
+): Promise<FileOfMachinePage | undefined> {
+  const [row] = await db
+    .select({ id: file.id, title: file.title, version: file.version, removedAt: file.removedAt })
+    .from(file)
+    .innerJoin(machine, eq(machine.id, machineId))
+    .where(
+      and(eq(file.id, fileId), or(eq(file.machineId, machine.id), eq(file.machineModelId, machine.machineModelId))),
+    );
+  return row && { id: row.id, title: row.title, version: row.version, removed: row.removedAt !== null };
+}

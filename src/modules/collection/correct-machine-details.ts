@@ -33,11 +33,7 @@ export type MachineDetailsCorrected = {
 export type CorrectionFacts = { museumNumbersGivenOut: readonly string[] };
 
 export type CorrectMachineDetailsError =
-  | "not-authorized"
-  | "machine-retired"
-  | "machine-details-unchanged"
-  | "museum-number-format"
-  | "museum-number-taken";
+  "not-authorized" | "machine-retired" | "machine-details-unchanged" | "museum-number-format" | "museum-number-taken";
 
 /**
  * Why a team member may not correct a machine's details – technicians only, never a retired machine. Asked by the

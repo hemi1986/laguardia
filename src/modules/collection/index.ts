@@ -9,7 +9,7 @@ export type {
   FileCategory,
   FileContent,
 } from "./attach-file";
-export { fileToOpen, type FileOfMachine } from "./files";
+export { fileOfMachinePage, fileToOpen, type FileOfMachine, type FileOfMachinePage } from "./files";
 export { removeFileCommand } from "./remove-file-command";
 export { removeFileRefusal } from "./remove-file";
 export type { RemoveFileError, RemoveFileInput } from "./remove-file";
@@ -66,4 +66,10 @@ export {
   type VisitorMachine,
   type MachineOverviewQuery,
 } from "./machines";
-export { collectionChangesIn, fileAttachedIn, machineModelChangeIn, machineRegisteredIn } from "./in-command";
+export {
+  collectionChangesIn,
+  fileAttachedIn,
+  fileRemovedIn,
+  machineModelChangeIn,
+  machineRegisteredIn,
+} from "./in-command";

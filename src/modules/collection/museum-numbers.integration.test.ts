@@ -122,13 +122,9 @@ describe("the museum number register", () => {
   it("lets a write that keeps the machine's museum number pass without waiting for the lock", async () => {
     const machineId = await aMachine("LG-042");
 
-    const moved = await whileHoldingRow(
-      db,
-      sql`SELECT pg_advisory_xact_lock(hashtext('museum-number'))`,
-      async () => ({
-        outcome: await executeCommand(moveMachineCommand, { machineId, version: 0, location: "Workshop" }, asEva()),
-      }),
-    );
+    const moved = await whileHoldingRow(db, sql`SELECT pg_advisory_xact_lock(hashtext('museum-number'))`, async () => ({
+      outcome: await executeCommand(moveMachineCommand, { machineId, version: 0, location: "Workshop" }, asEva()),
+    }));
 
     expect(moved.outcome).toMatchObject({ ok: true });
   });

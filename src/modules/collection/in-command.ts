@@ -40,6 +40,13 @@ export function fileAttachedIn(command: readonly JournalEntry[], fileId: string)
   );
 }
 
+/** Whether the command removed this file (ST-038). */
+export function fileRemovedIn(command: readonly JournalEntry[], fileId: string): boolean {
+  return entriesOf(collectionEvents, command).some(
+    (entry) => entry.type === "EVT-FileRemoved" && entry.aggregate.id === fileId,
+  );
+}
+
 /** Whether the command registered this machine (ST-007). */
 export function machineRegisteredIn(command: readonly JournalEntry[], machineId: string): boolean {
   return entriesOf(collectionEvents, command).some(

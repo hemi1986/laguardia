@@ -49,7 +49,13 @@ async function aStoredFile(storage: ReturnType<typeof memoryStorage>, title: str
 
 function sendForm(storage: ReturnType<typeof memoryStorage>, fileId: string) {
   const done: string[] = [];
-  const action = formRunner({ currentPerson: async () => tom, db, clock: fixedClock(removedAt), newId: randomUUID, storage })(
+  const action = formRunner({
+    currentPerson: async () => tom,
+    db,
+    clock: fixedClock(removedAt),
+    newId: randomUUID,
+    storage,
+  })(
     removeFileCommand,
     removeFileForm(fileId, async () => void done.push(fileId)),
   );

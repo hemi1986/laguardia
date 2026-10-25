@@ -28,7 +28,7 @@ export type RemoveFileError = "file-removed";
  * and by the pages, which offer the action only when there is no reason (G11).
  */
 export function removeFileRefusal(
-  file: Pick<FileState, "removed">,
+  file: { removed: boolean },
   teamMember: { role: Role },
 ): "not-authorized" | RemoveFileError | undefined {
   if (!removingActors.some((actor) => actor === teamMember.role)) return "not-authorized";
@@ -39,8 +39,9 @@ export function removeFile(
   file: FileState,
   _input: RemoveFileInput,
   { actor, clock }: DecisionContext<ActorOf<(typeof removingActors)[number]>>,
-): Decision<FileState, FileRemoved, RemoveFileError> {
-  if (file.removed) return { ok: false, error: "file-removed" };
+): Decision<FileState, FileRemoved, RemoveFileError | "not-authorized"> {
+  const refusal = removeFileRefusal({ removed: file.removed !== undefined }, actor);
+  if (refusal) return { ok: false, error: refusal };
   return {
     ok: true,
     state: { ...file, removed: { by: actor.teamMemberId, at: clock.now() } },
