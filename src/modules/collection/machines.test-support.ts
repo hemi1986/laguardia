@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { aggregateCommand, type Database } from "@/platform/command";
+import type { Database } from "@/platform/command";
 import { machines } from "./machines";
 
 /**
@@ -13,29 +13,6 @@ export async function withoutMachines(db: Database): Promise<void> {
   }
   await db.execute(sql`TRUNCATE machine, museum_number, machine_status_change, problem_report, file CASCADE`);
 }
-
-/** Test stand-in for CMD-CorrectMachineDetails (ST-035): a new museum number; the old one stays reserved (D11). */
-export const correctMuseumNumberForTest = aggregateCommand({
-  id: "CMD-TestCorrectMuseumNumber",
-  allowedActors: ["technician"],
-  store: machines,
-  target: (input: { machineId: string; version: number; museumNumber: string }) => ({
-    id: input.machineId,
-    version: input.version,
-  }),
-  decide: (machine, input) => ({
-    ok: true as const,
-    state: { ...machine, museumNumber: input.museumNumber },
-    events: [{ type: "EVT-TestMuseumNumberCorrected" as const }],
-  }),
-  journal: (event, machine) => ({
-    type: event.type,
-    aggregate: { type: "AGG-Machine", id: machine.id },
-    machineId: machine.id,
-    data: {},
-  }),
-  result: () => ({}),
-});
 
 /** A machine as stored – for checks at the command seam that no read model of that test's database shows. */
 export async function storedMachine(db: Database, machineId: string) {
