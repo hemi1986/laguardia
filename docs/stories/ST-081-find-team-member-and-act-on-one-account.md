@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-005]
 labels: [ui]
-status: ready
+status: in-progress
 ---
 
 ## Story

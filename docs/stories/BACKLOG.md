@@ -4,15 +4,20 @@
 
 **Progress: 49 of 59 domain stories done** · scenarios 444 of 505
 
-**84 stories** · In Progress: 0 · Ready: 16 · In Review: 0 · Draft: 3 · Done: 65
+**84 stories** · In Progress: 1 · Ready: 15 · In Review: 0 · Draft: 3 · Done: 65
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 | [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | could | M | medium | ST-013 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
