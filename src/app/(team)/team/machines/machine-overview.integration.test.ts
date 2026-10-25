@@ -254,4 +254,17 @@ describe("the machine overview with overdue maintenance tasks", () => {
     expect(entryOf(html, "LG-043")).toBeDefined();
     expect(entryOf(html, "LG-043")).not.toContain("Wartung"); // a zero is not shown (G6)
   });
+
+  it("ST-057: Recording removes the task from the count", async () => {
+    const lg042 = await registered("LG-042");
+    const glass = await aMaintenanceTask("Clean the glass");
+    await aMaintenanceTask("Check the rubbers");
+    expect(entryOf(await overview(), "LG-042")).toContain("2 Wartungsaufgaben überfällig");
+
+    await recordedDone(glass, lg042, "2026-10-04");
+
+    const html = await overview();
+    expect(entryOf(html, "LG-042")).toContain("1 Wartungsaufgabe überfällig");
+    expect(entryOf(html, "LG-042")).not.toContain("2 Wartungsaufgaben");
+  });
 });
