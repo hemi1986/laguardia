@@ -24,7 +24,9 @@ export function rejectionText(
 export function photoRejectionText(
   state: { error: TeamCommandErrorCode; photoAgain?: true },
   overrides: Partial<Record<TeamCommandErrorCode, string>> = {},
+  { several = false }: { several?: boolean } = {},
 ): string {
   const reason = rejectionText(state.error, overrides);
-  return state.photoAgain ? `${reason} ${teamMessages.forms.photoAgain}` : reason;
+  if (!state.photoAgain) return reason;
+  return `${reason} ${several ? teamMessages.forms.photosAgain : teamMessages.forms.photoAgain}`;
 }

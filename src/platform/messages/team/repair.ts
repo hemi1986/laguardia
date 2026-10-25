@@ -295,6 +295,9 @@ export const repairTexts = {
      */
     logWorkConflict:
       "Jemand hat den Defekt inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal eintragen.",
+    /** The same with photos (ST-032): the texts are kept, the browser cannot keep the photos (G8a). */
+    logWorkConflictWithPhotos:
+      "Jemand hat den Defekt inzwischen geändert. Dein Text ist noch da, die Fotos müssen erneut ausgewählt werden – bitte noch einmal eintragen.",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,

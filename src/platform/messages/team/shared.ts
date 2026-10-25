@@ -63,6 +63,8 @@ export const sharedTexts = {
     conflict: "Jemand hat das inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal senden.",
     /** After a rejection of a form that had a photo attached (G8a) – the browser cannot keep it. */
     photoAgain: "Das Foto muss erneut ausgewählt werden.",
+    /** The same for a form with several photos (ST-032). */
+    photosAgain: "Die Fotos müssen erneut ausgewählt werden.",
   },
 } as const;
 

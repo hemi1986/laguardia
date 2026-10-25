@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it } from "vitest";
-import { defectDetails, logWorkCommand } from "@/modules/repair";
+import { claimDefectCommand, defectDetails, logWorkCommand } from "@/modules/repair";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
+import { executeCommand } from "@/platform/command";
 import { memoryStorage, type ContentStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { anOpenDefectIn } from "@/test-support/defects";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { logWorkFields, logWorkInput, logWorkPhotos } from "./log-work-input";
+import { logWorkRejectionText } from "./log-work-rejection-text";
 
 /**
  * The form „Arbeitsschritt eintragen“ with photos (ST-032): its fields, photos and input function through the Server
@@ -77,5 +79,73 @@ describe("the form „Arbeitsschritt eintragen“ with photos", () => {
       expect(Math.max(meta.width!, meta.height!)).toBeLessThanOrEqual(2048);
       expect(meta.exif).toBeUndefined();
     }
+  });
+
+  it("ST-032: At most 5 photos", async () => {
+    const defectId = await anOpenDefect();
+    const storage = memoryStorage();
+    const six = await Promise.all(Array.from({ length: 6 }, aPhonePhoto));
+
+    const state = await formFor(defectId, storage)(
+      null,
+      post({ version: "0", whatWasDone: "Replaced coil stop", partsUsed: "" }, six),
+    );
+
+    expect(state?.error).toBe("too-many-photos");
+    expect(logWorkRejectionText(state!)).toBe("Höchstens 5 Fotos pro Arbeitsschritt – bitte weniger Fotos auswählen.");
+    expect((await defectDetails(db, defectId))!.workLog).toEqual([]);
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("ST-032: The conflict text names the photos", async () => {
+    const defectId = await anOpenDefect();
+    const storage = memoryStorage();
+    // Someone else claims „Left flipper weak“ while Anna is logging work on the version she saw.
+    const claimed = await executeCommand(
+      claimDefectCommand,
+      { defectId, version: 0 },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!claimed.ok) throw new Error(claimed.error);
+
+    const typed = { version: "0", whatWasDone: "Replaced coil stop", partsUsed: "" };
+    const state = await formFor(defectId, storage)(null, post(typed, [await aPhonePhoto(), await aPhonePhoto()]));
+
+    expect(state).toEqual({ error: "version-conflict", values: typed, photoAgain: true });
+    expect(logWorkRejectionText(state!)).toBe(
+      "Jemand hat den Defekt inzwischen geändert. Dein Text ist noch da, die Fotos müssen erneut ausgewählt werden – bitte noch einmal eintragen.",
+    );
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("ST-032: Non-image content is rejected", async () => {
+    const defectId = await anOpenDefect();
+    const storage = memoryStorage();
+    const notAnImage = new File([new TextEncoder().encode("%PDF-1.7 not a photo")], "manual.jpg", {
+      type: "image/jpeg",
+    });
+
+    const state = await formFor(defectId, storage)(
+      null,
+      post({ version: "0", whatWasDone: "Replaced coil stop", partsUsed: "" }, [await aPhonePhoto(), notAnImage]),
+    );
+
+    expect(state?.error).toBe("not-an-image");
+    expect(state?.photoAgain).toBeUndefined();
+    expect((await defectDetails(db, defectId))!.workLog).toEqual([]);
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("asks to choose the photos again after a rejection that is not about them (G8a)", async () => {
+    const defectId = await anOpenDefect();
+
+    const state = await formFor(defectId, memoryStorage())(
+      null,
+      post({ version: "0", whatWasDone: " ", partsUsed: "" }, [await aPhonePhoto(), await aPhonePhoto()]),
+    );
+
+    expect(logWorkRejectionText(state!)).toBe(
+      "Bitte kurz beschreiben, was gemacht wurde. Die Fotos müssen erneut ausgewählt werden.",
+    );
   });
 });
