@@ -123,4 +123,38 @@ describe("CMD-CorrectMachineDetails", () => {
     expect(await correct("LG-042", { museumNumber: "LG-013" })).toEqual({ ok: false, error: "museum-number-taken" });
     expect((await machineRecord(db, "LG-042"))?.museumNumber).toBe("LG-042");
   });
+
+  it("ST-035: Correction and registration race for the same number", async () => {
+    await aMachine("LG-420");
+
+    const [correction, registration] = await Promise.all([correct("LG-420", { museumNumber: "LG-060" }), register("LG-060")]);
+
+    expect([correction.ok, registration.ok].sort()).toEqual([false, true]);
+    expect([correction, registration].find((outcome) => !outcome.ok)).toEqual({ ok: false, error: "museum-number-taken" });
+    const owner = await machineForTeamForm(db, "LG-060");
+    expect(owner?.id).toBe(correction.ok ? correction.result.machineId : registration.ok && registration.result.machineId);
+  });
+
+  it("ST-035: Reserved number cannot be taken by a correction", async () => {
+    await aMachine("LG-420");
+    await corrected("LG-420", { museumNumber: "LG-042" });
+    await aMachine("LG-043");
+
+    expect(await correct("LG-043", { museumNumber: "LG-420" })).toEqual({ ok: false, error: "museum-number-taken" });
+  });
+
+  it("ST-035: Retired machines cannot be corrected", async () => {
+    await aMachine("LG-013");
+    await retire("LG-013");
+
+    expect(await correct("LG-013", { serialNumber: "MM-12345" })).toEqual({ ok: false, error: "machine-retired" });
+  });
+
+  it("ST-035: Helpers cannot correct machine details", async () => {
+    await aMachine("LG-042");
+
+    expect(await correct("LG-042", { museumNumber: "LG-043" }, tom)).toEqual({ ok: false, error: "not-authorized" });
+    expect(await correct("LG-042", { serialNumber: "MM-12345" }, tom)).toEqual({ ok: false, error: "not-authorized" });
+    expect(await machineRecord(db, "LG-042")).toMatchObject({ museumNumber: "LG-042", serialNumber: undefined });
+  });
 });
