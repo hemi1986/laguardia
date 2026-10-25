@@ -29,7 +29,7 @@ export function PhotosField({
   const [preparing, setPreparing] = useState(0);
   const [problem, setProblem] = useState<string>();
   /** Picks still being prepared when the form is reset are dropped when they finish. */
-  const generation = useRef(0);
+  const resets = useRef(0);
   const nextId = useRef(0);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function PhotosField({
   useEffect(() => {
     const form = field.current?.form;
     const reset = () => {
-      generation.current++;
+      resets.current++;
       setChosen((photos) => {
         for (const { preview } of photos) URL.revokeObjectURL(preview);
         return [];
@@ -60,20 +60,20 @@ export function PhotosField({
     const originals = [...(event.target.files ?? [])];
     event.target.value = ""; // the same photo can be picked again
     if (originals.length === 0) return;
-    const pick = generation.current;
+    const pick = resets.current;
     setProblem(undefined);
     setPreparing((count) => count + originals.length);
     for (const original of originals) {
       try {
         const prepared = await preparePhoto(original, { maxBytes: PHOTO_LIMITS.maxPreparedBytesOfSeveral });
-        if (pick !== generation.current) return;
+        if (pick !== resets.current) return;
         const photo = new File([prepared], "photo.jpg", { type: "image/jpeg" });
         setChosen((photos) => [...photos, { id: nextId.current++, photo, preview: URL.createObjectURL(photo) }]);
       } catch (failure) {
-        if (pick !== generation.current) return;
+        if (pick !== resets.current) return;
         setProblem(failure instanceof PhotoTooLargeError ? texts.tooLarge : texts.notAnImage);
       } finally {
-        if (pick === generation.current) setPreparing((count) => count - 1);
+        if (pick === resets.current) setPreparing((count) => count - 1);
       }
     }
   }
