@@ -21,12 +21,13 @@ async function openCorrection(page: Page, museumNumber: string) {
 
 /**
  * Corrects the machine's museum number to one nobody has – other specs register machines in the same database at the
- * same time, so a number taken meanwhile is tried again with another.
+ * same time, so a number taken meanwhile is tried again with another. Kept well below LG-999: assignment continues
+ * above the highest number, and ST-010's unknown museum number is LG-999.
  */
 async function correctToAFreeNumber(page: Page, museumNumber: string): Promise<string> {
   await openCorrection(page, museumNumber);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const corrected = `LG-${700 + Math.floor(Math.random() * 290)}`;
+    const corrected = `LG-${400 + Math.floor(Math.random() * 200)}`;
     await page.getByLabel("Museumsnummer").fill(corrected);
     await page.getByRole("button", { name: "Angaben korrigieren" }).click();
     const landed = page.waitForURL(new RegExp(`/team/machines/${corrected}\\?`)).then(() => true);
