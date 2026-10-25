@@ -1,4 +1,4 @@
-import { machineOverview, machinesForMaintenance, statusChangesSince, type MachineStatus } from "@/modules/collection";
+import { machineOverview, statusChangesSince, type MachineStatus } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
@@ -79,7 +79,7 @@ export async function loadTechnicianDashboard(
       lists.flat(),
     ),
     staleClaims(db, clock),
-    machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
+    dueMaintenance(db, clock),
     statusChangesSince(db, since),
     resolvedOrReopenedSince(db, since),
   ]);

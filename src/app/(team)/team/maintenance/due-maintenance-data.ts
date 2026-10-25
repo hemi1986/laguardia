@@ -1,4 +1,4 @@
-import { machineForMaintenance, machineLabels, machinesForMaintenance } from "@/modules/collection";
+import { machineForMaintenance, machineLabels } from "@/modules/collection";
 import {
   dueMaintenance,
   maintenanceForRecording,
@@ -77,9 +77,9 @@ export function dueMaintenanceFilterOf(params: Record<string, string | string[] 
 }
 
 /**
- * The due maintenance list's data (ST-043): Collection's machines and Maintenance's due maintenance tasks on them – the
- * page composes (ST-009) –, computed for today. `viewer` is the team member looking at the list: Maintenance says on
- * which due machines they may record maintenance (ST-044, G11), and only their own record is confirmed.
+ * The due maintenance list's data (ST-043): Maintenance's due maintenance tasks on Collection's machines, computed for
+ * today. `viewer` is the team member looking at the list: Maintenance says on which due machines they may record
+ * maintenance (ST-044, G11), and only their own record is confirmed.
  */
 export async function loadDueMaintenance(
   db: Database,
@@ -87,8 +87,7 @@ export async function loadDueMaintenance(
   filter: DueMaintenanceFilter,
   viewer?: Viewer,
 ): Promise<DueMaintenanceData> {
-  const machines = await machinesForMaintenance(db);
-  const due = (await dueMaintenance(db, clock, machines, viewer)).filter(
+  const due = (await dueMaintenance(db, clock, viewer)).filter(
     (task) => !filter.suitableForHelpers || task.suitableForHelpers,
   );
   return {

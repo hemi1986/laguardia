@@ -1,4 +1,3 @@
-import { machinesForMaintenance } from "@/modules/collection";
 import { dueMaintenance } from "@/modules/maintenance";
 import { changesOnClaimedDefects, openDefects, type ClaimedDefectChange } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
@@ -59,7 +58,7 @@ export async function loadHelperDashboard(db: Database, clock: Clock, viewer: Vi
     markLineOf(db, clock, viewer),
     openDefects(db, { claimedBy: viewer.id }),
     openDefects(db, { suitableForHelpers: true }),
-    machinesForMaintenance(db).then((machines) => dueMaintenance(db, clock, machines)),
+    dueMaintenance(db, clock),
     changesOnClaimedDefects(db, since, viewer.id),
   ]);
   const left = changed

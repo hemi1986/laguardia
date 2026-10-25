@@ -230,10 +230,18 @@ field per action. **A new command on a defect** adds: its description and comman
 says which fields it reads and how they become the input.
 
 **What a team member can do in maintenance** (architecture review 2026-10-18): the same answer from Maintenance –
-`dueMaintenance(db, clock, machines, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept
-them (`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
-task, the refusal (`whyNot`) and the dates allowed. The page passes Collection's machines and keeps no rule of its own
-(G11); `recordRefusal` stays inside the module.
+`dueMaintenance(db, clock, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept them
+(`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
+task, the refusal (`whyNot`) and the dates allowed. The page keeps no rule of its own (G11); `recordRefusal` stays
+inside the module.
+
+**Maintenance reads Collection's machines itself** (architecture review 2026-10-25): Collection publishes its machines
+for maintenance (context map, Published Language), and Maintenance's answers read them in one call –
+`dueMaintenance`, `maintenanceForSeveral(db, clock, taskId, teamMember)` and `machineMaintenance(db, clock, machineId,
+{ teamMember, latestRecords })`, the machine record's section 5 (due tasks, Not on display, the newest records). No
+page passes `machinesForMaintenance` in – the exception to "the page composes" below, as a downstream context reading
+its upstream's published query, the way a command's facts do. A retired machine is not published for maintenance:
+nothing is due on it.
 
 **What a team member can do on the machine record** (architecture review 2026-10-18): `loadMachineRecord(db, museumNumber,
 { clock, viewer })` returns `actions` – report a problem, change the location, change the status (Collection's

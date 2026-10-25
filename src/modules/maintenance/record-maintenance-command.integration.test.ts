@@ -5,7 +5,6 @@ import {
   changeMachineStatusCommand,
   createMachineModelCommand,
   machineForMaintenance,
-  machinesForMaintenance,
   registerMachineCommand,
   type MachineStatus,
 } from "@/modules/collection";
@@ -74,9 +73,8 @@ function record(
 
 /** When the maintenance task is due on the machine on that day – none when it is not due then. */
 async function dueOn(day: string, maintenanceTaskId: string, machineId: string) {
-  const machines = (await machinesForMaintenance(db)).filter((machine) => machine.id === machineId);
-  const due = await dueMaintenance(db, fixedClock(`${day}T10:00:00Z`), machines);
-  return due.find((task) => task.id === maintenanceTaskId)?.machines[0];
+  const due = await dueMaintenance(db, fixedClock(`${day}T10:00:00Z`));
+  return due.find((task) => task.id === maintenanceTaskId)?.machines.find((machine) => machine.machineId === machineId);
 }
 
 /** A machine of its own – registered in 2025, so the task's start date is its last done. */
@@ -226,10 +224,10 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
   it("says on each due machine whether they may record the task there – never when nobody asks", async () => {
     const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
     const lg042 = await aMachine();
-    const machines = (await machinesForMaintenance(db)).filter((machine) => machine.id === lg042);
     const offered = async (teamMember?: { role: "helper" | "technician" }) =>
-      (await dueMaintenance(db, tenthOfJune, machines, teamMember)).find((task) => task.id === fuses)?.machines[0]
-        ?.recordOffered;
+      (await dueMaintenance(db, tenthOfJune, teamMember))
+        .find((task) => task.id === fuses)
+        ?.machines.find((machine) => machine.machineId === lg042)?.recordOffered;
 
     expect(await offered(tom)).toBe(true);
     expect(await offered(anna)).toBe(false);

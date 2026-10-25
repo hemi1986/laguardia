@@ -1,17 +1,19 @@
 import {
   machineRecord,
-  machinesForMaintenance,
   machineStatusesToChangeTo,
   type MachineRecord,
   type Retirement,
   type StatusChange,
   retireRefusal,
 } from "@/modules/collection";
-import { dueMaintenance, latestMaintenanceRecords, type NamedMaintenanceRecord } from "@/modules/maintenance";
+import {
+  machineMaintenance,
+  type MachineMaintenance as MaintenanceOfMachine,
+  type NamedMaintenanceRecord,
+} from "@/modules/maintenance";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import type { CalendarDate } from "@/platform/time";
 import type { Viewer } from "../../claimant";
 import { openDefectReferences, shownOpenDefects, type OpenDefectsItem } from "../../defects/open-defects-data";
 import { named } from "../../named";
@@ -52,25 +54,9 @@ export type MachineRecordActions = {
   retire: boolean;
 };
 
-/** Section 5 „Wartung“ (ST-047): what Maintenance says about the machine, with Team's names. */
-export type MachineMaintenance = {
-  /** Not on display: nothing becomes due (ST-056) – said in place of the due maintenance tasks. */
-  notOnDisplay: boolean;
-  /** Its due maintenance tasks – the overdue ones first, then the longest due. */
-  due: MachineDueMaintenanceTask[];
-  /** Its latest maintenance records, the newest first – at most `LATEST_MAINTENANCE_RECORDS`. */
+/** Section 5 „Wartung“ (ST-047): Maintenance's answer for the machine, with Team's names. */
+export type MachineMaintenance = Omit<MaintenanceOfMachine, "latestRecords"> & {
   latestRecords: ShownMaintenanceRecord[];
-  /** How many maintenance records it has in all. */
-  recordCount: number;
-};
-
-/** A maintenance task due on the machine; `recordOffered`: Maintenance would accept the viewer recording it (G11). */
-export type MachineDueMaintenanceTask = {
-  maintenanceTaskId: string;
-  name: string;
-  dueSince: CalendarDate;
-  overdue: boolean;
-  recordOffered: boolean;
 };
 
 /** A maintenance record as the machine record shows it – who recorded it by name. */
@@ -101,24 +87,19 @@ export async function loadMachineRecord(
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
-  const [open, recent, forMaintenance, latest] = await Promise.all([
+  const [open, recent, maintenance] = await Promise.all([
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
-    machinesForMaintenance(db, { machineId: record.id }),
-    latestMaintenanceRecords(db, record.id, LATEST_MAINTENANCE_RECORDS),
+    machineMaintenance(db, clock, record.id, { teamMember: viewer, latestRecords: LATEST_MAINTENANCE_RECORDS }),
   ]);
-  const latestRecords = latest.records;
-  const [shown, due] = await Promise.all([
-    named(db, openDefectReferences(open), {
-      teamMembers: [
-        ...record.statusHistory.map((change) => change.changedBy),
-        record.retirement?.retiredBy,
-        ...recent.entries.map((entry) => entry.resolvedBy),
-        ...latestRecords.map((maintenance) => maintenance.recordedBy),
-      ],
-    }),
-    dueMaintenance(db, clock, forMaintenance, viewer),
-  ]);
+  const shown = await named(db, openDefectReferences(open), {
+    teamMembers: [
+      ...record.statusHistory.map((change) => change.changedBy),
+      record.retirement?.retiredBy,
+      ...recent.entries.map((entry) => entry.resolvedBy),
+      ...maintenance.latestRecords.map((maintenanceRecord) => maintenanceRecord.recordedBy),
+    ],
+  });
   return {
     ...record,
     statusHistory: record.statusHistory.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
@@ -127,23 +108,11 @@ export async function loadMachineRecord(
     recentRepairHistory: recent.entries.map((entry) => ({ ...entry, resolvedBy: shown.name(entry.resolvedBy) })),
     repairHistoryCount: recent.total,
     maintenance: {
-      notOnDisplay: record.machineStatus === "not-on-display",
-      due: due
-        .flatMap((task) =>
-          task.machines.map(({ dueSince, overdue, recordOffered }) => ({
-            maintenanceTaskId: task.id,
-            name: task.name,
-            dueSince,
-            overdue,
-            recordOffered,
-          })),
-        )
-        .sort((a, b) => Number(b.overdue) - Number(a.overdue) || a.dueSince.localeCompare(b.dueSince)),
-      latestRecords: latestRecords.map((maintenance) => ({
-        ...maintenance,
-        recordedBy: shown.name(maintenance.recordedBy),
+      ...maintenance,
+      latestRecords: maintenance.latestRecords.map((maintenanceRecord) => ({
+        ...maintenanceRecord,
+        recordedBy: shown.name(maintenanceRecord.recordedBy),
       })),
-      recordCount: latest.total,
     },
     actions: actionsOf(record, viewer),
   };
