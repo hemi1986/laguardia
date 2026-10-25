@@ -18,3 +18,8 @@ Checked without findings:
 
 Verdict: ready to merge (no blockers)
 Most important finding: #1 – no test would notice if due-but-not-overdue tasks were counted; add one due-only task to the first scenario.
+
+## Resolution (implement, refactor step)
+- #1 fixed: scenario 1 adds a maintenance task that is due but not overdue on 2026-10-04 and still expects „2 Wartungsaufgaben überfällig“; removing the `overdue` filter now fails the test (checked).
+- #2 fixed: the unrelated formatting of the sticker files, `attach-file-form.ts` and `machine-overview.test.ts` is undone; only the two `overdueMaintenance: 0` lines stay.
+- #3, #4 fixed: header comment of the integration test and the `MachineEntry` doc comment.

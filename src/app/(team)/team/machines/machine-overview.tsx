@@ -153,8 +153,7 @@ function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
 
 /**
  * What tells a machine apart from its neighbours (G5) – with its open defects (ST-021) and overdue maintenance tasks
- * (ST-057); its title leads to its machine
- * record (ST-009).
+ * (ST-057); its title leads to its machine record (ST-009).
  */
 function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
   const details = [

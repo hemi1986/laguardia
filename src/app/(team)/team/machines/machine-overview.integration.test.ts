@@ -21,8 +21,8 @@ import { loadMachineOverview } from "./machine-overview-data";
 import { MachineOverview } from "./machine-overview";
 
 /**
- * The machine overview's data – Collection's machines with Repair's number of open defects per machine (the page
- * composes, ST-009) – rendered by its view. In a database of its own, so "LG-042" can be arranged.
+ * The machine overview's data – Collection's machines with Repair's number of open defects and Maintenance's number of
+ * overdue maintenance tasks per machine (the page composes, ST-009) – rendered by its view. In a database of its own, so "LG-042" can be arranged.
  */
 const isolated = isolatedTestDatabase("machine_overview_page");
 let db: NodePgDatabase;
@@ -91,10 +91,10 @@ async function anOpenDefect(machineId: string, title: string) {
 }
 
 /**
- * A maintenance task every machine gets, every 3 months from 1 January 2026 – so on a machine without a record it has
- * been overdue since late April, and on 4 October 2026 (the test's clock).
+ * A maintenance task every machine gets, by default every 3 months from 1 January 2026 – so on a machine without a
+ * record it has been overdue since late April, and on 4 October 2026 (the test's clock).
  */
-async function aMaintenanceTask(name: string) {
+async function aMaintenanceTask(name: string, { intervalMonths = 3, startDate = "2026-01-01" } = {}) {
   const outcome = await executeCommand(
     changeMaintenancePlanCommand,
     {
@@ -103,11 +103,11 @@ async function aMaintenanceTask(name: string) {
       task: {
         name,
         instruction: `${name} – how to`,
-        intervalMonths: 3,
+        intervalMonths,
         suitableForHelpers: false,
         machineCategory: undefined,
         technology: undefined,
-        startDate: "2026-01-01",
+        startDate,
       },
     },
     { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
@@ -245,6 +245,8 @@ describe("the machine overview with overdue maintenance tasks", () => {
     const lg043 = await registered("LG-043");
     const glass = await aMaintenanceTask("Clean the glass");
     const rubbers = await aMaintenanceTask("Check the rubbers");
+    // Due since 1 September 2026, overdue only from December – due, not overdue, is not counted (Out of Scope).
+    await aMaintenanceTask("Clean the playfield", { intervalMonths: 12, startDate: "2025-09-01" });
     await recordedDone(glass, lg043, "2026-10-01");
     await recordedDone(rubbers, lg043, "2026-10-01");
 
