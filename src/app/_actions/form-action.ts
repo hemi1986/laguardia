@@ -12,6 +12,7 @@ export const formAction = formRunner({ currentPerson });
 export type {
   EachFormState,
   EachOutcome,
+  FormDefinition,
   FormFields,
   FormState,
   PhotoFormState,

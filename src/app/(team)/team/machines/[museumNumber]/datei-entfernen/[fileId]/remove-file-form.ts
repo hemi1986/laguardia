@@ -1,5 +1,5 @@
 import type { RemoveFileInput } from "@/modules/collection";
-import type { FormDefinition } from "@/app/_actions/form-runner";
+import type { FormDefinition } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
 
 /** The only field „Endgültig entfernen“ posts: the version of the file the question showed (HS-16). */
