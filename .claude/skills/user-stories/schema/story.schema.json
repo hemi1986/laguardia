@@ -24,6 +24,6 @@
       "type": "array", "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]*$" }
     },
-    "status": { "enum": ["draft", "review", "ready", "in-progress", "done"] }
+    "status": { "enum": ["draft", "review", "ready", "in-progress", "done", "superseded"] }
   }
 }

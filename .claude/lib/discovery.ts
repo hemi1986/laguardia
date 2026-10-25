@@ -39,7 +39,12 @@ const KIND_LABEL: Record<string, string> = {
   RM: "read model", HS: "hotspot", FLOW: "flow", ST: "story",
 };
 
-export const STATUSES = ["draft", "review", "ready", "in-progress", "done"] as const;
+/**
+ * `superseded`: never built as written – its work was done elsewhere (a direct change, another story) or a new planning
+ * replaces it. The file stays as the record other documents link to; it is final and counts toward no progress (user,
+ * 2026-10-25).
+ */
+export const STATUSES = ["draft", "review", "ready", "in-progress", "done", "superseded"] as const;
 /** Statuses that require a finished story: size set, no [OPEN] markers. */
 export const COMMITTED = new Set(["ready", "in-progress", "done"]);
 const PRIORITIES = ["must", "should", "could", "wont"];
@@ -676,6 +681,7 @@ const STATUS_TITLES: [string, string][] = [
   ["review", "In Review"],
   ["draft", "Draft"],
   ["done", "Done"],
+  ["superseded", "Superseded"],
 ];
 
 /** Orders stories by priority, then id – but always after the stories they depend on. */
@@ -721,7 +727,8 @@ export function renderBacklog(stories: Story[], model: Obj | null): string {
 
   const counts = STATUS_TITLES.map(([st, title]) => [title, stories.filter((s) => s.meta.status === st).length] as const);
   // Progress is measured in domain stories and their scenarios, not in the total number of stories (CLAUDE.md).
-  const domain = stories.filter((s) => s.meta.type === "story");
+  // A superseded story was never built as one – its work counts where it was done.
+  const domain = stories.filter((s) => s.meta.type === "story" && s.meta.status !== "superseded");
   const scenarioCount = (s: Story) =>
     (section(sections(s.body), "acceptance criteria") ?? "")
       .split("\n")

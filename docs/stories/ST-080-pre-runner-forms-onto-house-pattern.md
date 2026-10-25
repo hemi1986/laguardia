@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: [ST-007]
 labels: [ui, follow-up]
-status: draft
+status: superseded
 ---
 
 ## Task

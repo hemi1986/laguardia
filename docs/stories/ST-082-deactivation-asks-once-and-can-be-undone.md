@@ -9,7 +9,7 @@ risk: null
 events: []
 depends_on: [ST-081]
 labels: [ui]
-status: draft
+status: superseded
 ---
 
 ## Story

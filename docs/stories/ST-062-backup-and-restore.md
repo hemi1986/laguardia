@@ -9,10 +9,12 @@ risk: medium
 events: []
 depends_on: [ST-061]
 labels: [mvp, foundation]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 Make sure the repair history, files and photos survive a mistake or a provider failure (story review 2026-09-26, TT-E, decision D10). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 - Use the database provider's automatic backups and do one real test restore.

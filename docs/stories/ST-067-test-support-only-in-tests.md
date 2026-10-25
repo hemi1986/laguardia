@@ -9,10 +9,12 @@ risk: low
 events: []
 depends_on: [ST-003]
 labels: [follow-up, foundation]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 **Not built as a story: the lint policy is added directly (grooming 2026-10-11).** The text below is kept for the record.
 
 Follow-up of ST-059 (CI and test harness): `docs/reviews/ST-059-code-review.md` finding #14 (follow-up section). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.

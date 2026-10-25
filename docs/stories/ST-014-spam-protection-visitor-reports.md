@@ -9,10 +9,12 @@ risk: medium
 events: [EVT-ProblemReported]
 depends_on: [ST-013]
 labels: [visitor, ui]
-status: ready
+status: superseded
 ---
 
 ## Story
+**Superseded (user, 2026-10-25): not built as written – closed with the rest of the backlog – the new planning of go-live decides again whether spam protection is needed.** The text below is kept for the record.
+
 As a technician, I want automated and abusive problem reports from the public visitor page to be held back once spam actually appears, so that the triage list only contains real problem reports and triage stays quick.
 
 ## Context
