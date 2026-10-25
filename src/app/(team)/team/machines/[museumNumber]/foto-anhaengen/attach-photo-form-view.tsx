@@ -26,10 +26,14 @@ type Texts = {
 
 type ErrorCode = NonNullable<AttachPhotoState>["error"];
 
-/** The field that caused a rejection – marked at the form (G8); the photo's own rejections name the photo. */
-const fieldOf: Partial<Record<ErrorCode, AttachPhotoField>> = {
+/** The field that caused a rejection – marked at the form (G8). */
+const fieldOf: Partial<Record<ErrorCode, AttachPhotoField | "photo">> = {
   "title-required": "title",
   "attach-to-required": "attachTo",
+  "file-required": "photo",
+  "too-large": "photo",
+  "not-an-image": "photo",
+  "unsupported-format": "photo",
 };
 
 /**
@@ -57,14 +61,21 @@ export function AttachPhotoForm({
   const rejectionId = useId();
   const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
-  const marked = (field: AttachPhotoField) => ({
+  const marked = (field: AttachPhotoField | "photo") => ({
     "aria-invalid": invalid === field || undefined,
     "aria-describedby": invalid === field ? rejectionId : undefined,
   });
 
   return (
     <form action={action} className="flex flex-col gap-5">
-      <PhotoField key={`photo-${kept}`} name="photo" texts={texts.photo} onPreparing={setPreparingPhoto} />
+      <PhotoField
+        key={`photo-${kept}`}
+        name="photo"
+        texts={texts.photo}
+        onPreparing={setPreparingPhoto}
+        invalid={invalid === "photo"}
+        describedBy={marked("photo")["aria-describedby"]}
+      />
       <Field data-invalid={invalid === "title"}>
         <FieldLabel htmlFor="title">{texts.title}</FieldLabel>
         <Input id="title" name="title" defaultValue={state?.values.title} key={`title-${kept}`} {...marked("title")} />

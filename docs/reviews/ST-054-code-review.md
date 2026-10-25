@@ -16,3 +16,22 @@ Checked and in order: CMD-AttachFile still runs through `formAction` → command
 
 **Verdict:** ready to merge
 Most important finding: #1 – a photo form sent without a photo says "Bitte eine Datei auswählen." and marks no field. That is the wrong word for this page and misses G8 field marking.
+
+## Resolution (implement, 2026-10-25)
+
+Together with the `/code-review` findings (same items, plus: the refusal pre-check before the photo is stored, the settings precedence in the session-start hook, a line over 120 columns).
+
+- **Fixed #1:** the photo page says „Bitte ein Foto aufnehmen oder auswählen.“ (`attachPhoto.form.photoRequired`, `attachPhotoRejectionText`) and marks the photo field (`PhotoField` takes `invalid`/`describedBy`), also for the photo's own rejections.
+- **Fixed #3 (in part):** the scenario test now opens the stored camera photo through `viewAddressOf`, so a change of the photo module's names fails a test instead of silently breaking the links. The name rule stays in `isContentName`.
+- **Fixed #5:** the command test rejects missing content (`file-required`).
+- **Fixed #7:** `PhotoField`'s comment names both uses.
+- **Fixed:** the overlong comment line in `store-photo.ts`.
+- **Skipped #2:** a second, additive argument; passing only `StoredPhoto` would change the photo module's callback for ST-016/ST-032 and their tests. Revisit when a third photo form needs more than the reference.
+- **Skipped #4:** two pages for one command with their own texts per page (the catalog convention); a shared `AttachToField` is worth it when a third form offers the choice.
+- **Skipped #6:** the one-line binding helper is what the conventions ask for („A test binds its database … once in a one-line helper of its own“).
+- **Skipped #8:** the hook fix was asked for by the user in this session (the wrong "Vercel MCP not enabled" hint).
+- **Skipped (code-review) refusal pre-check before storing the photo:** after a missing title the photo must be chosen again anyway (G8a, the story's scenario), so the cost is one Blob write and delete per rejected send – rare.
+- **Skipped (code-review) `file-required` in the command instead of the runner:** kept deliberately – a file has content, so the decision says so whatever form sends it; the upload step still rejects earlier.
+- **Skipped (code-review) hook precedence:** a server disabled in one settings file and enabled in another is not a setup we have; the hint is advisory.
+
+No finding passes the follow-up hurdle.
