@@ -113,23 +113,32 @@ export type MachineOverviewEntry = {
   machineCategory: MachineCategory;
   technology?: Technology;
   location: string;
+  /** The status it had when it was retired, for a retired machine – shown as „Ausgemustert“ instead (ST-055). */
   machineStatus: MachineStatus;
+  retired: boolean;
 };
 
-/** What the machine overview is narrowed to (ST-008): both are optional and combine. */
+/** What the machine overview is narrowed to (ST-008, ST-055): all are optional and combine. */
 export type MachineOverviewQuery = {
-  /** Part of a museum number or a machine model title, in any case ("042", "medieval"). */
+  /** Part of a museum number or a machine model title, in any case ("042", "medieval") – also finds retired machines. */
   search?: string;
   machineStatus?: MachineStatus;
+  /** Lists the retired machines too (ST-055, „Auch ausgemusterte Geräte anzeigen“). */
+  retired?: boolean;
 };
 
-/** RM-MachineOverview: the active machines (not retired), sorted by museum number – searched and filtered. */
+/**
+ * RM-MachineOverview: the active machines, sorted by museum number – searched and filtered. Retired machines are
+ * listed with the filter for them or when they match a search (ST-055), never under a machine status: a retired
+ * machine has none any more (user, 2026-10-25).
+ */
 export async function machineOverview(
   db: Database,
-  { search, machineStatus }: MachineOverviewQuery = {},
+  { search, machineStatus, retired }: MachineOverviewQuery = {},
 ): Promise<MachineOverviewEntry[]> {
   const term = search?.trim();
   const pattern = term ? `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%` : undefined;
+  const withRetired = !machineStatus && (retired || pattern !== undefined);
   const rows = await db
     .select({
       id: machine.id,
@@ -139,18 +148,23 @@ export async function machineOverview(
       technology: machineModel.technology,
       location: machine.location,
       machineStatus: machine.machineStatus,
+      retiredAt: machine.retiredAt,
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(
       and(
-        isNull(machine.retiredAt),
+        withRetired ? undefined : isNull(machine.retiredAt),
         machineStatus ? eq(machine.machineStatus, machineStatus) : undefined,
         pattern ? or(ilike(machine.museumNumber, pattern), ilike(machineModel.title, pattern)) : undefined,
       ),
     )
     .orderBy(asc(machine.museumNumber));
-  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+  return rows.map(({ retiredAt, ...row }) => ({
+    ...row,
+    technology: row.technology ?? undefined,
+    retired: retiredAt !== null,
+  }));
 }
 
 /**

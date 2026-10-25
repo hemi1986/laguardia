@@ -54,6 +54,7 @@ describe("the machine overview", () => {
           technology: "dmd",
           location: "Hall 1, row 3",
           machineStatus: "playable",
+          retired: false,
           openDefects: 0,
         },
         {
@@ -63,6 +64,7 @@ describe("the machine overview", () => {
           machineCategory: "other",
           location: "Foyer",
           machineStatus: "out-of-order",
+          retired: false,
           openDefects: 0,
         },
       ],

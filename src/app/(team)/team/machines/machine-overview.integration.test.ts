@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand, resolveDefectCommand } from "@/modules/repair";
+import { recordDefectCommand, reportProblemCommand, resolveDefectCommand, retireMachineCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -78,6 +78,80 @@ async function anOpenDefect(machineId: string, title: string) {
   if (!recorded.ok) throw new Error(recorded.error);
   return recorded.result.defectId;
 }
+
+async function retire(machineId: string) {
+  const outcome = await executeCommand(
+    retireMachineCommand,
+    { machineId, version: 0, reason: "Sold" },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+}
+
+/** The overview as a team member sees it for a search and a filter. */
+async function overview(query: Parameters<typeof loadMachineOverview>[1] = {}) {
+  const data = await loadMachineOverview(db, query);
+  return renderToStaticMarkup(createElement(MachineOverview, { ...data, query, canRegister: false }));
+}
+
+/** The entry of a machine in the rendered overview – its title line up to the next entry. */
+function entryOf(html: string, museumNumber: string): string | undefined {
+  const at = html.indexOf(`${museumNumber} · Medieval Madness`);
+  if (at < 0) return undefined;
+  const next = html.indexOf("</li>", at);
+  return html.slice(at, next);
+}
+
+describe("retired machines in the machine overview", () => {
+  it("ST-055: Retired machines leave the machine overview", async () => {
+    await registered("LG-012");
+    await retire(await registered("LG-013"));
+
+    const html = await overview();
+
+    expect(entryOf(html, "LG-012")).toBeDefined();
+    expect(entryOf(html, "LG-013")).toBeUndefined();
+  });
+
+  it("ST-055: Team members find retired machines with a filter", async () => {
+    await registered("LG-012");
+    await retire(await registered("LG-013"));
+
+    const html = await overview({ retired: true });
+
+    expect(entryOf(html, "LG-012")).not.toContain("Ausgemustert");
+    expect(entryOf(html, "LG-013")).toContain("Ausgemustert");
+    expect(entryOf(html, "LG-013")).not.toContain("Status:");
+    expect(html).toContain('name="retired"');
+    expect(html).not.toContain("Kein Gerät ist ausgemustert.");
+  });
+
+  it("ST-055: The filter says when no machine is retired", async () => {
+    await registered("LG-012");
+
+    const html = await overview({ retired: true });
+
+    expect(entryOf(html, "LG-012")).toBeDefined();
+    expect(html).toContain("Kein Gerät ist ausgemustert.");
+  });
+
+  it("ST-055: Search by museum number finds retired machines", async () => {
+    await registered("LG-012");
+    await retire(await registered("LG-013"));
+
+    const html = await overview({ search: "013" });
+
+    expect(entryOf(html, "LG-012")).toBeUndefined();
+    expect(entryOf(html, "LG-013")).toContain("Ausgemustert");
+  });
+
+  it("lists retired machines only under all machines, never under a machine status (user, 2026-10-25)", async () => {
+    await retire(await registered("LG-013"));
+
+    expect(entryOf(await overview({ retired: true, machineStatus: "playable" }), "LG-013")).toBeUndefined();
+    expect(entryOf(await overview({ search: "013", machineStatus: "playable" }), "LG-013")).toBeUndefined();
+  });
+});
 
 describe("the machine overview with open defects", () => {
   it("ST-021: Machine overview shows the number of open defects", async () => {

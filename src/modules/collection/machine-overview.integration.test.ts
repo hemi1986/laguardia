@@ -85,6 +85,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 1, row 3",
         machineStatus: "playable",
+        retired: false,
       },
       {
         id: second,
@@ -94,6 +95,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 2, row 1",
         machineStatus: "out-of-order",
+        retired: false,
       },
     ]);
   });
@@ -116,6 +118,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 1, row 3",
         machineStatus: "playable",
+        retired: false,
       },
       {
         id: second,
@@ -125,6 +128,7 @@ describe("RM-MachineOverview", () => {
         technology: "crt",
         location: "Hall 2, row 1",
         machineStatus: "out-of-order",
+        retired: false,
       },
     ]);
   });
@@ -221,7 +225,8 @@ describe("RM-MachineOverview", () => {
     await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
 
     expect(museumNumbers(await machineOverview(db))).toEqual(["LG-012"]);
-    expect(museumNumbers(await machineOverview(db, { search: "013" }))).toEqual([]);
+    // A search finds it, marked as retired – ST-055 (finding retired machines was left out of ST-008).
+    expect(await machineOverview(db, { search: "013" })).toMatchObject([{ museumNumber: "LG-013", retired: true }]);
     expect((await machineStatusCounts(db)).playable).toBe(1);
   });
 });

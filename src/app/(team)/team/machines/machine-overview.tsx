@@ -15,18 +15,20 @@ import type { MachineOverviewItem } from "./machine-overview-data";
 const { machines: texts, machineModels } = teamMessages;
 
 /** The address of the overview for a search and a filter – a plain link, so it works without JavaScript. */
-function overviewHref({ search, machineStatus }: MachineOverviewQuery): string {
+function overviewHref({ search, machineStatus, retired }: MachineOverviewQuery): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (machineStatus) params.set("machineStatus", machineStatus);
+  if (retired) params.set("retired", "1");
   const query = params.toString();
   return query ? `/team/machines?${query}` : "/team/machines";
 }
 
 /**
  * The machine overview (RM-MachineOverview, ST-007/ST-008): how many active machines have which machine status –
- * each count is also the filter for it –, the search, and the list sorted by museum number. Registering is a named
- * action directly under the heading (G2a), shown to technicians only (G11).
+ * each count is also the filter for it –, the search, and the list sorted by museum number. Retired machines join
+ * the list with the filter for them or when a search finds them, marked „Ausgemustert“ (ST-055). Registering is a
+ * named action directly under the heading (G2a), shown to technicians only (G11).
  */
 export function MachineOverview({
   machines,
@@ -45,6 +47,9 @@ export function MachineOverview({
 }) {
   const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
+  const { retired } = query;
+  // Only the filter alone can say no machine is retired – a search or a machine status narrows the list on its own.
+  const noneRetired = retired && !search && !query.machineStatus && !machines.some((machine) => machine.retired);
 
   return (
     <>
@@ -85,16 +90,20 @@ export function MachineOverview({
             <p id="search-hint" className="text-muted-foreground text-sm">
               {texts.searchHint}
             </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="retired" value="1" defaultChecked={retired} className="size-4" />
+              {texts.showRetired}
+            </label>
           </form>
           <nav aria-label={texts.filter}>
             <ul className="flex flex-wrap gap-2">
-              <FilterLink href={overviewHref({ search })} current={!query.machineStatus}>
+              <FilterLink href={overviewHref({ search, retired })} current={!query.machineStatus}>
                 {texts.all} · {total}
               </FilterLink>
               {machineStatuses.map((status) => (
                 <FilterLink
                   key={status}
-                  href={overviewHref({ search, machineStatus: status })}
+                  href={overviewHref({ search, machineStatus: status, retired })}
                   current={query.machineStatus === status}
                 >
                   {texts.statuses[status]} · {counts[status]}
@@ -103,7 +112,7 @@ export function MachineOverview({
             </ul>
           </nav>
           {machines.length === 0 ? (
-            <NothingFound search={search} machineStatus={query.machineStatus} />
+            <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
             <ul className="flex flex-col gap-4">
               {machines.map((machine) => (
@@ -113,6 +122,7 @@ export function MachineOverview({
               ))}
             </ul>
           )}
+          {noneRetired && machines.length > 0 && <p>{texts.noneRetired}</p>}
         </>
       )}
     </>
@@ -137,12 +147,12 @@ function FilterLink({ href, current, children }: { href: string; current: boolea
  * The two "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
  * clear it (the filter stays); without a search only a filter can have emptied the list.
  */
-function NothingFound({ search, machineStatus }: MachineOverviewQuery) {
+function NothingFound({ search, machineStatus, retired }: MachineOverviewQuery) {
   if (search || !machineStatus) {
     return (
       <div className="flex flex-col gap-2">
         <p>{texts.noMatch(search ?? "")}</p>
-        <Link href={overviewHref({ machineStatus })} className="self-start underline underline-offset-4">
+        <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
           {texts.clearSearch}
         </Link>
       </div>
@@ -160,7 +170,8 @@ function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
     machineModels.categories[machine.machineCategory],
     machine.technology && machineModels.technologies[machine.technology],
     machine.location,
-    `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
+    // A retired machine has no machine status any more – the marker stands in its place (G6, ST-039).
+    machine.retired ? texts.retired : `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
     // A count is labelled in words, and a zero is not shown (ST-008, G6).
     machine.openDefects > 0 && texts.openDefects(machine.openDefects),
   ].filter(Boolean);
