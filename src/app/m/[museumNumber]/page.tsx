@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { machineOfMuseumNumber } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMemberIfLoggedIn } from "../../team-session";
 import { currentVisitorMessages } from "../../visitor-locale";
@@ -21,7 +22,12 @@ export default async function VisitorMachineRoute({ params, searchParams }: Page
     currentVisitorMessages(),
     loadVisitorMachinePage(database(), museumNumber),
   ]);
-  if (!data) notFound();
+  if (!data) {
+    // An old QR sticker keeps working (ST-035): a reserved museum number leads to the machine under its current one.
+    const machine = await machineOfMuseumNumber(database(), museumNumber);
+    if (machine && machine.museumNumber !== museumNumber) redirect(`/m/${encodeURIComponent(machine.museumNumber)}`);
+    notFound();
+  }
 
   return (
     <VisitorPage title={data.machineModelTitle} locale={locale} messages={messages} back={`/m/${museumNumber}`}>

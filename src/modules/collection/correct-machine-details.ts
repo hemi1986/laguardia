@@ -1,4 +1,4 @@
-import type { Decision } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
 import { isMuseumNumber } from "./museum-numbers";
 import type { Machine } from "./register-machine";
 
@@ -33,19 +33,33 @@ export type MachineDetailsCorrected = {
 export type CorrectionFacts = { museumNumbersGivenOut: readonly string[] };
 
 export type CorrectMachineDetailsError =
+  | "not-authorized"
   | "machine-retired"
   | "machine-details-unchanged"
   | "museum-number-format"
   | "museum-number-taken";
 
+/**
+ * Why a team member may not correct a machine's details – technicians only, never a retired machine. Asked by the
+ * decision and by the machine record, which offers the action only when there is no reason (G11).
+ */
+export function correctDetailsRefusal(
+  machine: { retired: boolean },
+  teamMember: { role: Role },
+): "not-authorized" | "machine-retired" | undefined {
+  if (!correctingActors.some((actor) => actor === teamMember.role)) return "not-authorized";
+  // A retired machine is final (AGG-Machine).
+  return machine.retired ? "machine-retired" : undefined;
+}
+
 export function correctMachineDetails(
   machine: Machine,
   input: CorrectMachineDetailsInput,
-  _context: unknown,
+  { actor }: DecisionContext<ActorOf<(typeof correctingActors)[number]>>,
   facts: CorrectionFacts,
 ): Decision<Machine, MachineDetailsCorrected, CorrectMachineDetailsError> {
-  // A retired machine is final (AGG-Machine).
-  if (machine.retirement) return { ok: false, error: "machine-retired" };
+  const refusal = correctDetailsRefusal({ retired: machine.retirement !== undefined }, actor);
+  if (refusal) return { ok: false, error: refusal };
   const museumNumber = input.museumNumber.trim();
   const serialNumber = input.serialNumber.trim() || undefined;
   // No change without a change, as with the location (ST-034).

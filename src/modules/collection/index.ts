@@ -14,6 +14,8 @@ export { changeMachineStatusCommand } from "./change-machine-status-command";
 export { machineStatusesToChangeTo } from "./change-machine-status";
 export type { ChangeMachineStatusError, ChangeMachineStatusInput } from "./change-machine-status";
 export { correctMachineDetailsCommand } from "./correct-machine-details-command";
+export { correctDetailsRefusal } from "./correct-machine-details";
+export { machineOfMuseumNumber } from "./museum-numbers";
 export type { CorrectMachineDetailsError, CorrectMachineDetailsInput } from "./correct-machine-details";
 export { correctMachineModelCommand } from "./correct-machine-model-command";
 export type { CorrectMachineModelError, CorrectMachineModelInput } from "./correct-machine-model";

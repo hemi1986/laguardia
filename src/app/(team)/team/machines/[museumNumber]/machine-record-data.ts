@@ -1,4 +1,5 @@
 import {
+  correctDetailsRefusal,
   machineRecord,
   machineStatusesToChangeTo,
   type MachineRecord,
@@ -44,6 +45,8 @@ export type MachineRecordActions = {
   changeLocation: boolean;
   /** Section 3 (ST-012): only where the viewer has a machine status to set – none for a retired machine. */
   changeStatus: boolean;
+  /** Section 3 (ST-035): technicians only, not for a retired machine – Collection's own rule. */
+  correctDetails: boolean;
   /** Section 8 (ST-037): every team member, a retired machine's record too. */
   attachFile: boolean;
   /** Section 9 (ST-039): technicians only, not for a retired machine – Collection's own rule. */
@@ -121,6 +124,7 @@ function actionsOf(record: MachineRecord, viewer: Viewer): MachineRecordActions 
     changeLocation: active,
     changeStatus:
       machineStatusesToChangeTo(viewer.role, { machineStatus: record.machineStatus, retired: !active }).length > 0,
+    correctDetails: correctDetailsRefusal({ retired: !active }, viewer) === undefined,
     attachFile: true,
     retire: retireRefusal({ retired: !active }, viewer) === undefined,
   };

@@ -11,7 +11,18 @@ export function collectionChangesIn(command: readonly JournalEntry[], machineId:
   const statusChange = entries.find(
     (entry) => entry.type === "EVT-MachineStatusChanged" && entry.aggregate.id === machineId,
   );
+  const correction = entries.find(
+    (entry) => entry.type === "EVT-MachineDetailsCorrected" && entry.aggregate.id === machineId,
+  );
   return {
+    /** The machine's museum numbers before and after, when the command corrected its details (ST-035). */
+    detailsCorrected:
+      correction?.type === "EVT-MachineDetailsCorrected"
+        ? {
+            previousMuseumNumber: correction.data.previousMuseumNumber as string | undefined,
+            museumNumber: correction.data.museumNumber as string | undefined,
+          }
+        : undefined,
     /** The machine's new status, when the command changed it. */
     statusChangedTo:
       statusChange?.type === "EVT-MachineStatusChanged"

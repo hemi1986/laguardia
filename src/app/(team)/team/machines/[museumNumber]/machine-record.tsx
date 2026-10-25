@@ -55,6 +55,15 @@ export function MachineRecordView({
   return (
     <>
       {confirmation && <Confirmation>{confirmationText(confirmation, record)}</Confirmation>}
+      {confirmation?.kind === "renumbered" && (
+        // A new museum number needs a new QR sticker (ST-035, ST-011) – one tap to its print page.
+        <Link
+          href={`/team/machines/stickers/print?m=${encodeURIComponent(record.museumNumber)}`}
+          className={buttonVariants({ variant: "outline", className: "self-start" })}
+        >
+          {texts.printSticker}
+        </Link>
+      )}
       {record.retirement && (
         <p className="font-medium">
           {texts.retired(
@@ -81,8 +90,8 @@ export function MachineRecordView({
           </div>
         ))}
       </dl>
-      {(actions.changeLocation || actions.changeStatus) && (
-        // The actions of section 3: moving (ST-034) and changing the status (ST-012).
+      {(actions.changeLocation || actions.changeStatus || actions.correctDetails) && (
+        // The actions of section 3: moving (ST-034), changing the status (ST-012), correcting the details (ST-035).
         <div className="flex flex-wrap gap-2">
           {actions.changeLocation && (
             <Link
@@ -98,6 +107,14 @@ export function MachineRecordView({
               className={buttonVariants({ variant: "outline" })}
             >
               {texts.changeStatus}
+            </Link>
+          )}
+          {actions.correctDetails && (
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/angaben`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {texts.correctDetails}
             </Link>
           )}
         </div>
@@ -240,6 +257,10 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.moved(record.museumNumber, record.location);
     case "retired":
       return texts.retiredConfirmation(record.museumNumber);
+    case "renumbered":
+      return texts.renumbered(confirmation.previousMuseumNumber, record.museumNumber);
+    case "details-corrected":
+      return texts.detailsCorrected(record.museumNumber);
     case "problem-reported":
       return texts.problemReported(record.museumNumber);
     case "file-attached":
