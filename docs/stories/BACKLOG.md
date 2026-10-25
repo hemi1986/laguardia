@@ -4,15 +4,20 @@
 
 **Progress: 51 of 59 domain stories done** · scenarios 468 of 505
 
-**84 stories** · In Progress: 0 · Ready: 14 · In Review: 0 · Draft: 3 · Done: 67
+**84 stories** · In Progress: 1 · Ready: 13 · In Review: 0 · Draft: 3 · Done: 67
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 | [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |

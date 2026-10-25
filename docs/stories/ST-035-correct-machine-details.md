@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachineDetailsCorrected]
 depends_on: [ST-011]
 labels: [collection, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story
