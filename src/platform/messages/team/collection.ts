@@ -116,6 +116,8 @@ export const collectionTexts = {
     files: "Dateien",
     noFiles: "Noch keine Dateien zu diesem Gerät oder seinem Modell.",
     attachFile: "Datei anhängen",
+    /** Beside it (ST-054): a camera photo as a file of the file category Photo. */
+    attachPhoto: "Foto aufnehmen",
     /** Next to a file of the machine model – every machine of that model shows it. */
     ofMachineModel: "Modell",
     fileAttached: (title: string) => `„${title}“ angehängt.`,
@@ -147,6 +149,27 @@ export const collectionTexts = {
       chooseAgain: "Die Datei muss erneut ausgewählt werden.",
       tooLarge: "Dateien dürfen höchstens 100 MB groß sein.",
       notUploaded: "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal auswählen.",
+    },
+    back: "Zurück zum Gerät",
+  },
+  /** Attaching a camera photo as a file (ST-054) – its own page beside attaching a file; the file category is Photo. */
+  attachPhoto: {
+    title: (museumNumber: string) => `Foto an ${museumNumber} anhängen`,
+    /** Strings only below – the form is a client component. */
+    form: {
+      photo: {
+        label: "Foto",
+        take: "Foto aufnehmen",
+        choose: "Foto auswählen",
+        remove: "Foto entfernen",
+        preparing: "Foto wird vorbereitet …",
+      },
+      title: "Titel",
+      attachTo: "Anhängen an",
+      choose: "Bitte wählen",
+      onlyMachine: "nur {museumNumber}",
+      allMachinesOfModel: "alle Geräte des Modells {machineModel}",
+      submit: "Foto anhängen",
     },
     back: "Zurück zum Gerät",
   },

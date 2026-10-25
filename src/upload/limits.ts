@@ -20,7 +20,10 @@ export function contentName(id: string): string {
   return `files/${id}`;
 }
 
-/** Whether a name is one the server gives to uploaded content. */
+/**
+ * Whether a name is one the server gives to the content of a file: uploaded content, or a camera photo the photo module
+ * stored as a file (`files/<ID>.jpg`, ST-054).
+ */
 export function isContentName(name: string): boolean {
-  return /^files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(name);
+  return /^files\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.jpg)?$/.test(name);
 }
