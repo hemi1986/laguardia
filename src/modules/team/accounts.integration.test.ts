@@ -4,6 +4,7 @@ import { reportProblemCommand } from "@/modules/repair";
 import { executeCommand, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import {
+  activateAccount,
   changeRole,
   createAccount,
   currentPerson,
@@ -146,6 +147,47 @@ describe("managing team member accounts", () => {
       role: "helper",
       active: false,
     });
+  });
+
+  it("activating a deactivated account again lets its team member log in with their password (ST-081)", async () => {
+    const technician = await aTechnician();
+    const { id, username, password } = await anna(technician);
+    await deactivateAccount({ teamMemberId: id }, { db, ...technician });
+
+    const outcome = await activateAccount({ teamMemberId: id }, { db, ...technician });
+
+    expect(outcome).toEqual({ ok: true, teamMemberId: id });
+    expect(await personBehind(username, password)).toMatchObject({ teamMemberId: id, role: "helper" });
+    expect((await teamMemberAccounts(db, { includeDeactivated: false })).map((account) => account.id)).toContain(id);
+  });
+
+  it("a deactivated account can only be activated again – role, password and deactivation are refused (ST-081)", async () => {
+    const technician = await aTechnician();
+    const { id, username, password } = await anna(technician);
+    await deactivateAccount({ teamMemberId: id }, { db, ...technician });
+
+    const attempts = [
+      await changeRole({ teamMemberId: id, role: "technician" }, { db, ...technician }),
+      await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, ...technician }),
+      await deactivateAccount({ teamMemberId: id }, { db, ...technician }),
+    ];
+
+    expect(attempts).toEqual(Array(3).fill({ ok: false, error: "account-deactivated" }));
+    await activateAccount({ teamMemberId: id }, { db, ...technician });
+    expect(await personBehind(username, password)).toMatchObject({ teamMemberId: id, role: "helper" });
+  });
+
+  it("only technicians activate an account again (ST-081)", async () => {
+    const technician = await aTechnician();
+    const { id } = await anna(technician);
+    await deactivateAccount({ teamMemberId: id }, { db, ...technician });
+    const helper = { kind: "team-member", teamMemberId: id, role: "helper" } as const;
+
+    expect(await activateAccount({ teamMemberId: id }, { db, actor: helper })).toEqual({
+      ok: false,
+      error: "not-authorized",
+    });
+    expect((await teamMemberAccounts(db)).find((account) => account.id === id)).toMatchObject({ active: false });
   });
 
   it("ST-005: Helpers cannot manage accounts", async () => {

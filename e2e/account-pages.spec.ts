@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, pageWidth, test, uniqueId as unique } from "./fixtures";
 
 /**
- * The account pages rebuilt from the shared UI components (ST-077): the accessibility contract of ST-005 and the
+ * The account pages rebuilt from the shared UI components (ST-077), on the pages of ST-081: the accessibility contract of ST-005 and the
  * 360 px rules hold for the new markup. Needs a technician account: locally the e2e technician each local run creates
  * (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD) – the preview database has none
  * before ST-068.
@@ -20,21 +20,34 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function createAccount(page: Page, name: string, accountUsername: string) {
-  await page.goto("/team/members");
+  await page.goto("/team/members/new");
   await page.getByLabel("Name", { exact: true }).fill(name);
   await page.getByLabel("Benutzername").fill(accountUsername);
   await page.getByLabel("Anfangspasswort").fill("e2e-secret-10");
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
+  await page.getByRole("button", { name: "Teammitglied anlegen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`${name} ist angelegt.`);
+}
+
+/** The team member's own page, opened from the list (ST-081). */
+async function openAccount(page: Page, name: string) {
+  await page.goto("/team/members");
+  await page.getByRole("link", { name, exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
 test("every label on the account pages resolves to exactly one field", async ({ page }) => {
-  await page.goto("/team/members");
+  await page.goto("/team/members/new");
   for (const label of ["Benutzername", "Anfangspasswort", "Rolle"]) {
     await expect(page.getByLabel(label)).toHaveCount(1);
   }
   await expect(page.getByLabel("Name", { exact: true })).toHaveCount(1);
   await expect(page.getByLabel("Anfangspasswort")).toHaveAccessibleDescription("Mindestens 10 Zeichen.");
+
+  const accountUsername = unique("e2e_f");
+  await createAccount(page, `E2E ${accountUsername}`, accountUsername);
+  await openAccount(page, `E2E ${accountUsername}`);
+  await expect(page.getByLabel("Neues Passwort")).toHaveCount(1);
+  await expect(page.getByLabel("Neues Passwort")).toHaveAccessibleDescription("Mindestens 10 Zeichen.");
 
   await page.goto("/team/password");
   for (const label of ["Aktuelles Passwort", "Neues Passwort"]) {
@@ -42,48 +55,45 @@ test("every label on the account pages resolves to exactly one field", async ({ 
   }
 });
 
-test("each account is one article with its own heading and controls, told apart by name", async ({ page }) => {
+test("each team member is one list entry with a link of their name, told apart by their username", async ({ page }) => {
   const first = unique("e2e_a");
   const second = unique("e2e_b");
   await createAccount(page, `E2E ${first}`, first);
   await createAccount(page, `E2E ${second}`, second);
 
   for (const accountUsername of [first, second]) {
-    const account = page.getByRole("article").filter({ hasText: accountUsername });
-    await expect(account).toHaveCount(1);
-    await expect(account.getByRole("heading", { name: `E2E ${accountUsername}` })).toBeVisible();
-    await expect(account.getByRole("button", { name: "Zu Techniker:in machen" })).toBeVisible();
-    await expect(account.getByRole("button", { name: "Passwort zurücksetzen" })).toBeVisible();
-    await expect(account.getByRole("button", { name: "Deaktivieren" })).toBeVisible();
-    await expect(page.getByLabel(`Neues Passwort – E2E ${accountUsername}`)).toHaveCount(1);
-    await expect(account.getByLabel(`Neues Passwort – E2E ${accountUsername}`)).toHaveCount(1);
+    const entry = page.getByRole("main").getByRole("listitem").filter({ hasText: accountUsername });
+    await expect(entry).toHaveCount(1);
+    await expect(entry.getByRole("link", { name: `E2E ${accountUsername}`, exact: true })).toBeVisible();
+    await expect(entry.getByRole("button")).toHaveCount(0);
   }
 });
 
-test("a deactivated account stays recognisable and offers no controls", async ({ page }) => {
+test("a deactivated account's page offers one control only", async ({ page }) => {
   const accountUsername = unique("e2e_d");
   await createAccount(page, `E2E ${accountUsername}`, accountUsername);
+  await openAccount(page, `E2E ${accountUsername}`);
+  await page.getByRole("link", { name: "Konto deaktivieren" }).click();
+  await page.getByRole("button", { name: "Konto deaktivieren" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`Konto von E2E ${accountUsername} deaktiviert.`);
 
-  await page
-    .getByRole("article")
-    .filter({ hasText: accountUsername })
-    .getByRole("button", { name: "Deaktivieren" })
-    .click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto deaktiviert.");
-
-  const account = page.getByRole("article").filter({ hasText: accountUsername });
-  await expect(account).toContainText("deaktiviert");
-  await expect(account.getByRole("button")).toHaveCount(0);
-  await expect(account.locator("input:not([type=hidden]), select")).toHaveCount(0);
+  const main = page.getByRole("main");
+  await expect(main).toContainText("Konto: deaktiviert");
+  await expect(main.getByRole("button")).toHaveCount(1);
+  await expect(main.locator("input:not([type=hidden]), select")).toHaveCount(0);
 });
 
-test("a 60-character name without spaces keeps the account list within 360 px", async ({ page }) => {
+test("a 60-character name without spaces keeps the list and the team member's page within 360 px", async ({
+  page,
+}) => {
   const accountUsername = unique("e2e_l");
   const longName = `L${accountUsername}`.padEnd(60, "x");
   expect(longName).toHaveLength(60);
   await createAccount(page, longName, accountUsername);
 
-  await expect(page.getByRole("article").filter({ hasText: accountUsername })).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: accountUsername })).toHaveCount(1);
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+  await openAccount(page, longName);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
 

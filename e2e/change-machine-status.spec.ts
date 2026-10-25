@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, openMore, pageWidth, test, unique, aMachine } from "./fixtures";
+import { expect, logIn, pageWidth, test, aMachine, aHelper } from "./fixtures";
 
 /**
  * Changing the machine status on a phone (ST-012): from the machine record to its own page and back. Needs a
@@ -28,15 +28,7 @@ async function openStatusChange(page: Page, museumNumber: string) {
 test("ST-012: A helper is offered only Außer Betrieb", async ({ page }) => {
   await logIn(page);
   const museumNumber = await aPlayableMachine(page);
-  const helper = { username: unique("helper").replace(" ", "_"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  const helper = await aHelper(page);
   await logIn(page, helper);
 
   await openStatusChange(page, museumNumber);
