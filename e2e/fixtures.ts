@@ -99,12 +99,16 @@ export async function pageWidth(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
-/** A team member created by the logged-in technician on „Neues Teammitglied“ (ST-081), named „<name> <suffix>“. */
+/**
+ * A team member created by the logged-in technician on „Neues Teammitglied“ (ST-081): named „<name> <suffix>“ when a
+ * name is given, else „E2E <username>“ – what the specs that only need some helper expect.
+ */
 export async function aTeamMember(
   page: Page,
-  { name = "E2E", role = "helper" }: { name?: string; role?: "helper" | "technician" } = {},
+  { name, role = "helper" }: { name?: string; role?: "helper" | "technician" } = {},
 ): Promise<Account & { name: string }> {
-  const member = { name: unique(name), username: uniqueId(role), password: "e2e-secret-10" };
+  const username = uniqueId(role);
+  const member = { name: name ? unique(name) : `E2E ${username}`, username, password: "e2e-secret-10" };
   await page.goto("/team/members/new");
   await page.getByLabel("Name", { exact: true }).fill(member.name);
   await page.getByLabel("Benutzername").fill(member.username);
@@ -115,7 +119,7 @@ export async function aTeamMember(
   return member;
 }
 
-/** A helper account created by the logged-in technician, who is logged out afterwards. */
+/** A helper account created by the logged-in technician, who is logged out afterwards. Named „E2E <username>“. */
 export async function aHelper(page: Page): Promise<Account> {
   const helper = await aTeamMember(page);
   await openMore(page);
