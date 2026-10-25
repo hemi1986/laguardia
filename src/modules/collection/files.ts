@@ -1,4 +1,4 @@
-import { asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
 import {
   fileCategories,
@@ -22,6 +22,7 @@ export const files = aggregateStore({
     content: { name: row.content, size: row.size, contentType: row.contentType },
     attachedBy: row.attachedBy,
     attachedAt: row.attachedAt,
+    ...(row.removedBy && row.removedAt && { removed: { by: row.removedBy, at: row.removedAt } }),
   }),
   toRow: (state: FileState) => ({
     id: state.id,
@@ -34,6 +35,8 @@ export const files = aggregateStore({
     contentType: state.content.contentType,
     attachedBy: state.attachedBy,
     attachedAt: state.attachedAt,
+    removedBy: state.removed?.by ?? null,
+    removedAt: state.removed?.at ?? null,
   }),
 });
 
@@ -57,7 +60,7 @@ export type FileOfMachine = {
 
 /**
  * The files of a machine and of its machine model, by file category in glossary order (Manual, Schematic, Photo,
- * Other), each group by title – for the machine record's files section.
+ * Other), each group by title – for the machine record's files section. A removed file is not among them (ST-038).
  */
 export async function filesOfMachine(
   db: Database,
@@ -66,7 +69,7 @@ export async function filesOfMachine(
   const rows = await db
     .select({ id: file.id, title: file.title, fileCategory: file.fileCategory, machineId: file.machineId })
     .from(file)
-    .where(or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId)))
+    .where(and(or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId)), isNull(file.removedAt)))
     .orderBy(asc(file.title), asc(file.attachedAt));
   return rows
     .map((row) => ({ id: row.id, title: row.title, fileCategory: row.fileCategory, ofMachineModel: !row.machineId }))
@@ -75,7 +78,7 @@ export async function filesOfMachine(
 
 /**
  * What opening a file needs (ST-037): its content's name in the storage seam, and whether the browser saves it instead
- * of opening it – none for an unknown file. Only after the team page's access check (files are team-only).
+ * of opening it – none for an unknown or removed file (ST-038). Only after the team page's access check (files are team-only).
  */
 export async function fileToOpen(
   db: Database,
@@ -84,6 +87,6 @@ export async function fileToOpen(
   const [row] = await db
     .select({ content: file.content, contentType: file.contentType })
     .from(file)
-    .where(eq(file.id, fileId));
+    .where(and(eq(file.id, fileId), isNull(file.removedAt)));
   return row && { content: row.content, download: !opensInBrowser(row.contentType) };
 }

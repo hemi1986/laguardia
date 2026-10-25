@@ -39,6 +39,8 @@ export type FileState = {
   content: FileContent;
   attachedBy: string;
   attachedAt: Date;
+  /** Who removed it and when (ST-038) – a removed file stays removed, and its content is gone from the storage. */
+  removed?: { by: string; at: Date };
 };
 
 export type FileAttached = {

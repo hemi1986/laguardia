@@ -10,6 +10,9 @@ export type {
   FileContent,
 } from "./attach-file";
 export { fileToOpen, type FileOfMachine } from "./files";
+export { removeFileCommand } from "./remove-file-command";
+export { removeFileRefusal } from "./remove-file";
+export type { RemoveFileError, RemoveFileInput } from "./remove-file";
 export { changeMachineStatusCommand } from "./change-machine-status-command";
 export { machineStatusesToChangeTo } from "./change-machine-status";
 export type { ChangeMachineStatusError, ChangeMachineStatusInput } from "./change-machine-status";

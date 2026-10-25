@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { FileAttached } from "./attach-file";
+import type { FileRemoved } from "./remove-file";
 import type { MachineStatusChanged } from "./change-machine-status";
 import type { MachineDetailsCorrected } from "./correct-machine-details";
 import type { MachineModelCorrected } from "./correct-machine-model";
@@ -79,6 +80,15 @@ export const collectionEvents = eventCatalogue({
       aggregateId: event.fileId,
       machineId: event.machineId ?? null,
       data: { fileCategory: event.fileCategory, machineModelId: event.machineModelId ?? null },
+    }),
+  },
+  "EVT-FileRemoved": {
+    aggregate: "AGG-File",
+    // Which file and who removed it (the journal's actor); its title stays in the kept record (ST-038).
+    project: (event: FileRemoved) => ({
+      aggregateId: event.fileId,
+      machineId: event.machineId ?? null,
+      data: { machineModelId: event.machineModelId ?? null },
     }),
   },
 });

@@ -90,7 +90,8 @@ export const machineStatusChange = pgTable(
 /**
  * AGG-File – current state (ST-037, docs/architecture/data-model.md): attached to exactly one machine or one machine
  * model (check constraint in the migration). `content` is the content's name in the storage seam; size and media type
- * are what the store said when the file was attached. `attached_by` refers to team_member.id (hand-written foreign key).
+ * are what the store said when the file was attached. `attached_by` and `removed_by` refer to team_member.id
+ * (hand-written foreign keys).
  */
 export const file = pgTable(
   "file",
@@ -105,6 +106,9 @@ export const file = pgTable(
     contentType: text("content_type").notNull(),
     attachedBy: uuid("attached_by").notNull(),
     attachedAt: timestamp("attached_at", { withTimezone: true }).notNull(),
+    /** Who removed the file and when (ST-038) – both or neither (check constraint); the record stays, its content not. */
+    removedBy: uuid("removed_by"),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     /** Optimistic version check (HS-16) – removing a file (ST-038) saves at the version the team member saw. */
     version: integer("version").notNull().default(0),
   },
