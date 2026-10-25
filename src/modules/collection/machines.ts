@@ -73,11 +73,12 @@ const machineRows = aggregateStore({
  */
 export const machines: AggregateStore<Machine> = {
   ...machineRows,
-  insert: (tx, state) =>
-    withMuseumNumber(tx, state, async () => {
+  async insert(tx, state) {
+    await withMuseumNumber(tx, state, async () => {
       await machineRows.insert(tx, state);
       return true;
-    }).then(() => undefined),
+    });
+  },
   update: (tx, state, expectedVersion) => withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
 };
 

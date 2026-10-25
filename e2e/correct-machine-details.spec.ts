@@ -31,12 +31,14 @@ async function correctToAFreeNumber(page: Page, museumNumber: string): Promise<s
     await page.getByLabel("Museumsnummer").fill(corrected);
     await page.getByRole("button", { name: "Angaben korrigieren" }).click();
     const landed = page.waitForURL(new RegExp(`/team/machines/${corrected}\\?`)).then(() => true);
+    // The rejection names the number tried – an alert left from an earlier attempt names another one.
     const taken = page
       .getByRole("main")
       .getByRole("alert")
+      .filter({ hasText: corrected })
       .waitFor()
       .then(() => false);
-    if (await Promise.race([landed, taken])) return corrected;
+    if (await Promise.race([landed, taken].map((wait) => wait.catch(() => false)))) return corrected;
   }
   throw new Error("no free museum number found");
 }

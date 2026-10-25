@@ -1,5 +1,5 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
-import { isMuseumNumber, nextMuseumNumber } from "./museum-numbers";
+import { museumNumberRefusal, nextMuseumNumber } from "./museum-numbers";
 
 /**
  * CMD-RegisterMachine (AGG-Machine): a technician registers a machine with its machine model, museum number,
@@ -92,15 +92,14 @@ export function registerMachine(
   const { machineStatus } = input;
   if (!machineStatus) return { ok: false, error: "machine-status-required" };
 
-  const givenOut = new Set(facts.museumNumbersGivenOut);
   const typed = input.museumNumber?.trim() ?? "";
   let museumNumber: string;
   if (typed) {
-    if (!isMuseumNumber(typed)) return { ok: false, error: "museum-number-format" };
-    if (givenOut.has(typed)) return { ok: false, error: "museum-number-taken" };
+    const refusal = museumNumberRefusal(typed, facts.museumNumbersGivenOut);
+    if (refusal) return { ok: false, error: refusal };
     museumNumber = typed;
   } else {
-    const assigned = nextMuseumNumber(givenOut);
+    const assigned = nextMuseumNumber(new Set(facts.museumNumbersGivenOut));
     if (!assigned) return { ok: false, error: "no-museum-number-free" };
     museumNumber = assigned;
   }

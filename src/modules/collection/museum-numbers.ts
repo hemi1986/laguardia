@@ -48,30 +48,51 @@ export async function museumNumbersGivenOut(tx: Database): Promise<string[]> {
 }
 
 /**
- * Writes a machine whose museum number may be new (`write`: the machine row, false when its version check failed),
- * then gives that museum number to the machine – an earlier one of it stays given out, as a reserved museum number.
- * Under the lock, also when the command read no facts; a number taken all the same is `museum-number-taken`.
+ * Why a museum number typed for a machine cannot be given to it (HS-17, D11): not in the format, or given out already –
+ * in use, of a retired machine, or reserved, its own earlier ones included. The one rule both decisions ask.
+ */
+export function museumNumberRefusal(
+  typed: string,
+  givenOut: readonly string[],
+): "museum-number-format" | "museum-number-taken" | undefined {
+  if (!isMuseumNumber(typed)) return "museum-number-format";
+  return givenOut.includes(typed) ? "museum-number-taken" : undefined;
+}
+
+/**
+ * Writes a machine (`write`: its row; false when the version check failed) and gives its museum number to it – an
+ * earlier one of it stays given out, as a reserved museum number. A machine whose museum number is already its own
+ * (a move, a status change) is written without the lock. A new one is written under the lock, also when the command
+ * read no facts, and a number taken all the same is `museum-number-taken`.
+ *
+ * Lock order: the museum number lock comes before the machine's row. A command that changes the museum number
+ * loads the machine without a row lock (a person's command passes its version); a policy that locks the row first
+ * (no version) never changes the museum number, so it never waits for this lock.
  */
 export async function withMuseumNumber(
   tx: Database,
   owner: { id: string; museumNumber: string },
   write: () => Promise<boolean>,
 ): Promise<boolean> {
+  if ((await ownerOf(tx, owner.museumNumber)) === owner.id) return write();
   await lockMuseumNumbers(tx);
   try {
     if (!(await write())) return false;
-    const [given] = await tx
-      .select({ machineId: museumNumber.machineId })
-      .from(museumNumber)
-      .where(eq(museumNumber.museumNumber, owner.museumNumber));
-    if (given?.machineId === owner.id) return true;
-    if (given) throw new Rejected("museum-number-taken");
+    if ((await ownerOf(tx, owner.museumNumber)) !== undefined) throw new Rejected("museum-number-taken");
     await tx.insert(museumNumber).values({ museumNumber: owner.museumNumber, machineId: owner.id });
     return true;
   } catch (error) {
     if (isMuseumNumberTaken(error)) throw new Rejected("museum-number-taken");
     throw error;
   }
+}
+
+async function ownerOf(tx: Database, number: string): Promise<string | undefined> {
+  const [given] = await tx
+    .select({ machineId: museumNumber.machineId })
+    .from(museumNumber)
+    .where(eq(museumNumber.museumNumber, number));
+  return given?.machineId;
 }
 
 /**

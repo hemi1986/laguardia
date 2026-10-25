@@ -7,7 +7,13 @@ import { aggregateCommand, executeCommand } from "@/platform/command";
 import { whileHoldingRow } from "@/test-support/held-row";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { correctMachineDetailsCommand, createMachineModelCommand, machineForTeamForm, registerMachineCommand } from ".";
+import {
+  correctMachineDetailsCommand,
+  createMachineModelCommand,
+  machineForTeamForm,
+  moveMachineCommand,
+  registerMachineCommand,
+} from ".";
 import { machines } from "./machines";
 import { withoutMachines } from "./machines.test-support";
 import { machineOfMuseumNumber } from "./museum-numbers";
@@ -80,6 +86,18 @@ async function aMachine(museumNumber: string) {
   return registered.result.machineId;
 }
 
+/** A machine registered as `from` whose museum number was corrected to `to` – through CMD-CorrectMachineDetails. */
+async function correctedMachine(from: string, to: string) {
+  const machineId = await aMachine(from);
+  const correction = await executeCommand(
+    correctMachineDetailsCommand,
+    { machineId, version: 0, museumNumber: to, serialNumber: "" },
+    asEva(),
+  );
+  if (!correction.ok) throw new Error(correction.error);
+  return machineId;
+}
+
 function writeWithoutFacts(machineId: string, museumNumber: string) {
   return executeCommand(museumNumberWithoutFacts, { machineId, version: 0, museumNumber }, asEva());
 }
@@ -101,6 +119,20 @@ describe("the museum number register", () => {
     expect(await writing).toMatchObject({ ok: true });
   });
 
+  it("lets a write that keeps the machine's museum number pass without waiting for the lock", async () => {
+    const machineId = await aMachine("LG-042");
+
+    const moved = await whileHoldingRow(
+      db,
+      sql`SELECT pg_advisory_xact_lock(hashtext('museum-number'))`,
+      async () => ({
+        outcome: await executeCommand(moveMachineCommand, { machineId, version: 0, location: "Workshop" }, asEva()),
+      }),
+    );
+
+    expect(moved.outcome).toMatchObject({ ok: true });
+  });
+
   it("answers a museum number in use, written past the facts, with museum-number-taken", async () => {
     await aMachine("LG-013");
     const machineId = await aMachine("LG-042");
@@ -110,22 +142,14 @@ describe("the museum number register", () => {
   });
 
   it("answers a reserved museum number, written past the facts, with museum-number-taken", async () => {
-    const corrected = await aMachine("LG-420");
-    const shown = await machineForTeamForm(db, "LG-420");
-    const correction = await executeCommand(
-      correctMachineDetailsCommand,
-      { machineId: corrected, version: shown!.version, museumNumber: "LG-042", serialNumber: "" },
-      asEva(),
-    );
-    if (!correction.ok) throw new Error(correction.error);
+    await correctedMachine("LG-420", "LG-042");
     const machineId = await aMachine("LG-043");
 
     expect(await writeWithoutFacts(machineId, "LG-420")).toEqual({ ok: false, error: "museum-number-taken" });
   });
 
   it("finds the machine of a current or a reserved museum number, by its current one", async () => {
-    const machineId = await aMachine("LG-420");
-    await writeWithoutFacts(machineId, "LG-042");
+    const machineId = await correctedMachine("LG-420", "LG-042");
 
     expect(await machineOfMuseumNumber(db, "LG-420")).toEqual({ machineId, museumNumber: "LG-042" });
     expect(await machineOfMuseumNumber(db, "LG-042")).toEqual({ machineId, museumNumber: "LG-042" });

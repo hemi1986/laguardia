@@ -1,5 +1,5 @@
 import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
-import { isMuseumNumber } from "./museum-numbers";
+import { museumNumberRefusal } from "./museum-numbers";
 import type { Machine } from "./register-machine";
 
 /**
@@ -66,11 +66,10 @@ export function correctMachineDetails(
   if (museumNumber === machine.museumNumber && serialNumber === machine.serialNumber) {
     return { ok: false, error: "machine-details-unchanged" };
   }
-  if (museumNumber !== machine.museumNumber) {
-    if (!isMuseumNumber(museumNumber)) return { ok: false, error: "museum-number-format" };
-    // Unique among all museum numbers ever given out – retired machines' and reserved ones included (D11).
-    if (facts.museumNumbersGivenOut.includes(museumNumber)) return { ok: false, error: "museum-number-taken" };
-  }
+  // Unique among all museum numbers ever given out – retired machines' and reserved ones included (D11).
+  const numberRefusal =
+    museumNumber === machine.museumNumber ? undefined : museumNumberRefusal(museumNumber, facts.museumNumbersGivenOut);
+  if (numberRefusal) return { ok: false, error: numberRefusal };
   return {
     ok: true,
     state: { ...machine, museumNumber, serialNumber },
