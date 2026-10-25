@@ -193,18 +193,26 @@ function takesAnActiveTechnicianAway(target: { role: string | null; banned: bool
   return isActiveTechnician && ("deactivate" in change || change.role !== "technician");
 }
 
+const notBanned = sql`coalesce(${teamMember.banned}, false) = false`;
+
 async function activeTechnicianCount(db: Database): Promise<number> {
   const [{ active }] = await db
     .select({ active: count() })
     .from(teamMember)
-    .where(and(eq(teamMember.role, "technician"), sql`coalesce(${teamMember.banned}, false) = false`));
+    .where(and(eq(teamMember.role, "technician"), notBanned));
   return active;
 }
 
 export type TeamMemberAccount = { id: string; name: string; username: string; role: Role; active: boolean };
 
-/** Read model: every account with its role, for the technicians' account list (ST-005). Deactivated ones stay. */
-export async function teamMemberAccounts(db: Database): Promise<TeamMemberAccount[]> {
+/**
+ * Read model: the accounts with their roles, for the technicians' team members page (ST-005). Deactivated accounts are
+ * listed only when asked for (ST-081) – they are never deleted.
+ */
+export async function teamMemberAccounts(
+  db: Database,
+  { includeDeactivated = true }: { includeDeactivated?: boolean } = {},
+): Promise<TeamMemberAccount[]> {
   const rows = await db
     .select({
       id: teamMember.id,
@@ -214,6 +222,7 @@ export async function teamMemberAccounts(db: Database): Promise<TeamMemberAccoun
       banned: teamMember.banned,
     })
     .from(teamMember)
+    .where(includeDeactivated ? undefined : notBanned)
     .orderBy(asc(teamMember.name));
   return rows.map((row) => ({
     id: row.id,
