@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { anythingToLinkTo } from "@/modules/repair";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { ProblemReportDescription } from "./problem-report-description";
@@ -55,7 +56,7 @@ export function ProblemReportView({ data, role }: { data: ProblemReportData; rol
           problemReportId={report.id}
           museumNumber={report.museumNumber}
           role={role}
-          canLink={data.openDefects.length > 0}
+          canLink={anythingToLinkTo(data.defectsToLinkTo)}
         />
       )}
       <BackToTriage />

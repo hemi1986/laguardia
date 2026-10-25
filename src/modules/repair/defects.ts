@@ -23,7 +23,7 @@ import {
   type DefectActionRefusals,
   type DefectTeamMember,
 } from "./defect-actions";
-import type { LinkingFacts } from "./link-problem-report-to-defect";
+import { daysSinceResolved, resolvedRecently, type LinkingFacts } from "./link-problem-report-to-defect";
 import { defectFormOffer, type DefectFormOffer } from "./defect-form-offers";
 import { problemReportsOfDefect, type DefectProblemReport } from "./problem-reports";
 import { defectRepairTimes, type DefectRepairTimes } from "./repair-times";
@@ -244,6 +244,46 @@ export async function openDefects(
     hold: holdReason ? { reason: holdReason } : undefined,
     lastWorkLogEntry: lastLoggedBy && lastLoggedAt ? { loggedBy: lastLoggedBy, loggedAt: lastLoggedAt } : undefined,
   }));
+}
+
+/**
+ * What a problem report of the machine can be linked to (ST-022, ST-053): its open defects in the order of
+ * RM-OpenDefects, then its recently resolved ones – resolved within the last 30 Berlin calendar days – the most
+ * recently resolved first, each with how many days ago and the version a link posts, since linking reopens it.
+ */
+export type DefectsToLinkTo = {
+  open: { id: string; title: string; openSince: Date }[];
+  recentlyResolved: { id: string; title: string; version: number; resolvedDaysAgo: number }[];
+};
+
+export async function defectsToLinkTo(db: Database, clock: Clock, machineId: string): Promise<DefectsToLinkTo> {
+  const now = clock.now();
+  const [open, resolved] = await Promise.all([
+    openDefects(db, { machineId }),
+    db
+      .select({
+        id: defect.id,
+        title: defect.title,
+        version: defect.version,
+        resolvedAt: sql`max(${defectResolution.resolvedAt})`.mapWith(defectResolution.resolvedAt),
+      })
+      .from(defect)
+      .innerJoin(defectResolution, eq(defectResolution.defectId, defect.id))
+      .where(and(eq(defect.machineId, machineId), eq(defect.state, "resolved")))
+      .groupBy(defect.id),
+  ]);
+  return {
+    open: open.map(({ id, title, openSince }) => ({ id, title, openSince })),
+    recentlyResolved: resolved
+      .filter((row) => resolvedRecently(row.resolvedAt, now))
+      .sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime() || a.id.localeCompare(b.id))
+      .map(({ resolvedAt, ...row }) => ({ ...row, resolvedDaysAgo: daysSinceResolved(resolvedAt, now) })),
+  };
+}
+
+/** Whether there is anything to link a problem report to (ST-053: open or recently resolved defects). */
+export function anythingToLinkTo(defects: DefectsToLinkTo): boolean {
+  return defects.open.length > 0 || defects.recentlyResolved.length > 0;
 }
 
 /** One column of the work log entry stored last for the defect of the surrounding query. */

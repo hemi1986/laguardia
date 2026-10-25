@@ -47,8 +47,16 @@ export const repairTexts = {
     outcome: "Mit Defekt verknüpfen",
     /** A problem report's own page when its machine has nothing to link to (G7). */
     noOpenDefects: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
-    defect: "Offener Defekt",
+    defect: "Defekt",
     openSince: (when: string) => `offen seit ${when}`,
+    /** A recently resolved defect on the list (ST-053) – linking reopens it. */
+    resolvedDaysAgo: (days: number) =>
+      days === 0 ? "heute behoben" : `behoben vor ${days} ${days === 1 ? "Tag" : "Tagen"}`,
+    /** Beside the status choice: it applies only when a resolved defect is reopened (ST-053, user 2026-10-25). */
+    statusOnlyWhenReopening:
+      "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
+    /** After the confirmation of a link that reopened the defect (ST-053). */
+    reopened: " Der Defekt ist wieder offen.",
     submit: "Mit Defekt verknüpfen",
     back: "Zurück zur Meldung",
     linked: (museumNumber: string, title: string) => `Meldung zu ${museumNumber} mit Defekt „${title}“ verknüpft.`,

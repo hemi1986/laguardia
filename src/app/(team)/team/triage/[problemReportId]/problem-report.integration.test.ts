@@ -10,6 +10,7 @@ import {
   linkProblemReportToDefectCommand,
   recordDefectCommand,
   reportProblemCommand,
+  resolveDefectCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -18,6 +19,7 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadProblemReport } from "./problem-report-data";
 import { ProblemReportView } from "./problem-report";
+import { LinkToDefectForm } from "./verknuepfen/link-to-defect-form";
 
 /**
  * A problem report's own page (ST-017) – where it is triaged; ST-017 owns it, the triage stories add their outcomes
@@ -314,5 +316,93 @@ describe("a problem report's own page", () => {
       { actor: anna, db, newId: randomUUID },
     );
     expect(tried).toEqual({ ok: false, error: "not-authorized" });
+  });
+});
+
+/** ST-053: recently resolved defects – resolved within the last 30 Berlin calendar days – can be linked too. */
+describe("linking to a recently resolved defect", () => {
+  /** A defect of the machine, recorded and – when `resolvedAt` is given – resolved then. */
+  async function aDefect(machineId: string, title: string, resolvedAt?: string) {
+    const recorded = await executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId: await reportedFor(machineId, `${title} – first seen`),
+        version: 0,
+        title,
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      { actor: eva, db, clock: fixedClock("2026-08-01T12:00:00Z"), newId: randomUUID },
+    );
+    if (!recorded.ok) throw new Error(recorded.error);
+    const defectId = recorded.result.defectId;
+    if (resolvedAt) {
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        { defectId, version: 0, closingNote: "Coil replaced" },
+        { actor: eva, db, clock: fixedClock(resolvedAt), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+    }
+    return defectId;
+  }
+
+  async function linkForm(problemReportId: string) {
+    const data = await loadProblemReport(db, fixedClock(NOW), problemReportId);
+    if (!data) throw new Error("no problem report");
+    return {
+      data,
+      html: renderToStaticMarkup(
+        createElement(LinkToDefectForm, {
+          action: async () => null,
+          version: data.version,
+          triaged: data.triaged,
+          museumNumber: "LG-042",
+          defects: data.defectsToLinkTo,
+          machine: { status: "playable", version: 0, stricter: ["limited", "out-of-order"] },
+        }),
+      ),
+    };
+  }
+
+  it("ST-053: Recently resolved defects are offered for linking", async () => {
+    const machineId = await aRegisteredMachine("LG-042");
+    await aDefect(machineId, "Display flickers");
+    await aDefect(machineId, "Left flipper weak", "2026-09-30T09:00:00Z");
+    const id = await reportedFor(machineId, "Flipper on the left does nothing");
+
+    const { data, html } = await linkForm(id);
+
+    expect(data.defectsToLinkTo.open.map((defect) => defect.title)).toEqual(["Display flickers"]);
+    expect(data.defectsToLinkTo.recentlyResolved).toMatchObject([{ title: "Left flipper weak", resolvedDaysAgo: 3 }]);
+    expect(html).toContain("behoben vor 3 Tagen");
+    // After the open defects, none preselected.
+    expect(html.indexOf("Display flickers")).toBeLessThan(html.indexOf("Left flipper weak"));
+    expect(html).not.toContain('checked=""');
+  });
+
+  it("ST-053: Defects resolved longer ago are not offered for linking", async () => {
+    const machineId = await aRegisteredMachine("LG-042");
+    await aDefect(machineId, "Display flickers");
+    await aDefect(machineId, "Coin door jammed", "2026-09-02T09:00:00Z");
+    const id = await reportedFor(machineId, "Coins get stuck");
+
+    const { data, html } = await linkForm(id);
+
+    expect(data.defectsToLinkTo.recentlyResolved).toEqual([]);
+    expect(html).not.toContain("Coin door jammed");
+  });
+
+  it("ST-053: Linking is offered when the machine only has a recently resolved defect", async () => {
+    const machineId = await aRegisteredMachine("LG-042");
+    await aDefect(machineId, "Left flipper weak", "2026-09-30T09:00:00Z");
+    const id = await reportedFor(machineId, "Flipper on the left does nothing");
+
+    const html = await page(id, "technician");
+
+    expect(html).toContain(linkLink(id));
+    expect(html).not.toContain("keine offenen Defekte");
   });
 });

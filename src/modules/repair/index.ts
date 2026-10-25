@@ -30,8 +30,10 @@ export { reopenDefectCommand } from "./reopen-defect-command";
 export type { ReopenDefectError, ReopenDefectInput } from "./reopen-defect";
 export type { ResumeDefectError, ResumeDefectInput } from "./resume-defect";
 export {
+  anythingToLinkTo,
   defectDetails,
   defectForAction,
+  defectsToLinkTo,
   defectTitle,
   openDefectCounts,
   openDefects,
@@ -40,6 +42,7 @@ export {
   staleClaims,
   type DefectDetails,
   type DefectForAction,
+  type DefectsToLinkTo,
   type OpenDefect,
   type OpenDefectsQuery,
   type ResolvedOrReopened,
