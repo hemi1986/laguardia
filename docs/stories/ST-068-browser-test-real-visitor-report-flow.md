@@ -3,7 +3,7 @@ id: ST-068
 title: Browser test of the real visitor problem report flow
 type: tech-task
 context: BC-Repair
-priority: could
+priority: wont
 size: M
 risk: medium
 events: []
@@ -60,6 +60,7 @@ The test needs a machine that is on display in the preview's database. Decided i
 - none – how the preview gets a machine on display was answered in the story review of 2026-09-27: seeded through `CMD-RegisterMachine` with a fixed test museum number, preview branches only, never production (see Task).
 
 ## Notes
+- `could` → `wont` (user, 2026-10-25): deferred with the hosting block – it is built after ST-065 and ST-061, not before.
 - `must` → `should` in the backlog grooming of 2026-10-11 (user decision of 2026-10-12, conflict B): built after go-live; until then the flow is covered locally by `e2e/report-problem.spec.ts`. `should` → `could` in the backlog grooming of 2026-10-17 (PO): the local browser test covers the flow; the preview part belongs to the hosting block.
 - **Belongs to the hosting block** (user, 2026-10-17: hosting, operations and go-live deferred to the end): build it after ST-065 (museum Pro team) and ST-061 (environments and operations, incl. the preview's own Blob store), together with that block. It deliberately has **no** `depends_on` on them – they are `wont` for now, and a dependency on a `wont` story would block it formally. Start it by name, `/implement ST-068`, once ST-065 and ST-061 are done.
 - The acting person of the seed step (`CMD-RegisterMachine` is for technicians only) is decided in this story's test plan, when login (ST-004) and account management (ST-005) exist – user decision in the story review of 2026-09-27 (`docs/reviews/2026-09-27-story-review-st-067-073.md`, decision 6).
