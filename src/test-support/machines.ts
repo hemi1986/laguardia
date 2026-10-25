@@ -10,6 +10,19 @@ import { anExistingTeamMember } from "./team-members";
  * Returns the MachineId.
  */
 export async function aRegisteredMachine(db: Database, machineStatus: MachineStatus = "playable"): Promise<string> {
+  const [machine] = await machinesOfOneModel(db, 1, machineStatus);
+  return machine.machineId;
+}
+
+/**
+ * Machines that share a machine model of their own – for what a machine model holds for all of them (its files,
+ * ST-037, ST-054). Registered through the commands with assigned museum numbers; returns their IDs and numbers.
+ */
+export async function machinesOfOneModel(
+  db: Database,
+  count: number,
+  machineStatus: MachineStatus = "playable",
+): Promise<{ machineId: string; museumNumber: string }[]> {
   const technician: Actor = { kind: "team-member", teamMemberId: TEST_TECHNICIAN, role: "technician" };
   await anExistingTeamMember(db, technician);
   const dependencies = { actor: technician, db, newId: randomUUID };
@@ -19,19 +32,23 @@ export async function aRegisteredMachine(db: Database, machineStatus: MachineSta
     dependencies,
   );
   if (!model.ok) throw new Error(model.error);
-  const machine = await executeCommand(
-    registerMachineCommand,
-    {
-      machineModelId: model.result.machineModelId,
-      museumNumber: undefined,
-      serialNumber: undefined,
-      location: "Test hall",
-      machineStatus,
-    },
-    dependencies,
-  );
-  if (!machine.ok) throw new Error(machine.error);
-  return machine.result.machineId;
+  const machines = [];
+  for (let i = 0; i < count; i++) {
+    const machine = await executeCommand(
+      registerMachineCommand,
+      {
+        machineModelId: model.result.machineModelId,
+        museumNumber: undefined,
+        serialNumber: undefined,
+        location: "Test hall",
+        machineStatus,
+      },
+      dependencies,
+    );
+    if (!machine.ok) throw new Error(machine.error);
+    machines.push(machine.result);
+  }
+  return machines;
 }
 
 /**

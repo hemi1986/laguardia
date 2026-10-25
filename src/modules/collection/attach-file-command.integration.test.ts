@@ -3,8 +3,9 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
+import { machinesOfOneModel as ofOneModel } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { attachFileCommand, createMachineModelCommand, machineRecord, registerMachineCommand } from ".";
+import { attachFileCommand, machineRecord } from ".";
 import type { AttachFileInput } from ".";
 
 /**
@@ -21,32 +22,7 @@ beforeAll(async () => {
   for (const member of [tom, anna]) await anExistingTeamMember(db, member);
 });
 
-/** A machine model of its own and the given number of machines of it; returns their museum numbers and IDs. */
-async function machinesOfOneModel(count: number) {
-  const model = await executeCommand(
-    createMachineModelCommand,
-    { title: `Medieval Madness ${randomUUID().slice(0, 8)}`, manufacturer: "Williams", machineCategory: "pinball" },
-    { actor: tom, ...at },
-  );
-  if (!model.ok) throw new Error(model.error);
-  const machines = [];
-  for (let i = 0; i < count; i++) {
-    const machine = await executeCommand(
-      registerMachineCommand,
-      {
-        machineModelId: model.result.machineModelId,
-        museumNumber: undefined,
-        serialNumber: undefined,
-        location: "Hall 2",
-        machineStatus: "playable",
-      },
-      { actor: tom, ...at },
-    );
-    if (!machine.ok) throw new Error(machine.error);
-    machines.push(machine.result);
-  }
-  return machines;
-}
+const machinesOfOneModel = (count: number) => ofOneModel(db, count);
 
 const aPdf = () => ({ name: `files/${randomUUID()}`, size: 4_200_000, contentType: "application/pdf" });
 
@@ -89,7 +65,7 @@ describe("CMD-AttachFile", () => {
     expect(await filesOf(lg043.museumNumber)).toEqual([]);
   });
 
-  it("rejects a file without title, file category or owner itself – whatever form sends it – and one for an unknown machine", async () => {
+  it("rejects a file without title, file category, owner or content itself – whatever form sends it – and one for an unknown machine", async () => {
     const [lg042] = await machinesOfOneModel(1);
 
     expect(await attach({ machineId: lg042.machineId, title: " " })).toEqual({ ok: false, error: "title-required" });
@@ -100,6 +76,10 @@ describe("CMD-AttachFile", () => {
     expect(await attach({ machineId: lg042.machineId, attachTo: undefined })).toEqual({
       ok: false,
       error: "attach-to-required",
+    });
+    expect(await attach({ machineId: lg042.machineId, content: undefined })).toEqual({
+      ok: false,
+      error: "file-required",
     });
     expect(await attach({ machineId: randomUUID() })).toEqual({ ok: false, error: "unknown-machine" });
     expect(await filesOf(lg042.museumNumber)).toEqual([]);

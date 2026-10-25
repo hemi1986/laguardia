@@ -9,10 +9,13 @@ export const photoErrors = ["too-large", "not-an-image", "unsupported-format", "
 export type PhotoError = (typeof photoErrors)[number];
 
 /** Who a photo belongs to – the first part of its stored name. */
-export type PhotoOwner = "problem-reports" | "work-log";
+export type PhotoOwner = "problem-reports" | "work-log" | "files";
 
 /** The reference a command keeps for a stored photo: its name in the storage seam. */
 export type PhotoReference = string;
+
+/** A stored photo as the store has it – for a command that keeps more than the reference (a file, ST-054). */
+export type StoredPhoto = { name: PhotoReference; size: number; contentType: string };
 
 export type PhotoDependencies = { storage: ContentStorage; newId: () => string };
 
@@ -37,13 +40,14 @@ export async function withStoredPhoto<Result, Error extends string>(
 /**
  * The same for several photos (ST-032, a work log entry's): every photo is accepted before any is stored, so one that
  * cannot be accepted stores none; all are stored at once, the command runs with their references in the order they
- * were sent, and every one is deleted again if storing one of them fails, or the command is rejected or throws.
+ * were sent (and with their sizes and media type), and every one is deleted again if storing one of them fails, or
+ * the command is rejected or throws.
  */
 export async function withStoredPhotos<Result, Error extends string>(
   sentPhotos: readonly Uint8Array[],
   owner: PhotoOwner,
   { storage, newId }: PhotoDependencies,
-  run: (photos: PhotoReference[]) => Promise<CommandResult<Result, Error>>,
+  run: (photos: PhotoReference[], stored: StoredPhoto[]) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: PhotoError }> {
   const outcomes = await Promise.all(sentPhotos.map((sent) => acceptPhoto(sent)));
   const rejected = outcomes.find((outcome) => !outcome.ok);
@@ -68,7 +72,10 @@ export async function withStoredPhotos<Result, Error extends string>(
 
   let outcome: CommandResult<Result, Error>;
   try {
-    outcome = await run(names);
+    outcome = await run(
+      names,
+      accepted.map((photo, i) => ({ name: names[i], size: photo.bytes.byteLength, contentType: photo.contentType })),
+    );
   } catch (error) {
     await deleteQuietly(storage, names);
     throw error;

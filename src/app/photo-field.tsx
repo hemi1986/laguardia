@@ -18,7 +18,8 @@ export type PhotoFieldTexts = {
 };
 
 /**
- * The optional photo of a report form (ST-016, building block ST-002): "take a photo" opens the camera, "choose a photo"
+ * The photo of a form – optional on a report form (ST-016), the content of a file on the photo page (ST-054); building
+ * block ST-002: "take a photo" opens the camera, "choose a photo"
  * the camera or the gallery. The photo is prepared in the browser – upright, ≤ 2048 px, JPEG ≤ 1 MB, no metadata – and
  * put into the form's file field `name`, so the form still posts natively (progressive enhancement, ST-073). The two
  * pickers have no name: the original never leaves the phone. Without JavaScript no photo is sent – the report still is.
@@ -27,12 +28,17 @@ export function PhotoField({
   name,
   texts,
   onPreparing,
+  invalid,
+  describedBy,
   children,
 }: {
   name: string;
   texts: PhotoFieldTexts;
   /** Tells the form a photo is being prepared – it waits with sending until it is ready. */
   onPreparing: (preparing: boolean) => void;
+  /** The rejection is about the photo – marked at the field (G8), described by the rejection's element. */
+  invalid?: boolean;
+  describedBy?: string;
   /** Below the pickers, e.g. the visitor pages' privacy notice about the photo. */
   children?: React.ReactNode;
 }) {
@@ -90,7 +96,7 @@ export function PhotoField({
 
   const picker = buttonVariants({ variant: "outline", className: "cursor-pointer" });
   return (
-    <fieldset className="flex flex-col gap-3">
+    <fieldset className="flex flex-col gap-3" aria-invalid={invalid || undefined} aria-describedby={describedBy}>
       <legend className="mb-2 text-sm font-medium">{texts.label}</legend>
       <input ref={field} type="file" name={name} accept="image/jpeg" hidden />
       <div className="flex flex-wrap gap-2">

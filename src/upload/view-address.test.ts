@@ -23,8 +23,17 @@ describe("the address to open uploaded content", () => {
     );
   });
 
+  it("is issued for a camera photo stored as a file (ST-054)", async () => {
+    const name = "files/0b6f3c1e-8f7a-4c55-9d2e-1a2b3c4d5e6f.jpg";
+
+    expect(await viewAddressOf(memoryStorage(), clock, name)).toBe(
+      `memory://${name}?valid-until=2026-10-18T10:05:00.000Z`,
+    );
+  });
+
   it("is not issued for a name the server does not give to uploaded content", async () => {
     expect(await viewAddressOf(memoryStorage(), clock, "problem-reports/a.jpg")).toBeUndefined();
     expect(await viewAddressOf(memoryStorage(), clock, "files/../problem-reports/a.jpg")).toBeUndefined();
+    expect(await viewAddressOf(memoryStorage(), clock, "files/0b6f3c1e-8f7a-4c55-9d2e-1a2b3c4d5e6f.pdf")).toBeUndefined();
   });
 });

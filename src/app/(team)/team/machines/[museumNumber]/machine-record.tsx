@@ -234,12 +234,20 @@ export function MachineRecordView({
               })
             )}
             {actions.attachFile && (
-              <Link
-                href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
-                className={buttonVariants({ variant: "outline", className: "self-start" })}
-              >
-                {texts.attachFile}
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  {texts.attachFile}
+                </Link>
+                <Link
+                  href={`/team/machines/${encodeURIComponent(record.museumNumber)}/foto-anhaengen`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  {texts.attachPhoto}
+                </Link>
+              </div>
             )}
           </CardContent>
         </Card>

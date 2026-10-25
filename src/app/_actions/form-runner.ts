@@ -8,7 +8,7 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
+import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
 import { blobStorage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 
@@ -43,13 +43,16 @@ export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
   storage?: ContentStorage;
 };
 
-/** A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference. */
+/**
+ * A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference,
+ * and the stored photo with its size and media type for a command that keeps them (a file, ST-054).
+ */
 export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
   "input"
 > & {
   photo: { field: string; owner: PhotoOwner };
-  input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
+  input: (fields: FormFields<Field>, photo: PhotoReference | undefined, stored: StoredPhoto | undefined) => Input;
 };
 
 /**
@@ -196,7 +199,7 @@ export function formRunner(dependencies: RunnerDependencies) {
       return photosStep(dependencies, command, {
         ...rest,
         photos: photo,
-        input: (fields, [one]) => input(fields, one),
+        input: (fields, [one], [stored]) => input(fields, one, stored),
       });
     }
     if ("photos" in definition) return photosStep(dependencies, command, definition);
@@ -232,8 +235,9 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
 function photosStep<Input, Result, Error extends string, Field extends string>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
-  definition: Omit<PhotosFormDefinition<Input, Result, Error, Field>, "photos"> & {
+  definition: Omit<PhotosFormDefinition<Input, Result, Error, Field>, "photos" | "input"> & {
     photos: { field: string; owner: PhotoOwner; atMost?: { count: number; error: Error } };
+    input: (fields: FormFields<Field>, photos: PhotoReference[], stored: StoredPhoto[]) => Input;
   },
 ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>> {
   const { field, owner, atMost } = definition.photos;
@@ -250,7 +254,8 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
       photos,
       owner,
       { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
-      (references) => executeCommand(command, definition.input(fields, references), { ...dependencies, actor }),
+      (references, stored) =>
+        executeCommand(command, definition.input(fields, references, stored), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
       const state = { error: outcome.error, values: valuesOf(fields) };
