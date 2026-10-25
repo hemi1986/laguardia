@@ -196,6 +196,23 @@ describe("CMD-LogWork", () => {
     ]);
   });
 
+  it("ST-032: Photos cannot be added to an existing entry", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+    await logWork(defectId, 0, { whatWasDone: "Replaced coil stop" }, tom);
+    const [withoutPhotos] = (await defectDetails(db, defectId))!.workLog;
+    expect(withoutPhotos.photos).toEqual([]);
+
+    // There is no command for it – a command that does what none of the module's does tries anyway.
+    const tried = await executeCommand(
+      tamperWithWorkLogForTest,
+      { defectId, version: 1, attempt: "add-photo" },
+      { actor: anna, db, clock: fixedClock("2026-10-14T10:00:00Z"), newId: randomUUID },
+    );
+
+    expect(tried.ok).toBe(true);
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([withoutPhotos]);
+  });
+
   it("ST-029: Logging work does not resume", async () => {
     const { defectId } = await anOpenDefect("Display flickers", true);
     const held = await executeCommand(
