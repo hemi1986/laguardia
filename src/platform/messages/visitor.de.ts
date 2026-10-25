@@ -61,6 +61,9 @@ export const visitorDe = {
   home: {
     museum: "Flipper- & Arcade Museum Eschbach",
     teamLogin: "Anmeldung fürs Team",
+
+    /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */
+    notFound: "Diese Seite gibt es nicht.",
   },
   /** The visitor machine page (ST-010) – what a visitor needs before reporting a problem, nothing more. */
   /** The language switch every visitor page shows (ST-010): it offers the other language, named in that language. */

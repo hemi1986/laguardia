@@ -105,7 +105,8 @@ function directive(policy: string, name: string): string[] {
   return found?.slice(1) ?? [];
 }
 
-const publicPages = ["/", "/login", "/datenschutz", "/m/LG-999", "/m/LG-999/melden"];
+// `/gibt-es-nicht`: the root not-found page – Next.js' built-in one would bring a `<style>` without the nonce.
+const publicPages = ["/", "/login", "/datenschutz", "/m/LG-999", "/m/LG-999/melden", "/gibt-es-nicht"];
 
 // Opened in the browser, not only fetched: the fixture's watch sees each page render under the policy (on the preview:
 // the production policy).
