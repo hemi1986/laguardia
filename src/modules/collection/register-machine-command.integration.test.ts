@@ -7,13 +7,14 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   changeMachineStatusCommand,
+  correctMachineDetailsCommand,
   createMachineModelCommand,
   machineOverview,
   registerMachineCommand,
   type RegisterMachineInput,
 } from ".";
 import { machineStatusHistory } from "./machines";
-import { correctMuseumNumberForTest, storedMachine, withoutMachines } from "./machines.test-support";
+import { storedMachine, withoutMachines } from "./machines.test-support";
 import { retireMachineCommand } from "./retire-machine-command";
 
 /**
@@ -79,8 +80,8 @@ async function retire(machineId: string) {
 
 async function correctMuseumNumber(machineId: string, museumNumber: string) {
   const corrected = await executeCommand(
-    correctMuseumNumberForTest,
-    { machineId, version: 0, museumNumber },
+    correctMachineDetailsCommand,
+    { machineId, version: 0, museumNumber, serialNumber: "" },
     { ...asTechnician, db },
   );
   if (!corrected.ok) throw new Error("not corrected");

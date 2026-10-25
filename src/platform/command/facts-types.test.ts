@@ -32,3 +32,35 @@ describe("the facts of a creating command", () => {
     });
   });
 });
+
+/** ST-035: the same rule for a changing command – a decision that takes facts (its fourth argument) must read them. */
+const decideOnThing = (thing: Thing, _input: { id: string; version: number }, _context: unknown, facts: { taken: string[] }) => ({
+  ok: true as const,
+  state: { id: thing.id + facts.taken.length },
+  events: [],
+});
+
+describe("the facts of a changing command", () => {
+  it("are required when the decision takes facts", () => {
+    aggregateCommand({
+      id: "CMD-TestChangingFacts",
+      allowedActors: ["technician"],
+      store: things,
+      target: (input) => ({ id: input.id, version: input.version }),
+      facts: async () => ({ taken: ["x"] }),
+      decide: decideOnThing,
+      journal,
+      result: () => ({}),
+    });
+    // @ts-expect-error – the decision needs facts, so they must be read
+    aggregateCommand({
+      id: "CMD-TestChangingNoFacts",
+      allowedActors: ["technician"],
+      store: things,
+      target: (input: { id: string; version: number }) => ({ id: input.id, version: input.version }),
+      decide: decideOnThing,
+      journal,
+      result: () => ({}),
+    });
+  });
+});

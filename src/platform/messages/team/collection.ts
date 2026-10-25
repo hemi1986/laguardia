@@ -97,6 +97,13 @@ export const collectionTexts = {
     /** Section 3 (ST-034): next to the location, for every team member – not for a retired machine. */
     changeLocation: "Standort ändern",
     moved: (museumNumber: string, location: string) => `${museumNumber} steht jetzt in „${location}“.`,
+    /** Section 3 (ST-035): technicians only, not for a retired machine. */
+    correctDetails: "Angaben korrigieren",
+    /** Landing under the new museum number (backlog grooming 2026-10-17, G3). */
+    renumbered: (previous: string, museumNumber: string) =>
+      `${previous} heißt jetzt ${museumNumber}. Bitte einen neuen QR-Sticker drucken.`,
+    printSticker: "QR-Sticker drucken",
+    detailsCorrected: (museumNumber: string) => `Angaben von ${museumNumber} korrigiert.`,
     /** Section 4 (ST-033): the machine's open defects – the same entries as the open defects list. */
     openDefects: "Offene Defekte",
     noOpenDefects: "Keine offenen Defekte.",
@@ -173,6 +180,20 @@ export const collectionTexts = {
     retired: "Dieses Gerät ist schon ausgemustert.",
     backToMachine: "Zurück zum Gerät",
   },
+  /** Correcting a machine's museum number or serial number (ST-035) – its own page, reached from the machine record. */
+  machineCorrection: {
+    title: (museumNumber: string) => `Angaben von ${museumNumber} korrigieren`,
+    museumNumberHint: "Die bisherige Museumsnummer bleibt reserviert und führt weiter zu diesem Gerät.",
+    serialNumberHint: "Leer lassen, wenn das Gerät keine lesbare Seriennummer hat.",
+    submit: "Angaben korrigieren",
+    retired: "Dieses Gerät ist ausgemustert – seine Angaben lassen sich nicht mehr korrigieren.",
+    notAuthorized: "Nur Techniker:innen können die Angaben eines Geräts korrigieren.",
+    /** In place of the registration's texts, which offer to leave the field empty. */
+    museumNumberFormat: "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042.",
+    museumNumberTaken: (museumNumber: string) =>
+      `${museumNumber} ist schon vergeben oder reserviert. Bitte eine andere Museumsnummer angeben.`,
+    back: "Zurück zum Gerät",
+  },
   /** Moving a machine (ST-034) – its own page, reached from the machine record. */
   machineMove: {
     title: (museumNumber: string) => `Standort von ${museumNumber} ändern`,
@@ -203,6 +224,8 @@ export const collectionErrors = {
     "Alle Museumsnummern von LG-001 bis LG-999 sind vergeben – es kann kein weiteres Gerät erfasst werden.",
   /** Moving a machine (ST-034): no change without a change. */
   "location-unchanged": "Das Gerät steht schon dort. Bitte einen anderen Standort angeben.",
+  /** Correcting a machine's details (ST-035): no correction without a change. */
+  "machine-details-unchanged": "An den Angaben hat sich nichts geändert. Bitte etwas ändern.",
   /** Changing a machine's status (ST-012). */
   "helpers-only-out-of-order": "Helfer:innen können ein Gerät nur auf Außer Betrieb setzen.",
   "machine-status-unchanged": "Das Gerät hat diesen Status schon. Bitte einen anderen Status wählen.",

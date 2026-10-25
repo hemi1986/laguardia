@@ -30,6 +30,11 @@ export {
   type RunCall,
 } from "./aggregate";
 export { history, type History } from "./history";
+/**
+ * Thrown inside a command's transaction to reject it with a domain reason the decision could not see – e.g. a unique
+ * constraint answered by the module that owns it (the museum number register, ST-035). Rolls everything back.
+ */
+export { Rejected } from "./errors";
 export { policy, withPolicies, type Policy } from "./policies";
 export { lastCommandBy } from "./last-command";
 export { entities, type Entities } from "./entities";
