@@ -23,16 +23,44 @@ function sh(command: string): { ok: boolean; out: string } {
   }
 }
 
-/** Is the Vercel MCP server from .mcp.json approved for this project? undefined = can't tell. */
-function vercelMcpApproved(): boolean | undefined {
+type McpApproval = {
+  mcpServers?: Record<string, unknown>;
+  enableAllProjectMcpServers?: boolean;
+  enabledMcpjsonServers?: string[];
+  disabledMcpjsonServers?: string[];
+};
+
+/** A JSON settings file, or nothing when it is missing, unreadable or too large to bother. */
+function readJson(path: string): Record<string, unknown> | undefined {
   try {
-    const config = join(homedir(), ".claude.json");
-    if (statSync(config).size > 50_000_000) return undefined;
-    const project = JSON.parse(readFileSync(config, "utf8")).projects?.[root] ?? {};
-    return Boolean(project.mcpServers?.vercel) || (project.enabledMcpjsonServers ?? []).includes("vercel");
+    if (statSync(path).size > 50_000_000) return undefined;
+    return JSON.parse(readFileSync(path, "utf8"));
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Is the Vercel MCP server from .mcp.json approved for this project? The approval can live in the project's entry of
+ * ~/.claude.json or in any settings file (user, project, local – the "approve" dialog writes .claude/settings.local.json).
+ * undefined = can't tell.
+ */
+function vercelMcpApproved(): boolean | undefined {
+  const global = readJson(join(homedir(), ".claude.json"));
+  const sources: McpApproval[] = [
+    (global?.projects as Record<string, McpApproval> | undefined)?.[root],
+    readJson(join(homedir(), ".claude/settings.json")),
+    readJson(join(root, ".claude/settings.json")),
+    readJson(join(root, ".claude/settings.local.json")),
+  ].filter((source): source is McpApproval => source !== undefined);
+  if (sources.length === 0) return undefined;
+  if (sources.some((source) => source.disabledMcpjsonServers?.includes("vercel"))) return false;
+  return sources.some(
+    (source) =>
+      Boolean(source.mcpServers?.vercel) ||
+      source.enableAllProjectMcpServers === true ||
+      source.enabledMcpjsonServers?.includes("vercel"),
+  );
 }
 
 function setupHints(): string[] {
