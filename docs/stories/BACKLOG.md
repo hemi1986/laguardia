@@ -4,15 +4,9 @@
 
 **Progress: 56 of 59 domain stories done** · scenarios 493 of 505
 
-**84 stories** · In Progress: 1 · Ready: 8 · In Review: 0 · Draft: 3 · Done: 72
+**84 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 3 · Done: 73
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | could | M | medium | ST-003, ST-013, ST-085 |
 
 ## Ready
 
@@ -110,4 +104,5 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
+| [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | could | M | medium | ST-003, ST-013, ST-085 |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |

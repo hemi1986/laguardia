@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-003, ST-013, ST-085]
 labels: [follow-up, security]
-status: in-progress
+status: done
 ---
 
 ## Task
@@ -38,7 +38,7 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 - [x] An inline script without the nonce, injected into a page in a browser test, does not run, and the browser reports a CSP violation for it.
 - [x] All existing browser tests (including the 360 px checks: page width ≤ 360 px) pass on the preview under the policy, and no CSP violation is reported in the browser console during them.
 - [x] Both CSRF browser tests from ST-003 (foreign Origin, missing Origin) stay green.
-- [ ] A photo upload and a file upload to the private Vercel Blob store and a presigned download of a stored file work on the preview under the policy; the policy allows only the Blob store's host for them.
+- [x] A photo upload and a file upload to the private Vercel Blob store and a presigned download of a stored file work on the preview under the policy; the policy allows only the Blob store's host for them.
 - [x] `npm run dev` works locally under the policy (with `'unsafe-eval'` only there).
 - [x] With every page rendered per request, the visitor machine page responds in under 1 s on the preview (Definition of Done, ST-059).
 - [x] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that pages are rendered per request because of the nonce, and that no inline script or third-party script is added without the nonce.
