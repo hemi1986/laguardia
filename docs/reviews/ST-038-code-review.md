@@ -36,3 +36,4 @@ Also folded in: the findings of `/code-review` (CR) and `/security-review` (no f
 | CR: bound file of another machine | Fixed – the action checks `machineFile` for the bound machine first (`not-found` otherwise). |
 | CR: fabricated file state for the record flag | Fixed – `mayRemoveFiles(teamMember)`, which `removeFileRefusal` uses too. |
 | CR: the question does not say a model file leaves every machine of the model | Open – a wording decision for the user (story text is fixed); asked at the acceptance checkpoint. |
+| CR: model file question (follow-up) | Decided by the user at acceptance (2026-10-25, 1a): for a file of the machine model the question adds „Sie verschwindet bei allen Geräten von <Modell>.“ – built, recorded in the story. |

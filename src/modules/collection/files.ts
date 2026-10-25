@@ -8,7 +8,7 @@ import {
   type FileState,
 } from "./attach-file";
 import { opensInBrowser } from "./open-file";
-import { file, machine } from "./schema";
+import { file, machine, machineModel } from "./schema";
 
 /** How AGG-File is stored: one row per file, its owner in exactly one of two columns (check constraint). */
 export const files = aggregateStore({
@@ -92,7 +92,14 @@ export async function fileToOpen(
 }
 
 /** A file of one machine's page (ST-038): what the question before removing it shows and posts, removed or not. */
-export type MachineFile = { id: string; title: string; version: number; removed: boolean };
+export type MachineFile = {
+  id: string;
+  title: string;
+  version: number;
+  removed: boolean;
+  /** The machine model's title, for a file of the machine model – it disappears from every machine of that model. */
+  machineModel?: string;
+};
 
 /**
  * A file of a machine or of its machine model, removed or not – none for any other file (ST-038): the question before
@@ -103,15 +110,30 @@ export async function machineFile(
   { fileId, machineId }: { fileId: string; machineId: string },
 ): Promise<MachineFile | undefined> {
   const [owner] = await db
-    .select({ machineModelId: machine.machineModelId })
+    .select({ machineModelId: machine.machineModelId, machineModelTitle: machineModel.title })
     .from(machine)
+    .innerJoin(machineModel, eq(machineModel.id, machine.machineModelId))
     .where(eq(machine.id, machineId));
   if (!owner) return undefined;
   const [row] = await db
-    .select({ id: file.id, title: file.title, version: file.version, removedAt: file.removedAt })
+    .select({
+      id: file.id,
+      title: file.title,
+      version: file.version,
+      removedAt: file.removedAt,
+      ofMachineModel: file.machineModelId,
+    })
     .from(file)
     .where(and(eq(file.id, fileId), ofMachineOrModel({ machineId, machineModelId: owner.machineModelId })));
-  return row && { id: row.id, title: row.title, version: row.version, removed: row.removedAt !== null };
+  return (
+    row && {
+      id: row.id,
+      title: row.title,
+      version: row.version,
+      removed: row.removedAt !== null,
+      ...(row.ofMachineModel && { machineModel: owner.machineModelTitle }),
+    }
+  );
 }
 
 /** The files of a machine and those of its machine model – what its machine record shows. */

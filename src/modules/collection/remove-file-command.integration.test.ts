@@ -8,6 +8,7 @@ import {
   attachFileCommand,
   createMachineModelCommand,
   fileToOpen,
+  machineFile,
   machineRecord,
   registerMachineCommand,
   removeFileCommand,
@@ -28,10 +29,10 @@ beforeAll(async () => {
 });
 
 /** A machine with a file of its own; returns the machine's museum number and the file's ID. */
-async function aMachineWithFile(title: string) {
+async function aMachineWithFile(title: string, attachTo: "machine" | "machine-model" = "machine") {
   const model = await executeCommand(
     createMachineModelCommand,
-    { title: `Medieval Madness ${randomUUID().slice(0, 8)}`, manufacturer: "Williams", machineCategory: "pinball" },
+    { title: `Medieval Madness ${title}`, manufacturer: "Williams", machineCategory: "pinball" },
     { actor: tom, ...at },
   );
   if (!model.ok) throw new Error(model.error);
@@ -51,7 +52,7 @@ async function aMachineWithFile(title: string) {
     attachFileCommand,
     {
       machineId: machine.result.machineId,
-      attachTo: "machine",
+      attachTo,
       title,
       fileCategory: "manual",
       content: { name: `files/${randomUUID()}`, size: 4_200_000, contentType: "application/pdf" },
@@ -59,7 +60,11 @@ async function aMachineWithFile(title: string) {
     { actor: tom, ...at },
   );
   if (!attached.ok) throw new Error(attached.error);
-  return { museumNumber: machine.result.museumNumber, fileId: attached.result.fileId };
+  return {
+    museumNumber: machine.result.museumNumber,
+    machineId: machine.result.machineId,
+    fileId: attached.result.fileId,
+  };
 }
 
 const remove = (fileId: string, actor: typeof tom | typeof anna, version = 0) =>
@@ -100,5 +105,19 @@ describe("CMD-RemoveFile", () => {
     const { fileId } = await aMachineWithFile("MM Flyer");
 
     expect(await remove(fileId, tom, 3)).toEqual({ ok: false, error: "version-conflict" });
+  });
+});
+
+describe("a file of a machine's page", () => {
+  it("names the machine model a file of the model belongs to – the question says where else it disappears", async () => {
+    const ofModel = await aMachineWithFile("MM Operations Manual (model)", "machine-model");
+    const ofMachine = await aMachineWithFile("LG wiring notes");
+
+    expect(await machineFile(db, ofModel)).toMatchObject({
+      title: "MM Operations Manual (model)",
+      machineModel: "Medieval Madness MM Operations Manual (model)",
+    });
+    expect(await machineFile(db, ofMachine)).not.toHaveProperty("machineModel");
+    expect(await machineFile(db, { fileId: ofModel.fileId, machineId: ofMachine.machineId })).toBeUndefined();
   });
 });

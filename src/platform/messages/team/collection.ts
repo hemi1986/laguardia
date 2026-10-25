@@ -153,7 +153,10 @@ export const collectionTexts = {
   /** Removing a file (ST-038): the question once, on a page of its own (G10, G10b). */
   removeFile: {
     title: "Datei entfernen",
-    question: (title: string) => `„${title}“ entfernen? Die Datei wird endgültig gelöscht.`,
+    /** A file of the machine model also says where else it disappears (user, 2026-10-25, acceptance of ST-038). */
+    question: (title: string, machineModel?: string) =>
+      `„${title}“ entfernen? Die Datei wird endgültig gelöscht.` +
+      (machineModel ? ` Sie verschwindet bei allen Geräten von ${machineModel}.` : ""),
     confirm: "Endgültig entfernen",
     back: "Zurück",
     unknown: (museumNumber: string) => `Diese Datei gehört nicht zu ${museumNumber}.`,

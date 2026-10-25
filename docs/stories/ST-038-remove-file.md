@@ -20,6 +20,7 @@ Command `CMD-RemoveFile` (technicians only – `docs/product/vision.md`: file de
 Removal is permanent within La Guardia – there is no undo (only a restore from the storage backup of ST-062 in an emergency) – so the technician confirms it explicitly.
 
 Interface (backlog grooming 2026-10-17, `docs/reviews/2026-10-17-backlog-grooming.md`; G10, G10a): removing asks once, naming the file and that it is gone for good: „„MM Manual (wrong edition)“ entfernen? Die Datei wird endgültig gelöscht.“ with the buttons „Endgültig entfernen“ / „Zurück“. „Zurück“ removes nothing.
+For a file of the machine model the question adds where else it disappears: „Sie verschwindet bei allen Geräten von <machine model>.“ (user, 2026-10-25, acceptance – G10: consequences nobody sees on this screen).
 
 ## Acceptance Criteria
 

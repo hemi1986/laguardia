@@ -36,7 +36,7 @@ export default async function RemoveFilePage({
       ) : (
         // Rendered for a removed file too: an action re-renders this page, and a rejection must stay and say so.
         <>
-          <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title)}</p>
+          <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title, file.machineModel)}</p>
           <RemoveFileButton
             action={removeFileAction.bind(null, machine.museumNumber, file.id)}
             version={file.version}

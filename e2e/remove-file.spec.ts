@@ -38,10 +38,15 @@ const filesSection = (page: Page) =>
 test("ST-038: Removal needs a confirmation", async ({ page }) => {
   needsTechnician();
   needsBlob();
-  await aMachineWithFile(page, "MM Operations Manual");
+  const machine = await aMachineWithFile(page, "MM Operations Manual");
 
   await filesSection(page).getByRole("link", { name: "„MM Operations Manual“ entfernen" }).click();
-  await expect(page.getByText("„MM Operations Manual“ entfernen? Die Datei wird endgültig gelöscht.")).toBeVisible();
+  // A file of the machine model also says where else it disappears (user, 2026-10-25, acceptance of ST-038).
+  await expect(
+    page.getByText(
+      `„MM Operations Manual“ entfernen? Die Datei wird endgültig gelöscht. Sie verschwindet bei allen Geräten von ${machine.title}.`,
+    ),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Zurück", exact: true }).click();
 
   await expect(filesSection(page).getByRole("link", { name: "MM Operations Manual", exact: true })).toBeVisible();
