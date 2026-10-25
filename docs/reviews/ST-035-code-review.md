@@ -16,3 +16,18 @@ Checked: module boundaries (only `@/modules/collection` public exports used by t
 
 Verdict: ready to merge
 Most important finding: #1 – the register fixes a lock order (museum number lock before the machine row) that nothing documents and that a future versionless machine policy would invert into a deadlock; write it down now.
+
+## Resolution (2026-10-25, `/implement ST-035`)
+
+Together with `/code-review medium` (7 findings) and `/security-review` (no finding).
+
+- **#1 fixed, and more:** `withMuseumNumber` writes a machine whose museum number is already its own without the lock, so a move, a status change or a retirement never waits for a correction or a registration (`/code-review` #1). A new number still takes the lock first. The lock order is written in its doc comment and in the conventions. A versionless policy locks the row first, but it never changes a museum number. Tested: "lets a write that keeps the machine's museum number pass without waiting for the lock".
+- **#2 fixed:** `insert` is a plain async method that awaits the register.
+- **#3 fixed:** `museumNumberRefusal(typed, givenOut)` in the register, asked by both decisions.
+- **#4 skipped:** no branded `MuseumNumber` type. The register alone resolves ST-007 review #4: it is the one place that knows the format, and every write goes through it. A brand would touch every page that reads a museum number from the address. Revisit if a second kind of number appears.
+- **#5 skipped:** `Rejected` is only thrown by the register, with `museum-number-taken`, which both commands that can give out a number declare. Moves, status changes and retirements take the fast path, so their stores never reach the throw except with stored data already inconsistent.
+- **#6 fixed:** the test sets up through CMD-CorrectMachineDetails (`correctedMachine`).
+- **#7 fixed:** the retry waits for an alert naming the number it tried; a losing wait that times out counts as "not this one".
+- **#8 fixed for `/angaben`:** that is the page the back button lands on right after a correction. It now redirects like the record (browser test). **Skipped** for `/standort`, `/status`, `/ausmustern` and the other subpages (`/code-review` #2): they are reached only through a stale tab or bookmark and say "unknown machine". Revisit when a museum number correction becomes common.
+- `/code-review` #3, correcting back to the machine's own earlier number: built literally (D11, rejected). Now an open question in `docs/stories/OPEN_QUESTIONS.md` with a recommendation – not decided in the code.
+- `/code-review` #4 (Rejected from move/status) → see #5. #5, the double query on an unknown number, is **skipped**: one extra lookup, only for unknown and reserved numbers. #6, the casts in `collectionChangesIn`, is **skipped**: the journal data is partial by design, older entries may lack a field. #7 → see #2.

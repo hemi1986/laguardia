@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
-import { correctDetailsRefusal, machineForTeamForm } from "@/modules/collection";
+import { correctDetailsRefusal, machineForTeamForm, machineOfMuseumNumber } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -17,6 +18,11 @@ export default async function CorrectDetailsPage({ params }: PageProps<"/team/ma
   const member = await requireTeamMember();
   const museumNumber = decodeURIComponent((await params).museumNumber);
   const machine = await machineForTeamForm(database(), museumNumber);
+  if (!machine) {
+    // The back button right after a correction lands here under the old, now reserved museum number.
+    const current = await machineOfMuseumNumber(database(), museumNumber);
+    if (current) redirect(`/team/machines/${encodeURIComponent(current.museumNumber)}/angaben`);
+  }
   const refusal = machine && correctDetailsRefusal(machine, member);
 
   return (

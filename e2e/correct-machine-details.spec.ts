@@ -83,6 +83,8 @@ test("ST-035: Old QR sticker keeps working", async ({ page, browser }) => {
   // A reserved museum number in a team address leads there too (ST-035 foundation).
   await page.goto(`/team/machines/${old}`);
   await expect(page).toHaveURL(new RegExp(`/team/machines/${corrected}$`));
+  await page.goto(`/team/machines/${old}/angaben`);
+  await expect(page).toHaveURL(new RegExp(`/team/machines/${corrected}/angaben$`));
 });
 
 test("a serial number added later shows on the machine record", async ({ page }) => {

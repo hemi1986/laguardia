@@ -47,3 +47,14 @@ No gap meets the follow-up hurdle; none needs a new story.
 accepted with remarks
 
 Remarks (all minor, fixable in this story or left as lines here): (1) no test for the empty-serial-number-removes-it decision (a one-line integration test would pin it); (2) helper and retired page paths have no browser test; (3) the "mistyped museum number" e2e uses random numbers instead of the scenario literals (reasonable given the shared database).
+
+## Resolution (2026-10-25, `/implement ST-035`)
+
+- Remark 1 fixed: "removes a mistyped serial number when the field is emptied".
+- Remark 4 fixed: "journals both museum numbers and never the typed serial number".
+- Open question "chained corrections" fixed: "keeps every earlier museum number reserved, leading to the current one".
+- Also tested: "rejects a correction that changes nothing".
+- Remark 2 skipped: the page shows the command's own refusal, and the record does not offer the link (`machine-record.integration.test.ts`, G11). A browser test would only repeat that.
+- Remark 3 kept as it is.
+- The English visitor redirect is the same `redirect` before the language matters.
+- Serial number uniqueness is not a rule in the story, the glossary or `events.yaml`, and it is not added here.
