@@ -9,10 +9,12 @@ risk: low
 events: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MaintenancePlanChanged]
 depends_on: [ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070, ST-078]
 labels: [mvp, maintenance, collection]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 Get La Guardia ready for the first day in the museum (story review 2026-09-26: NEW-2, merged with the former "seed the initial maintenance plan" task per decision D7). Everything is entered through La Guardia's normal commands, so the event journal contains it.
 
 1. **Team accounts**: every technician and helper has a personal account with the right role (ST-005).

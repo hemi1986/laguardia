@@ -75,7 +75,7 @@ Discovery ends at `ready`. The engineering workflow (`/implement`) sets `in-prog
 - `done` needs a test titled `ST-NNN: <scenario title>` for every scenario (story), or every checklist item ticked `- [x]` (spike, tech task).
 - A story that turns out wrong during implementation goes from `in-progress` (or `ready`) back to `review`, with `[OPEN]` + an entry in `OPEN_QUESTIONS.md`; it is revised and approved again.
 - `done` is final. A change to finished behaviour is a new story.
-- `superseded` – a story whose work was done elsewhere (a direct change, another story) before it was started: from `draft`, `review` or `ready`, never from `in-progress`. Its first paragraph says where the work went; the file stays as the record other documents link to. Final like `done`, listed in its own section of the backlog and counted in no progress (user, 2026-10-25). Set it with `node .claude/skills/implement/scripts/story-status.ts ST-NNN superseded`.
+- `superseded` – a story that is not built as written, before it was started: its work was done elsewhere (a direct change, another story), or a new planning replaces it. Set from `draft`, `review` or `ready`, never from `in-progress`. Its first paragraph says where the work went or what replaces it; the file stays as the record other documents link to. Final like `done`, listed in its own section of the backlog and counted in no progress (user, 2026-10-25). Set it with `node .claude/skills/implement/scripts/story-status.ts ST-NNN superseded`.
 
 ## Body Structure
 ```

@@ -76,7 +76,7 @@ const TRANSITIONS: Record<string, string[]> = {
   ready: ["review", "in-progress", "superseded"],
   "in-progress": ["review", "done"],
   done: [],
-  // Final like done: the record of work done elsewhere (user, 2026-10-25).
+  // Final like done: the record of a story done elsewhere or replaced by a new planning (user, 2026-10-25).
   superseded: [],
 };
 

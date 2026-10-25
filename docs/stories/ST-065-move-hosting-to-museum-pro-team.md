@@ -9,10 +9,12 @@ risk: medium
 events: []
 depends_on: [ST-001]
 labels: [follow-up, foundation]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 Follow-up of the walking-skeleton spike ST-001 (`docs/reviews/ST-001-code-review.md` finding #18, `docs/reviews/ST-001-acceptance.md` edge case "Neon Auth", `docs/adr/0006-hosting-verified-vercel-pro-neon-private-blob.md`, Consequences "Move to production"). Split from the original ST-065 in the story review `docs/reviews/2026-09-27-story-review.md` (decisions 1, 2 and 4). Removing the spike scaffolding was ST-078 (code) and ST-066 (configuration and data), both done – ST-066 was folded into this task by the backlog grooming of 2026-10-11, split out again on 2026-10-17 (user decision) and done the same day. Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 **Deadline:** this task must be finished before real visitor data is stored, i.e. before visitor reporting (ST-010, ST-013, ST-014) is live in production – ADR 0006: Vercel's data processing agreement covers only Pro and Enterprise, and Hobby Blob storage is limited to 1 GB. Team member accounts (ST-004, ST-005) may stay on the Hobby deployment until then (decision 2).

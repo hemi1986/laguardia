@@ -4,7 +4,7 @@
  *   done (story)       – every Gherkin scenario has a test titled `ST-NNN: <scenario title>`
  *   done (all types)   – every checklist item in the acceptance criteria is ticked (`- [x]`) – also a story's foundation checklist
  *   done is final      – changes become a new story
- *   superseded         – from draft, review or ready: its work was done elsewhere; final as well
+ *   superseded         – from draft, review or ready: done elsewhere or replaced by a new planning; final as well
  *
  * Usage: node story-status.ts ST-010 in-progress|done|review|superseded
  */

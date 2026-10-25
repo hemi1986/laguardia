@@ -152,7 +152,7 @@ _Avoid_: Severity, urgency
 _UI (de)_: Priorität (hoch / normal / niedrig)
 
 **Resolved on the spot**:
-A triage outcome for a problem report that was fixed immediately (e.g. a stuck ball freed) without becoming a defect; it stays in the machine history. Helpers may choose this outcome too.
+A triage outcome for a problem report that was fixed immediately (e.g. a stuck ball freed) without becoming a defect; it stays in the machine history. Helpers may choose this outcome too. What was done is its *note* (free text, UI „Was wurde gemacht?“).
 _Avoid_: Quick fix, closed
 _UI (de)_: Direkt behoben
 
@@ -214,7 +214,7 @@ _UI (de)_: Geschlossen (ausgemustert)
 
 **Work log entry**:
 A record of work done on a defect – who, when, what was done, parts used as free text.
-_Avoid_: Repair order, comment, note
+_Avoid_: Repair order, comment, note (*note* is the free text of *resolved on the spot*, not a work log entry)
 _UI (de)_: Arbeitsschritt
 
 **Repair history**:

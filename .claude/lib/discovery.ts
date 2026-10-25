@@ -40,8 +40,9 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 /**
- * `superseded`: never built as a story of its own – its work was done elsewhere (a direct change, another story). The
- * file stays as the record other documents link to; it is final and counts toward no progress (user, 2026-10-25).
+ * `superseded`: never built as written – its work was done elsewhere (a direct change, another story) or a new planning
+ * replaces it. The file stays as the record other documents link to; it is final and counts toward no progress (user,
+ * 2026-10-25).
  */
 export const STATUSES = ["draft", "review", "ready", "in-progress", "done", "superseded"] as const;
 /** Statuses that require a finished story: size set, no [OPEN] markers. */

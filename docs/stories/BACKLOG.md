@@ -2,24 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 56 of 58 domain stories done** · scenarios 493 of 501
+**Progress: 56 of 56 domain stories done** · scenarios 493 of 493
 
-**84 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 3
+**84 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## Ready
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | wont | M | medium | ST-013 |
-| [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | wont | S | medium | ST-001 |
-| [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | wont | M | medium | ST-001, ST-065 |
-| [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | wont | M | medium | ST-061 |
-| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | wont | M | low | ST-005, ST-011, ST-040, ST-043, ST-061, ST-062, ST-063, ST-064, ST-065, ST-070, ST-078 |
-| [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | wont | XS | low | ST-015, ST-044 |
-| [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | wont | XS | low | ST-003 |
-| [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | wont | M | medium | ST-007, ST-013, ST-059 |
 
 ## Done
 
@@ -103,6 +90,14 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
+| [ST-014](ST-014-spam-protection-visitor-reports.md) | Spam protection for visitor problem reports – only if spam occurs | story | Repair | wont | M | medium | ST-013 |
+| [ST-065](ST-065-move-hosting-to-museum-pro-team.md) | Move hosting to the museum's Vercel Pro team | tech-task | Repair | wont | S | medium | ST-001 |
+| [ST-061](ST-061-environments-and-operations.md) | Environments and operations | tech-task | Repair | wont | M | medium | ST-001, ST-065 (superseded) |
+| [ST-062](ST-062-backup-and-restore.md) | Backup and restore of database and object storage | tech-task | Repair | wont | M | medium | ST-061 (superseded) |
+| [ST-042](ST-042-go-live-readiness.md) | Go-live readiness checklist incl. the initial maintenance plan | tech-task | Collection | wont | M | low | ST-005, ST-011, ST-040, ST-043, ST-061 (superseded), ST-062 (superseded), ST-063, ST-064, ST-065 (superseded), ST-070, ST-078 |
+| [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | wont | XS | low | ST-015, ST-044 |
+| [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | wont | XS | low | ST-003 |
+| [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | wont | M | medium | ST-007, ST-013, ST-059 |
 | [ST-079](ST-079-event-catalogue-per-module.md) | The event catalogue per module | tech-task | Repair | wont | – | – | ST-018 |
 | [ST-080](ST-080-pre-runner-forms-onto-house-pattern.md) | Move the four pre-runner forms onto the house pattern | tech-task | Team | wont | S | low | ST-007 |
 | [ST-082](ST-082-deactivation-asks-once-and-can-be-undone.md) | Deactivating a team member asks once, and can be undone | story | Team | wont | – | – | ST-081 |

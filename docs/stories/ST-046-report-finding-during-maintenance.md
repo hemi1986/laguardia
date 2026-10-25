@@ -9,10 +9,12 @@ risk: low
 events: [EVT-MaintenanceRecorded, EVT-ProblemReported]
 depends_on: [ST-015, ST-044]
 labels: [maintenance, triage, ui]
-status: ready
+status: superseded
 ---
 
 ## Story
+**Superseded (user, 2026-10-25): not built as written – closed with the rest of the backlog – the new planning decides again whether a finding during maintenance gets its own path.** The text below is kept for the record.
+
 As a helper, I want to report a fault I found while doing maintenance right after recording the maintenance, so that the finding enters triage and does not get lost.
 
 ## Context

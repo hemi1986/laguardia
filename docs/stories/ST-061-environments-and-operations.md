@@ -9,10 +9,12 @@ risk: medium
 events: []
 depends_on: [ST-001, ST-065]
 labels: [mvp, foundation]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 Separate the preview and production environments and make problems in production visible without anyone having to look (story review 2026-09-26, TT-D). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 - Separate database and object storage for preview deployments and for production; preview deployments never see production data.

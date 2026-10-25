@@ -9,10 +9,12 @@ risk: medium
 events: []
 depends_on: [ST-007, ST-013, ST-059]
 labels: [follow-up, foundation]
-status: ready
+status: superseded
 ---
 
 ## Task
+**Superseded (user, 2026-10-25): not built as written – go-live, hosting and operations are planned anew; the new planning replaces it.** The text below is kept for the record.
+
 Follow-up of ST-059 (CI and test harness): `docs/reviews/ST-059-code-review.md` finding #15 (follow-up section) and `docs/reviews/ST-059-acceptance.md` ("Edge cases not covered by the story": the one browser test is coupled to the throwaway spike page). Cross-cutting; filed under `BC-Repair` like the other foundation tasks.
 
 **State on 2026-10-17 (text refreshed in the backlog grooming of 2026-10-17).** The spike browser test is gone (ST-078 deleted the spike code, ST-066 the spike configuration and data). The real visitor flow of ST-010 and ST-013 **already has a browser test**: `e2e/report-problem.spec.ts` (ST-013) – a visitor opens the visitor machine page by its museum number, reports a problem and sees the confirmation, at 360 px. It runs **locally only**: it registers its machine through the team pages with the e2e technician that each local run creates (ST-083), and it skips itself when `BASE_URL` is set, i.e. in `.github/workflows/e2e-preview.yml` against the Vercel preview.
