@@ -1,14 +1,13 @@
 import type { NextConfig } from "next";
 
 /**
- * Security headers (ST-003). A full Content Security Policy for scripts needs per-request nonces and follows
- * separately; until then the policy only forbids framing.
+ * Security headers (ST-003). The Content Security Policy is not here: it carries a nonce per request and is set by
+ * `src/proxy.ts` (ST-070) – a second one here would be combined with it by the browser.
  */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
   { key: "Permissions-Policy", value: "geolocation=(), microphone=(), payment=(), usb=()" },
 ];
 
