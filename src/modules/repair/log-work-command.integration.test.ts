@@ -65,6 +65,7 @@ describe("CMD-LogWork", () => {
         id: expect.any(String),
         whatWasDone: "Replaced coil stop and EOS switch",
         partsUsed: "1x coil stop, 1x EOS switch",
+        photos: [],
         loggedBy: tom.teamMemberId,
         loggedAt: new Date("2026-10-13T10:00:00Z"),
       },

@@ -20,6 +20,9 @@ export const repairTexts = {
   problemReportPhoto: {
     alt: "Foto zur Meldung",
   },
+  workLogPhoto: {
+    alt: "Foto zum Arbeitsschritt",
+  },
   /** The triage list and a problem report's own page (ST-017). */
   triage: {
     title: "Sichtung",
@@ -288,6 +291,14 @@ export const repairTexts = {
     logWorkTitle: (museumNumber: string) => `Arbeitsschritt eintragen · ${museumNumber}`,
     whatWasDone: "Was wurde gemacht?",
     partsUsed: "Verwendete Teile (optional)",
+    /** The work log entry's photos (ST-032) – the browser's own rejections use the photo errors' texts. */
+    workLogPhotos: {
+      label: "Fotos (optional, höchstens 5)",
+      take: "Foto aufnehmen",
+      choose: "Fotos auswählen",
+      remove: "Foto entfernen",
+      preparing: "Fotos werden vorbereitet …",
+    },
     workLogged: (title: string) => `Arbeitsschritt zu „${title}“ eingetragen.`,
     /**
      * A change of the defect made meanwhile (a claim, another work log entry) – the expected rejection of this form.

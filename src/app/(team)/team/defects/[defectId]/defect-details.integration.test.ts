@@ -575,10 +575,11 @@ describe("a defect's own page", () => {
       at: string,
       whatWasDone: string,
       partsUsed = "",
+      photos: string[] = [],
     ) {
       const outcome = await executeCommand(
         logWorkCommand,
-        { defectId, version, whatWasDone, partsUsed },
+        { defectId, version, whatWasDone, partsUsed, photos },
         { actor, db, clock: fixedClock(at), newId: randomUUID },
       );
       if (!outcome.ok) throw new Error(outcome.error);
@@ -618,6 +619,7 @@ describe("a defect's own page", () => {
           id: expect.any(String),
           whatWasDone: "Replaced coil stop and EOS switch",
           partsUsed: "1x coil stop, 1x EOS switch",
+          photos: [],
           loggedBy: "Tom",
           loggedAt: new Date("2026-10-07T16:15:00Z"),
         },
@@ -625,6 +627,7 @@ describe("a defect's own page", () => {
           id: expect.any(String),
           whatWasDone: "Cleaned the flipper mechanism",
           partsUsed: undefined,
+          photos: [],
           loggedBy: "Anna",
           loggedAt: new Date("2026-10-06T09:30:00Z"),
         },
@@ -632,6 +635,7 @@ describe("a defect's own page", () => {
           id: expect.any(String),
           whatWasDone: "Checked the coil",
           partsUsed: undefined,
+          photos: [],
           loggedBy: "Tom",
           loggedAt: new Date("2026-10-05T08:00:00Z"),
         },
@@ -648,6 +652,27 @@ describe("a defect's own page", () => {
       expect(html).toContain("Checked the coil");
       expect(html.match(/Verwendete Teile: /g)).toHaveLength(1);
       expect(html).toContain("Verwendete Teile: 1x coil stop, 1x EOS switch");
+    });
+
+    it("ST-032: Photos are shown with the work log entry", async () => {
+      await anExistingTeamMember(db, anna, "Anna");
+      const defectId = await recorded(
+        await reported(await registered("LG-042"), "Left flipper barely moves", "2026-10-04T10:00:00Z"),
+        "2026-10-04T10:00:00Z",
+      );
+      await logged(defectId, 0, anna, "2026-10-05T08:00:00Z", "Replaced coil stop", "", [
+        "work-log/before.jpg",
+        "work-log/after.jpg",
+      ]);
+
+      const { details, html } = await seenByAnna(defectId);
+
+      expect(details?.workLog[0].photos).toHaveLength(2);
+      // Under the entry – inside its own article.
+      const start = html.indexOf("Replaced coil stop");
+      const entry = html.slice(start, html.indexOf("</article>", start));
+      expect(entry).toContain('src="memory://work-log/before.jpg');
+      expect(entry).toContain('src="memory://work-log/after.jpg');
     });
 
     it("says that nobody has logged work yet, and offers logging work on an open defect only", async () => {
