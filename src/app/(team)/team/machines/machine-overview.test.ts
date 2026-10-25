@@ -69,6 +69,7 @@ describe("the machine overview", () => {
           machineStatus: "playable",
           retired: false,
           openDefects: 0,
+          overdueMaintenance: 0,
         },
         {
           id: "m2",
@@ -79,6 +80,7 @@ describe("the machine overview", () => {
           machineStatus: "out-of-order",
           retired: false,
           openDefects: 0,
+          overdueMaintenance: 0,
         },
       ],
     });
