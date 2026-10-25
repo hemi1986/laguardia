@@ -1,7 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { correctMachineDetails, correctingActors } from "./correct-machine-details";
 import { collectionEvents } from "./events";
-import { machines } from "./machines";
+import { correctionFacts, machines } from "./machines";
 
 /**
  * CMD-CorrectMachineDetails through the command layer (ST-035): a change of AGG-Machine at the version the acting
@@ -12,6 +12,7 @@ export const correctMachineDetailsCommand = aggregateCommand({
   allowedActors: correctingActors,
   store: machines,
   target: (input) => ({ id: input.machineId, version: input.version }),
+  facts: correctionFacts,
   decide: correctMachineDetails,
   journal: collectionEvents.journal,
   result: (machine, events) => ({

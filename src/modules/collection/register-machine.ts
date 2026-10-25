@@ -1,4 +1,5 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
+import { isMuseumNumber, nextMuseumNumber } from "./museum-numbers";
 
 /**
  * CMD-RegisterMachine (AGG-Machine): a technician registers a machine with its machine model, museum number,
@@ -95,7 +96,7 @@ export function registerMachine(
   const typed = input.museumNumber?.trim() ?? "";
   let museumNumber: string;
   if (typed) {
-    if (!MUSEUM_NUMBER.test(typed)) return { ok: false, error: "museum-number-format" };
+    if (!isMuseumNumber(typed)) return { ok: false, error: "museum-number-format" };
     if (givenOut.has(typed)) return { ok: false, error: "museum-number-taken" };
     museumNumber = typed;
   } else {
@@ -140,29 +141,4 @@ export function registerMachine(
       },
     ],
   };
-}
-
-/** "LG-" plus three digits (user 2026-09-26) – the format La Guardia assigns and the stickers print. */
-const MUSEUM_NUMBER = /^LG-\d{3}$/;
-const HIGHEST = 999;
-
-/**
- * The museum number La Guardia assigns (HS-19, D11): the next one above the highest given out so far; after LG-999
- * the next free one below it, counting down (user 2026-10-01). Undefined when LG-001 to LG-999 are all given out.
- */
-function nextMuseumNumber(givenOut: ReadonlySet<string>): string | undefined {
-  // Only numbers in the format count – one stored otherwise (by hand, an import) must not break the assignment.
-  const numbers = [...givenOut]
-    .filter((museumNumber) => MUSEUM_NUMBER.test(museumNumber))
-    .map((museumNumber) => Number(museumNumber.slice(3)));
-  const highest = Math.max(0, ...numbers);
-  if (highest < HIGHEST) return museumNumberOf(highest + 1);
-  for (let number = HIGHEST - 1; number >= 1; number--) {
-    if (!givenOut.has(museumNumberOf(number))) return museumNumberOf(number);
-  }
-  return undefined;
-}
-
-function museumNumberOf(number: number): string {
-  return `LG-${String(number).padStart(3, "0")}`;
 }

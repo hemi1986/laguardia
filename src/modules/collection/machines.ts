@@ -11,7 +11,9 @@ import {
   type Retirement,
   type StatusChange,
 } from "./register-machine";
-import { machine, machineModel, machineStatusChange, museumNumber } from "./schema";
+import type { CorrectionFacts } from "./correct-machine-details";
+import { museumNumbersGivenOut, withMuseumNumber } from "./museum-numbers";
+import { machine, machineModel, machineStatusChange } from "./schema";
 
 /** The status history of a machine – append-only (Q13): only the entries not stored yet are inserted. */
 const statusHistory = history({
@@ -66,55 +68,40 @@ const machineRows = aggregateStore({
 
 /**
  * How AGG-Machine is stored (ST-007): the machine row (versioned, HS-16) with its status history, and its museum
- * number in the set of all museum numbers ever given out. A museum number row is never deleted – a corrected-away
- * number (ST-035) stays there as reserved, a retired machine keeps its own.
+ * number given out through the museum number register – a corrected-away number (ST-035) stays given out as reserved,
+ * a retired machine keeps its own.
  */
 export const machines: AggregateStore<Machine> = {
   ...machineRows,
-  async insert(tx, state) {
-    await machineRows.insert(tx, state);
-    await giveOut(tx, state);
-  },
-  async update(tx, state, expectedVersion) {
-    if (!(await machineRows.update(tx, state, expectedVersion))) return false;
-    await giveOut(tx, state);
-    return true;
-  },
+  insert: (tx, state) =>
+    withMuseumNumber(tx, state, async () => {
+      await machineRows.insert(tx, state);
+      return true;
+    }).then(() => undefined),
+  update: (tx, state, expectedVersion) => withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
 };
-
-/**
- * The machine's current museum number joins the set of all given out; an earlier one of it stays there (reserved).
- * A number given out to another machine fails loudly – the facts' lock and the decision make that unreachable.
- */
-async function giveOut(tx: Database, state: Machine): Promise<void> {
-  const [owner] = await tx
-    .select({ machineId: museumNumber.machineId })
-    .from(museumNumber)
-    .where(eq(museumNumber.museumNumber, state.museumNumber));
-  if (owner?.machineId === state.id) return;
-  await tx.insert(museumNumber).values({ museumNumber: state.museumNumber, machineId: state.id });
-}
 
 async function statusHistoryOf(db: Database, machineId: string): Promise<StatusChange[]> {
   return (await statusHistory.load(db, [machineId])).get(machineId) ?? [];
 }
 
 /**
- * The facts of CMD-RegisterMachine (HS-17). Registrations take one lock first, so they run one after the other:
- * the second of two at the same time sees the museum number the first one got – it takes the next free one, or is
- * told that its own is already used. The museum number's primary key guarantees uniqueness even without the lock.
+ * The facts of CMD-RegisterMachine (HS-17): the museum numbers given out, read under the register's lock – the second
+ * of two registrations at the same time sees the number the first one got, and takes the next free one or is told
+ * that its own is already used.
  */
 export async function registrationFacts(tx: Database, input: { machineModelId: string | undefined }) {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('museum-number'))`);
-  const givenOut = await tx.select({ museumNumber: museumNumber.museumNumber }).from(museumNumber);
+  const givenOut = await museumNumbersGivenOut(tx);
   const model =
     input.machineModelId && isId(input.machineModelId)
       ? await tx.select({ id: machineModel.id }).from(machineModel).where(eq(machineModel.id, input.machineModelId))
       : [];
-  return {
-    museumNumbersGivenOut: givenOut.map((row) => row.museumNumber),
-    machineModelExists: model.length > 0,
-  } satisfies RegistrationFacts;
+  return { museumNumbersGivenOut: givenOut, machineModelExists: model.length > 0 } satisfies RegistrationFacts;
+}
+
+/** The facts of CMD-CorrectMachineDetails (ST-035): the museum numbers given out, under the register's lock. */
+export async function correctionFacts(tx: Database) {
+  return { museumNumbersGivenOut: await museumNumbersGivenOut(tx) } satisfies CorrectionFacts;
 }
 
 /** One entry of the machine overview (RM-MachineOverview): what tells a machine apart from its neighbours (G5). */

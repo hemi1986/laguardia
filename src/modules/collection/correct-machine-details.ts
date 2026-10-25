@@ -1,4 +1,5 @@
 import type { Decision } from "@/platform/command";
+import { isMuseumNumber } from "./museum-numbers";
 import type { Machine } from "./register-machine";
 
 /**
@@ -28,11 +29,20 @@ export type MachineDetailsCorrected = {
   serialNumber?: string;
 };
 
-export type CorrectMachineDetailsError = "machine-retired" | "machine-details-unchanged";
+/** What the decision must know about the other machines: every museum number given out (HS-17, D11). */
+export type CorrectionFacts = { museumNumbersGivenOut: readonly string[] };
+
+export type CorrectMachineDetailsError =
+  | "machine-retired"
+  | "machine-details-unchanged"
+  | "museum-number-format"
+  | "museum-number-taken";
 
 export function correctMachineDetails(
   machine: Machine,
   input: CorrectMachineDetailsInput,
+  _context: unknown,
+  facts: CorrectionFacts,
 ): Decision<Machine, MachineDetailsCorrected, CorrectMachineDetailsError> {
   // A retired machine is final (AGG-Machine).
   if (machine.retirement) return { ok: false, error: "machine-retired" };
@@ -41,6 +51,11 @@ export function correctMachineDetails(
   // No change without a change, as with the location (ST-034).
   if (museumNumber === machine.museumNumber && serialNumber === machine.serialNumber) {
     return { ok: false, error: "machine-details-unchanged" };
+  }
+  if (museumNumber !== machine.museumNumber) {
+    if (!isMuseumNumber(museumNumber)) return { ok: false, error: "museum-number-format" };
+    // Unique among all museum numbers ever given out – retired machines' and reserved ones included (D11).
+    if (facts.museumNumbersGivenOut.includes(museumNumber)) return { ok: false, error: "museum-number-taken" };
   }
   return {
     ok: true,
