@@ -145,6 +145,17 @@ describe("retired machines in the machine overview", () => {
     expect(entryOf(html, "LG-013")).toContain("Ausgemustert");
   });
 
+  it("keeps the filter form when every machine is retired, so they can still be found", async () => {
+    await retire(await registered("LG-013"));
+
+    const html = await overview();
+
+    expect(html).not.toContain("Noch kein Gerät erfasst.");
+    expect(html).toContain("Alle Geräte sind ausgemustert.");
+    expect(html).toContain('name="retired"');
+    expect(entryOf(await overview({ retired: true }), "LG-013")).toContain("Ausgemustert");
+  });
+
   it("lists retired machines only under all machines, never under a machine status (user, 2026-10-25)", async () => {
     await retire(await registered("LG-013"));
 

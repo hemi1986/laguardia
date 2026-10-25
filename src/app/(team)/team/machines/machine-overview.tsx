@@ -33,6 +33,7 @@ function overviewHref({ search, machineStatus, retired }: MachineOverviewQuery):
 export function MachineOverview({
   machines,
   counts,
+  retiredCount,
   query,
   canRegister,
   registered,
@@ -40,6 +41,8 @@ export function MachineOverview({
   machines: MachineOverviewItem[];
   /** Over all active machines – independent of the search and the filter (ST-008). */
   counts: Record<MachineStatus, number>;
+  /** How many machines are retired (ST-055). */
+  retiredCount: number;
   query: MachineOverviewQuery;
   canRegister: boolean;
   /** The machine just registered – named in the confirmation (G3). */
@@ -48,8 +51,6 @@ export function MachineOverview({
   const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
   const { retired } = query;
-  // Only the filter alone can say no machine is retired – a search or a machine status narrows the list on its own.
-  const noneRetired = retired && !search && !query.machineStatus && !machines.some((machine) => machine.retired);
 
   return (
     <>
@@ -66,7 +67,7 @@ export function MachineOverview({
       {registered && (
         <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>
       )}
-      {total === 0 ? (
+      {total + retiredCount === 0 ? (
         <p>{texts.empty}</p>
       ) : (
         <>
@@ -111,7 +112,9 @@ export function MachineOverview({
               ))}
             </ul>
           </nav>
-          {machines.length === 0 ? (
+          {machines.length === 0 && total === 0 && !search && !query.machineStatus ? (
+            <p>{texts.allRetired}</p>
+          ) : machines.length === 0 ? (
             <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
             <ul className="flex flex-col gap-4">
@@ -122,7 +125,7 @@ export function MachineOverview({
               ))}
             </ul>
           )}
-          {noneRetired && machines.length > 0 && <p>{texts.noneRetired}</p>}
+          {retired && retiredCount === 0 && <p>{texts.noneRetired}</p>}
         </>
       )}
     </>

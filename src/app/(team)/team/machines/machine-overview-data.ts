@@ -1,6 +1,7 @@
 import {
   machineOverview,
   machineStatusCounts,
+  retiredMachineCount,
   type MachineOverviewEntry,
   type MachineOverviewQuery,
   type MachineStatus,
@@ -15,6 +16,8 @@ export type MachineOverviewData = {
   machines: MachineOverviewItem[];
   /** Over all active machines – independent of the search and the filter (ST-008). */
   counts: Record<MachineStatus, number>;
+  /** How many machines are retired – they can still be found (ST-055). */
+  retiredCount: number;
 };
 
 /**
@@ -22,7 +25,11 @@ export type MachineOverviewData = {
  * machine – the page composes the modules' public queries (ST-009).
  */
 export async function loadMachineOverview(db: Database, query: MachineOverviewQuery): Promise<MachineOverviewData> {
-  const [machines, counts] = await Promise.all([machineOverview(db, query), machineStatusCounts(db)]);
+  const [machines, counts, retiredCount] = await Promise.all([
+    machineOverview(db, query),
+    machineStatusCounts(db),
+    retiredMachineCount(db),
+  ]);
   const openDefects = await openDefectCounts(
     db,
     machines.map((machine) => machine.id),
@@ -30,5 +37,6 @@ export async function loadMachineOverview(db: Database, query: MachineOverviewQu
   return {
     machines: machines.map((machine) => ({ ...machine, openDefects: openDefects.get(machine.id) ?? 0 })),
     counts,
+    retiredCount,
   };
 }

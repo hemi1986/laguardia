@@ -63,6 +63,8 @@ export const collectionTexts = {
     /** The filter for retired machines (ST-055) – off by default; with it on, they are listed beside the active ones. */
     showRetired: "Auch ausgemusterte Geräte anzeigen",
     noneRetired: "Kein Gerät ist ausgemustert.",
+    /** No active machine, but retired ones – the filter form stays so they can be found (ST-055). */
+    allRetired: "Alle Geräte sind ausgemustert.",
     /** In place of the machine status of a retired machine (G6), as on its machine record (ST-039). */
     retired: "Ausgemustert",
     /** The open defects of a machine (ST-021) – never zero, a zero is not shown. */

@@ -183,6 +183,15 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
   return counts;
 }
 
+/** RM-MachineOverview: how many machines are retired (ST-055) – whether the filter for them has anything to show. */
+export async function retiredMachineCount(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(machine)
+    .where(isNotNull(machine.retiredAt));
+  return row.count;
+}
+
 /** What the visitor machine page (RM-VisitorMachinePage, ST-010) shows of a machine – no ID, nothing internal. */
 export type VisitorMachine =
   | { retired: false; machineModelTitle: string; manufacturer: string; year?: number; machineStatus: MachineStatus }

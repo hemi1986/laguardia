@@ -13,7 +13,14 @@ const noCounts = { playable: 0, limited: 0, "out-of-order": 0, "not-on-display":
 
 function rendered(props: Partial<Props>): string {
   return renderToStaticMarkup(
-    createElement(MachineOverview, { machines: [], counts: noCounts, query: {}, canRegister: false, ...props }),
+    createElement(MachineOverview, {
+      machines: [],
+      counts: noCounts,
+      retiredCount: 0,
+      query: {},
+      canRegister: false,
+      ...props,
+    }),
   );
 }
 
