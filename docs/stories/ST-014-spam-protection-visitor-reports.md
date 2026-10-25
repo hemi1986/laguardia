@@ -3,7 +3,7 @@ id: ST-014
 title: Spam protection for visitor problem reports – only if spam occurs
 type: story
 context: BC-Repair
-priority: could
+priority: wont
 size: M
 risk: medium
 events: [EVT-ProblemReported]
@@ -16,6 +16,7 @@ status: ready
 As a technician, I want automated and abusive problem reports from the public visitor page to be held back once spam actually appears, so that the triage list only contains real problem reports and triage stays quick.
 
 ## Context
+**Set aside completely (user, 2026-10-25):** `priority: wont` – not built until the user brings it back.
 **Deferred (decision D3, 2026-09-27):** the MVP has no rate limits at all – spam is considered unlikely, and dismissing a problem report as spam (ST-020) removes its text and photo. This story is only implemented if spam actually occurs; its details are revisited then.
 Input validation is not part of this story and is in the MVP: description at most 2000 characters (ST-013), photo type and size limits and re-encoding (ST-002, ST-016).
 Starting points from the story review 2026-09-26, to be confirmed when this story is picked up:
