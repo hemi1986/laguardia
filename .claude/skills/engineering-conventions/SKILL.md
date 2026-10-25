@@ -583,7 +583,18 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 
 - Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts Blob upload-completion callbacks.
 - Authorization lives in the command layer, never only in the proxy or a page (ADR 0001).
-- React escapes output; `dangerouslySetInnerHTML` is not used. Security headers: `next.config.ts` (a script CSP follows with ST-070).
+- React escapes output; `dangerouslySetInnerHTML` is not used. Security headers: `next.config.ts` – except the Content
+  Security Policy.
+- **The Content Security Policy** (ST-070) is set by `src/proxy.ts` on every page request, with a fresh nonce
+  (`src/platform/content-security-policy.ts`): scripts only with the nonce and `'strict-dynamic'`, `<style>` elements
+  only with the nonce, `style` attributes inline (React's `style` props, Base UI), images and connections only to the
+  application, the private Blob store's host and Blob's upload API. Next.js puts the nonce on its own scripts while
+  rendering, so **every page is rendered per request** (`await connection()` in the root layout) – no static
+  rendering, ISR or Partial Prerendering. **No inline script or third-party script is added without the nonce**
+  (`headers().get("Content-Security-Policy")` holds it), and a new external source is a change of the policy, never a
+  wildcard. `next dev` alone adds `'unsafe-eval'` and inline `<style>` (React's debugging, the dev tools). Every
+  browser test fails on a policy violation in the console (`e2e/fixtures.ts`); one that provokes a violation sets
+  `test.use({ policyViolationsExpected: true })`.
 - No personal data in logs or in the journal.
 - **Login** (ST-004, ADR 0004/0006): Better Auth lives inside the Team module (`src/modules/team/auth.ts`) and is only called on the server – **never mount its HTTP handler** (no `/api/auth/*`): that would expose sign-up and the admin endpoints. Login and logout are Server Actions under the proxy's Origin check. Every team page and team Server Action calls `requireTeamMember()` itself (the `(team)` layout checks too, but layouts don't re-run on navigation). `BETTER_AUTH_SECRET` per environment (Vercel: sensitive, set by the user).
 
