@@ -126,8 +126,8 @@ export const defectReopening = pgTable(
 
 /**
  * The work log of a defect (data model: Work log entry entity, ST-024) – entries are only added, never changed or
- * removed. logged_by is a TeamMemberId; its foreign key to team_member.id is added in the migration. Photos follow with
- * ST-032.
+ * removed. logged_by is a TeamMemberId; its foreign key to team_member.id is added in the migration. Its photos (ST-032)
+ * are a column of the entry: saved with it once, never changed – so no photo can be added to an existing entry.
  */
 export const defectWorkLogEntry = pgTable(
   "defect_work_log_entry",
@@ -141,6 +141,8 @@ export const defectWorkLogEntry = pgTable(
       .references(() => defect.id),
     whatWasDone: text("what_was_done").notNull(),
     partsUsed: text("parts_used"),
+    /** The stored names of its photos (photo module), in the order they were chosen – at most 5. */
+    photos: text("photos").array().notNull().default(sql`'{}'::text[]`),
     loggedBy: uuid("logged_by").notNull(),
     loggedAt: timestamp("logged_at", { withTimezone: true }).notNull(),
   },

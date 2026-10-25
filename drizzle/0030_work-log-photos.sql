@@ -1,0 +1,1 @@
+ALTER TABLE "defect_work_log_entry" ADD COLUMN "photos" text[] DEFAULT '{}'::text[] NOT NULL;

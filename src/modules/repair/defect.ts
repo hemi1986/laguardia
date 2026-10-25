@@ -81,6 +81,8 @@ export type WorkLogEntry = {
   whatWasDone: string;
   /** Free text; none when no parts were used. */
   partsUsed: string | undefined;
+  /** The stored names of its photos (ST-032), at most 5 – none is ever added or removed later. */
+  photos: string[];
   loggedBy: TeamMemberId;
   loggedAt: Date;
 };

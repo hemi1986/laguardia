@@ -358,6 +358,7 @@ export const repairErrors = {
   "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",
   "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
   "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",
+  "too-many-photos": "Höchstens 5 Fotos pro Arbeitsschritt – bitte weniger Fotos auswählen.",
   "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
   "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
 } as const;
