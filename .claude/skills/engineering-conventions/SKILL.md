@@ -206,7 +206,7 @@ decision's reasons for refusing are one function next to it (`claimRefusal(defec
 and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
 in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
 over from) is a reference in the event's journal data, listed in `events.yaml` and in the catalogue, and read back typed with
-`readJournal` (`defectActionIn`) – only for the confirmation, never taken from the address.
+`entriesOf(repairEvents, command)` (`defectActionIn`) – only for the confirmation, never taken from the address.
 
 **What a team member can do to a defect** (architecture reviews 2026-10-11, 2026-10-18): `src/modules/repair/defect-actions.ts`
 describes each action on a defect once, in the order the page offers them (`defectActions`): its command's reason for
@@ -262,7 +262,8 @@ module answers typed questions about a command (`collectionChangesIn`, `machineR
 `entriesOf(<module>Events, command)` – no page matches an event type by string. **The page reads the latest command
 once** and hands it to each module's `…In` (architecture review 2026-10-25): the defect page asks Repair's
 `defectActionIn` and, after a reopening, Collection's `collectionChangesIn` of the same command. Only
-`maintenancePlanChangedBy` reads it itself, because the maintenance plan's aggregate ID is Maintenance's. The triage outcomes share one module,
+`maintenancePlanChangedBy` reads it itself: the maintenance plan is one aggregate whose ID stays inside Maintenance,
+and no other module answers about its commands. The triage outcomes share one module,
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
 `loadMachineConfirmation` and shows one `confirmation`.
 **The one exception** is the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there

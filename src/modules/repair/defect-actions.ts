@@ -144,17 +144,19 @@ export function defectActionRefusals(
 }
 
 /**
+ * The action one command did to a defect, with what its confirmation names: after a claim whom the defect was taken
+ * over from, if anyone; a claim made for someone else is an assignment, and names whom the defect was assigned to
+ * (ST-026). After a change of its details it names which changed and whose claim that released, if anyone's (ST-031).
+ */
+export type DefectActionInCommand = DefectActionDetails & { action: DefectAction };
+
+/**
  * What one command did to the defect – the action of its latest event on the defect – asked of the events
  * `lastCommandBy` returns (the latest command on the defect, if the team member looking ran it); undefined when the
  * command did no action on it. For the confirmation after an action (G3): the address alone cannot make a page confirm
- * anything. The journal is read for this one answer, never to rebuild state (ADR 0002). After a claim it
- * names whom the defect was taken over from, if anyone; a claim made for someone else is an assignment, and names whom
- * the defect was assigned to (ST-026). After a change of its details it names which changed and whose claim that
- * released, if anyone's (ST-031).
+ * anything. The journal is read for this one answer, never to rebuild state (ADR 0002).
  */
-export type LastDefectAction = DefectActionDetails & { action: DefectAction };
-
-export function defectActionIn(command: readonly JournalEntry[], defectId: string): LastDefectAction | undefined {
+export function defectActionIn(command: readonly JournalEntry[], defectId: string): DefectActionInCommand | undefined {
   const latest = entriesOf(repairEvents, command)
     .filter(
       (entry) =>
