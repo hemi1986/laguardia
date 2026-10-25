@@ -9,7 +9,7 @@ risk: null
 events: []
 depends_on: [ST-018]
 labels: [follow-up]
-status: draft
+status: superseded
 ---
 
 ## Task

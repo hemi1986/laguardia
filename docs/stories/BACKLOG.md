@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 56 of 59 domain stories done** · scenarios 493 of 505
+**Progress: 56 of 58 domain stories done** · scenarios 493 of 501
 
-**84 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 3 · Done: 73
+**84 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 3
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -20,14 +20,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-046](ST-046-report-finding-during-maintenance.md) | Report a finding during maintenance | story | Maintenance | wont | XS | low | ST-015, ST-044 |
 | [ST-067](ST-067-test-support-only-in-tests.md) | Test support is only imported by tests | tech-task | Repair | wont | XS | low | ST-003 |
 | [ST-068](ST-068-browser-test-real-visitor-report-flow.md) | Browser test of the real visitor problem report flow | tech-task | Repair | wont | M | medium | ST-007, ST-013, ST-059 |
-
-## Draft
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-079](ST-079-event-catalogue-per-module.md) | The event catalogue per module | tech-task | Repair | wont | – | – | ST-018 |
-| [ST-080](ST-080-pre-runner-forms-onto-house-pattern.md) | Move the four pre-runner forms onto the house pattern | tech-task | Team | wont | S | low | ST-007 |
-| [ST-082](ST-082-deactivation-asks-once-and-can-be-undone.md) | Deactivating a team member asks once, and can be undone | story | Team | wont | – | – | ST-081 |
 
 ## Done
 
@@ -106,3 +98,11 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
 | [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | could | M | medium | ST-003, ST-013, ST-085 |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
+
+## Superseded
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-079](ST-079-event-catalogue-per-module.md) | The event catalogue per module | tech-task | Repair | wont | – | – | ST-018 |
+| [ST-080](ST-080-pre-runner-forms-onto-house-pattern.md) | Move the four pre-runner forms onto the house pattern | tech-task | Team | wont | S | low | ST-007 |
+| [ST-082](ST-082-deactivation-asks-once-and-can-be-undone.md) | Deactivating a team member asks once, and can be undone | story | Team | wont | – | – | ST-081 |

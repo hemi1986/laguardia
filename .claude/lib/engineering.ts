@@ -71,11 +71,13 @@ export const testTitle = (id: string, scenario: string): string => `${id}: ${sce
  * behaviour become a new story.
  */
 const TRANSITIONS: Record<string, string[]> = {
-  draft: ["review"],
-  review: ["draft", "ready"],
-  ready: ["review", "in-progress"],
+  draft: ["review", "superseded"],
+  review: ["draft", "ready", "superseded"],
+  ready: ["review", "in-progress", "superseded"],
   "in-progress": ["review", "done"],
   done: [],
+  // Final like done: the record of work done elsewhere (user, 2026-10-25).
+  superseded: [],
 };
 
 function reachable(from: string, to: string): boolean {
@@ -102,9 +104,9 @@ export function transitionErrors(story: d.Story, from: string, to: string, stori
   const errs: string[] = [];
   if (!reachable(from, to)) {
     errs.push(
-      from === "done"
-        ? "a done story is never reopened – capture the change as a new story"
-        : `status '${from}' cannot become '${to}' (workflow: draft → review → ready → in-progress → done, back to review when a story is wrong)`,
+      from === "done" || from === "superseded"
+        ? `a ${from} story is never reopened – capture the change as a new story`
+        : `status '${from}' cannot become '${to}' (workflow: draft → review → ready → in-progress → done, back to review when a story is wrong; superseded from any status before in-progress)`,
     );
     return errs;
   }
