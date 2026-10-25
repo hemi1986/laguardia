@@ -107,9 +107,14 @@ function directive(policy: string, name: string): string[] {
 
 const publicPages = ["/", "/login", "/datenschutz", "/m/LG-999", "/m/LG-999/melden"];
 
+// Opened in the browser, not only fetched: the fixture's watch sees each page render under the policy (on the preview:
+// the production policy).
 test("every page carries exactly one script policy with a nonce and 'strict-dynamic'", async ({ page }) => {
   for (const path of publicPages) {
-    const policies = await policiesOf(page, path);
+    const response = await page.goto(path);
+    const policies = ((await response?.headersArray()) ?? [])
+      .filter(({ name }) => name.toLowerCase() === "content-security-policy")
+      .map(({ value }) => value);
     expect(policies, path).toHaveLength(1);
     const scripts = directive(policies[0], "script-src");
     expect(scripts, path).toContain("'self'");
@@ -157,6 +162,15 @@ test("the policy keeps the ST-003 protection and allows styles only with the non
   expect(directive(policy, "base-uri")).toEqual(["'self'"]);
   expect(directive(policy, "form-action")).toEqual(["'self'"]);
   expect(directive(policy, "default-src")).toEqual(["'self'"]);
+  // Photos and uploads reach only this deployment's private Blob store and Blob's upload API – no wildcard (on the
+  // preview the store comes from BLOB_STORE_ID, locally from the Development store's token).
+  const store = /^https:\/\/[a-z0-9]+\.private\.blob\.vercel-storage\.com$/;
+  const images = directive(policy, "img-src");
+  expect(images.slice(0, 3)).toEqual(["'self'", "blob:", "data:"]);
+  expect(images.slice(3)).toHaveLength(1);
+  expect(images[3]).toMatch(store);
+  const connections = directive(policy, "connect-src");
+  expect(connections).toEqual(["'self'", images[3], "https://vercel.com/api/blob/"]);
   // `next dev` allows inline `<style>` for its dev tools – the preview never does.
   expect(directive(policy, "style-src")).toEqual(onPreview ? ["'self'", nonce] : ["'self'", "'unsafe-inline'"]);
 });
@@ -168,8 +182,9 @@ test.describe(() => {
   test("an injected inline script without the nonce does not run and is reported as a violation", async ({ page }) => {
     const violations: string[] = [];
     page.on("console", (message) => {
-      if (message.type() === "error" && message.text().includes("Content Security Policy"))
-        violations.push(message.text());
+      const text = message.text();
+      if (message.type() === "error" && text.includes("Content Security Policy") && text.includes("script-src"))
+        violations.push(text);
     });
     await page.route("**/login", async (route) => {
       const response = await route.fetch();

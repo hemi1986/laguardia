@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 
 /**
  * The Vercel deployment protection bypass header goes only to requests for the preview itself,
@@ -20,23 +20,42 @@ export async function allowPreview(page: Page, baseURL: string | undefined): Pro
 }
 
 /**
- * Every browser test fails when the browser reports a Content Security Policy violation (ST-070) – except one caused
- * only by the Vercel toolbar, which Vercel injects into previews. A test that provokes a violation on purpose sets
+ * Every browser test fails when the browser reports a Content Security Policy violation (ST-070) – on any page it
+ * opens, in its own context and in every context it opens beside it (a visitor's phone) – except one caused only by
+ * the Vercel toolbar, which Vercel injects into previews. A test that provokes a violation on purpose sets
  * `test.use({ policyViolationsExpected: true })`.
  */
-export const test = base.extend<{ policyViolationsExpected: boolean }>({
+export const test = base.extend<{ policyViolationsExpected: boolean; policyWatch: void }>({
   policyViolationsExpected: [false, { option: true }],
-  page: async ({ page, baseURL, policyViolationsExpected }, provide) => {
-    const violations: string[] = [];
-    page.on("console", (message) => {
-      const text = message.text();
-      if (message.type() === "error" && text.includes("Content Security Policy") && !text.includes("vercel.live")) {
-        violations.push(text);
+  policyWatch: [
+    async ({ browser, context, policyViolationsExpected }, provide) => {
+      const violations: string[] = [];
+      const watch = (watched: BrowserContext) =>
+        watched.on("console", (message) => {
+          const text = message.text();
+          if (message.type() === "error" && text.includes("Content Security Policy") && !text.includes("vercel.live")) {
+            violations.push(text);
+          }
+        });
+      watch(context);
+      const newContext = browser.newContext;
+      browser.newContext = async (...options) => {
+        const opened = await newContext.apply(browser, options);
+        watch(opened);
+        return opened;
+      };
+      try {
+        await provide();
+      } finally {
+        browser.newContext = newContext;
       }
-    });
+      if (!policyViolationsExpected) expect(violations, "Content Security Policy violations").toEqual([]);
+    },
+    { auto: true },
+  ],
+  page: async ({ page, baseURL }, provide) => {
     await allowPreview(page, baseURL);
     await provide(page);
-    if (!policyViolationsExpected) expect(violations, "Content Security Policy violations").toEqual([]);
   },
 });
 
