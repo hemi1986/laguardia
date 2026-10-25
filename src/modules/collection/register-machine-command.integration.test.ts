@@ -112,6 +112,7 @@ describe("CMD-RegisterMachine", () => {
       technology: undefined,
       location: "Hall 2, row 3",
       machineStatus: "playable",
+      retired: false,
     });
     expect(await machineStatusHistory(db, machineId)).toEqual([
       {
