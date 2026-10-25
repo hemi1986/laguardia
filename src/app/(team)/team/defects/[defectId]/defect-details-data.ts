@@ -2,7 +2,7 @@ import { collectionChangesIn, type MachineStatus } from "@/modules/collection";
 import {
   defectActions,
   defectDetails,
-  lastDefectActionBy,
+  defectActionIn,
   resolutionsAndReopenings,
   type DefectAction,
   type DefectRepairTimes,
@@ -108,8 +108,10 @@ export async function loadDefectDetails(
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
-  // Read only for the confirmation: someone just back from an action.
-  const last = done && viewer ? await lastDefectActionBy(db, defect.id, viewer.id) : undefined;
+  // Read only for the confirmation – once: someone just back from an action (G3). Repair says which action the command
+  // did, Collection whether it changed the machine status in the same step (reopening, ST-030).
+  const command = done && viewer ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id) : undefined;
+  const last = command && defectActionIn(command, defect.id);
   const confirmed = last?.action === done ? last : undefined;
   const previousClaimant = confirmed?.takenOverFrom;
   const releasedClaimOf = confirmed?.changedDetails?.releasedClaimOf;
@@ -139,11 +141,10 @@ export async function loadDefectDetails(
   ]);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
   // not the address (architecture review 2026-10-18).
-  const reopening =
-    confirmed?.action === "reopen" && viewer
-      ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id)
+  const newMachineStatus =
+    confirmed?.action === "reopen" && command
+      ? collectionChangesIn(command, defect.machineId).statusChangedTo
       : undefined;
-  const newMachineStatus = reopening && collectionChangesIn(reopening, defect.machineId).statusChangedTo;
   return {
     title: defect.title,
     ...shown.label(defect.machineId),

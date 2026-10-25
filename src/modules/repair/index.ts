@@ -77,7 +77,7 @@ export { logWorkCommand } from "./log-work-command";
 export type { LogWorkError, LogWorkInput } from "./log-work";
 export {
   defectActions,
-  lastDefectActionBy,
+  defectActionIn,
   type DefectAction,
   type DefectActionRefusals,
   type DefectTeamMember,
