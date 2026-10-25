@@ -214,4 +214,69 @@ describe("CMD-LinkProblemReportToDefect on a resolved defect", () => {
       "EVT-MachineStatusChanged",
     ]);
   });
+
+  it("ST-053: Only a stricter machine status when linking reopens", async () => {
+    const { machineId, defectId } = await aResolvedDefect("out-of-order");
+    const problemReportId = await reported(machineId, "Left flipper does nothing again");
+
+    const rejected = await linkResolved(problemReportId, defectId, {
+      machineStatus: "limited",
+      machineVersion: (await machineOf(machineId)).version,
+    });
+
+    expect(rejected).toEqual({ ok: false, error: "machine-status-not-stricter" });
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+    expect((await machineOf(machineId)).machineStatus).toBe("out-of-order");
+    expect((await problemReportForTriage(db, clock, problemReportId))?.triageOutcome).toBeUndefined();
+  });
+
+  it("ST-053: Link fails, nothing is reopened", async () => {
+    const { machineId, defectId } = await aResolvedDefect();
+    const problemReportId = await reported(machineId, "Left flipper does nothing again");
+    // Another technician triaged the problem report a moment ago – as a new defect.
+    const first = await executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId,
+        version: 0,
+        title: "Left flipper dead",
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      { actor: eva, db, clock, newId: randomUUID },
+    );
+    if (!first.ok) throw new Error(first.error);
+
+    expect(await linkResolved(problemReportId, defectId)).toEqual({ ok: false, error: "already-triaged" });
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+    expect((await defectDetails(db, defectId))?.reopenings).toEqual([]);
+  });
+
+  it("rejects a defect resolved more than 30 days ago, and a status without a reopening", async () => {
+    const { machineId, defectId } = await aResolvedDefect();
+    const problemReportId = await reported(machineId, "Left flipper does nothing again");
+    const later = { actor: eva, db, newId: randomUUID };
+    const version = (await defectDetails(db, defectId))?.version;
+    // Resolved on 12 October (Berlin): 30 days later it is still recent, 31 days later it is not.
+    const linkOn = (instant: string) =>
+      executeCommand(
+        linkProblemReportToDefectCommand,
+        { problemReportId, version: 0, defectId, resolvedDefectVersion: version },
+        { ...later, clock: fixedClock(instant) },
+      );
+    expect(await linkOn("2026-11-12T22:00:00Z")).toEqual({ ok: false, error: "defect-resolved-too-long-ago" });
+
+    const open = await anOpenDefect(machineId, "Display flickers");
+    expect(
+      await executeCommand(
+        linkProblemReportToDefectCommand,
+        { problemReportId, version: 0, defectId: open, machineStatus: "limited", machineVersion: 0 },
+        { ...later, clock },
+      ),
+    ).toEqual({ ok: false, error: "machine-status-without-reopening" });
+
+    expect(await linkOn("2026-11-11T22:00:00Z")).toMatchObject({ ok: true });
+  });
 });
