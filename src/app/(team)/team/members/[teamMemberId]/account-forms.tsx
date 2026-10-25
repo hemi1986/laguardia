@@ -48,6 +48,7 @@ export function AccountButtonForm({
 export function ResetPasswordForm({ action: reset }: { action: AccountAction }) {
   const [state, action, pending] = useActionState(reset, null);
   const rejectionId = useId();
+  const hintId = useId();
   const marked = state?.error === "password-too-short";
 
   return (
@@ -62,9 +63,9 @@ export function ResetPasswordForm({ action: reset }: { action: AccountAction }) 
           required
           key={`password-${keptKey(state)}`}
           aria-invalid={marked || undefined}
-          aria-describedby={state ? rejectionId : undefined}
+          aria-describedby={state ? `${hintId} ${rejectionId}` : hintId}
         />
-        <FieldDescription>{accounts.passwordHint}</FieldDescription>
+        <FieldDescription id={hintId}>{accounts.passwordHint}</FieldDescription>
       </Field>
       {state && (
         <div id={rejectionId}>

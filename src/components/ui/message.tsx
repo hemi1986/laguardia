@@ -10,7 +10,7 @@ export function Rejection({ children }: { children: ReactNode }) {
   return (
     <p role="alert" className="text-destructive flex items-start gap-2 text-sm font-medium">
       <CircleAlert aria-hidden="true" className="mt-px size-4 shrink-0" />
-      <span>{children}</span>
+      <span className="min-w-0">{children}</span>
     </p>
   );
 }
@@ -19,7 +19,7 @@ export function Confirmation({ children }: { children: ReactNode }) {
   return (
     <p role="status" className="flex items-start gap-2 text-sm font-medium">
       <CircleCheck aria-hidden="true" className="mt-px size-4 shrink-0" />
-      <span>{children}</span>
+      <span className="min-w-0">{children}</span>
     </p>
   );
 }

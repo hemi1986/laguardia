@@ -99,15 +99,25 @@ export async function pageWidth(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth);
 }
 
-/** A helper account created by the logged-in technician, who is logged out afterwards. Named „E2E <username>“. */
+/** A team member created by the logged-in technician on „Neues Teammitglied“ (ST-081), named „<name> <suffix>“. */
+export async function aTeamMember(
+  page: Page,
+  { name = "E2E", role = "helper" }: { name?: string; role?: "helper" | "technician" } = {},
+): Promise<Account & { name: string }> {
+  const member = { name: unique(name), username: uniqueId(role), password: "e2e-secret-10" };
+  await page.goto("/team/members/new");
+  await page.getByLabel("Name", { exact: true }).fill(member.name);
+  await page.getByLabel("Benutzername").fill(member.username);
+  await page.getByLabel("Anfangspasswort").fill(member.password);
+  await page.getByLabel("Rolle").selectOption(role);
+  await page.getByRole("button", { name: "Teammitglied anlegen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`${member.name} ist angelegt.`);
+  return member;
+}
+
+/** A helper account created by the logged-in technician, who is logged out afterwards. */
 export async function aHelper(page: Page): Promise<Account> {
-  const helper = { username: uniqueId("helper"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
+  const helper = await aTeamMember(page);
   await openMore(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
   return helper;

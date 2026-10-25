@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, openMore, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
+import { expect, logIn, reportAsVisitor, test, uniqueId as unique, aHelper } from "./fixtures";
 
 /**
  * The triage list on a phone (ST-017). The login check needs no account and runs against the preview too; the others
@@ -38,15 +38,7 @@ test("ST-017: Helpers see the triage list without technician actions", async ({ 
   await logIn(page);
   const description = unique("Ball stuck");
   await aProblemReport(page, description);
-  const helper = { username: unique("helper"), password: "e2e-secret-10" };
-  await page.goto("/team/members");
-  await page.getByLabel("Name", { exact: true }).fill(`E2E ${helper.username}`);
-  await page.getByLabel("Benutzername").fill(helper.username);
-  await page.getByLabel("Anfangspasswort").fill(helper.password);
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await openMore(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  const helper = await aHelper(page);
   await logIn(page, helper);
 
   await page.getByRole("navigation").getByRole("link", { name: "Sichtung" }).click();

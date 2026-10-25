@@ -51,23 +51,17 @@ export async function resetPasswordAction(
   landing(teamMemberId, "password");
 }
 
-export async function deactivateAccountAction(
-  teamMemberId: string,
-  _previous: AccountActionState,
-): Promise<AccountActionState> {
-  const dependencies_ = await dependencies();
-  const outcome = await deactivateAccount({ teamMemberId }, dependencies_);
+export async function deactivateAccountAction(teamMemberId: string): Promise<AccountActionState> {
+  const acting = await dependencies();
+  const outcome = await deactivateAccount({ teamMemberId }, acting);
   if (!outcome.ok) return { error: outcome.error };
   // One's own account: its sessions ended with it, so the technician is logged out (ST-081).
-  const own = dependencies_.actor.kind === "team-member" && dependencies_.actor.teamMemberId === teamMemberId;
+  const own = acting.actor.kind === "team-member" && acting.actor.teamMemberId === teamMemberId;
   if (own) redirect("/login");
   landing(teamMemberId, "deactivated");
 }
 
-export async function activateAccountAction(
-  teamMemberId: string,
-  _previous: AccountActionState,
-): Promise<AccountActionState> {
+export async function activateAccountAction(teamMemberId: string): Promise<AccountActionState> {
   const outcome = await activateAccount({ teamMemberId }, await dependencies());
   if (!outcome.ok) return { error: outcome.error };
   landing(teamMemberId, "activated");

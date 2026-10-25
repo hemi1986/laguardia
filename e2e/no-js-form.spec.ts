@@ -23,6 +23,7 @@ test("a technician creates a technician account with JavaScript disabled", async
 
   await openMore(page);
   await page.getByRole("link", { name: "Teammitglieder" }).click();
+  await page.getByRole("link", { name: "Neues Teammitglied" }).click();
   await page.getByLabel("Name", { exact: true }).fill(`No JS ${newUsername}`);
   await page.getByLabel("Benutzername").fill(newUsername);
   await page.getByLabel("Anfangspasswort").fill("nojs-secret-10");
@@ -30,9 +31,11 @@ test("a technician creates a technician account with JavaScript disabled", async
   await page.keyboard.press("Tab");
   await expect(page.getByLabel("Rolle")).toBeFocused();
   await page.getByLabel("Rolle").selectOption("technician");
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
+  await page.getByRole("button", { name: "Teammitglied anlegen" }).click();
 
   // The chosen role really arrived at the server – not the default "helper".
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("Konto angelegt.");
-  await expect(page.getByRole("article").filter({ hasText: newUsername })).toContainText("Techniker:in");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`No JS ${newUsername} ist angelegt.`);
+  await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: newUsername })).toContainText(
+    "Techniker:in",
+  );
 });
