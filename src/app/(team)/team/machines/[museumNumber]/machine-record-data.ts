@@ -6,11 +6,7 @@ import {
   type StatusChange,
   retireRefusal,
 } from "@/modules/collection";
-import {
-  machineMaintenance,
-  type MachineMaintenance as MaintenanceOfMachine,
-  type NamedMaintenanceRecord,
-} from "@/modules/maintenance";
+import { machineMaintenance, type MachineMaintenance, type NamedMaintenanceRecord } from "@/modules/maintenance";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -32,7 +28,7 @@ export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retiremen
   /** How many entries its whole repair history has – open defects included (ST-033). */
   repairHistoryCount: number;
   /** Section 5 (ST-047): its due maintenance tasks and latest maintenance records – Maintenance's. */
-  maintenance: MachineMaintenance;
+  maintenance: ShownMachineMaintenance;
   /** The machine record's own actions the viewer may take (G11) – a section another module decides per item brings its own offer. */
   actions: MachineRecordActions;
 };
@@ -55,7 +51,7 @@ export type MachineRecordActions = {
 };
 
 /** Section 5 „Wartung“ (ST-047): Maintenance's answer for the machine, with Team's names. */
-export type MachineMaintenance = Omit<MaintenanceOfMachine, "latestRecords"> & {
+export type ShownMachineMaintenance = Omit<MachineMaintenance, "latestRecords"> & {
   latestRecords: ShownMaintenanceRecord[];
 };
 
@@ -90,7 +86,7 @@ export async function loadMachineRecord(
   const [open, recent, maintenance] = await Promise.all([
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
-    machineMaintenance(db, clock, record.id, { teamMember: viewer, latestRecords: LATEST_MAINTENANCE_RECORDS }),
+    machineMaintenance(db, clock, record.id, { teamMember: viewer, latestRecordCount: LATEST_MAINTENANCE_RECORDS }),
   ]);
   const shown = await named(db, openDefectReferences(open), {
     teamMembers: [

@@ -20,6 +20,7 @@ import {
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
+import { retireMachineCommand } from "@/modules/repair";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import type { Viewer } from "../../claimant";
@@ -37,7 +38,7 @@ import { MaintenanceRecordsView } from "./wartungseintraege/maintenance-records"
 
 /**
  * Section 5 of the machine record, „Wartung“ (ST-047): Maintenance's maintenance records and due maintenance tasks of
- * the machine, with Team's names – the page composes (ST-009). In a database of its own, so "nothing due" and exact
+ * the machine, with Team's names. In a database of its own, so "nothing due" and exact
  * maintenance plans can be arranged.
  */
 const isolated = isolatedTestDatabase("machine_record_maintenance");
@@ -315,6 +316,27 @@ describe("section 5 „Wartung“ of the machine record", () => {
     expect(due).not.toContain("fällig seit");
     expect(due).not.toContain("Überfällig");
     expect(due).toContain("Nicht ausgestellt – es wird keine Wartung fällig.");
+    expect(records).toContain("Before the restoration");
+  });
+
+  it("says nothing due on a machine retired while Not on display, and still lists its records", async () => {
+    const lg031 = await aMachine("LG-031");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    await recorded(cleanGlass, lg031, "2026-03-15", { note: "Before the restoration" });
+    await statusChanged(lg031, 0, "not-on-display", "2026-03-20");
+    await run(
+      executeCommand(
+        retireMachineCommand,
+        { machineId: lg031, version: 1, reason: "Sold to a collector" },
+        { actor: tom, db, clock: fixedClock("2026-04-01T08:00:00Z"), newId: randomUUID },
+      ),
+    );
+
+    const { due, records } = await page("LG-031", "2026-10-01");
+
+    // A retired machine is not published for maintenance: nothing is due, and the header already says „Ausgemustert“.
+    expect(due).toContain("Gerade ist an diesem Gerät keine Wartung fällig.");
+    expect(due).not.toContain("Nicht ausgestellt");
     expect(records).toContain("Before the restoration");
   });
 

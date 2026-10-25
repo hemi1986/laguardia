@@ -20,7 +20,7 @@ export type MachineMaintenance = {
   notOnDisplay: boolean;
   /** Its due maintenance tasks – the overdue ones first, then the longest due. */
   due: MachineDueMaintenanceTask[];
-  /** Its latest maintenance records, the newest first – at most the `latestRecords` asked for. */
+  /** Its latest maintenance records, the newest first – at most the `latestRecordCount` asked for. */
   latestRecords: NamedMaintenanceRecord[];
   /** How many maintenance records it has in all. */
   recordCount: number;
@@ -36,13 +36,14 @@ export async function machineMaintenance(
   db: Database,
   clock: Clock,
   machineId: string,
-  { teamMember, latestRecords }: { teamMember: { role: Role }; latestRecords: number },
+  { teamMember, latestRecordCount }: { teamMember: { role: Role }; latestRecordCount: number },
 ): Promise<MachineMaintenance> {
-  const [machines, latest] = await Promise.all([
-    machinesForMaintenance(db, { machineId }),
-    latestMaintenanceRecords(db, machineId, latestRecords),
+  const published = machinesForMaintenance(db, { machineId });
+  const [machines, due, latest] = await Promise.all([
+    published,
+    published.then((machines) => dueOn(db, clock, machines, teamMember)),
+    latestMaintenanceRecords(db, machineId, latestRecordCount),
   ]);
-  const due = await dueOn(db, clock, machines, teamMember);
   return {
     notOnDisplay: machines.some((machine) => machine.machineStatus === "not-on-display"),
     due: due

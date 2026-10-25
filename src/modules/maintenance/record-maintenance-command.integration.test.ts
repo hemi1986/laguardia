@@ -72,7 +72,7 @@ function record(
 }
 
 /** When the maintenance task is due on the machine on that day – none when it is not due then. */
-async function dueOn(day: string, maintenanceTaskId: string, machineId: string) {
+async function dueThatDay(day: string, maintenanceTaskId: string, machineId: string) {
   const due = await dueMaintenance(db, fixedClock(`${day}T10:00:00Z`));
   return due.find((task) => task.id === maintenanceTaskId)?.machines.find((machine) => machine.machineId === machineId);
 }
@@ -119,8 +119,8 @@ describe("CMD-RecordMaintenance", () => {
       }),
     ]);
     // Next due one interval after the recorded date.
-    expect(await dueOn("2026-07-02", cleanGlass, lg042)).toBeUndefined();
-    expect(await dueOn("2026-07-03", cleanGlass, lg042)).toMatchObject({
+    expect(await dueThatDay("2026-07-02", cleanGlass, lg042)).toBeUndefined();
+    expect(await dueThatDay("2026-07-03", cleanGlass, lg042)).toMatchObject({
       lastDone: "2026-06-03",
       dueSince: "2026-07-03",
     });
@@ -143,8 +143,8 @@ describe("CMD-RecordMaintenance", () => {
       { actor: tom, db, clock: fixedClock("2026-07-01T09:00:00Z"), newId: randomUUID },
     );
     if (!back.ok) throw new Error(back.error);
-    expect(await dueOn("2026-09-09", cleanPlayfield, lg030)).toBeUndefined();
-    expect(await dueOn("2026-09-10", cleanPlayfield, lg030)).toMatchObject({
+    expect(await dueThatDay("2026-09-09", cleanPlayfield, lg030)).toBeUndefined();
+    expect(await dueThatDay("2026-09-10", cleanPlayfield, lg030)).toMatchObject({
       lastDone: "2026-06-10",
       dueSince: "2026-09-10",
     });

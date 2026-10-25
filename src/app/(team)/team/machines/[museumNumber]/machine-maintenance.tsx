@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
 import { recordMaintenanceAddress } from "../../maintenance/erfassen/record-maintenance-address";
-import type { MachineMaintenance, ShownMaintenanceRecord } from "./machine-record-data";
+import type { ShownMachineMaintenance, ShownMaintenanceRecord } from "./machine-record-data";
 
 const { machineMaintenance: texts, dueMaintenance, recordMaintenance } = teamMessages;
 
@@ -17,7 +17,7 @@ export function MachineMaintenanceSection({
   maintenance,
   museumNumber,
 }: {
-  maintenance: MachineMaintenance;
+  maintenance: ShownMachineMaintenance;
   museumNumber: string;
 }) {
   const machine = `/team/machines/${encodeURIComponent(museumNumber)}`;
