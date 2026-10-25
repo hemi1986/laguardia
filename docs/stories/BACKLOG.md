@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 49 of 59 domain stories done** · scenarios 444 of 505
+**Progress: 50 of 59 domain stories done** · scenarios 460 of 505
 
-**84 stories** · In Progress: 1 · Ready: 15 · In Review: 0 · Draft: 3 · Done: 65
+**84 stories** · In Progress: 0 · Ready: 15 · In Review: 0 · Draft: 3 · Done: 66
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 
 ## Ready
 
@@ -109,5 +103,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-050](ST-050-new-since-last-visit.md) | Dashboards mark what is new since the last visit | story | Repair | should | L | high | ST-058, ST-086, ST-087 |
 | [ST-051](ST-051-repair-times.md) | Repair times view | story | Repair | should | M | medium | ST-022, ST-024, ST-027, ST-028, ST-030, ST-039 |
 | [ST-053](ST-053-link-reopens-resolved-defect.md) | Linking a problem report to a recently resolved defect reopens it | story | Repair | should | S | medium | ST-022, ST-030, ST-052 |
+| [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
