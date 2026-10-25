@@ -9,7 +9,7 @@ risk: low
 events: [EVT-FileRemoved]
 depends_on: [ST-037]
 labels: [files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 52 of 59 domain stories done** · scenarios 477 of 505
+**Progress: 53 of 59 domain stories done** · scenarios 481 of 505
 
-**84 stories** · In Progress: 1 · Ready: 12 · In Review: 0 · Draft: 3 · Done: 68
+**84 stories** · In Progress: 0 · Ready: 12 · In Review: 0 · Draft: 3 · Done: 69
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 
 ## Ready
 
@@ -110,4 +104,5 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
+| [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 | [ST-084](ST-084-report-forms-say-photo-must-be-chosen-again.md) | Report forms say that the photo must be chosen again after a rejection | story | Repair | could | XS | low | ST-013, ST-015, ST-016, ST-023 |
