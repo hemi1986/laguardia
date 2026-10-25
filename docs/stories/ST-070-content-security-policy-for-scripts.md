@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: [ST-003, ST-013, ST-085]
 labels: [follow-up, security]
-status: ready
+status: done
 ---
 
 ## Task
@@ -31,17 +31,17 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 **After the file upload tech task ST-085** (backlog grooming 2026-10-17, PO and lead dev): the criterion "a file upload to the private Vercel Blob store works under the policy" needs a file upload, and the first one is the direct browser upload of ST-085 (split off ST-037). The criterion stays here, so this task depends on ST-085: the policy is written once against the real upload path instead of being widened later. ST-070 is back in ST-042's `depends_on` (user, 2026-10-17, section 9 item 5).
 
 ## Acceptance Criteria
-- [ ] Every page response – visitor machine page, report form, legal pages, login and team pages that exist when this task is done – carries exactly one `Content-Security-Policy` header whose `script-src` contains a `'nonce-…'` source and `'strict-dynamic'` and neither `'unsafe-inline'` nor `'unsafe-eval'`; asserted by the browser test in `e2e/security.spec.ts` against the commit's Vercel preview.
-- [ ] Each nonce is generated with `crypto.randomBytes(16)` and base64-encoded (128 bits of randomness; not `randomUUID()`, which has about 122); two consecutive requests for the same page get different nonces.
-- [ ] `style-src` contains `'self'` and the nonce; `'unsafe-inline'` appears in `style-src` only if a page or library needs `style` attributes (named in the pull request), and never in `script-src`.
-- [ ] The policy still contains `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` and `form-action 'self'`; the other ST-003 security headers are unchanged (existing header check stays green).
-- [ ] An inline script without the nonce, injected into a page in a browser test, does not run, and the browser reports a CSP violation for it.
-- [ ] All existing browser tests (including the 360 px checks: page width ≤ 360 px) pass on the preview under the policy, and no CSP violation is reported in the browser console during them.
-- [ ] Both CSRF browser tests from ST-003 (foreign Origin, missing Origin) stay green.
-- [ ] A photo upload and a file upload to the private Vercel Blob store and a presigned download of a stored file work on the preview under the policy; the policy allows only the Blob store's host for them.
-- [ ] `npm run dev` works locally under the policy (with `'unsafe-eval'` only there).
-- [ ] With every page rendered per request, the visitor machine page responds in under 1 s on the preview (Definition of Done, ST-059).
-- [ ] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that pages are rendered per request because of the nonce, and that no inline script or third-party script is added without the nonce.
+- [x] Every page response – visitor machine page, report form, legal pages, login and team pages that exist when this task is done – carries exactly one `Content-Security-Policy` header whose `script-src` contains a `'nonce-…'` source and `'strict-dynamic'` and neither `'unsafe-inline'` nor `'unsafe-eval'`; asserted by the browser test in `e2e/security.spec.ts` against the commit's Vercel preview.
+- [x] Each nonce is generated with `crypto.randomBytes(16)` and base64-encoded (128 bits of randomness; not `randomUUID()`, which has about 122); two consecutive requests for the same page get different nonces.
+- [x] `style-src` contains `'self'` and the nonce; `'unsafe-inline'` appears in `style-src` only if a page or library needs `style` attributes (named in the pull request), and never in `script-src`.
+- [x] The policy still contains `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'` and `form-action 'self'`; the other ST-003 security headers are unchanged (existing header check stays green).
+- [x] An inline script without the nonce, injected into a page in a browser test, does not run, and the browser reports a CSP violation for it.
+- [x] All existing browser tests (including the 360 px checks: page width ≤ 360 px) pass on the preview under the policy, and no CSP violation is reported in the browser console during them.
+- [x] Both CSRF browser tests from ST-003 (foreign Origin, missing Origin) stay green.
+- [x] A photo upload and a file upload to the private Vercel Blob store and a presigned download of a stored file work on the preview under the policy; the policy allows only the Blob store's host for them.
+- [x] `npm run dev` works locally under the policy (with `'unsafe-eval'` only there).
+- [x] With every page rendered per request, the visitor machine page responds in under 1 s on the preview (Definition of Done, ST-059).
+- [x] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that pages are rendered per request because of the nonce, and that no inline script or third-party script is added without the nonce.
 
 ## Out of Scope
 - The CSRF protection itself (ST-003, `src/proxy.ts`)

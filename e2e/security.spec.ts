@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { expect, logIn, test } from "./fixtures";
 
 /**
  * The CSRF protection of ST-003 (`src/proxy.ts`), proven on the login page – public and with a real Server Action
@@ -79,4 +79,123 @@ test("pages are served with the security headers", async ({ page }) => {
   expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["permissions-policy"]).toContain("geolocation=()");
+});
+
+/**
+ * The script policy of ST-070 (`src/proxy.ts`): every page response carries exactly one Content Security Policy with a
+ * fresh nonce. `'unsafe-eval'` belongs only to `next dev` – the local browser tests run there, the preview never does.
+ */
+const onPreview = !!process.env.BASE_URL;
+
+/** The Content Security Policy headers of a page response – exactly one is expected. */
+async function policiesOf(page: Page, path: string): Promise<string[]> {
+  const response = await page.request.get(path);
+  return response
+    .headersArray()
+    .filter(({ name }) => name.toLowerCase() === "content-security-policy")
+    .map(({ value }) => value);
+}
+
+/** The sources of one directive of a policy. */
+function directive(policy: string, name: string): string[] {
+  const found = policy
+    .split(";")
+    .map((part) => part.trim().split(/\s+/))
+    .find(([directiveName]) => directiveName === name);
+  return found?.slice(1) ?? [];
+}
+
+// `/gibt-es-nicht`: the root not-found page – Next.js' built-in one would bring a `<style>` without the nonce.
+const publicPages = ["/", "/login", "/datenschutz", "/m/LG-999", "/m/LG-999/melden", "/gibt-es-nicht"];
+
+// Opened in the browser, not only fetched: the fixture's watch sees each page render under the policy (on the preview:
+// the production policy).
+test("every page carries exactly one script policy with a nonce and 'strict-dynamic'", async ({ page }) => {
+  for (const path of publicPages) {
+    const response = await page.goto(path);
+    const policies = ((await response?.headersArray()) ?? [])
+      .filter(({ name }) => name.toLowerCase() === "content-security-policy")
+      .map(({ value }) => value);
+    expect(policies, path).toHaveLength(1);
+    const scripts = directive(policies[0], "script-src");
+    expect(scripts, path).toContain("'self'");
+    expect(scripts, path).toContain("'strict-dynamic'");
+    expect(
+      scripts.some((source) => /^'nonce-[A-Za-z0-9+/]{22}==\'$/.test(source)),
+      path,
+    ).toBe(true);
+    expect(scripts, path).not.toContain("'unsafe-inline'");
+    if (onPreview) expect(scripts, path).not.toContain("'unsafe-eval'");
+  }
+});
+
+test("team pages carry the same script policy", async ({ page }) => {
+  test.skip(!process.env.E2E_TEAM_USERNAME || onPreview, "needs a local technician account");
+  await logIn(page);
+  for (const path of ["/team", "/team/machines", "/team/machines/new"]) {
+    const policies = await policiesOf(page, path);
+    expect(policies, path).toHaveLength(1);
+    expect(
+      directive(policies[0], "script-src").some((source) => source.startsWith("'nonce-")),
+      path,
+    ).toBe(true);
+  }
+});
+
+test("two requests for the same page get different nonces", async ({ page }) => {
+  const nonceOf = async () =>
+    directive((await policiesOf(page, "/login"))[0], "script-src").find((source) => source.startsWith("'nonce-"));
+
+  const first = await nonceOf();
+  const second = await nonceOf();
+
+  expect(first).toBeDefined();
+  expect(second).toBeDefined();
+  expect(first).not.toBe(second);
+});
+
+test("the policy keeps the ST-003 protection and allows styles only with the nonce", async ({ page }) => {
+  const [policy] = await policiesOf(page, "/login");
+  const nonce = directive(policy, "script-src").find((source) => source.startsWith("'nonce-"));
+
+  expect(directive(policy, "frame-ancestors")).toEqual(["'none'"]);
+  expect(directive(policy, "object-src")).toEqual(["'none'"]);
+  expect(directive(policy, "base-uri")).toEqual(["'self'"]);
+  expect(directive(policy, "form-action")).toEqual(["'self'"]);
+  expect(directive(policy, "default-src")).toEqual(["'self'"]);
+  // Photos and uploads reach only this deployment's private Blob store and Blob's upload API – no wildcard (on the
+  // preview the store comes from BLOB_STORE_ID, locally from the Development store's token).
+  const store = /^https:\/\/[a-z0-9]+\.private\.blob\.vercel-storage\.com$/;
+  const images = directive(policy, "img-src");
+  expect(images.slice(0, 3)).toEqual(["'self'", "blob:", "data:"]);
+  expect(images.slice(3)).toHaveLength(1);
+  expect(images[3]).toMatch(store);
+  const connections = directive(policy, "connect-src");
+  expect(connections).toEqual(["'self'", images[3], "https://vercel.com/api/blob/"]);
+  // `next dev` allows inline `<style>` for its dev tools – the preview never does.
+  expect(directive(policy, "style-src")).toEqual(onPreview ? ["'self'", nonce] : ["'self'", "'unsafe-inline'"]);
+});
+
+// Injected the way stored cross-site scripting would arrive: as markup in the server's HTML, past output encoding.
+test.describe(() => {
+  test.use({ policyViolationsExpected: true });
+
+  test("an injected inline script without the nonce does not run and is reported as a violation", async ({ page }) => {
+    const violations: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (message.type() === "error" && text.includes("Content Security Policy") && text.includes("script-src"))
+        violations.push(text);
+    });
+    await page.route("**/login", async (route) => {
+      const response = await route.fetch();
+      const html = (await response.text()).replace("</body>", "<script>window.injected = true;</script></body>");
+      await route.fulfill({ response, body: html });
+    });
+
+    await page.goto("/login");
+
+    expect(await page.evaluate(() => (window as { injected?: boolean }).injected)).toBeUndefined();
+    await expect.poll(() => violations.length).toBeGreaterThan(0);
+  });
 });

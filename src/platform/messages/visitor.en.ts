@@ -5,6 +5,9 @@ export const visitorEn: VisitorMessages = {
   home: {
     museum: "Flipper- & Arcade Museum Eschbach",
     teamLogin: "Team login",
+
+    /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */
+    notFound: "This page does not exist.",
   },
   /** The language switch every visitor page shows (ST-010): it offers the other language, named in that language. */
   languageSwitch: "Deutsch",
