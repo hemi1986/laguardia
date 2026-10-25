@@ -157,24 +157,29 @@ test("the policy keeps the ST-003 protection and allows styles only with the non
   expect(directive(policy, "base-uri")).toEqual(["'self'"]);
   expect(directive(policy, "form-action")).toEqual(["'self'"]);
   expect(directive(policy, "default-src")).toEqual(["'self'"]);
-  expect(directive(policy, "style-src")).toEqual(["'self'", nonce]);
+  // `next dev` allows inline `<style>` for its dev tools – the preview never does.
+  expect(directive(policy, "style-src")).toEqual(onPreview ? ["'self'", nonce] : ["'self'", "'unsafe-inline'"]);
 });
 
 // Injected the way stored cross-site scripting would arrive: as markup in the server's HTML, past output encoding.
-test("an injected inline script without the nonce does not run and is reported as a violation", async ({ page }) => {
-  const violations: string[] = [];
-  page.on("console", (message) => {
-    if (message.type() === "error" && message.text().includes("Content Security Policy"))
-      violations.push(message.text());
-  });
-  await page.route("**/login", async (route) => {
-    const response = await route.fetch();
-    const html = (await response.text()).replace("</body>", "<script>window.injected = true;</script></body>");
-    await route.fulfill({ response, body: html });
-  });
+test.describe(() => {
+  test.use({ policyViolationsExpected: true });
 
-  await page.goto("/login");
+  test("an injected inline script without the nonce does not run and is reported as a violation", async ({ page }) => {
+    const violations: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" && message.text().includes("Content Security Policy"))
+        violations.push(message.text());
+    });
+    await page.route("**/login", async (route) => {
+      const response = await route.fetch();
+      const html = (await response.text()).replace("</body>", "<script>window.injected = true;</script></body>");
+      await route.fulfill({ response, body: html });
+    });
 
-  expect(await page.evaluate(() => (window as { injected?: boolean }).injected)).toBeUndefined();
-  await expect.poll(() => violations.length).toBeGreaterThan(0);
+    await page.goto("/login");
+
+    expect(await page.evaluate(() => (window as { injected?: boolean }).injected)).toBeUndefined();
+    await expect.poll(() => violations.length).toBeGreaterThan(0);
+  });
 });

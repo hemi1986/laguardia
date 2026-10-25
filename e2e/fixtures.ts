@@ -19,10 +19,24 @@ export async function allowPreview(page: Page, baseURL: string | undefined): Pro
   );
 }
 
-export const test = base.extend({
-  page: async ({ page, baseURL }, provide) => {
+/**
+ * Every browser test fails when the browser reports a Content Security Policy violation (ST-070) – except one caused
+ * only by the Vercel toolbar, which Vercel injects into previews. A test that provokes a violation on purpose sets
+ * `test.use({ policyViolationsExpected: true })`.
+ */
+export const test = base.extend<{ policyViolationsExpected: boolean }>({
+  policyViolationsExpected: [false, { option: true }],
+  page: async ({ page, baseURL, policyViolationsExpected }, provide) => {
+    const violations: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (message.type() === "error" && text.includes("Content Security Policy") && !text.includes("vercel.live")) {
+        violations.push(text);
+      }
+    });
     await allowPreview(page, baseURL);
     await provide(page);
+    if (!policyViolationsExpected) expect(violations, "Content Security Policy violations").toEqual([]);
   },
 });
 

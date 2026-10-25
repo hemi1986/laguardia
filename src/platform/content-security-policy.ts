@@ -11,18 +11,27 @@ export function contentSecurityPolicy({
   blobStoreHost,
 }: {
   nonce: string;
-  /** `next dev` – React needs `eval` there for its debugging information, never on a preview or in production. */
+  /**
+   * `next dev` – React needs `eval` there for its debugging information, and the Next.js dev tools insert `<style>`
+   * elements without the nonce; never on a preview or in production.
+   */
   development: boolean;
   /** The private Vercel Blob store's host – photos and files are shown from and uploaded to it (ADR 0006). */
   blobStoreHost: string | undefined;
 }): string {
   const blob = blobStoreHost ? ` https://${blobStoreHost}` : "";
+  // A browser upload asks Blob's API for the upload, in parts above 20 MB (`/mpu`) – only that path (ST-085).
+  const blobApi = blobStoreHost ? ` ${BLOB_API}` : "";
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${development ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    development ? "style-src 'self' 'unsafe-inline'" : `style-src 'self' 'nonce-${nonce}'`,
+    // A nonce does not cover `style` attributes, which React renders from `style` props and Base UI sets on its
+    // controls; they may be inline – `<style>` elements still need the nonce, and scripts stay strict (ST-070, user
+    // 2026-10-25).
+    "style-src-attr 'unsafe-inline'",
     `img-src 'self' blob: data:${blob}`,
-    `connect-src 'self'${blob}`,
+    `connect-src 'self'${blob}${blobApi}`,
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -30,6 +39,9 @@ export function contentSecurityPolicy({
     "frame-ancestors 'none'",
   ].join("; ");
 }
+
+/** Vercel Blob's API, where the browser's `uploadPresigned` sends an upload (`@vercel/blob`'s default API address). */
+const BLOB_API = "https://vercel.com/api/blob/";
 
 /** A fresh, unpredictable nonce: 128 bits, base64 (ST-070). */
 export function newNonce(): string {
