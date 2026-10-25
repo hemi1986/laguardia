@@ -250,6 +250,8 @@ export const repairTexts = {
     reopenReason: "Warum wieder öffnen?",
     reopened: (title: string) => `„${title}“ ist wieder offen.`,
     reopenedBy: (name: string, dateTime: string) => `Wieder geöffnet von ${name} am ${dateTime}`,
+    /** The reason when linking a problem report reopened it (ST-053, user 2026-10-25) – its description. */
+    reopenedBecauseOf: (description: string) => `Wegen der Meldung: „${description}“`,
     /**
      * Putting a defect on hold (ST-029, G22): „Pausieren“ in the work group leads to its form page; the confirmation
      * names the reason. „Fortsetzen“ stands in its place while the defect is on hold – one tap.
@@ -316,6 +318,11 @@ export const repairErrors = {
   "defect-required": "Bitte einen Defekt auswählen.",
   "defect-of-another-machine": "Dieser Defekt gehört zu einem anderen Gerät.",
   "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
+  /** Linking to a recently resolved defect, which reopens it (ST-053). */
+  "defect-resolved-too-long-ago":
+    "Dieser Defekt wurde vor mehr als 30 Tagen behoben. Bitte stattdessen einen neuen Defekt erfassen.",
+  "machine-status-without-reopening":
+    "Den Status kannst du hier nur ändern, wenn ein behobener Defekt wieder geöffnet wird. Bitte „Status nicht ändern“ wählen.",
   "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
   "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
   /** Assigning a defect (ST-026). */

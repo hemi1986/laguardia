@@ -185,7 +185,9 @@ export function DefectDetailsView({
         ) : (
           <section key={step.id} className="flex flex-col gap-1">
             <h2 className="font-semibold">{texts.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}</h2>
-            <p className="whitespace-pre-line">{step.reason}</p>
+            <p className="whitespace-pre-line">
+              {step.problemReport ? texts.reopenedBecauseOf(step.problemReport.description) : step.reason}
+            </p>
           </section>
         ),
       )}

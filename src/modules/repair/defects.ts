@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
 import { elapsedMoreThanHours } from "@/platform/time";
@@ -12,6 +12,7 @@ import {
   type Priority,
   type Reopening,
   type Resolution,
+  type ShownReopening,
   type WorkLogEntry,
 } from "./defect";
 import { machineForReporting } from "@/modules/collection";
@@ -61,11 +62,15 @@ export const reopenings = history({
   owner: "defectId",
   toEntry: (row): Reopening => ({
     id: row.id,
-    reason: row.reason,
+    ...(row.problemReportId ? { problemReportId: row.problemReportId } : { reason: row.reason ?? "" }),
     reopenedBy: row.reopenedBy,
     reopenedAt: row.reopenedAt,
   }),
-  toRow: (reopening) => reopening,
+  toRow: (reopening) => ({
+    ...reopening,
+    reason: reopening.reason ?? null,
+    problemReportId: reopening.problemReportId ?? null,
+  }),
 });
 
 /** How AGG-Defect is stored (ST-018): one row per defect, versioned (HS-16), with its work log and its resolutions. */
@@ -369,7 +374,7 @@ export type DefectDetails = {
   resolution: Omit<Resolution, "id"> | undefined;
   /** Every resolution and every reopening, the oldest first (ST-030) – a reopened defect keeps them all. */
   resolutions: Resolution[];
-  reopenings: Reopening[];
+  reopenings: ShownReopening[];
   problemReports: DefectProblemReport[];
   /** Its time to the first work log entry and to resolved (ST-051, RM-RepairTimes) – each only once it exists. */
   repairTimes: DefectRepairTimes;
@@ -408,7 +413,7 @@ export async function defectDetails(
       resolvedAt: resolution.resolvedAt,
     },
     resolutions: stored.resolutions,
-    reopenings: stored.reopenings,
+    reopenings: (await withReopenReasons(db, new Map([[stored.id, stored.reopenings]]))).get(stored.id) ?? [],
     problemReports,
     repairTimes: defectRepairTimes({ ...stored, problemReports }),
   };
@@ -450,13 +455,44 @@ async function reopeningFacts(db: Database, defect: Defect): Promise<ReopeningFa
     : undefined;
 }
 
+/**
+ * The reopenings of some defects as read models show them (ST-053): a problem report as the reason with its
+ * description, read in one query for all of them – a linked problem report is never dismissed, so it has one.
+ */
+export async function withReopenReasons(
+  db: Database,
+  reopeningsByDefect: Map<string, Reopening[]>,
+): Promise<Map<string, ShownReopening[]>> {
+  const ids = [...reopeningsByDefect.values()]
+    .flat()
+    .flatMap((step) => (step.problemReportId ? [step.problemReportId] : []));
+  const rows = ids.length
+    ? await db
+        .select({ id: problemReport.id, description: problemReport.description })
+        .from(problemReport)
+        .where(inArray(problemReport.id, ids))
+    : [];
+  const descriptions = new Map(rows.map((row) => [row.id, row.description ?? ""]));
+  return new Map(
+    [...reopeningsByDefect].map(([defectId, steps]) => [
+      defectId,
+      steps.map(({ problemReportId, reason, ...step }): ShownReopening =>
+        problemReportId
+          ? { ...step, problemReport: { id: problemReportId, description: descriptions.get(problemReportId) ?? "" } }
+          : { ...step, reason: reason ?? "" },
+      ),
+    ]),
+  );
+}
+
 /** The defect through its store – the one mapping from its rows to its state (ST-018). */
 async function loadDefect(db: Database, defectId: string) {
   return isId(defectId) ? defects.load(db, defectId) : undefined;
 }
 
 /**
- * The facts of CMD-LinkProblemReportToDefect (ST-022): the chosen defect's machine and state, read in the command's
+ * The facts of CMD-LinkProblemReportToDefect (ST-022): the chosen defect's machine and state – and when it was last
+ * resolved, for "recently resolved" (ST-053) –, read in the command's
  * transaction. The row stays locked until the command commits, so a concurrent change of the defect (its resolution,
  * ST-028) waits instead of slipping between the check and the link. `FOR UPDATE`, not `FOR SHARE`: from ST-053 on the
  * same transaction reopens a resolved defect, and two links holding a share lock would deadlock on that write.
@@ -468,5 +504,12 @@ export async function linkingFacts(tx: Database, input: { defectId: string | und
     .from(defect)
     .where(eq(defect.id, input.defectId))
     .for("update");
-  return { defect: row };
+  if (!row) return { defect: undefined };
+  const [latest] = await tx
+    .select({ resolvedAt: defectResolution.resolvedAt })
+    .from(defectResolution)
+    .where(eq(defectResolution.defectId, row.id))
+    .orderBy(desc(defectResolution.position))
+    .limit(1);
+  return { defect: { ...row, resolvedAt: latest?.resolvedAt } };
 }

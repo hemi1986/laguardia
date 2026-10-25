@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { Database, TeamMemberId } from "@/platform/command";
-import type { DefectState, Reopening, Resolution, WorkLogEntry } from "./defect";
-import { reopenings, resolutions, workLog } from "./defects";
+import type { DefectState, Resolution, ShownReopening, WorkLogEntry } from "./defect";
+import { reopenings, resolutions, withReopenReasons, workLog } from "./defects";
 import { defect, defectResolution, problemReport } from "./schema";
 
 /**
@@ -22,7 +22,7 @@ export type RepairHistoryEntry =
       /** One per resolve, the oldest first – none while it was never resolved. */
       resolutions: Resolution[];
       /** One per reopen, the oldest first (ST-030) – each follows the resolution before it. */
-      reopenings: Reopening[];
+      reopenings: ShownReopening[];
     }
   | {
       kind: "resolved-on-the-spot";
@@ -70,7 +70,7 @@ export async function repairHistory(db: Database, machineId: string): Promise<Re
   const [workLogs, resolutionsByDefect, reopeningsByDefect] = await Promise.all([
     workLog.load(db, ids),
     resolutions.load(db, ids),
-    reopenings.load(db, ids),
+    reopenings.load(db, ids).then((loaded) => withReopenReasons(db, loaded)),
   ]);
   const entries: RepairHistoryEntry[] = [
     ...defects.map(({ closedOnRetirementAt, ...row }) => ({

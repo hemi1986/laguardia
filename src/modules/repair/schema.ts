@@ -1,4 +1,5 @@
-import { bigserial, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigserial, boolean, check, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { defectStates, holdReasons, priorities } from "./defect";
 import { dismissalReasons, triageOutcomes } from "./report-problem";
 
@@ -99,7 +100,8 @@ export const defectResolution = pgTable(
 
 /**
  * The reopenings of a defect (data model: Reopening entity, ST-030) – one per reopen, so the repair history shows each
- * closing note followed by the reason it was reopened. Insert-only (Q13); the reason is typed text.
+ * closing note followed by the reason it was reopened. Insert-only (Q13). The reason is typed text or – when linking
+ * reopened it (ST-053) – the linked problem report; exactly one of the two (a check in the migration).
  */
 export const defectReopening = pgTable(
   "defect_reopening",
@@ -111,11 +113,15 @@ export const defectReopening = pgTable(
     defectId: uuid("defect_id")
       .notNull()
       .references(() => defect.id),
-    reason: text("reason").notNull(),
+    reason: text("reason"),
+    problemReportId: uuid("problem_report_id").references(() => problemReport.id),
     reopenedBy: uuid("reopened_by").notNull(),
     reopenedAt: timestamp("reopened_at", { withTimezone: true }).notNull(),
   },
-  (t) => [index("defect_reopening_defect_idx").on(t.defectId)],
+  (t) => [
+    index("defect_reopening_defect_idx").on(t.defectId),
+    check("defect_reopening_one_reason", sql`(${t.reason} IS NULL) <> (${t.problemReportId} IS NULL)`),
+  ],
 );
 
 /**
