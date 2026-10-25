@@ -6,7 +6,9 @@ import {
   type MachineOverviewQuery,
   type MachineStatus,
 } from "@/modules/collection";
+import { overdueMaintenanceCounts } from "@/modules/maintenance";
 import { openDefectCounts } from "@/modules/repair";
+import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 
 /**
@@ -15,8 +17,11 @@ import type { Database } from "@/platform/command";
  */
 export type OverviewQuery = Omit<MachineOverviewQuery, "retiredToo"> & { retired?: boolean };
 
-/** One machine of the overview as the page shows it – with how many open defects it has (ST-021). */
-export type MachineOverviewItem = MachineOverviewEntry & { openDefects: number };
+/**
+ * One machine of the overview as the page shows it – with how many open defects it has (ST-021) and how many maintenance
+ * tasks are overdue on it (ST-057).
+ */
+export type MachineOverviewItem = MachineOverviewEntry & { openDefects: number; overdueMaintenance: number };
 
 export type MachineOverviewData = {
   machines: MachineOverviewItem[];
@@ -27,10 +32,15 @@ export type MachineOverviewData = {
 };
 
 /**
- * The machine overview's data: Collection's machines and status counts with Repair's number of open defects per
- * machine – the page composes the modules' public queries (ST-009).
+ * The machine overview's data: Collection's machines and status counts with Repair's number of open defects and
+ * Maintenance's number of overdue maintenance tasks per machine – the page composes the modules' public queries (ST-009).
+ * Overdue is computed on `clock`'s today (ADR 0002).
  */
-export async function loadMachineOverview(db: Database, query: OverviewQuery): Promise<MachineOverviewData> {
+export async function loadMachineOverview(
+  db: Database,
+  clock: Clock,
+  query: OverviewQuery,
+): Promise<MachineOverviewData> {
   const { retired, ...narrowed } = query;
   const retiredToo = retired || Boolean(narrowed.search?.trim());
   const [machines, counts, retiredCount] = await Promise.all([
@@ -38,12 +48,19 @@ export async function loadMachineOverview(db: Database, query: OverviewQuery): P
     machineStatusCounts(db),
     retiredMachineCount(db),
   ]);
-  const openDefects = await openDefectCounts(
-    db,
-    machines.map((machine) => machine.id),
-  );
+  const [openDefects, overdueMaintenance] = await Promise.all([
+    openDefectCounts(
+      db,
+      machines.map((machine) => machine.id),
+    ),
+    overdueMaintenanceCounts(db, clock),
+  ]);
   return {
-    machines: machines.map((machine) => ({ ...machine, openDefects: openDefects.get(machine.id) ?? 0 })),
+    machines: machines.map((machine) => ({
+      ...machine,
+      openDefects: openDefects.get(machine.id) ?? 0,
+      overdueMaintenance: overdueMaintenance.get(machine.id) ?? 0,
+    })),
     counts,
     retiredCount,
   };

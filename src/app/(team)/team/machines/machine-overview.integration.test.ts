@@ -5,7 +5,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { recordDefectCommand, reportProblemCommand, resolveDefectCommand, retireMachineCommand } from "@/modules/repair";
+import { changeMaintenancePlanCommand, maintenancePlanVersion, recordMaintenanceCommand } from "@/modules/maintenance";
+import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
+import {
+  recordDefectCommand,
+  reportProblemCommand,
+  resolveDefectCommand,
+  retireMachineCommand,
+} from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -37,8 +44,12 @@ beforeAll(async () => {
 
 afterAll(() => isolated.close());
 
-beforeEach(() => withoutMachines(db));
+beforeEach(async () => {
+  await withoutMachines(db);
+  await withoutMaintenanceTasks(db);
+});
 
+/** A playable machine, registered on 1 June 2025 – long before any maintenance task of the tests starts. */
 async function registered(museumNumber: string) {
   const outcome = await executeCommand(
     registerMachineCommand,
@@ -49,7 +60,7 @@ async function registered(museumNumber: string) {
       location: "Hall 2",
       machineStatus: "playable",
     },
-    { actor: tom, db, newId: randomUUID },
+    { actor: tom, db, clock: fixedClock("2025-06-01T09:00:00Z"), newId: randomUUID },
   );
   if (!outcome.ok) throw new Error(outcome.error);
   return outcome.result.machineId;
@@ -79,6 +90,42 @@ async function anOpenDefect(machineId: string, title: string) {
   return recorded.result.defectId;
 }
 
+/**
+ * A maintenance task every machine gets, every 3 months from 1 January 2026 – so on a machine without a record it has
+ * been overdue since late April, and on 4 October 2026 (the test's clock).
+ */
+async function aMaintenanceTask(name: string) {
+  const outcome = await executeCommand(
+    changeMaintenancePlanCommand,
+    {
+      version: await maintenancePlanVersion(db),
+      change: "add",
+      task: {
+        name,
+        instruction: `${name} – how to`,
+        intervalMonths: 3,
+        suitableForHelpers: false,
+        machineCategory: undefined,
+        technology: undefined,
+        startDate: "2026-01-01",
+      },
+    },
+    { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+  return outcome.result.maintenanceTaskId;
+}
+
+/** The maintenance task recorded as done on the machine, on that day (CMD-RecordMaintenance). */
+async function recordedDone(maintenanceTaskId: string, machineId: string, on: string) {
+  const outcome = await executeCommand(
+    recordMaintenanceCommand,
+    { maintenanceTaskId, machineId, outcome: "done", date: undefined, note: "" },
+    { actor: tom, db, clock: fixedClock(`${on}T09:00:00Z`), newId: randomUUID },
+  );
+  if (!outcome.ok) throw new Error(outcome.error);
+}
+
 async function retire(machineId: string) {
   const outcome = await executeCommand(
     retireMachineCommand,
@@ -89,8 +136,8 @@ async function retire(machineId: string) {
 }
 
 /** The overview as a team member sees it for a search and a filter. */
-async function overview(query: Parameters<typeof loadMachineOverview>[1] = {}) {
-  const data = await loadMachineOverview(db, query);
+async function overview(query: Parameters<typeof loadMachineOverview>[2] = {}) {
+  const data = await loadMachineOverview(db, clock, query);
   return renderToStaticMarkup(createElement(MachineOverview, { ...data, query, canRegister: false }));
 }
 
@@ -178,7 +225,7 @@ describe("the machine overview with open defects", () => {
     );
     if (!resolved.ok) throw new Error(resolved.error);
 
-    const data = await loadMachineOverview(db, {});
+    const data = await loadMachineOverview(db, clock, {});
 
     expect(data.machines.map((machine) => [machine.museumNumber, machine.openDefects])).toEqual([
       ["LG-007", 0],
@@ -189,5 +236,22 @@ describe("the machine overview with open defects", () => {
     const lg042At = html.indexOf("LG-042 · Medieval Madness");
     expect(html.slice(lg042At)).toContain("2 offene Defekte");
     expect(html.slice(lg007At, lg042At)).not.toContain("offene"); // a zero is not shown (ST-008)
+  });
+});
+
+describe("the machine overview with overdue maintenance tasks", () => {
+  it("ST-057: Machine overview shows the number of overdue maintenance tasks", async () => {
+    await registered("LG-042");
+    const lg043 = await registered("LG-043");
+    const glass = await aMaintenanceTask("Clean the glass");
+    const rubbers = await aMaintenanceTask("Check the rubbers");
+    await recordedDone(glass, lg043, "2026-10-01");
+    await recordedDone(rubbers, lg043, "2026-10-01");
+
+    const html = await overview();
+
+    expect(entryOf(html, "LG-042")).toContain("2 Wartungsaufgaben überfällig");
+    expect(entryOf(html, "LG-043")).toBeDefined();
+    expect(entryOf(html, "LG-043")).not.toContain("Wartung"); // a zero is not shown (G6)
   });
 });

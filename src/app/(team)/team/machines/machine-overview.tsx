@@ -152,7 +152,8 @@ function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
 }
 
 /**
- * What tells a machine apart from its neighbours (G5) – with its open defects (ST-021); its title leads to its machine
+ * What tells a machine apart from its neighbours (G5) – with its open defects (ST-021) and overdue maintenance tasks
+ * (ST-057); its title leads to its machine
  * record (ST-009).
  */
 function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
@@ -164,6 +165,7 @@ function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
     machine.retired ? texts.retired : `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
     // A count is labelled in words, and a zero is not shown (ST-008, G6).
     machine.openDefects > 0 && texts.openDefects(machine.openDefects),
+    machine.overdueMaintenance > 0 && texts.overdueMaintenance(machine.overdueMaintenance),
   ].filter(Boolean);
 
   return (
