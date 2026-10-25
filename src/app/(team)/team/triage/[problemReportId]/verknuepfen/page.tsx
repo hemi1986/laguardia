@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { anythingToLinkTo } from "../../../defect-to-link-to-input";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
-import { anythingToLinkTo, stricterMachineStatuses } from "@/modules/repair";
+import { stricterMachineStatuses } from "@/modules/repair";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";

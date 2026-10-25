@@ -16,21 +16,19 @@ export const reopeningActors = ["helper", "technician"] as const;
 
 type ReopeningPerson = ActorOf<(typeof reopeningActors)[number]>;
 
+/**
+ * The reason is typed text from the form (ST-030), or the problem report whose linking reopens the defect (ST-053) –
+ * only CMD-LinkProblemReportToDefect gives one; no form reads it.
+ */
 export type ReopenDefectInput = {
   defectId: string;
   /** The version of the defect the team member saw (HS-16). */
   version: number;
-  reason: string;
-  /**
-   * The problem report whose linking reopens the defect (ST-053) – it is then the reason, and no text is needed. Only
-   * CMD-LinkProblemReportToDefect gives it; no form reads it.
-   */
-  problemReportId?: string;
   /** A stricter machine status chosen in the same step – technicians only; none leaves the status as it is. */
   machineStatus?: MachineStatus;
   /** The version of the machine the technician saw – needed with a chosen status (HS-16). */
   machineVersion?: number;
-};
+} & ReopenReason;
 
 /** What the decision reads besides the defect: its machine as Collection knows it now. */
 export type ReopeningFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
@@ -75,11 +73,12 @@ export function reopenDefect(
 ): Decision<Defect, DefectReopened, ReopenDefectError> {
   const refusal = reopenRefusal(defect, facts);
   if (refusal) return { ok: false, error: refusal };
-  const reason: ReopenReason | undefined = input.problemReportId
-    ? { problemReportId: input.problemReportId }
-    : input.reason.trim()
-      ? { reason: input.reason.trim() }
-      : undefined;
+  const reason: ReopenReason | undefined =
+    input.problemReportId !== undefined
+      ? { problemReportId: input.problemReportId }
+      : input.reason.trim()
+        ? { reason: input.reason.trim() }
+        : undefined;
   if (!reason) return { ok: false, error: "reopen-reason-required" };
   if (input.machineStatus) {
     // Helpers cannot change the machine status while reopening (POL-DefectMayChangeMachineStatus).

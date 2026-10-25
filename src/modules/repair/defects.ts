@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, history, type Database } from "@/platform/command";
-import { elapsedMoreThanHours } from "@/platform/time";
+import { elapsedMoreThanHours, hoursBefore } from "@/platform/time";
 import {
   priorities,
   type Claim,
@@ -270,7 +270,9 @@ export async function defectsToLinkTo(db: Database, clock: Clock, machineId: str
       .from(defect)
       .innerJoin(defectResolution, eq(defectResolution.defectId, defect.id))
       .where(and(eq(defect.machineId, machineId), eq(defect.state, "resolved")))
-      .groupBy(defect.id),
+      .groupBy(defect.id)
+      // A lower bound only – 32 days of hours cover 30 Berlin calendar days; the rule itself decides below.
+      .having(sql`max(${defectResolution.resolvedAt}) >= ${hoursBefore(now, 32 * 24)}`),
   ]);
   return {
     open: open.map(({ id, title, openSince }) => ({ id, title, openSince })),
@@ -279,11 +281,6 @@ export async function defectsToLinkTo(db: Database, clock: Clock, machineId: str
       .sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime() || a.id.localeCompare(b.id))
       .map(({ resolvedAt, ...row }) => ({ ...row, resolvedDaysAgo: daysSinceResolved(resolvedAt, now) })),
   };
-}
-
-/** Whether there is anything to link a problem report to (ST-053: open or recently resolved defects). */
-export function anythingToLinkTo(defects: DefectsToLinkTo): boolean {
-  return defects.open.length > 0 || defects.recentlyResolved.length > 0;
 }
 
 /** One column of the work log entry stored last for the defect of the surrounding query. */

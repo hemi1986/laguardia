@@ -13,6 +13,7 @@ import { aDefectWithHistory } from "@/test-support/defects";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadTriageConfirmation, triageConfirmationText } from "../../../triage-confirmation";
 import { loadProblemReport } from "../problem-report-data";
+import { triageRejectionText } from "../triage-rejection-text";
 import { linkToDefectInput } from "./link-to-defect-input";
 
 /**
@@ -73,6 +74,15 @@ describe("„Mit Defekt verknüpfen“ on a resolved defect", () => {
     const confirmation = await loadTriageConfirmation(db, clock, eva.teamMemberId, { linked: problemReportId });
     expect(confirmation && triageConfirmationText(confirmation)).toMatch(
       /^Meldung zu .+ mit Defekt „Left flipper weak“ verknüpft\. Der Defekt ist wieder offen\.$/,
+    );
+  });
+
+  it("says so when the chosen defect was reopened meanwhile, and that a defect resolved long ago needs a new defect", () => {
+    expect(triageRejectionText({ error: "defect-not-resolved" })).toBe(
+      "Dieser Defekt wurde inzwischen wieder geöffnet. Er steht jetzt bei den offenen Defekten – bitte noch einmal wählen und senden.",
+    );
+    expect(triageRejectionText({ error: "defect-resolved-too-long-ago" })).toBe(
+      "Dieser Defekt wurde vor mehr als 30 Tagen behoben. Bitte stattdessen einen neuen Defekt erfassen.",
     );
   });
 });

@@ -57,6 +57,9 @@ export const repairTexts = {
       "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
     /** After the confirmation of a link that reopened the defect (ST-053). */
     reopened: " Der Defekt ist wieder offen.",
+    /** A defect offered as recently resolved that someone reopened meanwhile (ST-053 code review #2). */
+    reopenedMeanwhile:
+      "Dieser Defekt wurde inzwischen wieder geöffnet. Er steht jetzt bei den offenen Defekten – bitte noch einmal wählen und senden.",
     submit: "Mit Defekt verknüpfen",
     back: "Zurück zur Meldung",
     linked: (museumNumber: string, title: string) => `Meldung zu ${museumNumber} mit Defekt „${title}“ verknüpft.`,

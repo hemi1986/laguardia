@@ -1,4 +1,21 @@
+import type { DefectsToLinkTo } from "@/modules/repair";
+import type { TeamCommandErrorCode } from "@/platform/messages";
 import { wholeNumber } from "@/app/_actions/version";
+
+/** Whether a problem report of the machine can be linked to anything – open or recently resolved defects (ST-053). */
+export function anythingToLinkTo(defects: DefectsToLinkTo): boolean {
+  return defects.open.length > 0 || defects.recentlyResolved.length > 0;
+}
+
+/** The rejections that are about the chosen defect – the defect choice is marked with them (G8). */
+export function aboutTheChosenDefect(error: TeamCommandErrorCode | undefined): boolean {
+  return (
+    error === "defect-required" ||
+    error === "defect-not-open" ||
+    error === "defect-resolved-too-long-ago" ||
+    error === "defect-not-resolved"
+  );
+}
 
 /**
  * Reads the chosen defect of a link form (ST-022, ST-053) – no validation, no default. No chosen defect is none, which

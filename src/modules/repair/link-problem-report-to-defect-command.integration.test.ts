@@ -279,4 +279,21 @@ describe("CMD-LinkProblemReportToDefect on a resolved defect", () => {
 
     expect(await linkOn("2026-11-11T22:00:00Z")).toMatchObject({ ok: true });
   });
+
+  it("rejects linking a defect offered as resolved that someone reopened meanwhile – nothing is stored", async () => {
+    const { machineId, defectId, reopen } = await aResolvedDefect();
+    const problemReportId = await reported(machineId, "Left flipper does nothing again");
+    const seen = (await defectDetails(db, defectId))?.version;
+    await reopen("2026-10-14T10:00:00Z");
+
+    const rejected = await executeCommand(
+      linkProblemReportToDefectCommand,
+      { problemReportId, version: 0, defectId, resolvedDefectVersion: seen },
+      { actor: eva, db, clock: linkedAt, newId: randomUUID },
+    );
+
+    expect(rejected).toEqual({ ok: false, error: "defect-not-resolved" });
+    expect((await problemReportForTriage(db, clock, problemReportId))?.triageOutcome).toBeUndefined();
+    expect((await defectDetails(db, defectId))?.reopenings).toHaveLength(1);
+  });
 });

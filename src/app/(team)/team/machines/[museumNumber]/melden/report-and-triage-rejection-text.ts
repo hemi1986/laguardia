@@ -7,5 +7,9 @@ import { photoRejectionText } from "@/app/_actions/rejection-text";
  * (G8a). Its own file, without server code: the client forms import it.
  */
 export function rejectionText(state: { error: TeamCommandErrorCode; photoAgain?: true }, museumNumber: string): string {
-  return photoRejectionText(state, { "machine-retired": teamMessages.recordDefect.retiredMeanwhile(museumNumber) });
+  return photoRejectionText(state, {
+    "machine-retired": teamMessages.recordDefect.retiredMeanwhile(museumNumber),
+    // Only a link reopens here: a defect offered as resolved was reopened meanwhile (ST-053).
+    "defect-not-resolved": teamMessages.link.reopenedMeanwhile,
+  });
 }

@@ -502,6 +502,13 @@ policies: (report) => [trigger(somePolicyOfThisModule, { problemReportId: report
 
 Its events are journaled with the system as actor, after the triggering command's events. A rejected policy rejects the whole command. A policy may journal nothing when there is nothing to do.
 
+**An automatic policy that acts as the person** (first: POL-LinkReopensResolvedDefect, ST-053): when the policy's
+command records *who* did it, needs the version that person saw, or carries a choice of theirs (a stricter machine
+status), it is not a system command but a `runs` of the triggering command – `reopeningByLink` in
+`link-problem-report-to-defect-command.ts` runs CMD-ReopenDefect as the linking technician, at the defect version the
+form posted, in the same transaction. The function carries the `POL-` ID; `runAsSystem` stays for policies nobody in
+particular performs (closing on retirement).
+
 **A policy of another module** (ADR 0010, first: ST-039): the upstream command never names a downstream policy. The
 downstream module adds them – `withPolicies(command, [policy({ id: "POL-…", calls: async (tx, { events, actor }) =>
 [trigger(…)] })])` – a policy reads what happened from the triggering command's journal events, never from its result

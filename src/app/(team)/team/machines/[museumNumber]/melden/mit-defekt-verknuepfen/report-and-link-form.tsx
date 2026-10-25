@@ -6,6 +6,7 @@ import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import type { DefectsToLinkTo } from "@/modules/repair";
 import { DefectsToLinkToField } from "../../../../defects-to-link-to";
+import { aboutTheChosenDefect, anythingToLinkTo } from "../../../../defect-to-link-to-input";
 import { rejectionText } from "../report-and-triage-rejection-text";
 import { isAboutDescription, ReportSection } from "../report-section";
 import type { ReportAndLinkState } from "./actions";
@@ -37,13 +38,10 @@ export function ReportAndLinkForm({
   const [preparingPhoto, setPreparingPhoto] = useState(false);
   const rejectionId = useId();
   if (retired && !state) return <p>{reportProblem.retired}</p>;
-  const nothingToLinkTo = defects.open.length + defects.recentlyResolved.length === 0;
+  const nothingToLinkTo = !anythingToLinkTo(defects);
   if (nothingToLinkTo && !state) return <p>{link.noOpenDefects(museumNumber)}</p>;
   const kept = keptKey(state);
-  const defectInvalid =
-    state?.error === "defect-required" ||
-    state?.error === "defect-not-open" ||
-    state?.error === "defect-resolved-too-long-ago";
+  const defectInvalid = aboutTheChosenDefect(state?.error);
 
   return (
     <form action={action} className="flex flex-col gap-8">

@@ -405,4 +405,18 @@ describe("linking to a recently resolved defect", () => {
     expect(html).toContain(linkLink(id));
     expect(html).not.toContain("keine offenen Defekte");
   });
+
+  it("offers a stricter machine status only while a recently resolved defect is offered, saying it reopens it", async () => {
+    const machineId = await aRegisteredMachine("LG-042");
+    await aDefect(machineId, "Display flickers");
+    const onlyOpen = await reportedFor(machineId, "Display goes dark");
+    expect((await linkForm(onlyOpen)).html).not.toContain("Status nicht ändern");
+
+    await aDefect(machineId, "Left flipper weak", "2026-09-30T09:00:00Z");
+    const { html } = await linkForm(await reportedFor(machineId, "Flipper on the left does nothing"));
+    expect(html).toContain("Status nicht ändern");
+    expect(html).toContain(
+      "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
+    );
+  });
 });

@@ -12,6 +12,7 @@ import { triageRejectionText } from "../triage-rejection-text";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 import { MachineStatusChoice } from "../../../defect-fields";
 import { DefectsToLinkToField } from "../../../defects-to-link-to";
+import { aboutTheChosenDefect, anythingToLinkTo } from "../../../defect-to-link-to-input";
 
 const { link: texts, triage } = teamMessages;
 
@@ -42,12 +43,9 @@ export function LinkToDefectForm({
   const rejectionId = useId();
   if (triaged && !state) return <p>{triage.alreadyTriaged}</p>;
   // Nothing to choose: the page says so (G7) – no form that could only be rejected. After a rejection it stays.
-  if (defects.open.length + defects.recentlyResolved.length === 0 && !state) return null;
+  if (!anythingToLinkTo(defects) && !state) return null;
   const kept = keptKey(state);
-  const defectInvalid =
-    state?.error === "defect-required" ||
-    state?.error === "defect-not-open" ||
-    state?.error === "defect-resolved-too-long-ago";
+  const defectInvalid = aboutTheChosenDefect(state?.error);
   const statusInvalid =
     state?.error === "machine-status-not-stricter" || state?.error === "machine-status-without-reopening";
 

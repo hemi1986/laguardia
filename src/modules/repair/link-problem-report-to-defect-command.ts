@@ -11,21 +11,14 @@ import { repairEvents } from "./events";
 import { reopenDefectCommand } from "./reopen-defect-command";
 
 /**
- * CMD-LinkProblemReportToDefect through the command layer: a change of AGG-ProblemReport at the version the technician
- * saw (HS-16) – a concurrent triage is rejected as "already triaged" – emits EVT-ProblemReportLinkedToDefect. Its facts
- * are the chosen defect as stored now; the defect itself is not changed. Before the defect's row lock it takes the
- * machine's retirement lock from Collection (ADR 0010) – linking to a resolved defect reopens it, and the lock order is
- * the same as the retirement's: the advisory lock first, then the defect.
+ * POL-LinkReopensResolvedDefect (ST-053): the reopening a link runs when the technician chose a defect offered as
+ * recently resolved – CMD-ReopenDefect at the version they saw, the problem report as the reason, with a stricter
+ * machine status if one was chosen (POL-DefectMayChangeMachineStatus). None for a defect offered as open. Shared with
+ * CMD-ReportProblem (ST-052).
  *
- * POL-LinkReopensResolvedDefect (ST-053): when the technician chose a defect offered as recently resolved, the command
- * runs CMD-ReopenDefect as the same technician, in the same transaction (`context.run`), with the problem report as the
- * reason and the defect's version the technician saw – and with it a stricter machine status chosen in the same step
- * (POL-DefectMayChangeMachineStatus). Its rejection rejects the link: nothing is stored.
- */
-/**
- * POL-LinkReopensResolvedDefect: the reopening a link runs when the technician chose a defect offered as recently
- * resolved – CMD-ReopenDefect at the version they saw, the problem report as the reason, with a stricter machine status
- * if one was chosen. None for a defect offered as open. Shared with CMD-ReportProblem (ST-052).
+ * An automatic policy that runs as the person, not as the system (`runs`, not `runAsSystem`): the reopening records
+ * who reopened it, needs the version that person saw, and the status change is that technician's decision
+ * (engineering conventions, *Automatic policies*).
  */
 export function reopeningByLink(
   problemReportId: string,
@@ -37,7 +30,6 @@ export function reopeningByLink(
     run(reopenDefectCommand, {
       defectId,
       version: chosen.resolvedDefectVersion,
-      reason: "",
       problemReportId,
       machineStatus: chosen.machineStatus,
       machineVersion: chosen.machineVersion,
@@ -45,6 +37,15 @@ export function reopeningByLink(
   ];
 }
 
+/**
+ * CMD-LinkProblemReportToDefect through the command layer: a change of AGG-ProblemReport at the version the technician
+ * saw (HS-16) – a concurrent triage is rejected as "already triaged" – emits EVT-ProblemReportLinkedToDefect. Its facts
+ * are the chosen defect as stored now; the defect itself is not changed. Before the defect's row lock it takes the
+ * machine's retirement lock from Collection (ADR 0010) – linking to a resolved defect reopens it, and the lock order is
+ * the same as the retirement's: the advisory lock first, then the defect.
+ * Linking to a recently resolved defect reopens it (POL-LinkReopensResolvedDefect, `reopeningByLink`); a rejection of
+ * the reopening rejects the link: nothing is stored.
+ */
 export const linkProblemReportToDefectCommand = aggregateCommand({
   id: "CMD-LinkProblemReportToDefect",
   allowedActors: linkingActors,

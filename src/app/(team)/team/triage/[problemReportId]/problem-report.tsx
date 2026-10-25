@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { anythingToLinkTo } from "../../defect-to-link-to-input";
 import { buttonVariants } from "@/components/ui/button";
-import { anythingToLinkTo } from "@/modules/repair";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { ProblemReportDescription } from "./problem-report-description";
