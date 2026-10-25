@@ -1,4 +1,9 @@
-import type { MachineCategory, MachineForMaintenance, Technology } from "@/modules/collection";
+import {
+  machinesForMaintenance,
+  type MachineCategory,
+  type MachineForMaintenance,
+  type Technology,
+} from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, calendarDate, graceDays, maintenanceDates, today, type CalendarDate } from "@/platform/time";
@@ -39,10 +44,10 @@ export type DueMaintenanceTask = {
 };
 
 /**
- * RM-DueMaintenance (ST-043) – on Collection's machines as it publishes them for maintenance (context map), which the
- * page passes in: every maintenance task of the plan that is due today on a machine it applies to, with
- * those machines – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the
- * most due machines, then by name (user, 2026-10-15); within a task its machines by location.
+ * RM-DueMaintenance (ST-043) – on Collection's machines as it publishes them for maintenance (context map, read here
+ * in one call): every maintenance task of the plan that is due today on a machine it applies to, with those machines
+ * – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the most due
+ * machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
  * Last done is the latest of the task's start date, the machine's registration date (HS-20), the day the task began
  * to apply after a machine model correction (ST-036, D5) and its latest maintenance record *done* (ST-044) – a record
@@ -52,6 +57,15 @@ export type DueMaintenanceTask = {
  * `teamMember` is who looks at it: each due machine says whether they may record the task there (ST-044, G11).
  */
 export async function dueMaintenance(
+  db: Database,
+  clock: Clock,
+  teamMember?: { role: Role },
+): Promise<DueMaintenanceTask[]> {
+  return dueOn(db, clock, await machinesForMaintenance(db), teamMember);
+}
+
+/** RM-DueMaintenance on the given machines – for the module's answers that already hold Collection's machines. */
+export async function dueOn(
   db: Database,
   clock: Clock,
   machines: readonly MachineForMaintenance[],

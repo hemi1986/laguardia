@@ -230,10 +230,19 @@ field per action. **A new command on a defect** adds: its description and comman
 says which fields it reads and how they become the input.
 
 **What a team member can do in maintenance** (architecture review 2026-10-18): the same answer from Maintenance –
-`dueMaintenance(db, clock, machines, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept
-them (`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
-task, the refusal (`whyNot`) and the dates allowed. The page passes Collection's machines and keeps no rule of its own
-(G11); `recordRefusal` stays inside the module.
+`dueMaintenance(db, clock, teamMember)` says on each due machine whether CMD-RecordMaintenance would accept them
+(`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
+task, the refusal (`whyNot`) and the dates allowed. The page keeps no rule of its own (G11); `recordRefusal` stays
+inside the module.
+
+**Maintenance's lists read Collection's machines themselves** (architecture review 2026-10-25): Collection publishes
+its machines for maintenance (context map, Published Language), and the answers over them read them in one call –
+`dueMaintenance`, `maintenanceForSeveral(db, clock, taskId, teamMember)` and `machineMaintenance(db, clock, machineId,
+{ teamMember, latestRecordCount })`, the machine record's section 5 (due tasks, Not on display, the newest records). No
+page passes `machinesForMaintenance` in – the exception to "the page composes" below, as a downstream context reading
+its upstream's published query, the way a command's facts do. A retired machine is not published for maintenance:
+nothing is due on it. The one machine of the recording form stays the page's (`maintenanceForRecording` above): it comes
+from the address, and the page checks it where it reads it.
 
 **What a team member can do on the machine record** (architecture review 2026-10-18): `loadMachineRecord(db, museumNumber,
 { clock, viewer })` returns `actions` – report a problem, change the location, change the status (Collection's
@@ -509,7 +518,8 @@ data calls each module's own public query and puts the results together in its p
 machine record (`src/app/(team)/team/machines/[museumNumber]/machine-record-data.ts`) takes the Collection module's
 `machineRecord` (with TeamMemberIds) and the Team module's `teamMemberNames(db, ids)`. Neither module imports the
 other, and there is no database view across modules. A module offers such a query as narrow as the page needs (names
-by ID, not its table). Don't import another module's `schema.ts`.
+by ID, not its table). Don't import another module's `schema.ts`. The one exception: Maintenance reads Collection's
+machines for maintenance itself (see "Maintenance's lists read Collection's machines themselves").
 
 **Naming what read models return by ID** (architecture review 2026-10-25): a team page names the team members and
 machines its read models refer to only through `named(db, ...parts)` (`src/app/(team)/team/named.ts`) – Team's

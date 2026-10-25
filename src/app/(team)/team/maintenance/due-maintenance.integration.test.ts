@@ -48,8 +48,8 @@ import { loadMaintenancePlan } from "../maintenance-plan/maintenance-plan-data";
 import { MaintenancePlanView } from "../maintenance-plan/maintenance-plan";
 
 /**
- * The due maintenance list (RM-DueMaintenance, ST-043): Maintenance's maintenance tasks, due on Collection's machines –
- * the page composes (ST-009) –, computed when the page loads (ADR 0002). In a database of its own, so "nothing is due"
+ * The due maintenance list (RM-DueMaintenance, ST-043): Maintenance's maintenance tasks, due on Collection's machines
+ * (Maintenance reads them), computed when the page loads (ADR 0002). In a database of its own, so "nothing is due"
  * and exact counts can be arranged. Without maintenance records (ST-044), a task's start date is its last done.
  */
 const isolated = isolatedTestDatabase("due_maintenance");

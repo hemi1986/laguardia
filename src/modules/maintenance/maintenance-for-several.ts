@@ -1,8 +1,8 @@
-import type { MachineForMaintenance } from "@/modules/collection";
+import { machinesForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
-import { byLocation, dueMaintenance } from "./due-maintenance";
+import { byLocation, dueOn } from "./due-maintenance";
 import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 import { LONGEST_BACK_DATING_DAYS, recordRefusal, type RecordMaintenanceError } from "./record-maintenance";
 
@@ -25,27 +25,27 @@ export type MaintenanceForSeveral = {
 };
 
 /**
- * On Collection's machines as it publishes them for maintenance (context map), which the page passes in. Undefined for
- * a maintenance task not in the plan – removed ones included.
+ * On Collection's machines as it publishes them for maintenance (context map), read here in one call. Undefined for a
+ * maintenance task not in the plan – removed ones included.
  */
 export async function maintenanceForSeveral(
   db: Database,
   clock: Clock,
   maintenanceTaskId: string,
-  machines: readonly MachineForMaintenance[],
   teamMember: { role: Role },
 ): Promise<MaintenanceForSeveral | undefined> {
-  const task = (await activeMaintenanceTasks(db)).find((candidate) => candidate.id === maintenanceTaskId);
+  const [tasks, machines] = await Promise.all([activeMaintenanceTasks(db), machinesForMaintenance(db)]);
+  const task = tasks.find((candidate) => candidate.id === maintenanceTaskId);
   if (!task) return undefined;
-  const dueOn = (await dueMaintenance(db, clock, machines, teamMember)).find((due) => due.id === task.id);
+  const dueHere = (await dueOn(db, clock, machines, teamMember)).find((due) => due.id === task.id);
   const applicable = machines.filter((machine) => maintenanceTaskAppliesTo(task, machine));
   const refusals = applicable.map((machine) => recordRefusal(task, machine, teamMember));
   const offered = applicable.filter((_machine, index) => refusals[index] === undefined);
-  const dueIds = new Set(dueOn?.machines.map((machine) => machine.machineId));
+  const dueIds = new Set(dueHere?.machines.map((machine) => machine.machineId));
   const now = today(clock);
   return {
     maintenanceTask: { id: task.id, name: task.name, instruction: task.instruction },
-    due: (dueOn?.machines ?? []).filter((machine) => machine.recordOffered).map(toChoose),
+    due: (dueHere?.machines ?? []).filter((machine) => machine.recordOffered).map(toChoose),
     others: offered
       .filter((machine) => !dueIds.has(machine.id))
       .map((machine) => toChoose({ ...machine, machineId: machine.id }))
