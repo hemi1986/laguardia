@@ -8,8 +8,8 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { removePhoto, withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
-import { blobStorage, type ContentStorage } from "@/platform/storage";
+import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
+import { blobStorage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 
 /**
@@ -34,15 +34,16 @@ export type FormDefinition<Input, Result, Field extends string> = {
   /** Reads and converts the fields (Q19): no validation, no default – a missing value stays "no value given". */
   input: (fields: FormFields<Field>) => Input;
   /**
-   * The photo the command removed on purpose, if any (ST-020: a spam dismissal) – deleted from the storage after the
-   * command was committed, before `onSuccess`. A failed delete is logged and does not undo the command (ADR 0007).
+   * The stored content the command removed on purpose, if any (ST-020: a spam dismissal's photo; ST-038: a removed
+   * file's content) – deleted from the storage after the command was committed, before `onSuccess`. A failed delete is
+   * logged and does not undo the command (ADR 0009).
    */
-  removesPhoto?: (result: Result) => PhotoReference | undefined;
+  removesContent?: (result: Result) => string | undefined;
   /** After the command succeeded, e.g. `revalidatePath` and `redirect` (which ends the action). */
   onSuccess: (result: Result) => Promise<void>;
 };
 
-/** `storage`: where a form's photo is stored (ST-016) or a removed one deleted (ST-020) – Vercel Blob unless a test injects another. */
+/** `storage`: where a form's photo is stored (ST-016) or removed content deleted (ST-020, ST-038) – Vercel Blob unless a test injects another. */
 export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
   currentPerson: () => Promise<Actor>;
   storage?: ContentStorage;
@@ -51,7 +52,7 @@ export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
 /** A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference. */
 export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input" | "removesContent"
 > & {
   photo: { field: string; owner: PhotoOwner };
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
@@ -65,7 +66,7 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
  */
 export type PhotosFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input" | "removesContent"
 > & {
   photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: Error } };
   input: (fields: FormFields<Field>, photos: PhotoReference[]) => Input;
@@ -81,7 +82,7 @@ export type PhotoFormState<Error extends string, Field extends string> =
  */
 export type UploadFormDefinition<Input, Result, Field extends string, Refusal extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input" | "removesContent"
 > & {
   upload: {
     /** The field with the uploaded content's name. */
@@ -102,7 +103,7 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
  */
 export type EachFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto" | "onSuccess"
+  "input" | "removesContent" | "onSuccess"
 > & {
   each: { field: string };
   input: (fields: FormFields<Field>, item: string) => Input;
@@ -224,8 +225,8 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
       actor: await currentPerson(),
     });
     if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
-    const removed = definition.removesPhoto?.(outcome.result);
-    if (removed) await removePhoto(storage ?? blobStorage(), removed);
+    const removed = definition.removesContent?.(outcome.result);
+    if (removed) await deleteRemovedContent(storage ?? blobStorage(), removed);
     await definition.onSuccess(outcome.result);
     return null;
   };
