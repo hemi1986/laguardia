@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MachineRetired]
 depends_on: [ST-039]
 labels: [mvp, collection, ui]
-status: ready
+status: done
 ---
 
 ## Story

@@ -4,33 +4,32 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
-import {
-  machineStatuses,
-  type MachineOverviewQuery,
-  type MachineStatus,
-} from "@/modules/collection";
+import { machineStatuses, type MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import type { MachineOverviewItem } from "./machine-overview-data";
+import type { MachineOverviewItem, OverviewQuery } from "./machine-overview-data";
 
 const { machines: texts, machineModels } = teamMessages;
 
 /** The address of the overview for a search and a filter – a plain link, so it works without JavaScript. */
-function overviewHref({ search, machineStatus }: MachineOverviewQuery): string {
+function overviewHref({ search, machineStatus, retired }: OverviewQuery): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (machineStatus) params.set("machineStatus", machineStatus);
+  if (retired) params.set("retired", "1");
   const query = params.toString();
   return query ? `/team/machines?${query}` : "/team/machines";
 }
 
 /**
  * The machine overview (RM-MachineOverview, ST-007/ST-008): how many active machines have which machine status –
- * each count is also the filter for it –, the search, and the list sorted by museum number. Registering is a named
- * action directly under the heading (G2a), shown to technicians only (G11).
+ * each count is also the filter for it –, the search, and the list sorted by museum number. Retired machines join
+ * the list with the filter for them or when a search finds them, marked „Ausgemustert“ (ST-055). Registering is a
+ * named action directly under the heading (G2a), shown to technicians only (G11).
  */
 export function MachineOverview({
   machines,
   counts,
+  retiredCount,
   query,
   canRegister,
   registered,
@@ -38,13 +37,16 @@ export function MachineOverview({
   machines: MachineOverviewItem[];
   /** Over all active machines – independent of the search and the filter (ST-008). */
   counts: Record<MachineStatus, number>;
-  query: MachineOverviewQuery;
+  /** How many machines are retired (ST-055). */
+  retiredCount: number;
+  query: OverviewQuery;
   canRegister: boolean;
   /** The machine just registered – named in the confirmation (G3). */
   registered?: MachineOverviewItem;
 }) {
   const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
+  const { retired } = query;
 
   return (
     <>
@@ -61,7 +63,7 @@ export function MachineOverview({
       {registered && (
         <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>
       )}
-      {total === 0 ? (
+      {total + retiredCount === 0 ? (
         <p>{texts.empty}</p>
       ) : (
         <>
@@ -70,13 +72,7 @@ export function MachineOverview({
               {texts.search}
             </label>
             <div className="flex gap-2">
-              <Input
-                id="search"
-                name="search"
-                type="search"
-                defaultValue={search}
-                aria-describedby="search-hint"
-              />
+              <Input id="search" name="search" type="search" defaultValue={search} aria-describedby="search-hint" />
               {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
               <button type="submit" className={buttonVariants({ variant: "outline" })}>
                 {texts.searchSubmit}
@@ -85,16 +81,20 @@ export function MachineOverview({
             <p id="search-hint" className="text-muted-foreground text-sm">
               {texts.searchHint}
             </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="retired" value="1" defaultChecked={retired} className="size-4" />
+              {texts.showRetired}
+            </label>
           </form>
           <nav aria-label={texts.filter}>
             <ul className="flex flex-wrap gap-2">
-              <FilterLink href={overviewHref({ search })} current={!query.machineStatus}>
+              <FilterLink href={overviewHref({ search, retired })} current={!query.machineStatus}>
                 {texts.all} · {total}
               </FilterLink>
               {machineStatuses.map((status) => (
                 <FilterLink
                   key={status}
-                  href={overviewHref({ search, machineStatus: status })}
+                  href={overviewHref({ search, machineStatus: status, retired })}
                   current={query.machineStatus === status}
                 >
                   {texts.statuses[status]} · {counts[status]}
@@ -103,7 +103,7 @@ export function MachineOverview({
             </ul>
           </nav>
           {machines.length === 0 ? (
-            <NothingFound search={search} machineStatus={query.machineStatus} />
+            <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
             <ul className="flex flex-col gap-4">
               {machines.map((machine) => (
@@ -113,6 +113,7 @@ export function MachineOverview({
               ))}
             </ul>
           )}
+          {retired && retiredCount === 0 && <p>{texts.noneRetired}</p>}
         </>
       )}
     </>
@@ -134,21 +135,20 @@ function FilterLink({ href, current, children }: { href: string; current: boolea
 }
 
 /**
- * The two "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
- * clear it (the filter stays); without a search only a filter can have emptied the list.
+ * The "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
+ * clear it (the filter stays); with a machine status only that filter can have emptied the list; with neither, every
+ * machine is retired – the filter for them finds them (ST-055).
  */
-function NothingFound({ search, machineStatus }: MachineOverviewQuery) {
-  if (search || !machineStatus) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p>{texts.noMatch(search ?? "")}</p>
-        <Link href={overviewHref({ machineStatus })} className="self-start underline underline-offset-4">
-          {texts.clearSearch}
-        </Link>
-      </div>
-    );
-  }
-  return <p>{texts.noneWithStatus(texts.statuses[machineStatus])}</p>;
+function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
+  if (!search) return <p>{machineStatus ? texts.noneWithStatus(texts.statuses[machineStatus]) : texts.allRetired}</p>;
+  return (
+    <div className="flex flex-col gap-2">
+      <p>{texts.noMatch(search)}</p>
+      <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
+        {texts.clearSearch}
+      </Link>
+    </div>
+  );
 }
 
 /**
@@ -160,7 +160,8 @@ function MachineEntry({ machine }: { machine: MachineOverviewItem }) {
     machineModels.categories[machine.machineCategory],
     machine.technology && machineModels.technologies[machine.technology],
     machine.location,
-    `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
+    // A retired machine has no machine status any more – the marker stands in its place (G6, ST-039).
+    machine.retired ? texts.retired : `${texts.status}: ${texts.statuses[machine.machineStatus]}`,
     // A count is labelled in words, and a zero is not shown (ST-008, G6).
     machine.openDefects > 0 && texts.openDefects(machine.openDefects),
   ].filter(Boolean);

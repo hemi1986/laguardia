@@ -13,7 +13,14 @@ const noCounts = { playable: 0, limited: 0, "out-of-order": 0, "not-on-display":
 
 function rendered(props: Partial<Props>): string {
   return renderToStaticMarkup(
-    createElement(MachineOverview, { machines: [], counts: noCounts, query: {}, canRegister: false, ...props }),
+    createElement(MachineOverview, {
+      machines: [],
+      counts: noCounts,
+      retiredCount: 0,
+      query: {},
+      canRegister: false,
+      ...props,
+    }),
   );
 }
 
@@ -54,6 +61,7 @@ describe("the machine overview", () => {
           technology: "dmd",
           location: "Hall 1, row 3",
           machineStatus: "playable",
+          retired: false,
           openDefects: 0,
         },
         {
@@ -63,6 +71,7 @@ describe("the machine overview", () => {
           machineCategory: "other",
           location: "Foyer",
           machineStatus: "out-of-order",
+          retired: false,
           openDefects: 0,
         },
       ],

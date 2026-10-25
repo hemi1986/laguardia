@@ -113,23 +113,35 @@ export type MachineOverviewEntry = {
   machineCategory: MachineCategory;
   technology?: Technology;
   location: string;
-  machineStatus: MachineStatus;
-};
+} & (
+  | { retired: false; machineStatus: MachineStatus }
+  /** A retired machine has no machine status any more (ST-039) – „Ausgemustert“ stands in its place (ST-055). */
+  | { retired: true }
+);
 
-/** What the machine overview is narrowed to (ST-008): both are optional and combine. */
+/** What the machine overview is narrowed to (ST-008, ST-055): all are optional and combine. */
 export type MachineOverviewQuery = {
   /** Part of a museum number or a machine model title, in any case ("042", "medieval"). */
   search?: string;
   machineStatus?: MachineStatus;
+  /**
+   * Retired machines too (ST-055) – the caller decides: the machine overview asks for them with its filter or a search;
+   * the sticker choice never does (a retired machine gets no sticker, ST-011).
+   */
+  retiredToo?: boolean;
 };
 
-/** RM-MachineOverview: the active machines (not retired), sorted by museum number – searched and filtered. */
+/**
+ * RM-MachineOverview: the active machines, sorted by museum number – searched and filtered; the retired ones too when
+ * asked for, but never under a machine status: a retired machine has none any more (user, 2026-10-25).
+ */
 export async function machineOverview(
   db: Database,
-  { search, machineStatus }: MachineOverviewQuery = {},
+  { search, machineStatus, retiredToo }: MachineOverviewQuery = {},
 ): Promise<MachineOverviewEntry[]> {
   const term = search?.trim();
   const pattern = term ? `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%` : undefined;
+  const withRetired = retiredToo && !machineStatus;
   const rows = await db
     .select({
       id: machine.id,
@@ -139,18 +151,22 @@ export async function machineOverview(
       technology: machineModel.technology,
       location: machine.location,
       machineStatus: machine.machineStatus,
+      retiredAt: machine.retiredAt,
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(
       and(
-        isNull(machine.retiredAt),
+        withRetired ? undefined : isNull(machine.retiredAt),
         machineStatus ? eq(machine.machineStatus, machineStatus) : undefined,
         pattern ? or(ilike(machine.museumNumber, pattern), ilike(machineModel.title, pattern)) : undefined,
       ),
     )
     .orderBy(asc(machine.museumNumber));
-  return rows.map((row) => ({ ...row, technology: row.technology ?? undefined }));
+  return rows.map(({ retiredAt, machineStatus, ...row }): MachineOverviewEntry => {
+    const entry = { ...row, technology: row.technology ?? undefined };
+    return retiredAt ? { ...entry, retired: true } : { ...entry, retired: false, machineStatus };
+  });
 }
 
 /**
@@ -169,17 +185,24 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
   return counts;
 }
 
+/** RM-MachineOverview: how many machines are retired (ST-055) – whether the filter for them has anything to show. */
+export async function retiredMachineCount(db: Database): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(machine)
+    .where(isNotNull(machine.retiredAt));
+  return row.count;
+}
+
 /** What the visitor machine page (RM-VisitorMachinePage, ST-010) shows of a machine – no ID, nothing internal. */
-export type VisitorMachine = {
-  machineModelTitle: string;
-  manufacturer: string;
-  year?: number;
-  machineStatus: MachineStatus;
-};
+export type VisitorMachine =
+  | { retired: false; machineModelTitle: string; manufacturer: string; year?: number; machineStatus: MachineStatus }
+  /** A retired machine shows visitors only that it is no longer in the museum (ST-055) – nothing else about it. */
+  | { retired: true; machineModelTitle: string };
 
 /**
- * The machine as visitors see it, by its museum number – active machines only (a retired machine's visitor page is
- * ST-055's). Selects only the visible facts, so nothing else can reach a public page.
+ * The machine as visitors see it, by its museum number – of a retired machine only its title (ST-055). Selects only
+ * the visible facts, so nothing else can reach a public page.
  */
 export async function visitorMachine(db: Database, museumNumber: string): Promise<VisitorMachine | undefined> {
   const [row] = await db
@@ -188,11 +211,15 @@ export async function visitorMachine(db: Database, museumNumber: string): Promis
       manufacturer: machineModel.manufacturer,
       year: machineModel.year,
       machineStatus: machine.machineStatus,
+      retiredAt: machine.retiredAt,
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
-    .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
-  return row && { ...row, year: row.year ?? undefined };
+    .where(eq(machine.museumNumber, museumNumber));
+  if (!row) return undefined;
+  const { retiredAt, year, ...visible } = row;
+  if (retiredAt) return { retired: true, machineModelTitle: row.machineModelTitle };
+  return { ...visible, year: year ?? undefined, retired: false };
 }
 
 /** The machine record (RM-MachineRecord) as ST-009 builds it – later stories add its further sections (G18). */

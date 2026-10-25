@@ -12,12 +12,14 @@ import {
   reportProblemCommand,
   resolveProblemOnTheSpotCommand,
   dismissProblemReportCommand,
+  retireMachineCommand,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadReportForm } from "./melden/report-form-data";
 import { loadVisitorMachinePage } from "./visitor-machine-page-data";
 import { VisitorMachinePage } from "./visitor-machine-page";
 
@@ -73,6 +75,28 @@ async function page(museumNumber: string, locale: "de" | "en" = "de"): Promise<s
 }
 
 describe("the visitor machine page", () => {
+  it("ST-055: Visitor machine page of a retired machine", async () => {
+    const machineId = await registered("LG-013");
+    const retired = await executeCommand(
+      retireMachineCommand,
+      { machineId, version: 0, reason: "Sold to a collector" },
+      { actor: tom, db, newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error(retired.error);
+
+    for (const [locale, note] of [
+      ["de", "Dieses Gerät ist nicht mehr im Museum."],
+      ["en", "This machine is no longer in the museum."],
+    ] as const) {
+      const html = await page("LG-013", locale);
+      expect(html).toContain(note);
+      expect(html).not.toMatch(/Status|Spielbereit|Playable/);
+      expect(html).not.toMatch(/Defekte|defects|Sichtung|triage/i);
+      expect(html).not.toContain("/melden");
+    }
+    expect(await loadReportForm(db, "LG-013")).toBeUndefined(); // its report page answers 404
+  });
+
   it("ST-016: Only team members can see the photo", async () => {
     const machineId = await registered("LG-042");
     const photoId = randomUUID();

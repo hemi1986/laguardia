@@ -85,6 +85,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 1, row 3",
         machineStatus: "playable",
+        retired: false,
       },
       {
         id: second,
@@ -94,6 +95,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 2, row 1",
         machineStatus: "out-of-order",
+        retired: false,
       },
     ]);
   });
@@ -116,6 +118,7 @@ describe("RM-MachineOverview", () => {
         technology: "dmd",
         location: "Hall 1, row 3",
         machineStatus: "playable",
+        retired: false,
       },
       {
         id: second,
@@ -125,6 +128,7 @@ describe("RM-MachineOverview", () => {
         technology: "crt",
         location: "Hall 2, row 1",
         machineStatus: "out-of-order",
+        retired: false,
       },
     ]);
   });
@@ -134,6 +138,27 @@ describe("RM-MachineOverview", () => {
     await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
 
     expect(await machineOverview(db)).toEqual([]);
+  });
+
+  it("lists retired machines too when asked for – marked, without a machine status, never under one (ST-055)", async () => {
+    await registered({ museumNumber: "LG-012", location: "Hall 1", machineStatus: "playable" });
+    const retired = await registered({ museumNumber: "LG-013", location: "Depot", machineStatus: "playable" });
+    await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
+
+    expect(await machineOverview(db, { search: "013", retiredToo: true })).toEqual([
+      {
+        id: retired,
+        museumNumber: "LG-013",
+        machineModelTitle: "Medieval Madness",
+        machineCategory: "pinball",
+        technology: "dmd",
+        location: "Depot",
+        retired: true,
+      },
+    ]);
+    expect(museumNumbers(await machineOverview(db, { retiredToo: true, machineStatus: "playable" }))).toEqual([
+      "LG-012",
+    ]);
   });
 
   it("ST-008: Number of machines per machine status", async () => {

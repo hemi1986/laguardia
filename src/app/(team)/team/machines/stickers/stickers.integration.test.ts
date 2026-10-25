@@ -48,6 +48,8 @@ describe("QR stickers", () => {
     await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, { actor: eva, db, newId: randomUUID });
 
     expect((await machinesToPrintFor(db, {})).map((machine) => machine.museumNumber)).toEqual(["LG-012"]);
+    // Not even found by a search – unlike the machine overview, which finds retired machines (ST-055).
+    expect(await machinesToPrintFor(db, { search: "013" })).toEqual([]);
     expect((await stickersFor(db, ["LG-012", "LG-013"])).map((sticker) => sticker.museumNumber)).toEqual(["LG-012"]);
   });
 

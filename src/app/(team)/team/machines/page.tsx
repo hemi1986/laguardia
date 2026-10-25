@@ -16,8 +16,12 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 export default async function MachinesPage({ searchParams }: { searchParams: SearchParams }) {
   const member = await requireTeamMember();
   const params = await searchParams;
-  const query = { search: single(params.search), machineStatus: statusOf(single(params.machineStatus)) };
-  const { machines, counts } = await loadMachineOverview(database(), query);
+  const query = {
+    search: single(params.search),
+    machineStatus: statusOf(single(params.machineStatus)),
+    retired: single(params.retired) === "1",
+  };
+  const { machines, counts, retiredCount } = await loadMachineOverview(database(), query);
   // Confirmed only when registering it was the latest command on it and this technician ran it (G3).
   const registeredId = single(params.registered);
   const registering = registeredId && (await lastCommandBy(database(), { aggregateId: registeredId }, member.id));
@@ -28,6 +32,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
       <MachineOverview
         machines={machines}
         counts={counts}
+        retiredCount={retiredCount}
         query={query}
         canRegister={member.role === "technician"}
         registered={registered ? machines.find((machine) => machine.id === registered) : undefined}
