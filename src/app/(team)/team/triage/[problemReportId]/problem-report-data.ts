@@ -3,7 +3,7 @@ import { named } from "../../named";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { blobStorage } from "@/platform/storage";
-import type { PhotoSource } from "../../problem-report-photo";
+import type { PhotoSource } from "../../team-photos";
 import { withNames, type TriageListItem } from "../triage-list-data";
 
 /**

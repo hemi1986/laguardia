@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
+import { MAX_WORK_LOG_PHOTOS } from "@/modules/repair";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -35,6 +36,7 @@ export default async function LogWorkPage({ params }: PageProps<"/team/defects/[
           <LogWorkForm
             action={logWorkAction.bind(null, details.id)}
             version={details.version}
+            maxPhotos={MAX_WORK_LOG_PHOTOS}
             whyNot={details.whyNot}
           />
         </>

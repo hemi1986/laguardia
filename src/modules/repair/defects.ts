@@ -37,6 +37,7 @@ export const workLog = history({
     id: row.id,
     whatWasDone: row.whatWasDone,
     partsUsed: row.partsUsed ?? undefined,
+    photos: row.photos,
     loggedBy: row.loggedBy,
     loggedAt: row.loggedAt,
   }),

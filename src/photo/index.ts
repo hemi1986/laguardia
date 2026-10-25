@@ -8,6 +8,7 @@ export {
   photoViewAddresses,
   removePhoto,
   withStoredPhoto,
+  withStoredPhotos,
   type PhotoDependencies,
   type PhotoError,
   type PhotoOwner,

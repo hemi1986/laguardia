@@ -19,7 +19,12 @@ export type LogWorkInput = {
   whatWasDone: string;
   /** Free text; empty when no parts were used. */
   partsUsed: string;
+  /** The stored names of the photos sent with it (ST-032) – stored before the command runs (ADR 0009). */
+  photos?: readonly string[];
 };
+
+/** At most this many photos per work log entry (ST-032). */
+export const MAX_WORK_LOG_PHOTOS = 5;
 
 export type WorkLogged = {
   type: "EVT-WorkLogged";
@@ -29,7 +34,7 @@ export type WorkLogged = {
   loggedBy: TeamMemberId;
 };
 
-export type LogWorkError = "defect-not-open" | "what-was-done-required";
+export type LogWorkError = "defect-not-open" | "what-was-done-required" | "too-many-photos";
 
 /**
  * Why nobody may log work on the defect as it is, whatever they write – undefined when they may. The decision applies
@@ -37,7 +42,7 @@ export type LogWorkError = "defect-not-open" | "what-was-done-required";
  */
 export function logWorkRefusal(
   defect: Pick<Defect, "state">,
-): Exclude<LogWorkError, "what-was-done-required"> | undefined {
+): Exclude<LogWorkError, "what-was-done-required" | "too-many-photos"> | undefined {
   // A resolved defect can only be reopened; one closed on retirement is final (AGG-Defect invariants).
   return defect.state === "open" ? undefined : "defect-not-open";
 }
@@ -51,10 +56,13 @@ export function logWork(
   if (refusal) return { ok: false, error: refusal };
   const whatWasDone = input.whatWasDone.trim();
   if (!whatWasDone) return { ok: false, error: "what-was-done-required" };
+  const photos = [...(input.photos ?? [])];
+  if (photos.length > MAX_WORK_LOG_PHOTOS) return { ok: false, error: "too-many-photos" };
   const entry = {
     id: newId(),
     whatWasDone,
     partsUsed: input.partsUsed.trim() || undefined,
+    photos,
     loggedBy: actor.teamMemberId,
     loggedAt: clock.now(),
   };

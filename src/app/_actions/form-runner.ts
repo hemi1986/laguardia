@@ -8,7 +8,7 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { removePhoto, withStoredPhoto, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
+import { removePhoto, withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
 import { blobStorage, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 
@@ -55,6 +55,20 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
 > & {
   photo: { field: string; owner: PhotoOwner };
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
+};
+
+/**
+ * A form with several photos (ST-032, a work log entry's) – its file field, posted once per photo, whom the photos
+ * belong to, and the command's own rule on how many it takes with the command's error for too many: the runner refuses
+ * too many before storing any (the command checks again), and that rejection is about the photos themselves – its text
+ * says what to do, so it does not ask to choose them again (G8a). The input gets the photos' references.
+ */
+export type PhotosFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
+  FormDefinition<Input, Result, Field>,
+  "input" | "removesPhoto"
+> & {
+  photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: Error } };
+  input: (fields: FormFields<Field>, photos: PhotoReference[]) => Input;
 };
 
 /** After a rejection of a form with a photo: also whether the photo must be chosen again (G8a) – set only then. */
@@ -138,6 +152,8 @@ const isPhotoError = (error: string): error is PhotoError => Object.hasOwn(rejec
  *   photo, a photo that cannot be accepted or stored rejects the form like a command would, and a rejection of a form
  *   that had a photo attached says it must be chosen again (`photoAgain`, G8a) – not after a rejection of the photo
  *   itself (user, 2026-10-10);
+ * - **`photos`** (ST-032) – the same for several photos: none is stored unless all are accepted, and all go again
+ *   when one of them cannot be stored or the command rejects the form;
  * - **`upload`** (ST-037, ADR 0009) – the form's own rejections (`refusal`) come first and keep the uploaded content,
  *   the chosen file is still attached for the next send (user, 2026-10-18); then the command runs through the upload
  *   module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no content behind,
@@ -162,6 +178,10 @@ export function formRunner(dependencies: RunnerDependencies) {
   ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
+    definition: PhotosFormDefinition<Input, Result, NoInfer<Error>, Field>,
+  ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
     definition: FormDefinition<Input, Result, Field>,
   ): FormStateAction<FormState<CommandError<typeof command>, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
@@ -169,12 +189,18 @@ export function formRunner(dependencies: RunnerDependencies) {
     definition:
       | FormDefinition<Input, Result, Field>
       | PhotoFormDefinition<Input, Result, Field>
+      | PhotosFormDefinition<Input, Result, Error, Field>
       | UploadFormDefinition<Input, Result, Field, Error>
       | EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ) {
     if ("each" in definition) return eachStep(dependencies, command, definition);
     if ("upload" in definition) return uploadStep(dependencies, command, definition);
-    if ("photo" in definition) return photoStep(dependencies, command, definition);
+    if ("photo" in definition) {
+      // One photo: only the first file of its field is read – more files are never stored (code review ST-032).
+      const { photo, input, ...rest } = definition;
+      return photosStep(dependencies, command, { ...rest, photos: photo, input: (fields, [one]) => input(fields, one) });
+    }
+    if ("photos" in definition) return photosStep(dependencies, command, definition);
     return withoutContent(dependencies, command, definition);
   }
   return formAction;
@@ -205,25 +231,34 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
   };
 }
 
-function photoStep<Input, Result, Error extends string, Field extends string>(
+function photosStep<Input, Result, Error extends string, Field extends string>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
-  definition: PhotoFormDefinition<Input, Result, Field>,
+  definition: Omit<PhotosFormDefinition<Input, Result, Error, Field>, "photos"> & {
+    photos: { field: string; owner: PhotoOwner; atMost?: { count: number; error: Error } };
+  },
 ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>> {
+  const { field, owner, atMost } = definition.photos;
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
+    const posted = postedPhotos(formData, field);
+    if (atMost && posted.length > atMost.count) return { error: atMost.error, values: valuesOf(fields) };
     const actor = await currentPerson();
-    const photo = await sentPhotoOf(formData, definition.photo.field);
-    const outcome = await withStoredPhoto(
-      photo,
-      definition.photo.owner,
+    // Without a rule on how many, the form has one photo: the first file posted in its field.
+    const photos = await Promise.all(
+      (atMost ? posted : posted.slice(0, 1)).map(async (file) => new Uint8Array(await file.arrayBuffer())),
+    );
+    const outcome = await withStoredPhotos(
+      photos,
+      owner,
       { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
-      (reference) => executeCommand(command, definition.input(fields, reference), { ...dependencies, actor }),
+      (references) => executeCommand(command, definition.input(fields, references), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
       const state = { error: outcome.error, values: valuesOf(fields) };
-      const ofThePhoto = isPhotoError(outcome.error) && rejectsThePhoto[outcome.error];
-      return photo !== undefined && !ofThePhoto ? { ...state, photoAgain: true } : state;
+      const ofThePhotos =
+        (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) || outcome.error === atMost?.error;
+      return photos.length > 0 && !ofThePhotos ? { ...state, photoAgain: true } : state;
     }
     await definition.onSuccess(outcome.result);
     return null;
@@ -307,10 +342,9 @@ function eachStep<Input, Result, Error extends string, Field extends string>(
 type FormStateAction<State> = (previous: State, formData: FormData) => Promise<State>;
 
 /** The bytes of the posted file – none for a missing, empty or non-file field. */
-async function sentPhotoOf(formData: FormData, field: string): Promise<Uint8Array | undefined> {
-  const file = formData.get(field);
-  if (!(file instanceof Blob) || file.size === 0) return undefined;
-  return new Uint8Array(await file.arrayBuffer());
+/** The photos a form posted in its file field – an empty file (no photo chosen) is none. */
+function postedPhotos(formData: FormData, field: string): Blob[] {
+  return formData.getAll(field).filter((file): file is File => file instanceof Blob && file.size > 0);
 }
 
 function fieldsOf<Field extends string>(formData: FormData, names: readonly Field[]): FormFields<Field> {

@@ -20,6 +20,9 @@ export const repairTexts = {
   problemReportPhoto: {
     alt: "Foto zur Meldung",
   },
+  workLogPhoto: {
+    alt: "Foto zum Arbeitsschritt",
+  },
   /** The triage list and a problem report's own page (ST-017). */
   triage: {
     title: "Sichtung",
@@ -288,6 +291,15 @@ export const repairTexts = {
     logWorkTitle: (museumNumber: string) => `Arbeitsschritt eintragen · ${museumNumber}`,
     whatWasDone: "Was wurde gemacht?",
     partsUsed: "Verwendete Teile (optional)",
+    /** The work log entry's photos (ST-032) – the browser's own rejections use the photo errors' texts. */
+    workLogPhotos: {
+      label: (max: number) => `Fotos (optional, höchstens ${max})`,
+      full: (max: number) => `${max} Fotos ausgewählt – mehr gehen nicht.`,
+      take: "Foto aufnehmen",
+      choose: "Fotos auswählen",
+      remove: "Foto entfernen",
+      preparing: "Fotos werden vorbereitet …",
+    },
     workLogged: (title: string) => `Arbeitsschritt zu „${title}“ eingetragen.`,
     /**
      * A change of the defect made meanwhile (a claim, another work log entry) – the expected rejection of this form.
@@ -295,6 +307,9 @@ export const repairTexts = {
      */
     logWorkConflict:
       "Jemand hat den Defekt inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal eintragen.",
+    /** The same with photos (ST-032): the texts are kept, the browser cannot keep the photos (G8a). */
+    logWorkConflictWithPhotos:
+      "Jemand hat den Defekt inzwischen geändert. Dein Text ist noch da, die Fotos müssen erneut ausgewählt werden – bitte noch einmal eintragen.",
   },
   reportProblem: {
     title: (museumNumber: string) => `Problem melden · ${museumNumber}`,
@@ -358,6 +373,7 @@ export const repairErrors = {
   "not-your-claim": "Die Übernahme von jemand anderem können nur Techniker:innen aufheben.",
   "closing-note-required": "Bitte kurz beschreiben, wie der Defekt behoben wurde.",
   "what-was-done-required": "Bitte kurz beschreiben, was gemacht wurde.",
+  "too-many-photos": "Höchstens 5 Fotos pro Arbeitsschritt – bitte weniger Fotos auswählen.",
   "machine-status-not-stricter": "Diesen Status kann ein Defekt nicht setzen. Bitte die Seite neu laden.",
   "description-too-long": "Bitte kürzer: höchstens 2000 Zeichen.",
 } as const;

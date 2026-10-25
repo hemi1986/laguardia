@@ -65,6 +65,7 @@ describe("CMD-LogWork", () => {
         id: expect.any(String),
         whatWasDone: "Replaced coil stop and EOS switch",
         partsUsed: "1x coil stop, 1x EOS switch",
+        photos: [],
         loggedBy: tom.teamMemberId,
         loggedAt: new Date("2026-10-13T10:00:00Z"),
       },
@@ -193,6 +194,37 @@ describe("CMD-LogWork", () => {
       byTom,
       expect.objectContaining({ whatWasDone: "Adjusted EOS switch", loggedBy: anna.teamMemberId }),
     ]);
+  });
+
+  it("refuses more than 5 photos itself – whatever form sends them (ST-032)", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+    const photos = Array.from({ length: 6 }, (_, i) => `work-log/photo-${i}.jpg`);
+
+    const outcome = await executeCommand(
+      logWorkCommand,
+      { defectId, version: 0, whatWasDone: "Replaced coil stop", partsUsed: "", photos },
+      { actor: anna, db, clock: fixedClock("2026-10-14T10:00:00Z"), newId: randomUUID },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "too-many-photos" });
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([]);
+  });
+
+  it("ST-032: Photos cannot be added to an existing entry", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+    await logWork(defectId, 0, { whatWasDone: "Replaced coil stop" }, tom);
+    const [withoutPhotos] = (await defectDetails(db, defectId))!.workLog;
+    expect(withoutPhotos.photos).toEqual([]);
+
+    // There is no command for it – a command that does what none of the module's does tries anyway.
+    const tried = await executeCommand(
+      tamperWithWorkLogForTest,
+      { defectId, version: 1, attempt: "add-photo" },
+      { actor: anna, db, clock: fixedClock("2026-10-14T10:00:00Z"), newId: randomUUID },
+    );
+
+    expect(tried.ok).toBe(true);
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([withoutPhotos]);
   });
 
   it("ST-029: Logging work does not resume", async () => {

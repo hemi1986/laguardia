@@ -76,7 +76,7 @@ export type { PrioritizeDefectError, PrioritizeDefectInput } from "./prioritize-
 export { resolveDefectCommand } from "./resolve-defect-command";
 export type { ResolveDefectError, ResolveDefectInput } from "./resolve-defect";
 export { logWorkCommand } from "./log-work-command";
-export type { LogWorkError, LogWorkInput } from "./log-work";
+export { MAX_WORK_LOG_PHOTOS, type LogWorkError, type LogWorkInput } from "./log-work";
 export {
   defectActions,
   defectActionIn,

@@ -28,3 +28,12 @@ export function photoRejectionText(
   const reason = rejectionText(state.error, overrides);
   return state.photoAgain ? `${reason} ${teamMessages.forms.photoAgain}` : reason;
 }
+
+/** The same for a form with several photos (ST-032): they must all be chosen again. */
+export function photosRejectionText(
+  state: { error: TeamCommandErrorCode; photoAgain?: true },
+  overrides: Partial<Record<TeamCommandErrorCode, string>> = {},
+): string {
+  const reason = rejectionText(state.error, overrides);
+  return state.photoAgain ? `${reason} ${teamMessages.forms.photosAgain}` : reason;
+}

@@ -14,7 +14,7 @@ import { lastCommandBy, type Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
-import { photoAt, type PhotoSource } from "../../problem-report-photo";
+import { photoAt, type PhotoSource } from "../../team-photos";
 import { shownReporter, type ShownReporter } from "../../reporter";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
 import { named } from "../../named";
@@ -92,6 +92,8 @@ export type ShownWorkLogEntry = {
   id: string;
   whatWasDone: string;
   partsUsed: string | undefined;
+  /** Its photos at their short-lived addresses (ST-032) – those no address could be issued for are left out. */
+  photos: { address: string }[];
   loggedBy: string;
   loggedAt: Date;
 };
@@ -135,11 +137,10 @@ export async function loadDefectDetails(
         ...defect.workLog.map((entry) => entry.loggedBy),
       ],
     }),
-    photoViewAddresses(
-      storage,
-      clock,
-      defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
-    ),
+    photoViewAddresses(storage, clock, [
+      ...defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
+      ...defect.workLog.flatMap((entry) => entry.photos),
+    ]),
   ]);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
   // not the address (architecture review 2026-10-18).
@@ -190,6 +191,7 @@ export async function loadDefectDetails(
       .map((entry) => ({
         ...entry,
         loggedBy: shown.name(entry.loggedBy),
+        photos: entry.photos.flatMap((photo) => photoAt(photos, photo) ?? []),
       }))
       .reverse(),
   };

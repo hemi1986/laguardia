@@ -207,13 +207,14 @@ export async function storedDefect(db: Database, defectId: string) {
 
 /**
  * Test stand-in for a command that tries what no command of the module does (ST-024): it rewrites the defect's first
- * work log entry, or drops the whole work log – the store must keep what is stored.
+ * work log entry, drops the whole work log, or adds a photo to every existing entry (ST-032) – the store must keep what
+ * is stored.
  */
 export const tamperWithWorkLogForTest = aggregateCommand({
   id: "CMD-TestTamperWithWorkLog",
   allowedActors: ["helper", "technician"],
   store: defects,
-  target: (input: { defectId: string; version: number; attempt: "change" | "remove" }) => ({
+  target: (input: { defectId: string; version: number; attempt: "change" | "remove" | "add-photo" }) => ({
     id: input.defectId,
     version: input.version,
   }),
@@ -224,7 +225,9 @@ export const tamperWithWorkLogForTest = aggregateCommand({
       workLog:
         input.attempt === "remove"
           ? []
-          : defect.workLog.map((entry) => ({ ...entry, whatWasDone: "Nothing at all", partsUsed: undefined })),
+          : input.attempt === "add-photo"
+            ? defect.workLog.map((entry) => ({ ...entry, photos: [...entry.photos, "work-log/added-later.jpg"] }))
+            : defect.workLog.map((entry) => ({ ...entry, whatWasDone: "Nothing at all", partsUsed: undefined })),
     },
     events: [{ type: "EVT-TestWorkLogTamperedWith" as const }],
   }),

@@ -2,9 +2,9 @@ import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
-import { memoryStorage } from "@/platform/storage";
+import { memoryStorage, type ContentStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
-import { photoViewAddresses, withStoredPhoto } from ".";
+import { photoViewAddresses, withStoredPhoto, withStoredPhotos } from ".";
 import { techniciansOnlyWithPhotoForTest, withPhotoForTest, type WithPhotoInput } from "./photo-stand-in.test-support";
 
 /**
@@ -139,5 +139,58 @@ describe("store, run, delete on failure", () => {
     const failing = { ...memoryStorage(), viewAddresses: () => Promise.reject(new Error("Blob is down")) };
 
     expect(await photoViewAddresses(failing, clock, ["problem-reports/a.jpg"])).toEqual(new Map());
+  });
+});
+
+describe("several photos (ST-032)", () => {
+  const run = (storage: ContentStorage, outcome: WithPhotoInput["outcome"]) => (photos: Uint8Array[]) =>
+    withStoredPhotos(photos, "work-log", { storage, newId }, (references) =>
+      executeCommand(withPhotoForTest, { photo: references.join(","), outcome }, { actor: visitor, db, clock, newId }),
+    );
+
+  it("stores every accepted photo and runs the command with their references, in the order they were sent", async () => {
+    const storage = memoryStorage();
+
+    const outcome = await run(storage, "accept")([await aPhoneJpeg(), await aPhoneJpeg()]);
+
+    const stored = storage.names();
+    expect(stored).toHaveLength(2);
+    expect(stored.every((name) => name.startsWith("work-log/"))).toBe(true);
+    expect(outcome).toEqual({ ok: true, result: { photo: stored.join(",") } });
+  });
+
+  it("stores none when one of them is not an image", async () => {
+    const storage = memoryStorage();
+
+    const outcome = await run(storage, "accept")([await aPhoneJpeg(), new TextEncoder().encode("%PDF-1.7")]);
+
+    expect(outcome).toEqual({ ok: false, error: "not-an-image" });
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("deletes the photos already stored when storing one of them fails", async () => {
+    const memory = memoryStorage();
+    let writes = 0;
+    const failingSecond: ContentStorage = {
+      ...memory,
+      write: async (...args) => {
+        if (++writes === 2) throw new Error("Blob unavailable");
+        return memory.write(...args);
+      },
+    };
+
+    const outcome = await run(failingSecond, "accept")([await aPhoneJpeg(), await aPhoneJpeg(), await aPhoneJpeg()]);
+
+    expect(outcome).toEqual({ ok: false, error: "not-stored" });
+    expect(memory.names()).toEqual([]);
+  });
+
+  it("deletes every photo when the command is rejected", async () => {
+    const storage = memoryStorage();
+
+    const outcome = await run(storage, "reject")([await aPhoneJpeg(), await aPhoneJpeg()]);
+
+    expect(outcome.ok).toBe(false);
+    expect(storage.names()).toEqual([]);
   });
 });

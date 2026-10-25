@@ -20,8 +20,9 @@ const nextConfig: NextConfig = {
   // click then never arrives (ST-041). Errors are still shown.
   ...(process.env.NEXT_DIST_DIR ? { devIndicators: false as const } : {}),
   experimental: {
-    // Photos arrive downscaled (≤ 1 MB, ST-002); the server check allows 2 MB – leave room for multipart overhead.
-    serverActions: { bodySizeLimit: "3mb" },
+    // Photos arrive downscaled (≤ 1 MB, ST-002; ≤ 600 KB each of a work log entry's 5, ST-032); the server check allows
+    // 2 MB per photo – leave room for multipart overhead, below Vercel's 4.5 MB request body.
+    serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

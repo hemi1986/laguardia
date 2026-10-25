@@ -17,6 +17,7 @@ import {
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
+import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadRepairHistory } from "./repair-history-data";
@@ -105,7 +106,10 @@ async function aDefect(title: string, at: string) {
 }
 
 async function page(year?: string): Promise<string> {
-  const data = await loadRepairHistory(db, "LG-042", year);
+  const data = await loadRepairHistory(db, "LG-042", year, {
+    clock: fixedClock("2026-10-25T10:00:00Z"),
+    storage: memoryStorage(),
+  });
   return renderToStaticMarkup(createElement(RepairHistoryView, { data, museumNumber: "LG-042" }));
 }
 
@@ -146,6 +150,30 @@ describe("the repair history's own page", () => {
     expect(entry).toContain("Lock replaced");
     expect(entry).toContain("Behoben von Eva am 04.09.2026, 12:00");
     expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${coinDoor}"[^>]*>Coin door jammed</a>`));
+  });
+
+  it("ST-032: Photos are shown on the repair history", async () => {
+    const flipper = await aDefect("Left flipper weak", "2026-09-01T08:00:00Z");
+    await run(
+      executeCommand(
+        logWorkCommand,
+        {
+          defectId: flipper,
+          version: 0,
+          whatWasDone: "Replaced coil stop",
+          partsUsed: "",
+          photos: ["work-log/before.jpg", "work-log/after.jpg"],
+        },
+        as(anna, "2026-09-02T10:00:00Z"),
+      ),
+    );
+
+    const html = await page("2026");
+
+    // Under the entry – before its work log ends.
+    const entry = html.slice(html.indexOf("Replaced coil stop")).split("</ol>")[0];
+    expect(entry).toContain('src="memory://work-log/before.jpg');
+    expect(entry).toContain('src="memory://work-log/after.jpg');
   });
 
   it("ST-030: Repair history shows every resolution of a reopened defect and the reopen reason", async () => {

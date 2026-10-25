@@ -1,34 +1,40 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
-import { rejectionText } from "@/app/_actions/rejection-text";
+import { PhotosField } from "@/app/photos-field";
 import type { LogWorkState } from "./actions";
+import { logWorkRejectionText } from "./log-work-rejection-text";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 
 const { defects: texts } = teamMessages;
 
 /**
- * The form „Arbeitsschritt eintragen“ (ST-024): what was done, and the parts used if any. A rejection keeps both texts
- * and marks „Was wurde gemacht?“ when that is the reason (G8), with and without JavaScript. A defect that was no longer
+ * The form „Arbeitsschritt eintragen“ (ST-024): what was done, the parts used if any, and photos (ST-032). A rejection
+ * keeps both texts and marks „Was wurde gemacht?“ when that is the reason (G8), with and without JavaScript; the photos
+ * must be chosen again, and the rejection says so (G8a). A defect that was no longer
  * open when the page loaded shows the reason instead of a form – but one that changed while the person typed keeps the
  * form, the texts and the rejection.
  */
 export function LogWorkForm({
   action: logWork,
   version,
+  maxPhotos,
   whyNot,
 }: {
   action: (previous: LogWorkState, formData: FormData) => Promise<LogWorkState>;
   version: number;
+  /** How many photos CMD-LogWork takes (ST-032). */
+  maxPhotos: number;
   /** Why work cannot be logged on the defect as it is now – CMD-LogWork's own reason (G11). */
   whyNot: TeamCommandErrorCode | undefined;
 }) {
   const [state, action, pending] = useActionState(logWork, null);
+  const [preparing, setPreparing] = useState(false);
   const rejectionId = useId();
   if (whyNot && !state) return <p>{commandErrorText(teamMessages, whyNot)}</p>;
   const kept = keptKey(state);
@@ -59,14 +65,24 @@ export function LogWorkForm({
           key={`partsUsed-${kept}`}
         />
       </Field>
+      <PhotosField
+        name="photos"
+        max={maxPhotos}
+        onPreparing={setPreparing}
+        texts={{
+          ...texts.workLogPhotos,
+          label: texts.workLogPhotos.label(maxPhotos),
+          full: texts.workLogPhotos.full(maxPhotos),
+          tooLarge: teamMessages.commandErrors["too-large"],
+          notAnImage: teamMessages.commandErrors["not-an-image"],
+        }}
+      />
       {state && (
         <div id={rejectionId}>
-          <Rejection>
-            {rejectionText(state.error, { "version-conflict": texts.logWorkConflict })}
-          </Rejection>
+          <Rejection>{logWorkRejectionText(state)}</Rejection>
         </div>
       )}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || preparing}>
         {texts.logWork}
       </Button>
     </form>

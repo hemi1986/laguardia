@@ -8,6 +8,11 @@ export const PHOTO_LIMITS = {
   maxOriginalBytes: 20_000_000,
   maxEdgePx: 2048,
   maxStoredBytes: 1_000_000,
+  /**
+   * What the browser prepares each photo of a form with several to (ST-032, user 2026-10-25): 5 photos of a work log
+   * entry must fit one Server Action body (4 MB in next.config.ts, below Vercel's 4.5 MB). The server's limits stay.
+   */
+  maxPreparedBytesOfSeveral: 600_000,
   maxUploadBytes: 2_000_000,
   /** Decoding guard (≈ 5000 × 5000); prepared photos are at most 2048 × 2048. */
   maxInputPixels: 25_000_000,
