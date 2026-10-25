@@ -113,32 +113,35 @@ export type MachineOverviewEntry = {
   machineCategory: MachineCategory;
   technology?: Technology;
   location: string;
-  /** The status it had when it was retired, for a retired machine – shown as „Ausgemustert“ instead (ST-055). */
-  machineStatus: MachineStatus;
-  retired: boolean;
-};
+} & (
+  | { retired: false; machineStatus: MachineStatus }
+  /** A retired machine has no machine status any more (ST-039) – „Ausgemustert“ stands in its place (ST-055). */
+  | { retired: true }
+);
 
 /** What the machine overview is narrowed to (ST-008, ST-055): all are optional and combine. */
 export type MachineOverviewQuery = {
-  /** Part of a museum number or a machine model title, in any case ("042", "medieval") – also finds retired machines. */
+  /** Part of a museum number or a machine model title, in any case ("042", "medieval"). */
   search?: string;
   machineStatus?: MachineStatus;
-  /** Lists the retired machines too (ST-055, „Auch ausgemusterte Geräte anzeigen“). */
-  retired?: boolean;
+  /**
+   * Retired machines too (ST-055) – the caller decides: the machine overview asks for them with its filter or a search;
+   * the sticker choice never does (a retired machine gets no sticker, ST-011).
+   */
+  retiredToo?: boolean;
 };
 
 /**
- * RM-MachineOverview: the active machines, sorted by museum number – searched and filtered. Retired machines are
- * listed with the filter for them or when they match a search (ST-055), never under a machine status: a retired
- * machine has none any more (user, 2026-10-25).
+ * RM-MachineOverview: the active machines, sorted by museum number – searched and filtered; the retired ones too when
+ * asked for, but never under a machine status: a retired machine has none any more (user, 2026-10-25).
  */
 export async function machineOverview(
   db: Database,
-  { search, machineStatus, retired }: MachineOverviewQuery = {},
+  { search, machineStatus, retiredToo }: MachineOverviewQuery = {},
 ): Promise<MachineOverviewEntry[]> {
   const term = search?.trim();
   const pattern = term ? `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%` : undefined;
-  const withRetired = !machineStatus && (retired || pattern !== undefined);
+  const withRetired = retiredToo && !machineStatus;
   const rows = await db
     .select({
       id: machine.id,
@@ -160,11 +163,10 @@ export async function machineOverview(
       ),
     )
     .orderBy(asc(machine.museumNumber));
-  return rows.map(({ retiredAt, ...row }) => ({
-    ...row,
-    technology: row.technology ?? undefined,
-    retired: retiredAt !== null,
-  }));
+  return rows.map(({ retiredAt, machineStatus, ...row }): MachineOverviewEntry => {
+    const entry = { ...row, technology: row.technology ?? undefined };
+    return retiredAt ? { ...entry, retired: true } : { ...entry, retired: false, machineStatus };
+  });
 }
 
 /**

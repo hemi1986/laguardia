@@ -140,6 +140,27 @@ describe("RM-MachineOverview", () => {
     expect(await machineOverview(db)).toEqual([]);
   });
 
+  it("lists retired machines too when asked for – marked, without a machine status, never under one (ST-055)", async () => {
+    await registered({ museumNumber: "LG-012", location: "Hall 1", machineStatus: "playable" });
+    const retired = await registered({ museumNumber: "LG-013", location: "Depot", machineStatus: "playable" });
+    await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
+
+    expect(await machineOverview(db, { search: "013", retiredToo: true })).toEqual([
+      {
+        id: retired,
+        museumNumber: "LG-013",
+        machineModelTitle: "Medieval Madness",
+        machineCategory: "pinball",
+        technology: "dmd",
+        location: "Depot",
+        retired: true,
+      },
+    ]);
+    expect(museumNumbers(await machineOverview(db, { retiredToo: true, machineStatus: "playable" }))).toEqual([
+      "LG-012",
+    ]);
+  });
+
   it("ST-008: Number of machines per machine status", async () => {
     const statuses: [MachineStatus, number][] = [
       ["playable", 45],
@@ -225,8 +246,7 @@ describe("RM-MachineOverview", () => {
     await executeCommand(retireMachineCommand, { machineId: retired, version: 0, reason: "Sold" }, asEva());
 
     expect(museumNumbers(await machineOverview(db))).toEqual(["LG-012"]);
-    // A search finds it, marked as retired – ST-055 (finding retired machines was left out of ST-008).
-    expect(await machineOverview(db, { search: "013" })).toMatchObject([{ museumNumber: "LG-013", retired: true }]);
+    expect(museumNumbers(await machineOverview(db, { search: "013" }))).toEqual([]);
     expect((await machineStatusCounts(db)).playable).toBe(1);
   });
 });

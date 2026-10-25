@@ -4,18 +4,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
-import {
-  machineStatuses,
-  type MachineOverviewQuery,
-  type MachineStatus,
-} from "@/modules/collection";
+import { machineStatuses, type MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import type { MachineOverviewItem } from "./machine-overview-data";
+import type { MachineOverviewItem, OverviewQuery } from "./machine-overview-data";
 
 const { machines: texts, machineModels } = teamMessages;
 
 /** The address of the overview for a search and a filter – a plain link, so it works without JavaScript. */
-function overviewHref({ search, machineStatus, retired }: MachineOverviewQuery): string {
+function overviewHref({ search, machineStatus, retired }: OverviewQuery): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (machineStatus) params.set("machineStatus", machineStatus);
@@ -43,7 +39,7 @@ export function MachineOverview({
   counts: Record<MachineStatus, number>;
   /** How many machines are retired (ST-055). */
   retiredCount: number;
-  query: MachineOverviewQuery;
+  query: OverviewQuery;
   canRegister: boolean;
   /** The machine just registered – named in the confirmation (G3). */
   registered?: MachineOverviewItem;
@@ -76,13 +72,7 @@ export function MachineOverview({
               {texts.search}
             </label>
             <div className="flex gap-2">
-              <Input
-                id="search"
-                name="search"
-                type="search"
-                defaultValue={search}
-                aria-describedby="search-hint"
-              />
+              <Input id="search" name="search" type="search" defaultValue={search} aria-describedby="search-hint" />
               {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
               <button type="submit" className={buttonVariants({ variant: "outline" })}>
                 {texts.searchSubmit}
@@ -112,9 +102,7 @@ export function MachineOverview({
               ))}
             </ul>
           </nav>
-          {machines.length === 0 && total === 0 && !search && !query.machineStatus ? (
-            <p>{texts.allRetired}</p>
-          ) : machines.length === 0 ? (
+          {machines.length === 0 ? (
             <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
             <ul className="flex flex-col gap-4">
@@ -147,21 +135,20 @@ function FilterLink({ href, current, children }: { href: string; current: boolea
 }
 
 /**
- * The two "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
- * clear it (the filter stays); without a search only a filter can have emptied the list.
+ * The "nothing found" cases say what to do about them (G7). A search names what was searched for and offers to
+ * clear it (the filter stays); with a machine status only that filter can have emptied the list; with neither, every
+ * machine is retired – the filter for them finds them (ST-055).
  */
-function NothingFound({ search, machineStatus, retired }: MachineOverviewQuery) {
-  if (search || !machineStatus) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p>{texts.noMatch(search ?? "")}</p>
-        <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
-          {texts.clearSearch}
-        </Link>
-      </div>
-    );
-  }
-  return <p>{texts.noneWithStatus(texts.statuses[machineStatus])}</p>;
+function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
+  if (!search) return <p>{machineStatus ? texts.noneWithStatus(texts.statuses[machineStatus]) : texts.allRetired}</p>;
+  return (
+    <div className="flex flex-col gap-2">
+      <p>{texts.noMatch(search)}</p>
+      <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
+        {texts.clearSearch}
+      </Link>
+    </div>
+  );
 }
 
 /**

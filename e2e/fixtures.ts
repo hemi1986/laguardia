@@ -150,6 +150,18 @@ export async function aMachine(page: Page, machineStatus?: MachineStatus, locati
   return { museumNumber, title };
 }
 
+/** A new machine, retired by the logged-in technician through its machine record (ST-039). */
+export async function aRetiredMachine(page: Page) {
+  const machine = await aMachine(page);
+  await page.goto(`/team/machines/${machine.museumNumber}`);
+  await page.getByRole("link", { name: "Gerät ausmustern" }).click();
+  await page.getByLabel("Grund").fill("Sold to a collector");
+  await page.getByRole("button", { name: "Weiter" }).click();
+  await page.getByRole("button", { name: "Endgültig ausmustern" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`${machine.museumNumber} ist ausgemustert.`);
+  return machine;
+}
+
 /** A machine with an open defect, reported and recorded by the logged-in technician in one step (ST-023). */
 export async function anOpenDefect(page: Page, { suitableForHelpers = false } = {}) {
   const { museumNumber } = await aMachine(page);

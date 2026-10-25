@@ -1,5 +1,4 @@
-import type { Page } from "@playwright/test";
-import { aMachine, allowPreview, expect, logIn, pageWidth, test } from "./fixtures";
+import { aRetiredMachine, allowPreview, expect, logIn, pageWidth, test } from "./fixtures";
 
 /**
  * Retired machines on a phone (ST-055): the machine overview's filter form lists them with the checkbox „Auch
@@ -14,20 +13,8 @@ test.beforeEach(() => {
   );
 });
 
-/** A new machine, retired by the logged-in e2e technician through its machine record. */
-async function aRetiredMachine(page: Page) {
-  await logIn(page);
-  const machine = await aMachine(page);
-  await page.goto(`/team/machines/${machine.museumNumber}`);
-  await page.getByRole("link", { name: "Gerät ausmustern" }).click();
-  await page.getByLabel("Grund").fill("Sold to a collector");
-  await page.getByRole("button", { name: "Weiter" }).click();
-  await page.getByRole("button", { name: "Endgültig ausmustern" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText(`${machine.museumNumber} ist ausgemustert.`);
-  return machine;
-}
-
 test("the filter form lists retired machines with the checkbox, marked „Ausgemustert“", async ({ page }) => {
+  await logIn(page);
   const { museumNumber, title } = await aRetiredMachine(page);
   const entry = page.getByRole("listitem").filter({ hasText: `${museumNumber} · ${title}` });
 
@@ -44,6 +31,7 @@ test("the filter form lists retired machines with the checkbox, marked „Ausgem
 });
 
 test("the old QR sticker of a retired machine says it is no longer in the museum", async ({ page, browser }) => {
+  await logIn(page);
   const { museumNumber } = await aRetiredMachine(page);
   const visitor = await (await browser.newContext({ locale: "en-GB" })).newPage();
   await allowPreview(visitor, test.info().project.use.baseURL);

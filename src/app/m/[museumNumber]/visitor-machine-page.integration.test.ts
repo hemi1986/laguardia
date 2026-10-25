@@ -19,6 +19,7 @@ import { executeCommand } from "@/platform/command";
 import { visitorMessages } from "@/platform/messages";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadReportForm } from "./melden/report-form-data";
 import { loadVisitorMachinePage } from "./visitor-machine-page-data";
 import { VisitorMachinePage } from "./visitor-machine-page";
 
@@ -93,6 +94,7 @@ describe("the visitor machine page", () => {
       expect(html).not.toMatch(/Defekte|defects|Sichtung|triage/i);
       expect(html).not.toContain("/melden");
     }
+    expect(await loadReportForm(db, "LG-013")).toBeUndefined(); // its report page answers 404
   });
 
   it("ST-016: Only team members can see the photo", async () => {

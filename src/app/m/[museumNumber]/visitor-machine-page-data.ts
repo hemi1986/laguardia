@@ -25,7 +25,7 @@ export async function loadVisitorMachinePage(
   museumNumber: string,
 ): Promise<VisitorMachinePageData | undefined> {
   const [machine, machineId] = await Promise.all([visitorMachine(db, museumNumber), machineIdOf(db, museumNumber)]);
-  if (machine?.retired) return machine; // no ID for a retired machine – nothing of it is loaded (ST-055)
+  if (machine?.retired) return machine; // only its title – no machine status, defects or problem reports (ST-055)
   if (!machine || !machineId) return undefined;
   return {
     ...machine,

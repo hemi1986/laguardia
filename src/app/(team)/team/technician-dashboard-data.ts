@@ -75,8 +75,9 @@ export async function loadTechnicianDashboard(
   const { since, reachedBack } = recentSince(clock, marks);
   const [toTriage, notPlayable, stale, due, statusChanges, defectChanges] = await Promise.all([
     triageList(db, clock),
+    // Filtered by a machine status, the overview lists active machines only – the narrowing says so to the types.
     Promise.all(NOT_PLAYABLE.map((machineStatus) => machineOverview(db, { machineStatus }))).then((lists) =>
-      lists.flat(),
+      lists.flat().flatMap((machine) => (machine.retired ? [] : [machine])),
     ),
     staleClaims(db, clock),
     dueMaintenance(db, clock),
