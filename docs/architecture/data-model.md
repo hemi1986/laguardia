@@ -1,6 +1,6 @@
 # Logical Data Model
 
-> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-01
+> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-25 (per-machine maintenance)
 >
 > No physical model yet – the stack is only *proposed* (`docs/adr/0001-tech-stack.md`, `0002`, `0003`). A "Physical Model" section follows once the user accepts them.
 
@@ -54,6 +54,8 @@ erDiagram
     DEFECT ||--o{ RESOLUTION : contains
     DEFECT ||--o{ REOPENING : contains
     MAINTENANCE_PLAN ||--o{ MAINTENANCE_TASK : contains
+    MAINTENANCE_TASK ||--o{ MACHINE_OF_TASK : contains
+    MACHINE ||--o{ MACHINE_OF_TASK : "refers to (applies to)"
     MAINTENANCE_TASK ||--o{ MAINTENANCE_RECORD : "refers to"
     MACHINE ||--o{ MAINTENANCE_RECORD : "refers to"
     TEAM_MEMBER ||--o{ DEFECT : "refers to (claimant)"
@@ -267,7 +269,7 @@ Corrections: EVT-MachineModelCorrected (HS-18).
 | | | Technology | `Technology` | no | EVT-MachineModelCreated, EVT-MachineModelCorrected |
 | | | Holds from | `Timestamp` | yes | EVT-MachineModelCreated, EVT-MachineModelCorrected (occurrence) |
 
-The **category history** is append-only, like the machine status history: its first entry holds the machine category and technology given at creation, and every correction that changes either appends one with the correction's point in time (ST-036, user 2026-10-18). Collection publishes it for Maintenance, which needs to know since when a maintenance task applies to a machine – a task that newly applies counts as last done on the correction date (HS-20, D5). A correction of title, manufacturer or year appends nothing. Machine models created before ST-036 got their first entry from the journal's EVT-MachineModelCreated.
+The **category history** is append-only, like the machine status history: its first entry holds the machine category and technology given at creation, and every correction that changes either appends one with the correction's point in time (ST-036, user 2026-10-18). A correction of title, manufacturer or year appends nothing. Machine models created before ST-036 got their first entry from the journal's EVT-MachineModelCreated. Collection published it for Maintenance to know since when a restricted maintenance task applied to a machine; since FLOW-PerMachineMaintenance (2026-10-25) maintenance tasks apply to chosen machines and Maintenance reads only the **current** machine category and technology, for grouping and proposing machines. The history's last reader is the one-off migration of HS-23/HS-24 (the date each machine started counting); after it, the category history has no reader and is kept anyway (user, 2026-10-25, HS-24).
 
 ---
 
@@ -306,19 +308,24 @@ Whether the content of a removed file is deleted or only hidden is not decided; 
 ## Maintenance plan (`AGG-MaintenancePlan`, context `BC-Maintenance`)
 
 **Invariants**
-- Every maintenance task has a positive interval and a start date
-- A restriction to a technology fits the restricted machine category
-- A removed maintenance task never becomes due again; its maintenance records are kept
+- Every maintenance task has a positive interval
+- A maintenance task applies to any number of machines – none included – and to each machine at most once
+- A removed maintenance task is final – its instruction, interval, suitable-for-helpers mark and machines never change, it never becomes due again, and its maintenance records are kept
 
-**Lifecycle** of a maintenance task within the plan (`EVT-MaintenancePlanChanged` covers added, changed and removed):
+**Machines of a maintenance task (FLOW-PerMachineMaintenance, user 2026-10-25):** each task holds the machines a technician chose for it, by `MachineId`, each with the moment it was added. There is no restriction to machine category or technology and no start date any more; category and technology only group and propose machines in the choice read models (`RM-MachineChoiceForMaintenanceTask`, `RM-MaintenanceTaskChoiceForMachine`). Removing a machine deletes its entry – the journal (`EVT-MachinesOfMaintenanceTaskChanged`) keeps who removed it and when; its maintenance records stay. Adding it again creates a new entry with a new *Added at*. A retired machine's entry may stay; it never counts (see *Derived* below), so no policy reacts to `EVT-MachineRetired` in Maintenance and a machine retired while it is being added needs no retirement lock. Registering a machine with chosen maintenance tasks adds it to each of them in the registration's transaction (`POL-RegistrationAppliesChosenMaintenanceTasks`, HS-22).
+
+**Lifecycle** of a maintenance task within the plan (`EVT-MaintenancePlanChanged` covers added, changed and removed; `EVT-MachinesOfMaintenanceTaskChanged` changes its machines and leaves its state alone):
 
 ```mermaid
 stateDiagram-v2
     [*] --> Active : EVT-MaintenancePlanChanged (added)
     Active --> Active : EVT-MaintenancePlanChanged (changed)
+    Active --> Active : EVT-MachinesOfMaintenanceTaskChanged
     Active --> Removed : EVT-MaintenancePlanChanged (removed)
     Removed --> [*]
 ```
+
+A new task and its first machines are stored together (`CMD-ChangeMaintenancePlan` produces both events).
 
 | Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
 |---|---|---|---|---|---|
@@ -328,11 +335,12 @@ stateDiagram-v2
 | | | Instruction | `Text` | yes | EVT-MaintenancePlanChanged |
 | | | Interval | `Interval` | yes | EVT-MaintenancePlanChanged |
 | | | Suitable for helpers | Boolean | yes | EVT-MaintenancePlanChanged |
-| | | Restriction | Restriction (VO) | no | EVT-MaintenancePlanChanged |
-| | | Start date | `Date` | yes | EVT-MaintenancePlanChanged |
+| | | Machines | list of Machine of the task | yes (may be empty) | see below |
 | | | Removed at | `Timestamp` | when removed | EVT-MaintenancePlanChanged (removed, occurrence) |
-| Restriction | VO | Machine category | `MachineCategory` | no | EVT-MaintenancePlanChanged |
-| | | Technology | `Technology` | no | EVT-MaintenancePlanChanged |
+| Machine of the task | Entity (per task and machine) | Machine | `MachineId` | yes, unique within the task | EVT-MachinesOfMaintenanceTaskChanged ("Machines added", "Machines removed") |
+| | | Added at | `Timestamp` | yes | EVT-MachinesOfMaintenanceTaskChanged (occurrence of the event that added it; for migrated tasks see HS-23/HS-24) |
+
+*Number of machines it applies to* (`RM-MaintenancePlan`) and *Chosen* (`RM-MachineChoiceForMaintenanceTask`, `RM-MaintenanceTaskChoiceForMachine`) are derived from these entries, counting only machines that are not retired. *Proposed for a new machine* is derived: a task is proposed when it applies to at least one non-retired machine whose machine model has the same machine category and technology as the new machine's.
 
 ---
 
@@ -363,16 +371,18 @@ stateDiagram-v2
 
 ### Derived: due status per machine and maintenance task (not stored)
 
-A maintenance task **applies** to a machine when the machine is registered and not retired and the task's restriction (if any) matches the machine model's machine category / technology. For each applicable pair:
+A maintenance task **applies** to a machine when the task is not removed, the machine is one of the machines of the task and the machine is not retired. Machine category, technology and machine model corrections play no part (FLOW-PerMachineMaintenance, user 2026-10-25). For each applicable pair:
 
-- *Last done* = latest *Date (carried out)* of a maintenance record with outcome *done* – but never earlier than the task's *Start date* or the machine's registration date (whichever is later); without such a record, that later date (`RM-DueMaintenance`; user decision 2026-10-15, ST-044).
-- *Due since* = *Last done* + *Interval*; never due while the machine is *Not on display* (status history).
+- *Last done* = latest *Date (carried out)* of a maintenance record with outcome *done* for that machine and task, counting only records recorded since the machine's *Added at* – a record backdated to before the day it was added still counts if it was recorded afterwards; one from before a removal does not (HS-24, user 2026-10-25). Without such a record there is no *Last done* (`RM-DueMaintenance` shows none).
+- *Due since* = *Last done* + *Interval*; without a *Last done*, the day of *Added at* – the task is due at once on a machine it newly applies to, also on one added again after a removal. Calendar days in Europe/Berlin.
+- Never due while the machine is *Not on display* (status history). A machine returning from *Not on display* follows the normal rule; only a task already due at the return counts as due since the return date, overdue counted from there (HS-20). This covers a machine that was *Not on display* when it was added: the task becomes due on its return.
 - *Overdue* once due for more than 25% of the interval.
-- A machine returning from *Not on display* follows the normal interval rule; only a task already due at the return counts as due since the return date, overdue counted from there. For a machine registered after a task's start date, or a task newly applying after a machine model correction, last done is the registration or correction date (HS-20, revised in the story review D5).
+- Superseded (2026-10-25): the task's start date, the machine's registration date as a floor for *Last done*, and the rule that a task newly applying after a machine model correction counts as last done on the correction date (ST-044, HS-20 D5, ST-036).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> NotDue
+    [*] --> Due : EVT-MachinesOfMaintenanceTaskChanged (added, on display)
+    [*] --> Suspended : EVT-MachinesOfMaintenanceTaskChanged (added, Not on display)
     NotDue --> Due : EVT-MaintenanceTaskDue
     Due --> Overdue : EVT-MaintenanceTaskOverdue
     Due --> NotDue : EVT-MaintenanceRecorded (done)
@@ -382,9 +392,13 @@ stateDiagram-v2
     Overdue --> Suspended : EVT-MachineStatusChanged (Not on display)
     Suspended --> NotDue : EVT-MachineStatusChanged (back on display, interval not passed)
     Suspended --> Due : EVT-MachineStatusChanged (back on display, already due – due since return, HS-20)
+    NotDue --> [*] : EVT-MachinesOfMaintenanceTaskChanged (removed) / EVT-MachineRetired / task removed
+    Due --> [*] : EVT-MachinesOfMaintenanceTaskChanged (removed) / EVT-MachineRetired / task removed
+    Overdue --> [*] : EVT-MachinesOfMaintenanceTaskChanged (removed) / EVT-MachineRetired / task removed
+    Suspended --> [*] : EVT-MachinesOfMaintenanceTaskChanged (removed) / EVT-MachineRetired / task removed
 ```
 
-`Suspended` is only a diagram label for "machine not on display", not a domain term.
+`Suspended` is only a diagram label for "machine not on display", not a domain term. The state starts when the machine is added to the task and ends when it no longer applies.
 
 ---
 

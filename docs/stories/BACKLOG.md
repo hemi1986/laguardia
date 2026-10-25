@@ -2,11 +2,27 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 56 of 56 domain stories done** · scenarios 493 of 493
+**Progress: 56 of 67 domain stories done** · scenarios 493 of 637
 
-**84 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 11
+**95 stories** · In Progress: 0 · Ready: 11 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## Ready
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-094](ST-094-maintenance-tasks-apply-to-chosen-machines.md) | Maintenance tasks apply to the machines a technician chooses, due at once on each | story | Maintenance | must | L | high | – |
+| [ST-095](ST-095-change-the-machines-of-a-maintenance-task.md) | Change the machines of a maintenance task | story | Maintenance | must | M | medium | ST-094 |
+| [ST-096](ST-096-change-a-machines-maintenance-tasks-on-its-record.md) | Change a machine's maintenance tasks from its machine record | story | Maintenance | must | M | medium | ST-095 |
+| [ST-097](ST-097-choose-maintenance-tasks-when-registering-a-machine.md) | Choose a new machine's maintenance tasks when registering it | story | Maintenance | must | M | high | ST-096 |
+| [ST-098](ST-098-sticker-selection-and-recording-for-several-in-groups.md) | The sticker selection and recording for several machines choose in folding groups | story | Collection | must | S | low | ST-094 |
+| [ST-088](ST-088-edit-account-on-one-page-and-deactivate-in-one-tap.md) | Edit an account on one page, and deactivate or activate it with one tap | story | Team | should | M | medium | – |
+| [ST-089](ST-089-one-page-width-for-every-page.md) | One page width for every page, with fields and submit buttons across the column | story | Collection | should | S | low | – |
+| [ST-090](ST-090-dark-design-with-a-switch-per-device.md) | Dark design on every page, with a switch to light per device | story | Collection | should | M | medium | – |
+| [ST-091](ST-091-headings-and-buttons-say-the-job-in-one-pattern.md) | Headings, buttons and instructions say the job in one pattern | story | Collection | should | S | low | – |
+| [ST-092](ST-092-sections-lists-filters-and-links-in-one-shape.md) | Sections, lists, filters and links take one shape on every page | story | Repair | should | L | medium | ST-091 |
+| [ST-093](ST-093-status-history-latest-five-and-its-own-page.md) | Status history on the machine record – the latest five and a page of its own | story | Collection | should | S | low | – |
 
 ## Done
 

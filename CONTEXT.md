@@ -240,9 +240,14 @@ _UI (de)_: Bis behoben
 ### Maintenance
 
 **Maintenance task**:
-A recurring job on a machine with a time-based interval, a short instruction, a *suitable for helpers* mark and optionally a restriction to a machine category and/or technology (e.g. Pinball/EM only).
-_Avoid_: Service, check, inspection, chore
+A recurring job with a time-based interval, a short instruction and a *suitable for helpers* mark, which applies to the machines a technician chose for it – individually, not by machine category or technology. A machine a maintenance task newly applies to has it due at once; from then on its interval runs on that machine alone.
+_Avoid_: Service, check, inspection, chore, restriction (machine category and technology only help choosing the machines), start date
 _UI (de)_: Wartungsaufgabe
+
+**Machines of a maintenance task**:
+The machines a maintenance task applies to; only a technician changes them – when adding the maintenance task or later on it, from the machine record, or when registering a machine. Removing a machine ends its due maintenance for that task and keeps its maintenance records; a retired machine no longer counts as one of them. Choosing machines for a maintenance task is never *assign* – that word belongs to defects.
+_Avoid_: Assignment, assigned machines, restriction, scope
+_UI (de)_: Geräte der Wartungsaufgabe („Geräte ändern“ / „Wartungsaufgaben ändern“)
 
 **Maintenance plan**:
 The single, museum-wide set of all maintenance tasks.
@@ -250,7 +255,7 @@ _Avoid_: Schedule, checklist
 _UI (de)_: Wartungsplan
 
 **Due** / **Overdue**:
-A maintenance task is due on a machine once its interval has passed since it was last done there (or since the task's start date, or the machine's registration if later), and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*. After a machine returns to display, a task that was already due counts as due since the return, and overdue 25% of its interval after it.
+A maintenance task is due on a machine it applies to once its interval has passed since it was last done there – and at once when it newly applies to that machine – and overdue once it has been due for more than 25% of its interval; never for machines that are *Not on display*. After a machine returns to display, a task that was already due counts as due since the return, and overdue 25% of its interval after it.
 _Avoid_: Pending, late
 _UI (de)_: Fällig / Überfällig
 

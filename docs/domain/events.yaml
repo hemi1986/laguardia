@@ -93,12 +93,17 @@ aggregates:
     name: Maintenance plan
     context: BC-Maintenance
     description: >-
-      One museum-wide aggregate containing the maintenance tasks as entities. Edited rarely and by technicians only,
-      so a single aggregate causes no contention.
+      One museum-wide aggregate containing the maintenance tasks as entities, each with the machines of the
+      maintenance task (by machine ID, with when each was added – FLOW-PerMachineMaintenance). Edited rarely and by
+      technicians only – registering a machine with chosen maintenance tasks is a technician step too – so a single
+      aggregate causes no contention. Machine category and technology play no part in which machines a task applies
+      to; a machine model correction changes nothing (user, 2026-10-25). A retired machine may stay among the machines
+      of a task but no longer counts – it drops out of every due calculation and choice by derivation, not by a
+      policy on Machine retired (docs/architecture/data-model.md).
     invariants:
-      - Every maintenance task has a positive interval and a start date
-      - A restriction to a technology fits the restricted machine category
-      - A removed maintenance task never becomes due again; its maintenance records are kept
+      - Every maintenance task has a positive interval
+      - A maintenance task applies to any number of machines – none included – and to each machine at most once
+      - A removed maintenance task is final – its instruction, interval, suitable-for-helpers mark and machines never change, it never becomes due again, and its maintenance records are kept
   - id: AGG-MaintenanceRecord
     name: Maintenance record
     context: BC-Maintenance
@@ -234,15 +239,30 @@ events:
   - id: EVT-MaintenancePlanChanged
     aggregate: AGG-MaintenancePlan
     name: Maintenance plan changed
-    data: [Maintenance task, Instruction, Interval, Suitable for helpers, Restriction to machine category / technology (optional), Start date]
-    description: A maintenance task was added, changed or removed.
+    data: [Maintenance task, Instruction, Interval, Suitable for helpers]
+    description: >-
+      A maintenance task was added, changed or removed. Since FLOW-PerMachineMaintenance (user, 2026-10-25) without a
+      restriction to machine category / technology and without a start date – which machines it applies to is
+      EVT-MachinesOfMaintenanceTaskChanged.
+  - id: EVT-MachinesOfMaintenanceTaskChanged
+    aggregate: AGG-MaintenancePlan
+    name: Machines of maintenance task changed
+    data: [Maintenance task, Machines added, Machines removed, Changed by]
+    description: >-
+      A technician chose the machines a maintenance task applies to – when adding the task, on the task, on the machine
+      record (one event per changed task), or when registering a machine. A machine added has the task due at once; a
+      machine removed is no longer due for it and keeps its maintenance records.
   - id: EVT-MaintenanceTaskDue
     context: BC-Maintenance
     pivotal: true
     name: Maintenance task due
     origin: time
     data: [Machine, Maintenance task, Due since]
-    description: Interval passed since the last done maintenance record (or since the start date set when the task was added). Not for machines that are Not on display.
+    description: >-
+      Interval passed since the last done maintenance record on that machine recorded since the machine was last
+      added to the task (HS-24) – or at once when the maintenance task newly applies to the machine and has
+      no such record (EVT-MachinesOfMaintenanceTaskChanged). Only for machines the task applies to; not for machines that are Not on
+      display.
   - id: EVT-MaintenanceTaskOverdue
     context: BC-Maintenance
     name: Maintenance task overdue
@@ -465,9 +485,22 @@ commands:
     aggregate: AGG-MaintenancePlan
     name: Change maintenance plan
     actor: ACT-Technician
-    produces: [EVT-MaintenancePlanChanged]
+    produces: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged]
     rules:
-      - The start date of a new maintenance task counts as last done
+      - A new maintenance task may be given its machines in the same step; the task and its machines are stored together or not at all (the machines follow the rules of CMD-ChangeMachinesOfMaintenanceTask)
+  - id: CMD-ChangeMachinesOfMaintenanceTask
+    aggregate: AGG-MaintenancePlan
+    name: Change machines of maintenance task
+    actor: ACT-Technician
+    produces: [EVT-MachinesOfMaintenanceTaskChanged]
+    description: >-
+      From the maintenance task (several machines, one task), from the machine record (one machine, several tasks –
+      one event per changed task) or through POL-RegistrationAppliesChosenMaintenanceTasks.
+    rules:
+      - Only registered machines that are not retired can be added – checked against Collection at command time; a machine Not on display can be added and becomes due on its return (HS-20)
+      - Only a machine not yet among the machines of the task can be added and only one among them can be removed; a change that adds and removes nothing records no event (on the machine record, one event per task that changed)
+      - Every machine added – also one added again after it was removed – has the task due at once; a machine removed keeps its maintenance records
+      - Through POL-RegistrationAppliesChosenMaintenanceTasks, Changed by is the technician who registered the machine
   - id: CMD-RecordMaintenance
     aggregate: AGG-MaintenanceRecord
     name: Record maintenance
@@ -475,7 +508,7 @@ commands:
     produces: [EVT-MaintenanceRecorded]
     description: Can be recorded for several machines at once – one event per machine.
     rules:
-      - The maintenance task applies to the machine's category and technology
+      - The maintenance task applies to the machine (it is one of the machines of the maintenance task)
       - Helpers can only record maintenance tasks suitable for helpers
       - The machine is not retired
       - The date it was carried out (a calendar day, Europe/Berlin) may be up to 7 days in the past (default today), never in the future
@@ -497,6 +530,17 @@ policies:
     when: [EVT-MachineRetired]
     then: [CMD-DismissProblemReport]
     description: Automatic, for every untriaged problem report of the machine, reason "machine retired".
+  - id: POL-RegistrationAppliesChosenMaintenanceTasks
+    name: Registering a machine applies the chosen maintenance tasks
+    when: [EVT-MachineRegistered]
+    then: [CMD-ChangeMachinesOfMaintenanceTask]
+    description: >-
+      Automatic, in the same step as the registration: the maintenance tasks the technician chose on the registration
+      form apply to the new machine and are due at once – one CMD-ChangeMachinesOfMaintenanceTask per chosen task.
+      Proposed are the tasks that already apply to a machine of the same machine category and technology. The chosen
+      tasks are input of the registration step for this policy, not data of EVT-MachineRegistered – Collection knows
+      no maintenance tasks (HS-22). The machine and its maintenance tasks are stored together or not at all; a chosen
+      task removed in the meantime rejects the registration (user, 2026-10-25; HS-22).
   # --- manual routines ---
   - id: POL-TriageProblemReports
     name: New problem reports are triaged
@@ -557,21 +601,37 @@ read_models:
     fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
   - id: RM-MachineRecord
     name: Machine record
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged]
     used_by: [ACT-TeamMember]
     description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
-    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Due and overdue maintenance tasks, Files of the machine and its machine model by file category]
+    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files of the machine and its machine model by file category]
   - id: RM-DueMaintenance
     name: Due maintenance
-    fed_by: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-MachineMoved, EVT-MachineModelCorrected]
+    fed_by: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-MachineMoved, EVT-MachineModelCorrected]
     used_by: [ACT-TeamMember]
     description: Grouped by maintenance task so the same task can be recorded for several machines at once.
     fields: [Maintenance task, Instruction, Suitable for helpers, Museum number, Machine model title, Location, Last done, Due since, Overdue]
   - id: RM-MaintenancePlan
     name: Maintenance plan
-    fed_by: [EVT-MaintenancePlanChanged]
+    fed_by: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MachineRetired]
     used_by: [ACT-Technician]
-    fields: [Maintenance task, Instruction, Interval, Suitable for helpers, Machine category, Technology]
+    fields: [Maintenance task, Instruction, Interval, Suitable for helpers, Number of machines it applies to]
+  - id: RM-MachineChoiceForMaintenanceTask
+    name: Machine choice for a maintenance task
+    description: >-
+      The machines a technician can choose for a maintenance task – adding it or changing its machines. Grouped by
+      machine category and technology, each group collapsible and choosable as a whole, with how many of it are chosen.
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineRetired, EVT-MachineModelCorrected, EVT-MachinesOfMaintenanceTaskChanged]
+    used_by: [ACT-Technician]
+    fields: [Machine category, Technology, Museum number, Machine model title, Chosen (the task applies to it), Number chosen per group]
+  - id: RM-MaintenanceTaskChoiceForMachine
+    name: Maintenance task choice for a machine
+    description: >-
+      The maintenance tasks a technician can choose for one machine – on its machine record, and when registering it,
+      where the tasks that apply to a machine of the same machine category and technology are proposed.
+    fed_by: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineRetired, EVT-MachineModelCorrected]
+    used_by: [ACT-Technician]
+    fields: [Maintenance task, Interval, Suitable for helpers, Chosen (applies to the machine), Proposed for a new machine]
   - id: RM-TechnicianDashboard
     name: Technician dashboard
     description: Highlights everything new since the viewer's last visit – the previous time they opened their dashboard, recorded by the Team area.
@@ -643,7 +703,7 @@ hotspots:
     question: Which machine types exist for restricting maintenance tasks? The museum also has arcade machines and other machines ("Sonstiges"), not only pinball.
     refs: [EVT-MachineModelCreated, EVT-MaintenancePlanChanged]
     status: resolved
-    resolution: "Two levels on the machine model: machine category (Pinball, Arcade, Other – required) and technology (Pinball: EM, Solid-state, DMD, LCD; Arcade: CRT, LCD; Other: none – optional). Maintenance tasks can be restricted to a category and/or technology. Other = jukeboxes, gum machines, table football etc., no maintenance tasks by default."
+    resolution: "Two levels on the machine model: machine category (Pinball, Arcade, Other – required) and technology (Pinball: EM, Solid-state, DMD, LCD; Arcade: CRT, LCD; Other: none – optional). Maintenance tasks can be restricted to a category and/or technology. Other = jukeboxes, gum machines, table football etc., no maintenance tasks by default. Superseded for maintenance on 2026-10-25 (FLOW-PerMachineMaintenance): maintenance tasks apply to individually chosen machines; category and technology only help choosing them."
   - id: HS-11
     question: Can a maintenance task be recorded for several machines at once (e.g. glass cleaning on a whole hall)?
     refs: [EVT-MaintenanceRecorded]
@@ -653,7 +713,7 @@ hotspots:
     question: When is a newly added maintenance task first due – immediately on all machines (flood on go-live) or later?
     refs: [EVT-MaintenancePlanChanged, EVT-MaintenanceTaskDue]
     status: resolved
-    resolution: "When a maintenance task is added, the technician sets a start date that counts as last done; first due one interval later. At go-live each maintenance task gets one start date (staggered across tasks), not one per machine."
+    resolution: "When a maintenance task is added, the technician sets a start date that counts as last done; first due one interval later. At go-live each maintenance task gets one start date (staggered across tasks), not one per machine. Superseded on 2026-10-25 (user, FLOW-PerMachineMaintenance): no start date – a task is due at once on every machine it newly applies to, and the intervals then spread per machine as each one is done."
   - id: HS-13
     question: Can maintenance be recorded on a machine that is Not on display (e.g. full cleaning during restoration)?
     refs: [EVT-MaintenanceRecorded]
@@ -719,7 +779,7 @@ hotspots:
       last done date.
     refs: [EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineStatusChanged]
     status: resolved
-    resolution: "Revised in the story review (2026-09-26, D5): on return to display the normal interval rule applies. Only a maintenance task that was already due at the return counts as due since the return date, and overdue is counted from there. For a machine registered after a task's start date – or a task that newly applies after a machine model correction – last done is the registration or correction date."
+    resolution: "Revised in the story review (2026-09-26, D5): on return to display the normal interval rule applies. Only a maintenance task that was already due at the return counts as due since the return date, and overdue is counted from there. For a machine registered after a task's start date – or a task that newly applies after a machine model correction – last done is the registration or correction date. The last sentence is superseded on 2026-10-25 (FLOW-PerMachineMaintenance): a task newly applying to a machine is due at once, and a machine model correction no longer changes which machines a task applies to."
   - id: HS-21
     question: >-
       The dashboards highlight what is new "since the last login". Team members will stay logged in on their phones for
@@ -728,6 +788,53 @@ hotspots:
     refs: [RM-TechnicianDashboard, RM-HelperDashboard]
     status: resolved
     resolution: "Accepted as recommended: \"new\" is measured since the viewer's previous dashboard visit – the Last visit, recorded by the Team area. RM-TechnicianDashboard and RM-HelperDashboard both carry the field \"New since last visit\"."
+  # --- Flow: per-machine maintenance (feature:per-machine-maintenance, 2026-10-25) ---
+  - id: HS-22
+    question: >-
+      Registering a machine (Collection) and applying the chosen maintenance tasks to it (Maintenance) are two
+      contexts. Stored together, or the machine first and the tasks afterwards?
+    refs: [CMD-RegisterMachine, POL-RegistrationAppliesChosenMaintenanceTasks, CMD-ChangeMachinesOfMaintenanceTask]
+    status: resolved
+    resolution: >-
+      Together or not at all (user, 2026-10-25) – an automatic policy in the registration's transaction, added by the
+      downstream Maintenance module (docs/adr/0010-cross-module-policies-and-retirement-lock.md). How the chosen tasks
+      reach the policy (domain-architect, 2026-10-25): they are the technician's input to the policy for this one
+      registration, never data of CMD-RegisterMachine or EVT-MachineRegistered – Collection stays unaware of
+      maintenance tasks (ADR 0002, upstream does not know downstream). Maintenance exports the registration command
+      with POL-RegistrationAppliesChosenMaintenanceTasks added for the chosen task IDs (ADR 0010, option 3, the policy
+      bound to the chosen tasks when the step is submitted), and the registration page uses that export. From the
+      triggering EVT-MachineRegistered the policy takes the new machine's ID; for each chosen task it runs
+      CMD-ChangeMachinesOfMaintenanceTask (machine added, Changed by = the registering technician). A chosen task that
+      was removed in the meantime rejects the policy and so the whole registration – the form shows it and the
+      technician chooses again. No change to ADR 0010: Maintenance is the only module reacting to the registration,
+      and it does not react to the retirement at all (retired machines drop out by derivation), so option 4 is not
+      triggered. No hotspot left on a context boundary.
+  - id: HS-23
+    question: What happens to existing maintenance tasks with a restriction and a start date when they switch to chosen machines?
+    refs: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged]
+    status: resolved
+    resolution: >-
+      Each existing task applies to every machine it applies to today under its restriction; its maintenance records
+      stay, so what is due today stays due (user, 2026-10-25). There is no go-live yet, so only development and preview
+      data are affected. Follow-up question on the details: HS-24.
+  - id: HS-24
+    question: >-
+      Which maintenance records count for Last done once a machine can be removed from a task and added again, and
+      what does HS-23 mean for a machine without a done record? Recommendation (domain-architect, 2026-10-25) – Last
+      done is the latest date carried out of a done maintenance record recorded since the machine was last added to
+      the task (so a record backdated up to 7 days on the day of adding still counts, but one from before a removal
+      does not); without one the task is due since the day it was added. The migration sets "added" for each machine
+      to the date it started counting under the old rule (the later of the task's start date, the machine's
+      registration date and the category change that made the task apply), so a machine with a done record keeps its
+      due date exactly. A machine without a done record since then becomes due at once instead of one interval after
+      that date – accepted, as only development and preview data exist.
+    refs: [EVT-MaintenanceTaskDue, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceRecorded]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-10-25): only done records recorded since the machine was last added count for
+      Last done; the migration sets "added" to the date each machine started counting under the old rule, and a machine
+      without a done record since then becomes due at once. The machine model's category history is kept, although
+      Maintenance no longer reads it after the migration.
 
 flows:
   - id: FLOW-ProblemReportTriage
@@ -751,3 +858,11 @@ flows:
   - id: FLOW-MachineLifecycle
     name: Machine lifecycle
     sequence: [ACT-Technician, EVT-MachineModelCreated, EVT-MachineRegistered, EVT-FileAttached, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-DefectClosedOnRetirement]
+  - id: FLOW-PerMachineMaintenance
+    name: Per-machine maintenance
+    description: >-
+      Feature per-machine-maintenance (2026-10-25). A technician chooses the machines of a maintenance task – when adding
+      it, later on the task or on the machine record, or when registering a machine. The task is due at once on each
+      machine it newly applies to; each machine's interval then runs from its own last done maintenance record, so
+      the work spreads out instead of falling due everywhere on the same day.
+    sequence: [ACT-Technician, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, ACT-TeamMember, EVT-MaintenanceRecorded]

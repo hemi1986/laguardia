@@ -28,7 +28,7 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 2. Every machine has a traceable repair history.
 3. At any time it's clear which machines are playable, limited, or out of order.
 4. Files (manuals, schematics, etc.) are attached to the machines and available at the machine.
-5. Scheduled maintenance: a museum-wide maintenance plan (clean playfield, test switches and lamps, rubbers, …) shows what is due or overdue on which machine, and helpers can carry out most of it.
+5. Scheduled maintenance: a museum-wide maintenance plan (clean playfield, test switches and lamps, rubbers, …) in which technicians choose, per maintenance task, the machines it applies to; it shows what is due or overdue on which machine, and helpers can carry out most of it.
 
 ## Scope Notes
 - Visitors report problems via a QR code on each machine: free text plus an optional photo, no account, no contact data.
@@ -37,7 +37,7 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - No active notifications (e-mail, push); instead the dashboard highlights what is new since the team member's previous visit to it (HS-21; team members stay logged in on their phones for weeks, so the last login would highlight nothing).
 - Machines are registered and retired; loans, purchase prices and provenance are out of scope.
 - Visitors see a machine's open defects (by title) before writing a report, to avoid duplicates.
-- Helpers may resolve a problem report on the spot (e.g. stuck ball) and mark a machine *Out of order* when unsafe; all other triage, status changes, file deletion, the maintenance plan and machine registration are technician-only.
+- Helpers may resolve a problem report on the spot (e.g. stuck ball) and mark a machine *Out of order* when unsafe; all other triage, status changes, file deletion, the maintenance plan, the machines a maintenance task applies to and machine registration are technician-only.
 - Any team member can upload files.
 
 ## Non-Goals
@@ -66,9 +66,9 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - Who develops and maintains it long-term: a single volunteer, who is also one of the two technicians.
 
 ## Initial Maintenance Plan
-Starting point agreed in the event storming; technicians maintain the maintenance plan in La Guardia. Intervals are time-based and count from the last *done* maintenance record.
+Starting point agreed in the event storming; technicians maintain the maintenance plan in La Guardia. Intervals are time-based and count per machine from the last *done* maintenance record on that machine since the task was added to it; a task newly applied to a machine is due at once (user, 2026-10-25). The table is a starting point: technicians choose the actual machines per task, and when a machine is registered, the tasks that already apply to a machine of the same machine category and technology are proposed.
 
-| Maintenance task | Interval | Suitable for helpers | Applies to |
+| Maintenance task | Interval | Suitable for helpers | Suggested machines |
 |---|---|---|---|
 | Clean glass (inside & out) | 1 month | yes | Pinball |
 | Switch test (every switch) | 1 month | yes | Pinball |
@@ -90,4 +90,4 @@ Starting point agreed in the event storming; technicians maintain the maintenanc
 | Check PSU voltages, connectors, board | 12 months | no | Arcade |
 | Check monitor geometry, convergence, capacitors | 12 months | no | Arcade / CRT |
 
-No maintenance tasks for machine category *Other* by default.
+No task is suggested for machine category *Other* by default.
