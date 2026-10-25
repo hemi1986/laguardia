@@ -14,7 +14,7 @@ import { lastCommandBy, type Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { blobStorage } from "@/platform/storage";
-import { photoAt, type PhotoSource } from "../../problem-report-photo";
+import { photoAt, type PhotoSource } from "../../team-photos";
 import { shownReporter, type ShownReporter } from "../../reporter";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
 import { named } from "../../named";

@@ -42,13 +42,15 @@ export function defectFormAction<A extends DefectAction, const Field extends str
   const command = commands[action];
   return async (previous: DefectActionState<A, Field>, formData: FormData): Promise<DefectActionState<A, Field>> => {
     await requireTeamMember(); // the page's access check
-    return formAction(command, {
-      ...definition,
-      onSuccess: async ({ defectId }) => {
-        revalidatePath("/team/defects");
-        redirect(defectDoneAddress(defectId, action));
-      },
-    })(previous, formData);
+    return formAction(command, { ...definition, onSuccess: backOnTheDefect(action) })(previous, formData);
+  };
+}
+
+/** After an action on a defect: its page, which confirms the action (G3) – the lists show the change too. */
+function backOnTheDefect(action: DefectAction) {
+  return async ({ defectId }: { defectId: string }) => {
+    revalidatePath("/team/defects");
+    redirect(defectDoneAddress(defectId, action));
   };
 }
 
@@ -56,7 +58,7 @@ export function defectPhotosFormAction<A extends DefectAction, const Field exten
   action: A,
   definition: {
     fields: readonly Field[];
-    photos: { field: string; owner: PhotoOwner; rejectedBy?: readonly string[] };
+    photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: ErrorOf<A> } };
     input: (fields: FormFields<Field>, photos: string[]) => InputOf<A>;
   },
 ) {
@@ -66,12 +68,6 @@ export function defectPhotosFormAction<A extends DefectAction, const Field exten
     formData: FormData,
   ): Promise<DefectPhotosActionState<A, Field>> => {
     await requireTeamMember(); // the page's access check
-    return formAction(command, {
-      ...definition,
-      onSuccess: async ({ defectId }) => {
-        revalidatePath("/team/defects");
-        redirect(defectDoneAddress(defectId, action));
-      },
-    })(previous, formData);
+    return formAction(command, { ...definition, onSuccess: backOnTheDefect(action) })(previous, formData);
   };
 }

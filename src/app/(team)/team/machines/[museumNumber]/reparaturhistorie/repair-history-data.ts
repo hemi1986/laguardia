@@ -11,7 +11,7 @@ import type { Database } from "@/platform/command";
 import { blobStorage } from "@/platform/storage";
 import { calendarDate } from "@/platform/time";
 import { named } from "../../../named";
-import { photoAt, type PhotoSource } from "../../../problem-report-photo";
+import { photoAt, type PhotoSource } from "../../../team-photos";
 
 /** A team member's ID replaced by their name – „unbekannt“ for an account that is gone (`named`). */
 type WithName<Entry, Key extends keyof Entry> = Omit<Entry, Key> & { [K in Key]: string };
@@ -63,23 +63,25 @@ export async function loadRepairHistory(
   for (const entry of history) counts.set(yearOf(entry), (counts.get(yearOf(entry)) ?? 0) + 1);
   const year = chosenYear && counts.has(chosenYear) ? chosenYear : undefined;
   const chosen = year ? history.filter((entry) => yearOf(entry) === year) : [];
-  const photos = await photoViewAddresses(
-    storage,
-    clock,
-    chosen.flatMap((entry) => (entry.kind === "defect" ? entry.workLog.flatMap((logged) => logged.photos) : [])),
-  );
-  const shown = await named(db, {
-    machines: [machineId],
-    teamMembers: chosen.flatMap((entry) =>
-      entry.kind === "defect"
-        ? [
-            ...entry.workLog.map((logged) => logged.loggedBy),
-            ...entry.resolutions.map((ended) => ended.resolvedBy),
-            ...entry.reopenings.map((reopened) => reopened.reopenedBy),
-          ]
-        : [entry.resolvedBy],
+  const [photos, shown] = await Promise.all([
+    photoViewAddresses(
+      storage,
+      clock,
+      chosen.flatMap((entry) => (entry.kind === "defect" ? entry.workLog.flatMap((logged) => logged.photos) : [])),
     ),
-  });
+    named(db, {
+      machines: [machineId],
+      teamMembers: chosen.flatMap((entry) =>
+        entry.kind === "defect"
+          ? [
+              ...entry.workLog.map((logged) => logged.loggedBy),
+              ...entry.resolutions.map((ended) => ended.resolvedBy),
+              ...entry.reopenings.map((reopened) => reopened.reopenedBy),
+            ]
+          : [entry.resolvedBy],
+      ),
+    }),
+  ]);
   return {
     machineModelTitle: shown.label(machineId).machineModelTitle,
     // The years are written alike, so their order as text is their order in time.

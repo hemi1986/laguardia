@@ -24,9 +24,16 @@ export function rejectionText(
 export function photoRejectionText(
   state: { error: TeamCommandErrorCode; photoAgain?: true },
   overrides: Partial<Record<TeamCommandErrorCode, string>> = {},
-  { several = false }: { several?: boolean } = {},
 ): string {
   const reason = rejectionText(state.error, overrides);
-  if (!state.photoAgain) return reason;
-  return `${reason} ${several ? teamMessages.forms.photosAgain : teamMessages.forms.photoAgain}`;
+  return state.photoAgain ? `${reason} ${teamMessages.forms.photoAgain}` : reason;
+}
+
+/** The same for a form with several photos (ST-032): they must all be chosen again. */
+export function photosRejectionText(
+  state: { error: TeamCommandErrorCode; photoAgain?: true },
+  overrides: Partial<Record<TeamCommandErrorCode, string>> = {},
+): string {
+  const reason = rejectionText(state.error, overrides);
+  return state.photoAgain ? `${reason} ${teamMessages.forms.photosAgain}` : reason;
 }

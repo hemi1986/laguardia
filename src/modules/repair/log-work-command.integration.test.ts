@@ -196,6 +196,20 @@ describe("CMD-LogWork", () => {
     ]);
   });
 
+  it("refuses more than 5 photos itself – whatever form sends them (ST-032)", async () => {
+    const { defectId } = await anOpenDefect("Left flipper weak", true);
+    const photos = Array.from({ length: 6 }, (_, i) => `work-log/photo-${i}.jpg`);
+
+    const outcome = await executeCommand(
+      logWorkCommand,
+      { defectId, version: 0, whatWasDone: "Replaced coil stop", partsUsed: "", photos },
+      { actor: anna, db, clock: fixedClock("2026-10-14T10:00:00Z"), newId: randomUUID },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "too-many-photos" });
+    expect((await defectDetails(db, defectId))?.workLog).toEqual([]);
+  });
+
   it("ST-032: Photos cannot be added to an existing entry", async () => {
     const { defectId } = await anOpenDefect("Left flipper weak", true);
     await logWork(defectId, 0, { whatWasDone: "Replaced coil stop" }, tom);

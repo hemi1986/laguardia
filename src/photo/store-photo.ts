@@ -36,8 +36,8 @@ export async function withStoredPhoto<Result, Error extends string>(
 
 /**
  * The same for several photos (ST-032, a work log entry's): every photo is accepted before any is stored, so one that
- * cannot be accepted stores none; all are stored, the command runs with their references in the order they were sent,
- * and every one is deleted again if storing one of them fails, or the command is rejected or throws.
+ * cannot be accepted stores none; all are stored at once, the command runs with their references in the order they
+ * were sent, and every one is deleted again if storing one of them fails, or the command is rejected or throws.
  */
 export async function withStoredPhotos<Result, Error extends string>(
   sentPhotos: readonly Uint8Array[],
@@ -45,24 +45,24 @@ export async function withStoredPhotos<Result, Error extends string>(
   { storage, newId }: PhotoDependencies,
   run: (photos: PhotoReference[]) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: PhotoError }> {
-  const accepted = [];
-  for (const sent of sentPhotos) {
-    const outcome = await acceptPhoto(sent);
-    if (!outcome.ok) return outcome;
-    accepted.push(outcome.photo);
-  }
+  const outcomes = await Promise.all(sentPhotos.map((sent) => acceptPhoto(sent)));
+  const rejected = outcomes.find((outcome) => !outcome.ok);
+  if (rejected) return rejected;
+  const accepted = outcomes.flatMap((outcome) => (outcome.ok ? [outcome.photo] : []));
 
-  const names: PhotoReference[] = [];
-  try {
-    for (const photo of accepted) {
-      const name = `${owner}/${newId()}.jpg`;
-      await storage.write(name, photo.bytes, photo.contentType);
-      names.push(name);
-    }
-  } catch (error) {
+  const names = accepted.map(() => `${owner}/${newId()}.jpg`);
+  const writes = await Promise.allSettled(
+    accepted.map((photo, i) => storage.write(names[i], photo.bytes, photo.contentType)),
+  );
+  const failed = writes.find((write) => write.status === "rejected");
+  if (failed) {
     // Visible in the function logs (a Blob outage); the photo itself and the person stay out of the log.
-    console.error("photo not stored:", error instanceof Error ? error.message : error);
-    await deleteQuietly(storage, names);
+    const reason: unknown = failed.reason;
+    console.error("photo not stored:", reason instanceof Error ? reason.message : reason);
+    await deleteQuietly(
+      storage,
+      names.filter((_, i) => writes[i].status === "fulfilled"),
+    );
     return { ok: false, error: "not-stored" };
   }
 
@@ -82,13 +82,8 @@ export async function withStoredPhotos<Result, Error extends string>(
  * behind unreferenced in the private store – the same leftover as after a crash (ADR 0007, Consequences).
  */
 async function deleteQuietly(storage: ContentStorage, names: readonly PhotoReference[]): Promise<void> {
-  for (const name of names) {
-    try {
-      await storage.delete(name);
-    } catch {
-      // unreferenced and unreachable without a signed address – accepted (ADR 0007)
-    }
-  }
+  // A failed delete leaves the photo unreferenced and unreachable without a signed address – accepted (ADR 0007).
+  await Promise.allSettled(names.map((name) => storage.delete(name)));
 }
 
 /**

@@ -11,7 +11,7 @@ import { DefectButtonForm } from "./defect-button-form";
 import { ManageDefect } from "./manage-defect";
 import { defectActionPages, defectFormAddress } from "./defect-action-pages";
 import type { DefectDetailsData } from "./defect-details-data";
-import { ProblemReportPhoto, WorkLogPhotos } from "../../problem-report-photo";
+import { ProblemReportPhoto, WorkLogPhotos } from "../../team-photos";
 
 const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
 

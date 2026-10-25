@@ -3,7 +3,7 @@ import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../reporter";
-import { ProblemReportPhoto } from "../problem-report-photo";
+import { ProblemReportPhoto } from "../team-photos";
 import { triageConfirmationText, type TriageConfirmation } from "../triage-confirmation";
 import type { TriageListItem } from "./triage-list-data";
 

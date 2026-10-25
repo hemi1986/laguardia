@@ -6,7 +6,7 @@ import { teamMessages } from "@/platform/messages";
 import { ProblemReportDescription } from "./problem-report-description";
 import { formatDateTime } from "@/platform/time";
 import { reporterName } from "../../reporter";
-import { ProblemReportPhoto } from "../../problem-report-photo";
+import { ProblemReportPhoto } from "../../team-photos";
 import type { ProblemReportData } from "./problem-report-data";
 
 const { triage: texts, terms } = teamMessages;

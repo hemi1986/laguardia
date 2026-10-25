@@ -1,4 +1,4 @@
-import type { LogWorkInput } from "@/modules/repair";
+import { MAX_WORK_LOG_PHOTOS, type LogWorkInput } from "@/modules/repair";
 import type { FormFields } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
 
@@ -8,10 +8,14 @@ export const logWorkFields = ["version", "whatWasDone", "partsUsed"] as const;
 export type LogWorkField = (typeof logWorkFields)[number];
 
 /**
- * The form's photos (ST-032): the file field posted once per photo, stored as the work log's; too many is a rejection
- * of the photos themselves – its text says what to do, so it does not ask to choose them again (G8a).
+ * The form's photos (ST-032): the file field posted once per photo, stored as the work log's – at most CMD-LogWork's
+ * maximum, refused before any is stored.
  */
-export const logWorkPhotos = { field: "photos", owner: "work-log", rejectedBy: ["too-many-photos"] } as const;
+export const logWorkPhotos = {
+  field: "photos",
+  owner: "work-log",
+  atMost: { count: MAX_WORK_LOG_PHOTOS, error: "too-many-photos" },
+} as const;
 
 /**
  * Reads the form „Arbeitsschritt eintragen“ (Q19): no validation, no default. A missing text is an empty one – the

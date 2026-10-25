@@ -68,3 +68,17 @@ test("ST-032: A rejection says the photos must be chosen again", async ({ page }
   // No preview promises a photo the next send would not carry.
   await expect(page.getByRole("group", { name: "Fotos (optional, höchstens 5)" }).locator("img")).toHaveCount(0);
 });
+
+test("the chooser takes at most 5 photos, so the form never sends more than one request can carry", async ({ page }) => {
+  const { museumNumber, title } = await anOpenDefect(page);
+  await openDefect(page, museumNumber, title);
+  await page.getByRole("link", { name: "Arbeitsschritt eintragen" }).click();
+
+  await page
+    .getByLabel("Fotos auswählen")
+    .setInputFiles(await Promise.all(Array.from({ length: 6 }, (_, i) => aCameraPhoto(`photo-${i}.jpg`))));
+
+  await expect(page.getByRole("button", { name: "Foto entfernen" })).toHaveCount(5);
+  await expect(page.getByText("5 Fotos ausgewählt – mehr gehen nicht.")).toBeVisible();
+  await expect(page.getByLabel("Fotos auswählen")).toHaveCount(0);
+});

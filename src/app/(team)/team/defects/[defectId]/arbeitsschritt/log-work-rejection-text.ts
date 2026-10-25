@@ -1,4 +1,4 @@
-import { photoRejectionText } from "@/app/_actions/rejection-text";
+import { photosRejectionText } from "@/app/_actions/rejection-text";
 import { teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
 
 const { defects: texts } = teamMessages;
@@ -10,5 +10,5 @@ const { defects: texts } = teamMessages;
  */
 export function logWorkRejectionText(state: { error: TeamCommandErrorCode; photoAgain?: true }): string {
   if (state.error === "version-conflict" && state.photoAgain) return texts.logWorkConflictWithPhotos;
-  return photoRejectionText(state, { "version-conflict": texts.logWorkConflict }, { several: true });
+  return photosRejectionText(state, { "version-conflict": texts.logWorkConflict });
 }

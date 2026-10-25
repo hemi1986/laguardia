@@ -23,10 +23,13 @@ const { defects: texts } = teamMessages;
 export function LogWorkForm({
   action: logWork,
   version,
+  maxPhotos,
   whyNot,
 }: {
   action: (previous: LogWorkState, formData: FormData) => Promise<LogWorkState>;
   version: number;
+  /** How many photos CMD-LogWork takes (ST-032). */
+  maxPhotos: number;
   /** Why work cannot be logged on the defect as it is now – CMD-LogWork's own reason (G11). */
   whyNot: TeamCommandErrorCode | undefined;
 }) {
@@ -64,9 +67,12 @@ export function LogWorkForm({
       </Field>
       <PhotosField
         name="photos"
+        max={maxPhotos}
         onPreparing={setPreparing}
         texts={{
           ...texts.workLogPhotos,
+          label: texts.workLogPhotos.label(maxPhotos),
+          full: texts.workLogPhotos.full(maxPhotos),
           tooLarge: teamMessages.commandErrors["too-large"],
           notAnImage: teamMessages.commandErrors["not-an-image"],
         }}

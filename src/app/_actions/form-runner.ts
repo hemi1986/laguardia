@@ -59,14 +59,15 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
 
 /**
  * A form with several photos (ST-032, a work log entry's) – its file field, posted once per photo, whom the photos
- * belong to, and the command's rejections that are about the photos themselves (too many): their texts already say
- * what to do, so they do not ask to choose the photos again (G8a). The input gets the photos' references.
+ * belong to, and the command's own rule on how many it takes with the command's error for too many: the runner refuses
+ * too many before storing any (the command checks again), and that rejection is about the photos themselves – its text
+ * says what to do, so it does not ask to choose them again (G8a). The input gets the photos' references.
  */
-export type PhotosFormDefinition<Input, Result, Field extends string> = Omit<
+export type PhotosFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
   "input" | "removesPhoto"
 > & {
-  photos: { field: string; owner: PhotoOwner; rejectedBy?: readonly string[] };
+  photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: Error } };
   input: (fields: FormFields<Field>, photos: PhotoReference[]) => Input;
 };
 
@@ -177,7 +178,7 @@ export function formRunner(dependencies: RunnerDependencies) {
   ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
-    definition: PhotosFormDefinition<Input, Result, Field>,
+    definition: PhotosFormDefinition<Input, Result, NoInfer<Error>, Field>,
   ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
@@ -188,19 +189,16 @@ export function formRunner(dependencies: RunnerDependencies) {
     definition:
       | FormDefinition<Input, Result, Field>
       | PhotoFormDefinition<Input, Result, Field>
-      | PhotosFormDefinition<Input, Result, Field>
+      | PhotosFormDefinition<Input, Result, Error, Field>
       | UploadFormDefinition<Input, Result, Field, Error>
       | EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ) {
     if ("each" in definition) return eachStep(dependencies, command, definition);
     if ("upload" in definition) return uploadStep(dependencies, command, definition);
     if ("photo" in definition) {
+      // One photo: only the first file of its field is read – more files are never stored (code review ST-032).
       const { photo, input, ...rest } = definition;
-      return photosStep(dependencies, command, {
-        ...rest,
-        photos: photo,
-        input: (fields, [reference]) => input(fields, reference),
-      });
+      return photosStep(dependencies, command, { ...rest, photos: photo, input: (fields, [one]) => input(fields, one) });
     }
     if ("photos" in definition) return photosStep(dependencies, command, definition);
     return withoutContent(dependencies, command, definition);
@@ -236,23 +234,30 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
 function photosStep<Input, Result, Error extends string, Field extends string>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
-  definition: PhotosFormDefinition<Input, Result, Field>,
+  definition: Omit<PhotosFormDefinition<Input, Result, Error, Field>, "photos"> & {
+    photos: { field: string; owner: PhotoOwner; atMost?: { count: number; error: Error } };
+  },
 ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>> {
+  const { field, owner, atMost } = definition.photos;
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
+    const posted = postedPhotos(formData, field);
+    if (atMost && posted.length > atMost.count) return { error: atMost.error, values: valuesOf(fields) };
     const actor = await currentPerson();
-    const photos = await sentPhotosOf(formData, definition.photos.field);
+    // Without a rule on how many, the form has one photo: the first file posted in its field.
+    const photos = await Promise.all(
+      (atMost ? posted : posted.slice(0, 1)).map(async (file) => new Uint8Array(await file.arrayBuffer())),
+    );
     const outcome = await withStoredPhotos(
       photos,
-      definition.photos.owner,
+      owner,
       { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
       (references) => executeCommand(command, definition.input(fields, references), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
       const state = { error: outcome.error, values: valuesOf(fields) };
       const ofThePhotos =
-        (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) ||
-        (definition.photos.rejectedBy ?? []).includes(outcome.error);
+        (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) || outcome.error === atMost?.error;
       return photos.length > 0 && !ofThePhotos ? { ...state, photoAgain: true } : state;
     }
     await definition.onSuccess(outcome.result);
@@ -338,9 +343,8 @@ type FormStateAction<State> = (previous: State, formData: FormData) => Promise<S
 
 /** The bytes of the posted file – none for a missing, empty or non-file field. */
 /** The photos a form posted in its file field – an empty file (no photo chosen) is none. */
-async function sentPhotosOf(formData: FormData, field: string): Promise<Uint8Array[]> {
-  const files = formData.getAll(field).filter((file): file is File => file instanceof Blob && file.size > 0);
-  return Promise.all(files.map(async (file) => new Uint8Array(await file.arrayBuffer())));
+function postedPhotos(formData: FormData, field: string): Blob[] {
+  return formData.getAll(field).filter((file): file is File => file instanceof Blob && file.size > 0);
 }
 
 function fieldsOf<Field extends string>(formData: FormData, names: readonly Field[]): FormFields<Field> {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { WorkLogPhotos } from "../../../problem-report-photo";
+import { WorkLogPhotos } from "../../../team-photos";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { RepairHistoryData, ShownRepairHistoryEntry } from "./repair-history-data";

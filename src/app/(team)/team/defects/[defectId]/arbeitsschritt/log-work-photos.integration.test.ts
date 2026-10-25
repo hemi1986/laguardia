@@ -83,7 +83,10 @@ describe("the form „Arbeitsschritt eintragen“ with photos", () => {
 
   it("ST-032: At most 5 photos", async () => {
     const defectId = await anOpenDefect();
-    const storage = memoryStorage();
+    // Counts what is written: too many photos are refused before any of them is stored (code review ST-032).
+    const memory = memoryStorage();
+    let written = 0;
+    const storage: ContentStorage = { ...memory, write: (...args) => (written++, memory.write(...args)) };
     const six = await Promise.all(Array.from({ length: 6 }, aPhonePhoto));
 
     const state = await formFor(defectId, storage)(
@@ -94,7 +97,8 @@ describe("the form „Arbeitsschritt eintragen“ with photos", () => {
     expect(state?.error).toBe("too-many-photos");
     expect(logWorkRejectionText(state!)).toBe("Höchstens 5 Fotos pro Arbeitsschritt – bitte weniger Fotos auswählen.");
     expect((await defectDetails(db, defectId))!.workLog).toEqual([]);
-    expect(storage.names()).toEqual([]);
+    expect(written).toBe(0);
+    expect(memory.names()).toEqual([]);
   });
 
   it("ST-032: The conflict text names the photos", async () => {

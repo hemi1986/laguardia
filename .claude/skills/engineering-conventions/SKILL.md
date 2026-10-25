@@ -405,11 +405,13 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   `rejected` per item only when the reasons differ). The page landed on confirms each record by `lastCommandBy` (G3);
   the items left out are named in the address, but their reason is the owning module's answer now – never the address's.
 - **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo) => …`: the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
-- **A form with several photos** (ST-032) passes `photos: { field, owner, rejectedBy? }` and `input: (fields, photos)
-  => …` – the browser posts the file field once per photo (`PhotosField`, `src/app/photos-field.tsx`, prepares each to
-  600 KB so 5 fit one request), the runner stores them through `withStoredPhotos`. `rejectedBy` names the command's
-  rejections that are about the photos themselves (`too-many-photos`) – their text says what to do, so no "choose
-  again" follows. A form on a defect uses `defectPhotosFormAction`.
+- **A form with several photos** (ST-032) passes `photos: { field, owner, atMost: { count, error } }` and
+  `input: (fields, photos) => …` – the browser posts the file field once per photo (`PhotosField`,
+  `src/app/photos-field.tsx`, prepares each to 600 KB and offers no picker once `max` are chosen, so 5 fit one
+  request), the runner refuses more than `atMost.count` with the command's own error before storing any (the command
+  checks again – `MAX_WORK_LOG_PHOTOS`), then stores them through `withStoredPhotos`. That error is about the photos
+  themselves, so no "choose again" follows; the other rejections use `photosRejectionText`. A form with **one** photo
+  reads only the first file of its field. A form on a defect uses `defectPhotosFormAction`.
 - **After a rejection the photo must be chosen again** (UX guideline G8a; ST-023, ST-084): the browser cannot put a
   file back into the form. The runner's photo step marks the state `photoAgain: true` – a photo was attached and the
   rejection is not one of the photo errors, whose texts already say what to do – and the form's rejection text adds
@@ -422,7 +424,7 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `size`) is injected like the clock and the ID generator: `blobStorage()` in production (the only file that may import `@vercel/blob` – lint), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `blobStorage()` as its default (`PhotoSource`); a runner takes `storage`.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when Blob cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
-- **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto` (`src/app/(team)/team/problem-report-photo.tsx`).
+- **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`).
 - **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020) or a failed command – never as a compensation after a committed one.
 ### Files uploaded from the browser (ST-085, ADR 0009)
 

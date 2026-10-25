@@ -293,7 +293,8 @@ export const repairTexts = {
     partsUsed: "Verwendete Teile (optional)",
     /** The work log entry's photos (ST-032) – the browser's own rejections use the photo errors' texts. */
     workLogPhotos: {
-      label: "Fotos (optional, höchstens 5)",
+      label: (max: number) => `Fotos (optional, höchstens ${max})`,
+      full: (max: number) => `${max} Fotos ausgewählt – mehr gehen nicht.`,
       take: "Foto aufnehmen",
       choose: "Fotos auswählen",
       remove: "Foto entfernen",
