@@ -15,6 +15,7 @@ export type {
   FormDefinition,
   FormFields,
   FormState,
+  PhotoFormDefinition,
   PhotoFormState,
   UploadFormDefinition,
 } from "./form-runner";

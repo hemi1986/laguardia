@@ -12,4 +12,5 @@ export {
   type PhotoError,
   type PhotoOwner,
   type PhotoReference,
+  type StoredPhoto,
 } from "./store-photo";

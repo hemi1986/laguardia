@@ -27,7 +27,8 @@ export type AttachFileInput = {
   attachTo: AttachTarget | undefined;
   title: string;
   fileCategory: FileCategory | undefined;
-  content: FileContent;
+  /** None when the form had nothing to attach – a camera photo form sent without a photo (ST-054). */
+  content: FileContent | undefined;
 };
 
 /** AGG-File – current state (`docs/architecture/data-model.md`): attached to exactly one machine or machine model. */
@@ -58,7 +59,7 @@ export type AttachingFacts = { machineModelId: string } | undefined;
 
 /** The form's own rejections – checked before uploaded content is handed over, so they never delete it (ST-085 #9). */
 export type AttachFileInputError = "title-required" | "file-category-required" | "attach-to-required";
-export type AttachFileError = AttachFileInputError | "unknown-machine";
+export type AttachFileError = AttachFileInputError | "file-required" | "unknown-machine";
 
 /**
  * Why the input cannot be attached as it is – the rules that need nothing but the input. The decision applies them
@@ -80,6 +81,7 @@ export function attachFile(
 ): Decision<FileState, FileAttached, AttachFileError> {
   const refusal = attachFileRefusal(input);
   if (refusal) return { ok: false, error: refusal };
+  if (!input.content) return { ok: false, error: "file-required" };
   if (!facts) return { ok: false, error: "unknown-machine" };
   const owner =
     input.attachTo === "machine-model" ? { machineModelId: facts.machineModelId } : { machineId: input.machineId };
