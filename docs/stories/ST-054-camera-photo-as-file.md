@@ -9,7 +9,7 @@ risk: low
 events: [EVT-FileAttached]
 depends_on: [ST-002, ST-037, ST-016]
 labels: [mvp, files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
