@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
+import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import type { AccountActionState } from "./actions";
 
@@ -15,21 +16,25 @@ type AccountAction = (previous: AccountActionState, formData: FormData) => Promi
 
 /**
  * An action on an account behind one button – changing the role, activating again, confirming the deactivation. It
- * has nothing to keep; a rejection says why under the button.
+ * has nothing to keep; a rejection says why under the button. When the account no longer allows the action, its
+ * `refusal` stands in place of the button – or the rejection, when this very form was refused.
  */
 export function AccountButtonForm({
   action: act,
   label,
   role,
   variant = "outline",
+  refusal,
 }: {
   action: AccountAction;
   label: string;
   /** The role a role change sets – posted with the button. */
-  role?: string;
+  role?: Role;
   variant?: "default" | "outline" | "destructive";
+  refusal?: string;
 }) {
   const [state, action, pending] = useActionState(act, null);
+  if (refusal) return state ? <Rejection>{accountErrors[state.error]}</Rejection> : <p>{refusal}</p>;
   return (
     <form action={action} className="flex flex-col gap-2">
       {role && <input type="hidden" name="role" value={role} />}

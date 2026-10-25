@@ -43,6 +43,7 @@ async function openFromTheList(page: Page, name: string, { deactivated = false }
   if (deactivated) {
     await page.getByLabel("Auch deaktivierte Konten anzeigen").check();
     await page.getByRole("button", { name: "Anzeigen" }).click();
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
   }
   await page.getByRole("link", { name, exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
@@ -203,6 +204,7 @@ test("ST-081: A technician activates an account again", async ({ page, browser }
   const anna = await aTeamMember(page, { name: "Anna Berger" });
   await deactivate(page, anna.name);
   await openFromTheList(page, anna.name, { deactivated: true });
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 
   await page.getByRole("button", { name: "Konto wieder aktivieren" }).click();
 
@@ -210,4 +212,19 @@ test("ST-081: A technician activates an account again", async ({ page, browser }
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`Konto von ${anna.name} wieder aktiviert.`);
   await expect(page.getByRole("main")).toContainText("Konto: aktiv");
   expect(await canLogIn(browser, anna)).toBe(true);
+});
+
+test("a deactivation another technician made meanwhile is said at the button, not swallowed", async ({ page }) => {
+  const anna = await aTeamMember(page, { name: "Anna Berger" });
+  await openFromTheList(page, anna.name);
+  await page.getByRole("link", { name: "Konto deaktivieren" }).click();
+
+  // A second tab plays the other technician, who confirms first.
+  const otherTab = await page.context().newPage();
+  await deactivate(otherTab, anna.name);
+  await otherTab.close();
+  await page.getByRole("button", { name: "Konto deaktivieren" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText("Dieses Konto ist deaktiviert.");
+  await expect(page.getByRole("button", { name: "Konto deaktivieren" })).toHaveCount(0);
 });

@@ -107,9 +107,10 @@ export async function resetPassword(
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
   const rejection = passwordRejection(input.password);
   if (rejection) return { ok: false, error: rejection };
-  const [target] = await accountStates(db, input.teamMemberId);
+  const target = await accountState(db, input.teamMemberId);
   if (!target) return { ok: false, error: "not-found" };
-  const refusal = changeRefusal(target, { resetPassword: true }, 0);
+  // A reset never takes an active technician away, so it needs no count and no lock.
+  const refusal = changeRefusal(target, { resetPassword: true });
   if (refusal) return { ok: false, error: refusal };
   // The sessions go first: if setting the password then fails, the old holder is logged out and the old
   // password still works – the safe way round. Better Auth writes on its own connection, so the two cannot
@@ -177,7 +178,10 @@ export async function activateAccount(
 }
 
 /** What a change does to an account. A new role and deactivation can take an active technician away. */
-type Change = { role: Role } | { deactivate: true } | { activate: true } | { resetPassword: true };
+type Change = StoredChange | { resetPassword: true };
+
+/** What `applyChange` writes onto the account row – a reset sets the password through Better Auth instead. */
+type StoredChange = { role: Role } | { deactivate: true } | { activate: true };
 
 type AccountState = { role: string | null; banned: boolean | null };
 
@@ -186,13 +190,19 @@ type AccountState = { role: string | null; banned: boolean | null };
  * so the page offers exactly what the change would accept (G11). A deactivated account can only be activated again;
  * the invariant of BC-Team: at least one active technician always remains, so the team can never lock itself out.
  */
+function changeRefusal(target: AccountState, change: { resetPassword: true }): "account-deactivated" | undefined;
 function changeRefusal(
   target: AccountState,
   change: Change,
   activeTechnicians: number,
+): "account-deactivated" | "last-technician" | undefined;
+function changeRefusal(
+  target: AccountState,
+  change: Change,
+  activeTechnicians?: number,
 ): "account-deactivated" | "last-technician" | undefined {
   if (target.banned && !("activate" in change)) return "account-deactivated";
-  if (takesAnActiveTechnicianAway(target, change) && activeTechnicians <= 1) return "last-technician";
+  if (takesAnActiveTechnicianAway(target, change) && activeTechnicians! <= 1) return "last-technician";
   return undefined;
 }
 
@@ -203,10 +213,10 @@ function changeRefusal(
  */
 const ACTIVE_TECHNICIANS_LOCK = "team:active-technicians";
 
-async function applyChange(db: Database, teamMemberId: string, change: Change): Promise<AccountOutcome> {
+async function applyChange(db: Database, teamMemberId: string, change: StoredChange): Promise<AccountOutcome> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ACTIVE_TECHNICIANS_LOCK}))`);
-    const [target] = await accountStates(tx, teamMemberId);
+    const target = await accountState(tx, teamMemberId);
     if (!target) return { ok: false, error: "not-found" };
     const refusal = changeRefusal(target, change, await activeTechnicianCount(tx));
     if (refusal) return { ok: false, error: refusal };
@@ -221,11 +231,12 @@ async function applyChange(db: Database, teamMemberId: string, change: Change): 
   });
 }
 
-function accountStates(db: Database, teamMemberId: string) {
-  return db
+async function accountState(db: Database, teamMemberId: string): Promise<AccountState | undefined> {
+  const [found] = await db
     .select({ role: teamMember.role, banned: teamMember.banned })
     .from(teamMember)
     .where(eq(teamMember.id, teamMemberId));
+  return found;
 }
 
 function takesAnActiveTechnicianAway(target: AccountState, change: Change): boolean {
@@ -243,6 +254,15 @@ async function activeTechnicianCount(db: Database): Promise<number> {
   return active;
 }
 
+/** What a page shows of an account – and `banned`, from which `active` follows. */
+const accountColumns = {
+  id: teamMember.id,
+  name: teamMember.name,
+  username: teamMember.username,
+  role: teamMember.role,
+  banned: teamMember.banned,
+};
+
 export type TeamMemberAccount = { id: string; name: string; username: string; role: Role; active: boolean };
 
 /**
@@ -254,13 +274,7 @@ export async function teamMemberAccounts(
   { includeDeactivated = true }: { includeDeactivated?: boolean } = {},
 ): Promise<TeamMemberAccount[]> {
   const rows = await db
-    .select({
-      id: teamMember.id,
-      name: teamMember.name,
-      username: teamMember.username,
-      role: teamMember.role,
-      banned: teamMember.banned,
-    })
+    .select(accountColumns)
     .from(teamMember)
     .where(includeDeactivated ? undefined : notBanned)
     .orderBy(asc(teamMember.name));
@@ -313,13 +327,7 @@ export async function teamMemberAccount(
   teamMemberId: string,
 ): Promise<TeamMemberAccountWithActions | undefined> {
   const [row] = await db
-    .select({
-      id: teamMember.id,
-      name: teamMember.name,
-      username: teamMember.username,
-      role: teamMember.role,
-      banned: teamMember.banned,
-    })
+    .select(accountColumns)
     .from(teamMember)
     .where(eq(teamMember.id, teamMemberId));
   if (!row) return undefined;

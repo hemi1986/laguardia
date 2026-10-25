@@ -3,9 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { activateAccount, changeRole, deactivateAccount, resetPassword, type AccountError } from "@/modules/team";
-import type { Role } from "@/platform/command";
 import { database } from "@/platform/database";
 import { currentPerson } from "@/app/_actions/current-person";
+import { postedRole } from "../role-field";
 
 /**
  * The actions on one account (ST-005, ST-081). They call the Team module's account functions, not commands (BC-Team
@@ -26,16 +26,12 @@ function landing(teamMemberId: string, done: DoneOnAccount): never {
   redirect(`/team/members/${encodeURIComponent(teamMemberId)}?done=${done}`);
 }
 
-function role(formData: FormData): Role {
-  return formData.get("role") === "technician" ? "technician" : "helper";
-}
-
 export async function changeRoleAction(
   teamMemberId: string,
   _previous: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
-  const outcome = await changeRole({ teamMemberId, role: role(formData) }, await dependencies());
+  const outcome = await changeRole({ teamMemberId, role: postedRole(formData) }, await dependencies());
   if (!outcome.ok) return { error: outcome.error };
   landing(teamMemberId, "role");
 }

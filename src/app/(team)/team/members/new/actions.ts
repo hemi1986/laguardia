@@ -5,6 +5,7 @@ import { createAccount, type AccountError } from "@/modules/team";
 import type { Role } from "@/platform/command";
 import { database } from "@/platform/database";
 import { currentPerson } from "@/app/_actions/current-person";
+import { postedRole } from "../role-field";
 
 /**
  * Creating a team member (ST-005, ST-081). The Team module's `createAccount` is no command, so this action mirrors
@@ -23,7 +24,7 @@ export async function createTeamMemberAction(
   const values = {
     name: String(formData.get("name") ?? ""),
     username: String(formData.get("username") ?? ""),
-    role: (formData.get("role") === "technician" ? "technician" : "helper") as Role,
+    role: postedRole(formData),
   };
   const outcome = await createAccount(
     { ...values, password: String(formData.get("password") ?? "") },

@@ -13,10 +13,11 @@ const { account: texts, accounts } = teamMessages;
 /**
  * What the page confirms after an action (G3). The account functions keep no journal (BC-Team has no events, and
  * the audit trail was dropped – ST-081, Out of Scope), so the address names the action and the page confirms it only
- * when the account's state agrees: a deactivation only on a deactivated account, an activation only on an active one.
+ * when the account's state agrees: a deactivation only on a deactivated account; an activation, a role change and a
+ * password reset only on an active one.
  */
 const confirmations: Record<DoneOnAccount, (account: TeamMemberAccount) => string | undefined> = {
-  role: (account) => texts.roleChanged(account.name),
+  role: (account) => (account.active ? texts.roleChanged(account.name) : undefined),
   password: (account) => (account.active ? texts.passwordReset(account.name) : undefined),
   deactivated: (account) => (account.active ? undefined : texts.accountDeactivated(account.name)),
   activated: (account) => (account.active ? texts.accountActivated(account.name) : undefined),
