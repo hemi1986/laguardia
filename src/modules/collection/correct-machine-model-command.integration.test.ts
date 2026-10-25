@@ -74,7 +74,7 @@ describe("CMD-CorrectMachineModel", () => {
 
     expect(outcome).toEqual({ ok: true, result: { machineModelId, title: "Medieval Madness" } });
     expect((await machineRecord(db, museumNumber))?.machineModel.year).toBe(1997);
-    expect((await visitorMachine(db, museumNumber))?.year).toBe(1997);
+    expect(await visitorMachine(db, museumNumber)).toMatchObject({ retired: false, year: 1997 });
   });
 
   it("journals the correction with its machine category and technology – no typed text", async () => {

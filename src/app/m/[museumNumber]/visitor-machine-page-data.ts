@@ -3,14 +3,17 @@ import { openDefectTitles, untriagedProblemReportCount } from "@/modules/repair"
 import type { Database } from "@/platform/command";
 
 /** The visitor machine page's data (RM-VisitorMachinePage, ST-010, ST-013, ST-018). */
-export type VisitorMachinePageData = VisitorMachine & {
-  /** Reporting is offered only for a machine on display (ST-013's rule). */
-  reportingPossible: boolean;
-  /** How many problem reports wait for triage – the number only, never their texts (HS-1). */
-  untriagedProblemReports: number;
-  /** The titles of the machine's open defects – written by a technician for visitors, shown untranslated (ST-018). */
-  openDefects: string[];
-};
+export type VisitorMachinePageData =
+  | (Extract<VisitorMachine, { retired: false }> & {
+      /** Reporting is offered only for a machine on display (ST-013's rule). */
+      reportingPossible: boolean;
+      /** How many problem reports wait for triage – the number only, never their texts (HS-1). */
+      untriagedProblemReports: number;
+      /** The titles of the machine's open defects – written by a technician for visitors, shown untranslated (ST-018). */
+      openDefects: string[];
+    })
+  /** A retired machine: the page only says it is no longer in the museum (ST-055). */
+  | Extract<VisitorMachine, { retired: true }>;
 
 /**
  * RM-VisitorMachinePage: loaded for every request – never cached (ST-010) –, from the modules' own queries (the page
@@ -22,6 +25,7 @@ export async function loadVisitorMachinePage(
   museumNumber: string,
 ): Promise<VisitorMachinePageData | undefined> {
   const [machine, machineId] = await Promise.all([visitorMachine(db, museumNumber), machineIdOf(db, museumNumber)]);
+  if (machine?.retired) return machine; // no ID for a retired machine – nothing of it is loaded (ST-055)
   if (!machine || !machineId) return undefined;
   return {
     ...machine,

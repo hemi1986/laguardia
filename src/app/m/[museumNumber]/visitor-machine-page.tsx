@@ -21,6 +21,8 @@ export function VisitorMachinePage({
   reported?: boolean;
 }) {
   const texts = messages.machinePage;
+  // A retired machine – e.g. reached through its old QR sticker: no machine status, no defects, no reporting (ST-055).
+  if (data.retired) return <p>{texts.noLongerInMuseum}</p>;
   const maker = [data.manufacturer, data.year].filter(Boolean).join(" · ");
 
   return (

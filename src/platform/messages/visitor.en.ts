@@ -23,6 +23,8 @@ export const visitorEn: VisitorMessages = {
       count === 1
         ? "1 report is waiting to be checked by the team."
         : `${count} reports are waiting to be checked by the team.`,
+    /** A retired machine's page says only this (ST-055). */
+    noLongerInMuseum: "This machine is no longer in the museum.",
     notOnDisplay:
       "This machine is not on display at the moment. Problems can only be reported for machines on display.",
     unknown: "There is no machine with this museum number.",

@@ -184,16 +184,14 @@ export async function machineStatusCounts(db: Database): Promise<Record<MachineS
 }
 
 /** What the visitor machine page (RM-VisitorMachinePage, ST-010) shows of a machine – no ID, nothing internal. */
-export type VisitorMachine = {
-  machineModelTitle: string;
-  manufacturer: string;
-  year?: number;
-  machineStatus: MachineStatus;
-};
+export type VisitorMachine =
+  | { retired: false; machineModelTitle: string; manufacturer: string; year?: number; machineStatus: MachineStatus }
+  /** A retired machine shows visitors only that it is no longer in the museum (ST-055) – nothing else about it. */
+  | { retired: true; machineModelTitle: string };
 
 /**
- * The machine as visitors see it, by its museum number – active machines only (a retired machine's visitor page is
- * ST-055's). Selects only the visible facts, so nothing else can reach a public page.
+ * The machine as visitors see it, by its museum number – of a retired machine only its title (ST-055). Selects only
+ * the visible facts, so nothing else can reach a public page.
  */
 export async function visitorMachine(db: Database, museumNumber: string): Promise<VisitorMachine | undefined> {
   const [row] = await db
@@ -202,11 +200,15 @@ export async function visitorMachine(db: Database, museumNumber: string): Promis
       manufacturer: machineModel.manufacturer,
       year: machineModel.year,
       machineStatus: machine.machineStatus,
+      retiredAt: machine.retiredAt,
     })
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
-    .where(and(eq(machine.museumNumber, museumNumber), isNull(machine.retiredAt)));
-  return row && { ...row, year: row.year ?? undefined };
+    .where(eq(machine.museumNumber, museumNumber));
+  if (!row) return undefined;
+  const { retiredAt, year, ...visible } = row;
+  if (retiredAt) return { retired: true, machineModelTitle: row.machineModelTitle };
+  return { ...visible, year: year ?? undefined, retired: false };
 }
 
 /** The machine record (RM-MachineRecord) as ST-009 builds it – later stories add its further sections (G18). */
