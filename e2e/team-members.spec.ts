@@ -61,6 +61,8 @@ async function deactivate(page: Page, name: string) {
 }
 
 test.beforeEach(async ({ page }) => {
+  const { E2E_TEAM_USERNAME: username, E2E_TEAM_PASSWORD: password, BASE_URL } = process.env;
+  test.skip(!username || !password || !!BASE_URL, "needs a local technician account");
   await logIn(page);
 });
 
