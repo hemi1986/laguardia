@@ -1,6 +1,6 @@
 # Context Map
 
-> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-10-01
+> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-10-25 (per-machine maintenance)
 
 ## Contexts
 
@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | **Repair** (`BC-Repair`) | Core domain | From problem reports via triage to defects that are worked on and resolved – the reason La Guardia exists ("no defect gets lost", traceable repair history) | Problem report, Triage, Defect, Priority, Resolved on the spot, Claim, On hold, Closed on retirement, Work log entry, Repair history | Technician (triage, priority); every team member works on defects | `AGG-ProblemReport`, `AGG-Defect` |
 | **Collection** (`BC-Collection`) | Supporting | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, Machine category, Technology, Museum number, Serial number, Location, Machine status, Registered / Retired machine, File, File category | Technician (registration, machine status, file removal); helpers may set *Out of order* and attach files | `AGG-Machine`, `AGG-MachineModel`, `AGG-File` |
-| **Maintenance** (`BC-Maintenance`) | Supporting | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance task, Maintenance plan, Due / Overdue, Maintenance record, Suitable for helpers | Technician (maintenance plan); every team member records maintenance | `AGG-MaintenancePlan`, `AGG-MaintenanceRecord` |
+| **Maintenance** (`BC-Maintenance`) | Supporting | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance task, Machines of a maintenance task, Maintenance plan, Due / Overdue, Maintenance record, Suitable for helpers | Technician (maintenance plan); every team member records maintenance | `AGG-MaintenancePlan`, `AGG-MaintenanceRecord` |
 | **Team** | Generic, **not modelled** | Team member accounts, roles (helper / technician), signing in and last visit | Team member, Account, Helper, Technician, Last visit | Technician (manages accounts, `docs/product/vision.md`) | – (standard account management, see `docs/adr/0004-team-authentication.md`) |
 
 The **Visitor** is not a context and has no account: visitor pages are a public view onto Collection and Repair (`RM-VisitorMachinePage`) plus the *Report problem* command of Repair.
@@ -27,7 +27,7 @@ flowchart LR
     Team -- "U → D · Conformist" --> Maintenance
 
     Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, museum number, machine status,<br/>Machine retired" --> Repair
-    Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, machine category, technology,<br/>machine status, Machine retired" --> Maintenance
+    Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, machine status, Machine registered,<br/>Machine retired; category and technology for choosing" --> Maintenance
 
     Repair -. "prompts status change (manual, same step)<br/>→ Change machine status" .-> Collection
     Maintenance -. "finding during maintenance (manual)<br/>→ Report problem" .-> Repair
@@ -43,9 +43,10 @@ Solid arrows: upstream (U) supplies, downstream (D) depends. Dotted arrows: the 
 - Repair prompts status changes **manually**: `POL-DefectMayChangeMachineStatus` (new or reopened defect – the technician sets *Limited* / *Out of order* in the same step, HS-3) and `POL-ResolvedDefectsReturnMachineToPlay` (machines without open defects highlighted, the technician decides on *Playable*, HS-6). Both issue Collection's `CMD-ChangeMachineStatus`; the decision stays with the technician.
 
 ### Collection → Maintenance (Customer/Supplier, Published Language)
-- Maintenance needs per machine: machine category and technology (via its machine model) to decide which maintenance tasks apply, and the machine status history, because machines that are *Not on display* never become due (HS-13, HS-20).
-- Since when: the machine model's **category history** – its machine category and technology from creation on and from every correction that changes either (`EVT-MachineModelCorrected`, ST-036). A maintenance task that newly applies after a correction counts as last done on the correction date (HS-20, D5).
-- `EVT-MachineRetired` removes the machine from due maintenance; `CMD-RecordMaintenance` checks that the machine is not retired.
+- Which maintenance tasks apply to a machine is Maintenance's own decision: the **machines of a maintenance task**, chosen by a technician and referenced by machine ID (`EVT-MachinesOfMaintenanceTaskChanged`, FLOW-PerMachineMaintenance, 2026-10-25). Collection's machine category and technology no longer decide it; Maintenance reads their **current** values only to group machines in `RM-MachineChoiceForMaintenanceTask` and to propose maintenance tasks for a new machine in `RM-MaintenanceTaskChoiceForMachine`. A machine model correction changes nothing in Maintenance; the category history (ST-036) is no longer read after the migration (HS-23, HS-24).
+- Maintenance needs the machine status history, because machines that are *Not on display* never become due (HS-13, HS-20).
+- `EVT-MachineRetired` removes the machine from due maintenance and from every choice by derivation – Maintenance adds no policy to the retirement (ADR 0010 stays as it is). `CMD-RecordMaintenance` checks that the machine is not retired (under the retirement lock); `CMD-ChangeMachinesOfMaintenanceTask` checks that a machine added is registered and not retired.
+- **Registration with chosen maintenance tasks** (HS-22): Maintenance adds `POL-RegistrationAppliesChosenMaintenanceTasks` to Collection's `CMD-RegisterMachine` (ADR 0010 – the downstream module adds its policy; Collection does not know it). The chosen tasks are the technician's input to that policy for the one registration, never data of the registration command or of `EVT-MachineRegistered`; the policy takes the new machine ID from the event and runs `CMD-ChangeMachinesOfMaintenanceTask` once per chosen task, in the registration's transaction. A rejected policy (a chosen task removed meanwhile) rejects the registration – stored together or not at all.
 
 ### Maintenance → Repair (manual)
 - `POL-MaintenanceFindingIsReported`: a fault found during maintenance becomes a problem report through Repair's normal `CMD-ReportProblem`. Maintenance has no knowledge of defects.
@@ -67,10 +68,12 @@ Read models compose data from several contexts; they only read, every write goes
 | `RM-MachineOverview` | x | x | x | |
 | `RM-MachineRecord` | x | x | x | x |
 | `RM-DueMaintenance` | x | | x | |
-| `RM-MaintenancePlan` | | | x | |
+| `RM-MaintenancePlan` | x | | x | |
+| `RM-MachineChoiceForMaintenanceTask` | x | | x | |
+| `RM-MaintenanceTaskChoiceForMachine` | x | | x | |
 | `RM-TechnicianDashboard` | x | x | x | x |
 | `RM-HelperDashboard` | | x | x | x |
 | `RM-RepairTimes` | | x | | |
 
 ## Open points
-- None affecting a context boundary. HS-18 (events for corrections of location, machine model, museum number and defect title – Collection and Repair) and HS-21 (the Team area records the viewer's last visit for *New since last visit*) are both resolved; see `docs/domain/events.yaml`.
+- None affecting a context boundary. HS-22 (registration with chosen maintenance tasks across Collection and Maintenance) is resolved; HS-24 (which maintenance records count for *Last done*) is open but stays inside Maintenance. HS-18 (events for corrections of location, machine model, museum number and defect title – Collection and Repair) and HS-21 (the Team area records the viewer's last visit for *New since last visit*) are both resolved; see `docs/domain/events.yaml`.

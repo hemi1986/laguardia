@@ -62,8 +62,10 @@ flowchart LR
     end
     subgraph BC_Maintenance["Maintenance"]
         CMD_ChangeMaintenancePlan["Change maintenance plan"]:::cmd
+        CMD_ChangeMachinesOfMaintenanceTask["Change machines of maintenance task"]:::cmd
         CMD_RecordMaintenance["Record maintenance"]:::cmd
         EVT_MaintenancePlanChanged["Maintenance plan changed"]:::evt
+        EVT_MachinesOfMaintenanceTaskChanged["Machines of maintenance task changed"]:::evt
         EVT_MaintenanceTaskDue["⭐ Maintenance task due"]:::evt
         EVT_MaintenanceTaskOverdue["Maintenance task overdue"]:::evt
         EVT_MaintenanceRecorded["Maintenance recorded"]:::evt
@@ -75,6 +77,7 @@ flowchart LR
     POL_LinkReopensResolvedDefect{{"Linking to a resolved defect reopens it"}}:::pol
     POL_RetirementClosesDefects{{"Retirement closes open defects"}}:::pol
     POL_RetirementDismissesProblemReports{{"Retirement dismisses untriaged problem reports"}}:::pol
+    POL_RegistrationAppliesChosenMaintenanceTasks{{"Registering a machine applies the chosen maintenance tasks"}}:::pol
     POL_TriageProblemReports{{"New problem reports are triaged"}}:::pol
     POL_DefectMayChangeMachineStatus{{"A new or reopened defect may change the machine status"}}:::pol
     POL_ResolvedDefectsReturnMachineToPlay{{"Machines without open defects return to play"}}:::pol
@@ -87,6 +90,8 @@ flowchart LR
     RM_MachineRecord[("Machine record")]:::rm
     RM_DueMaintenance[("Due maintenance")]:::rm
     RM_MaintenancePlan[("Maintenance plan")]:::rm
+    RM_MachineChoiceForMaintenanceTask[("Machine choice for a maintenance task")]:::rm
+    RM_MaintenanceTaskChoiceForMachine[("Maintenance task choice for a machine")]:::rm
     RM_TechnicianDashboard[("Technician dashboard")]:::rm
     RM_HelperDashboard[("Helper dashboard")]:::rm
     RM_RepairTimes[("Repair times")]:::rm
@@ -143,6 +148,9 @@ flowchart LR
     CMD_CloseDefectOnRetirement --> EVT_DefectClosedOnRetirement
     ACT_Technician --> CMD_ChangeMaintenancePlan
     CMD_ChangeMaintenancePlan --> EVT_MaintenancePlanChanged
+    CMD_ChangeMaintenancePlan --> EVT_MachinesOfMaintenanceTaskChanged
+    ACT_Technician --> CMD_ChangeMachinesOfMaintenanceTask
+    CMD_ChangeMachinesOfMaintenanceTask --> EVT_MachinesOfMaintenanceTaskChanged
     ACT_TeamMember --> CMD_RecordMaintenance
     CMD_RecordMaintenance --> EVT_MaintenanceRecorded
     EVT_ProblemReportLinkedToDefect --> POL_LinkReopensResolvedDefect
@@ -151,6 +159,8 @@ flowchart LR
     POL_RetirementClosesDefects --> CMD_CloseDefectOnRetirement
     EVT_MachineRetired --> POL_RetirementDismissesProblemReports
     POL_RetirementDismissesProblemReports --> CMD_DismissProblemReport
+    EVT_MachineRegistered --> POL_RegistrationAppliesChosenMaintenanceTasks
+    POL_RegistrationAppliesChosenMaintenanceTasks --> CMD_ChangeMachinesOfMaintenanceTask
     EVT_ProblemReported --> POL_TriageProblemReports
     POL_TriageProblemReports --> CMD_RecordDefect
     POL_TriageProblemReports --> CMD_LinkProblemReportToDefect
@@ -233,12 +243,16 @@ flowchart LR
     EVT_ProblemResolvedOnTheSpot -.-> RM_MachineRecord
     EVT_MaintenanceRecorded -.-> RM_MachineRecord
     EVT_MaintenanceTaskDue -.-> RM_MachineRecord
+    EVT_MaintenanceTaskOverdue -.-> RM_MachineRecord
     EVT_MachineMoved -.-> RM_MachineRecord
     EVT_MachineDetailsCorrected -.-> RM_MachineRecord
     EVT_MachineModelCorrected -.-> RM_MachineRecord
     EVT_DefectDetailsChanged -.-> RM_MachineRecord
+    EVT_MaintenancePlanChanged -.-> RM_MachineRecord
+    EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MachineRecord
     RM_MachineRecord -.-> ACT_TeamMember
     EVT_MaintenancePlanChanged -.-> RM_DueMaintenance
+    EVT_MachinesOfMaintenanceTaskChanged -.-> RM_DueMaintenance
     EVT_MaintenanceTaskDue -.-> RM_DueMaintenance
     EVT_MaintenanceTaskOverdue -.-> RM_DueMaintenance
     EVT_MaintenanceRecorded -.-> RM_DueMaintenance
@@ -249,7 +263,22 @@ flowchart LR
     EVT_MachineModelCorrected -.-> RM_DueMaintenance
     RM_DueMaintenance -.-> ACT_TeamMember
     EVT_MaintenancePlanChanged -.-> RM_MaintenancePlan
+    EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MaintenancePlan
+    EVT_MachineRetired -.-> RM_MaintenancePlan
     RM_MaintenancePlan -.-> ACT_Technician
+    EVT_MachineModelCreated -.-> RM_MachineChoiceForMaintenanceTask
+    EVT_MachineRegistered -.-> RM_MachineChoiceForMaintenanceTask
+    EVT_MachineRetired -.-> RM_MachineChoiceForMaintenanceTask
+    EVT_MachineModelCorrected -.-> RM_MachineChoiceForMaintenanceTask
+    EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MachineChoiceForMaintenanceTask
+    RM_MachineChoiceForMaintenanceTask -.-> ACT_Technician
+    EVT_MaintenancePlanChanged -.-> RM_MaintenanceTaskChoiceForMachine
+    EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MaintenanceTaskChoiceForMachine
+    EVT_MachineModelCreated -.-> RM_MaintenanceTaskChoiceForMachine
+    EVT_MachineRegistered -.-> RM_MaintenanceTaskChoiceForMachine
+    EVT_MachineRetired -.-> RM_MaintenanceTaskChoiceForMachine
+    EVT_MachineModelCorrected -.-> RM_MaintenanceTaskChoiceForMachine
+    RM_MaintenanceTaskChoiceForMachine -.-> ACT_Technician
     EVT_ProblemReported -.-> RM_TechnicianDashboard
     EVT_DefectRecorded -.-> RM_TechnicianDashboard
     EVT_ProblemReportLinkedToDefect -.-> RM_TechnicianDashboard
@@ -408,6 +437,35 @@ flowchart LR
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
 ```
 
+### Per-machine maintenance
+
+Feature per-machine-maintenance (2026-10-25). A technician chooses the machines of a maintenance task – when adding it, later on the task or on the machine record, or when registering a machine. The task is due at once on each machine it newly applies to; each machine's interval then runs from its own last done maintenance record, so the work spreads out instead of falling due everywhere on the same day.
+
+```mermaid
+flowchart LR
+    ACT_Technician(["Technician"]):::act
+    EVT_MaintenancePlanChanged["Maintenance plan changed"]:::evt
+    EVT_MachinesOfMaintenanceTaskChanged["Machines of maintenance task changed"]:::evt
+    EVT_MaintenanceTaskDue["⭐ Maintenance task due"]:::evt
+    EVT_MaintenanceTaskOverdue["Maintenance task overdue"]:::evt
+    ACT_TeamMember(["Team member"]):::act
+    EVT_MaintenanceRecorded["Maintenance recorded"]:::evt
+    ACT_Technician --> EVT_MaintenancePlanChanged
+    EVT_MaintenancePlanChanged --> EVT_MachinesOfMaintenanceTaskChanged
+    EVT_MachinesOfMaintenanceTaskChanged --> EVT_MaintenanceTaskDue
+    EVT_MaintenanceTaskDue --> EVT_MaintenanceTaskOverdue
+    EVT_MaintenanceTaskOverdue --> ACT_TeamMember
+    ACT_TeamMember --> EVT_MaintenanceRecorded
+    classDef evt fill:#a3391f,stroke:#e65100,color:#fff
+    classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
+    classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
+    classDef rm fill:#81c784,stroke:#1b5e20,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
+    classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
+    classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
+    classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
+```
+
 ## Bounded Contexts & Aggregates
 
 | Context | Purpose | Aggregates | Events |
@@ -415,4 +473,4 @@ flowchart LR
 | Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, File | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File attached, File removed, Machine retired |
 | Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect details changed, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
 | Team (`BC-Team`) | Generic, not modelled – team member accounts, roles (helper, technician), signing in and last visit; supplier to all other contexts | – | – |
-| Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
+| Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Machines of maintenance task changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
