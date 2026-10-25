@@ -6,8 +6,9 @@ import { rejectionText } from "@/app/_actions/rejection-text";
  * shared rejection text. Its own file, without server code: the client forms import it.
  */
 export function triageRejectionText(state: { error: TeamCommandErrorCode; triagedBy?: string }): string {
-  return rejectionText(
-    state.error,
-    state.triagedBy ? { "already-triaged": teamMessages.triage.alreadyTriagedBy(state.triagedBy) } : {},
-  );
+  return rejectionText(state.error, {
+    ...(state.triagedBy ? { "already-triaged": teamMessages.triage.alreadyTriagedBy(state.triagedBy) } : {}),
+    // Only a link reopens in triage: a defect offered as resolved was reopened meanwhile (ST-053).
+    "defect-not-resolved": teamMessages.link.reopenedMeanwhile,
+  });
 }

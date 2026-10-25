@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
+  linkProblemReportToDefectCommand,
   logWorkCommand,
   recordDefectCommand,
   reportProblemCommand,
@@ -171,6 +172,32 @@ describe("the repair history's own page", () => {
     expect(entry).toContain("Wieder geöffnet von Anna am 05.09.2026, 12:00");
     expect(entry).toContain("Weak again");
     expect(entry.indexOf("Coil replaced")).toBeLessThan(entry.indexOf("Weak again"));
+  });
+
+  it("shows a defect reopened by a linked problem report with that problem report as the reason (ST-053)", async () => {
+    const flipper = await aDefect("Left flipper weak", "2026-09-01T08:00:00Z");
+    await run(
+      executeCommand(
+        resolveDefectCommand,
+        { defectId: flipper, version: 0, closingNote: "Coil replaced" },
+        as(eva, "2026-09-02T10:00:00Z"),
+      ),
+    );
+    const { problemReportId } = await reported("Left flipper dead again", "2026-09-05T09:00:00Z");
+    await run(
+      executeCommand(
+        linkProblemReportToDefectCommand,
+        { problemReportId, version: 0, defectId: flipper, resolvedDefectVersion: 1 },
+        as(eva, "2026-09-05T10:00:00Z"),
+      ),
+    );
+
+    const html = await page("2026");
+
+    const entry = html.slice(html.indexOf("Left flipper weak")).split("</article>")[0];
+    expect(entry).toContain("Wieder geöffnet von Eva am 05.09.2026, 12:00");
+    expect(entry).toContain("Wegen der Meldung: „Left flipper dead again“");
+    expect(entry.indexOf("Coil replaced")).toBeLessThan(entry.indexOf("Wegen der Meldung"));
   });
 
   it("ST-030: Repair history keeps the order of several resolutions and reopenings", async () => {

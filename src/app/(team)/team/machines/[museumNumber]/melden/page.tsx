@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { anythingToLinkTo } from "../../../defect-to-link-to-input";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { named } from "../../../named";
-import { openDefects } from "@/modules/repair";
+import { defectsToLinkTo } from "@/modules/repair";
+import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
@@ -29,13 +31,14 @@ export default async function TeamReportProblemPage({
   const machine = await machineForTeamForm(db, museumNumber);
   const technician = member.role === "technician";
   // Only the technician's choice page names the machine model and needs to know whether there is a defect to link to.
-  const [label, defects] =
+  const [label, canLink] =
     machine && technician
       ? await Promise.all([
           named(db, { machines: [machine.id] }).then(({ label }) => label(machine.id)),
-          openDefects(db, { machineId: machine.id }),
+          // Open or recently resolved defects (ST-053).
+          defectsToLinkTo(db, systemClock, machine.id).then(anythingToLinkTo),
         ])
-      : [undefined, []];
+      : [undefined, false];
   const triageRequired = (await searchParams).triageRequired !== undefined;
 
   return (
@@ -48,7 +51,7 @@ export default async function TeamReportProblemPage({
         <TriageChoice
           museumNumber={museumNumber}
           machineModelTitle={label?.machineModelTitle ?? ""}
-          canLink={defects.length > 0}
+          canLink={canLink}
           triageRequired={triageRequired}
         />
       ) : (

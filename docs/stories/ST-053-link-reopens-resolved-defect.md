@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-ProblemReportLinkedToDefect, EVT-DefectReopened, EVT-MachineStatusChanged]
 depends_on: [ST-022, ST-030, ST-052]
 labels: [mvp, defect-work, triage, ui]
-status: ready
+status: done
 ---
 
 ## Story

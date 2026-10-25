@@ -41,8 +41,8 @@ import {
 export type TriageInTheSameStep =
   | ({ outcome: "defect-recorded" } & Omit<RecordDefectInput, "problemReportId" | "version">)
   | { outcome: "resolved-on-the-spot"; note: string }
-  /** No defect chosen: undefined. */
-  | { outcome: "linked"; defectId: string | undefined };
+  /** No defect chosen: undefined. A recently resolved defect comes with the version the page showed (ST-053). */
+  | { outcome: "linked"; defectId: string | undefined; resolvedDefectVersion?: number };
 
 /**
  * What the decision must know beyond the new problem report: the machine as Collection knows it now, and – for the
@@ -117,7 +117,8 @@ function triage(
   if (actor.role !== "technician") throw new Error(`CMD-ReportProblem: ${chosen.outcome} is for technicians only`);
   const asTechnician = { ...context, actor: { ...actor, role: actor.role } };
   if (chosen.outcome === "linked") {
-    return linkProblemReportToDefect(report, { ...target, defectId: chosen.defectId }, asTechnician, facts);
+    const { defectId, resolvedDefectVersion } = chosen;
+    return linkProblemReportToDefect(report, { ...target, defectId, resolvedDefectVersion }, asTechnician, facts);
   }
   const { title, priority, suitableForHelpers, machineStatus, machineVersion } = chosen;
   return recordDefect(

@@ -1,13 +1,14 @@
 import type { MachineStatus } from "@/modules/collection";
 import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
-import type { Defect } from "./defect";
+import type { Defect, ReopenReason } from "./defect";
 import { stricterMachineStatuses } from "./record-defect";
 
 /**
  * CMD-ReopenDefect (AGG-Defect, ST-030): the fault of a resolved defect came back – the defect is open again, not on
  * hold and unclaimed, with its earlier resolutions kept and the reopening as an entry of its own. Any team member may
  * reopen (HS-7); a technician may set the machine to a stricter status in the same step
- * (POL-DefectMayChangeMachineStatus, as in ST-018).
+ * (POL-DefectMayChangeMachineStatus, as in ST-018). Linking a problem report to a resolved defect reopens it with that
+ * problem report as its reason (POL-LinkReopensResolvedDefect, ST-053) – run by the link, as the same technician.
  */
 
 /** Who may reopen a defect – every team member (HS-7). */
@@ -15,29 +16,31 @@ export const reopeningActors = ["helper", "technician"] as const;
 
 type ReopeningPerson = ActorOf<(typeof reopeningActors)[number]>;
 
+/**
+ * The reason is typed text from the form (ST-030), or the problem report whose linking reopens the defect (ST-053) –
+ * only CMD-LinkProblemReportToDefect gives one; no form reads it.
+ */
 export type ReopenDefectInput = {
   defectId: string;
   /** The version of the defect the team member saw (HS-16). */
   version: number;
-  reason: string;
   /** A stricter machine status chosen in the same step – technicians only; none leaves the status as it is. */
   machineStatus?: MachineStatus;
   /** The version of the machine the technician saw – needed with a chosen status (HS-16). */
   machineVersion?: number;
-};
+} & ReopenReason;
 
 /** What the decision reads besides the defect: its machine as Collection knows it now. */
 export type ReopeningFacts = { machine: { machineStatus: MachineStatus; retired: boolean } | undefined };
 
+/** The reason – typed text or the linked problem report – stays in the aggregate; the journal keeps none (ST-003). */
 export type DefectReopened = {
   type: "EVT-DefectReopened";
   defectId: string;
   machineId: string;
   title: string;
-  /** Typed text: in the aggregate, never in the journal (ST-003). */
-  reason: string;
   reopenedBy: TeamMemberId;
-};
+} & ReopenReason;
 
 export type ReopenDefectError =
   | "defect-not-resolved"
@@ -70,7 +73,12 @@ export function reopenDefect(
 ): Decision<Defect, DefectReopened, ReopenDefectError> {
   const refusal = reopenRefusal(defect, facts);
   if (refusal) return { ok: false, error: refusal };
-  const reason = input.reason.trim();
+  const reason: ReopenReason | undefined =
+    input.problemReportId !== undefined
+      ? { problemReportId: input.problemReportId }
+      : input.reason.trim()
+        ? { reason: input.reason.trim() }
+        : undefined;
   if (!reason) return { ok: false, error: "reopen-reason-required" };
   if (input.machineStatus) {
     // Helpers cannot change the machine status while reopening (POL-DefectMayChangeMachineStatus).
@@ -88,7 +96,7 @@ export function reopenDefect(
       hold: undefined,
       reopenings: [
         ...defect.reopenings,
-        { id: newId(), reason, reopenedBy: actor.teamMemberId, reopenedAt: clock.now() },
+        { id: newId(), ...reason, reopenedBy: actor.teamMemberId, reopenedAt: clock.now() },
       ],
     },
     events: [
@@ -97,7 +105,7 @@ export function reopenDefect(
         defectId: defect.id,
         machineId: defect.machineId,
         title: defect.title,
-        reason,
+        ...reason,
         reopenedBy: actor.teamMemberId,
       },
     ],

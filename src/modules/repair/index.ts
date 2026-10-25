@@ -32,6 +32,7 @@ export type { ResumeDefectError, ResumeDefectInput } from "./resume-defect";
 export {
   defectDetails,
   defectForAction,
+  defectsToLinkTo,
   defectTitle,
   openDefectCounts,
   openDefects,
@@ -40,6 +41,7 @@ export {
   staleClaims,
   type DefectDetails,
   type DefectForAction,
+  type DefectsToLinkTo,
   type OpenDefect,
   type OpenDefectsQuery,
   type ResolvedOrReopened,

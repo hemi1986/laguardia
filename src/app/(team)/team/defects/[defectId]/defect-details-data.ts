@@ -83,7 +83,9 @@ export type DefectDetailsData = {
 /** A resolution or a reopening on the defect's page. */
 export type ShownResolutionOrReopening =
   | { kind: "resolution"; id: string; closingNote: string; resolvedBy: string; resolvedAt: Date }
-  | { kind: "reopening"; id: string; reason: string; reopenedBy: string; reopenedAt: Date };
+  | ({ kind: "reopening"; id: string; reopenedBy: string; reopenedAt: Date } & (
+      { reason: string; problemReport?: never } | { problemReport: { id: string; description: string }; reason?: never }
+    ));
 
 /** A work log entry on the defect's page. */
 export type ShownWorkLogEntry = {

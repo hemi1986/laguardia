@@ -35,19 +35,36 @@ export type Hold = { reason: HoldReason; note: string | undefined; heldAt: Date 
 export type Resolution = { id: string; closingNote: string; resolvedBy: TeamMemberId; resolvedAt: Date };
 
 /**
- * The Reopening entity of AGG-Defect (data model, ST-030): why a resolved defect is open again, who reopened it and
- * when – one per reopen, stored after the resolution it follows and never changed (Q13). The reason is typed text.
+ * Why a resolved defect is open again (data model: Reopen reason): typed text (ST-030), or the problem report linked
+ * to it, whose linking reopened it (POL-LinkReopensResolvedDefect, ST-053) – exactly one of the two.
  */
-export type Reopening = { id: string; reason: string; reopenedBy: TeamMemberId; reopenedAt: Date };
+export type ReopenReason = { reason: string; problemReportId?: never } | { problemReportId: string; reason?: never };
+
+/**
+ * The Reopening entity of AGG-Defect (data model, ST-030): why a resolved defect is open again, who reopened it and
+ * when – one per reopen, stored after the resolution it follows and never changed (Q13).
+ */
+export type Reopening = { id: string; reopenedBy: TeamMemberId; reopenedAt: Date } & ReopenReason;
+
+/**
+ * A reopening as a read model shows it: a problem report as its reason comes with the description it was reported
+ * with (ST-053) – the page says the defect was reopened because of that problem report.
+ */
+export type ShownReopening = { id: string; reopenedBy: TeamMemberId; reopenedAt: Date } & (
+  { reason: string; problemReport?: never } | { problemReport: { id: string; description: string }; reason?: never }
+);
 
 /** A resolution or a reopening of a defect, tagged – one step of how it ended and came back (ST-030). */
-export type ResolutionOrReopening = ({ kind: "resolution" } & Resolution) | ({ kind: "reopening" } & Reopening);
+export type ResolutionOrReopening = ({ kind: "resolution" } & Resolution) | ({ kind: "reopening" } & ShownReopening);
 
 /**
  * A defect's resolutions and reopenings in the order they happened, the oldest first – they alternate, each reopening
  * after the resolution it followed (data model, ST-030).
  */
-export function resolutionsAndReopenings(defect: Pick<Defect, "resolutions" | "reopenings">): ResolutionOrReopening[] {
+export function resolutionsAndReopenings(defect: {
+  resolutions: Resolution[];
+  reopenings: ShownReopening[];
+}): ResolutionOrReopening[] {
   const at = (step: ResolutionOrReopening) => (step.kind === "resolution" ? step.resolvedAt : step.reopenedAt);
   return [
     ...defect.resolutions.map((resolution) => ({ kind: "resolution" as const, ...resolution })),

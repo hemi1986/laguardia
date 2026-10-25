@@ -1,0 +1,4 @@
+ALTER TABLE "defect_reopening" ALTER COLUMN "reason" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "defect_reopening" ADD COLUMN "problem_report_id" uuid;--> statement-breakpoint
+ALTER TABLE "defect_reopening" ADD CONSTRAINT "defect_reopening_problem_report_id_problem_report_id_fk" FOREIGN KEY ("problem_report_id") REFERENCES "public"."problem_report"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "defect_reopening" ADD CONSTRAINT "defect_reopening_one_reason" CHECK (("defect_reopening"."reason" IS NULL) <> ("defect_reopening"."problem_report_id" IS NULL));

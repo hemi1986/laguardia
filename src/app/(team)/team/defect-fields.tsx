@@ -104,6 +104,7 @@ export function MachineStatusChoice({
   kept,
   aria,
   invalid,
+  note,
 }: {
   museumNumber: string;
   machine: { status: MachineStatus; version: number; stricter: MachineStatus[] };
@@ -111,6 +112,8 @@ export function MachineStatusChoice({
   kept: string;
   aria: { "aria-invalid"?: true; "aria-describedby"?: string };
   invalid: boolean;
+  /** When the choice applies only in some cases (ST-053: only to a reopened defect) – said under the current status. */
+  note?: string;
 }) {
   if (machine.stricter.length === 0)
     return <p className="text-sm">{texts.statusStays(museumNumber, machines.statuses[machine.status])}</p>;
@@ -119,6 +122,7 @@ export function MachineStatusChoice({
       <FieldLabel htmlFor="machineStatus">{texts.status}</FieldLabel>
       <FieldDescription id="machineStatus-hint">
         {texts.currentStatus(museumNumber, machines.statuses[machine.status])}
+        {note && ` ${note}`}
       </FieldDescription>
       <VersionField name="machineVersion" version={machine.version} />
       <NativeSelect

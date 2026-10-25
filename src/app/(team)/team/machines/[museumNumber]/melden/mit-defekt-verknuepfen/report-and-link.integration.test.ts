@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import {
+  defectDetails,
+  defectsToLinkTo,
   openDefectTitles,
   problemReportsOfMachine,
   reportProblemAndTriageCommand,
@@ -15,6 +17,7 @@ import { memoryStorage } from "@/platform/storage";
 import { formRunner } from "@/app/_actions/form-runner";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
+import { aDefectWithHistory } from "@/test-support/defects";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { reportAndResolveFields, reportAndResolveInput } from "../direkt-behoben/report-and-resolve-input";
 import { teamReportProblemPhoto } from "../report-problem-input";
@@ -212,5 +215,41 @@ describe("the forms for reporting a problem and linking it or resolving it on th
     );
     expect(await stored(machineId, link.storage)).toEqual(before);
     expect(resolve.storage.names()).toEqual([]);
+  });
+});
+
+describe("reporting and linking to a recently resolved defect", () => {
+  it("ST-053: Reporting and linking in the same step offers recently resolved defects", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const defect = await aDefectWithHistory(db, { by: tom, recordedAt: "2026-10-01T10:00:00Z" });
+    await defect.resolve("2026-10-09T10:00:00Z");
+    // The page offers it as recently resolved, with the version it posts.
+    const offered = await defectsToLinkTo(db, clock, defect.machineId);
+    expect(offered).toMatchObject({ open: [], recentlyResolved: [{ id: defect.defectId, resolvedDaysAgo: 3 }] });
+    const { action, storage } = linkFormFor(defect.machineId);
+
+    const reported = await action(
+      null,
+      post({
+        description: "Left flipper weak again during test",
+        defectId: defect.defectId,
+        resolvedDefects: offered.recentlyResolved.map((entry) => `${entry.id}:${entry.version}`).join(" "),
+      }),
+    );
+
+    expect(reported).toBeNull();
+    const problemReport = (await problemReportsOfMachine(db, defect.machineId)).find(
+      (report) => report.description === "Left flipper weak again during test",
+    );
+    if (!problemReport) throw new Error("not stored");
+    expect(await storedProblemReport(db, problemReport.id)).toMatchObject({
+      description: "Left flipper weak again during test",
+      triage: { outcome: "linked", triagedBy: tom.teamMemberId, defectId: defect.defectId },
+    });
+    expect(await defectDetails(db, defect.defectId)).toMatchObject({
+      state: "open",
+      reopenings: [{ problemReport: { id: problemReport.id }, reopenedBy: tom.teamMemberId }],
+    });
+    expect(storage.names()).toEqual([]);
   });
 });

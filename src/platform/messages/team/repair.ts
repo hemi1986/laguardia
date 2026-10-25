@@ -47,8 +47,19 @@ export const repairTexts = {
     outcome: "Mit Defekt verknüpfen",
     /** A problem report's own page when its machine has nothing to link to (G7). */
     noOpenDefects: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
-    defect: "Offener Defekt",
+    defect: "Defekt",
     openSince: (when: string) => `offen seit ${when}`,
+    /** A recently resolved defect on the list (ST-053) – linking reopens it. */
+    resolvedDaysAgo: (days: number) =>
+      days === 0 ? "heute behoben" : `behoben vor ${days} ${days === 1 ? "Tag" : "Tagen"}`,
+    /** Beside the status choice: it applies only when a resolved defect is reopened (ST-053, user 2026-10-25). */
+    statusOnlyWhenReopening:
+      "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
+    /** After the confirmation of a link that reopened the defect (ST-053). */
+    reopened: " Der Defekt ist wieder offen.",
+    /** A defect offered as recently resolved that someone reopened meanwhile (ST-053 code review #2). */
+    reopenedMeanwhile:
+      "Dieser Defekt wurde inzwischen wieder geöffnet. Er steht jetzt bei den offenen Defekten – bitte noch einmal wählen und senden.",
     submit: "Mit Defekt verknüpfen",
     back: "Zurück zur Meldung",
     linked: (museumNumber: string, title: string) => `Meldung zu ${museumNumber} mit Defekt „${title}“ verknüpft.`,
@@ -250,6 +261,8 @@ export const repairTexts = {
     reopenReason: "Warum wieder öffnen?",
     reopened: (title: string) => `„${title}“ ist wieder offen.`,
     reopenedBy: (name: string, dateTime: string) => `Wieder geöffnet von ${name} am ${dateTime}`,
+    /** The reason when linking a problem report reopened it (ST-053, user 2026-10-25) – its description. */
+    reopenedBecauseOf: (description: string) => `Wegen der Meldung: „${description}“`,
     /**
      * Putting a defect on hold (ST-029, G22): „Pausieren“ in the work group leads to its form page; the confirmation
      * names the reason. „Fortsetzen“ stands in its place while the defect is on hold – one tap.
@@ -316,6 +329,11 @@ export const repairErrors = {
   "defect-required": "Bitte einen Defekt auswählen.",
   "defect-of-another-machine": "Dieser Defekt gehört zu einem anderen Gerät.",
   "defect-not-open": "Dieser Defekt ist nicht mehr offen.",
+  /** Linking to a recently resolved defect, which reopens it (ST-053). */
+  "defect-resolved-too-long-ago":
+    "Dieser Defekt wurde vor mehr als 30 Tagen behoben. Bitte stattdessen einen neuen Defekt erfassen.",
+  "machine-status-without-reopening":
+    "Den Status kannst du hier nur ändern, wenn ein behobener Defekt wieder geöffnet wird. Bitte „Status nicht ändern“ wählen.",
   "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
   "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
   /** Assigning a defect (ST-026). */
