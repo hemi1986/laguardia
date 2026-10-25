@@ -110,7 +110,7 @@ test("uploaded content opens only through its presigned address, not through its
   await page.getByLabel("Dateikategorie").selectOption({ label: "Handbuch" });
   await page.getByLabel("Anhängen an").selectOption({ label: `nur ${museumNumber}` });
   await page.getByRole("button", { name: "Datei anhängen" }).click();
-  const fileAddress = (await page.getByRole("link", { name: "Presigned only" }).getAttribute("href"))!;
+  const fileAddress = (await page.getByRole("link", { name: "Presigned only", exact: true }).getAttribute("href"))!;
 
   const redirect = await page.request.get(fileAddress, { maxRedirects: 0 });
   const presigned = new URL(redirect.headers()["location"]);
