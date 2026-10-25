@@ -9,7 +9,10 @@ import { testDatabase } from "@/test-support/database";
 import { post } from "@/test-support/forms";
 import { machinesOfOneModel } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { teamMessages } from "@/platform/messages";
+import { viewAddressOf } from "@/upload";
 import { attachPhotoForm } from "./attach-photo-form";
+import { attachPhotoRejectionText } from "./attach-photo-form-view";
 
 /**
  * The form that attaches a camera photo as a file (ST-054): the runner with its `photo` step (`formRunner`) and the
@@ -70,6 +73,8 @@ describe("the form that attaches a camera photo", () => {
     const meta = await sharp(storage.read(stored)!.bytes).metadata();
     expect(meta.exif).toBeUndefined();
     expect(meta.format).toBe("jpeg");
+    // A file's content is opened through its own address (ST-037) – the photo module's names must be accepted there.
+    expect(await viewAddressOf(storage, fixedClock("2026-10-25T10:00:00Z"), stored)).toBeDefined();
   });
 
   it("ST-054: Photo of a machine model", async () => {
@@ -92,6 +97,9 @@ describe("the form that attaches a camera photo", () => {
     const state = await photoForm(lg042.machineId, storage)({ attachTo: "machine", title: " " }, await aPhonePhoto());
 
     expect(state).toMatchObject({ error: "title-required", photoAgain: true });
+    expect(attachPhotoRejectionText(state!, teamMessages.attachPhoto.form)).toBe(
+      "Bitte einen Titel angeben. Das Foto muss erneut ausgewählt werden.",
+    );
     expect(await filesOf(lg042.museumNumber)).toEqual([]);
     expect(storage.names()).toEqual([]);
   });
@@ -117,7 +125,9 @@ describe("the form that attaches a camera photo", () => {
     const state = await photoForm(lg042.machineId, memoryStorage())({ attachTo: "machine", title: "No photo" });
 
     expect(state).toMatchObject({ error: "file-required" });
-    expect(state).not.toHaveProperty("photoAgain");
+    expect(attachPhotoRejectionText(state!, teamMessages.attachPhoto.form)).toBe(
+      "Bitte ein Foto aufnehmen oder auswählen.",
+    );
     expect(await filesOf(lg042.museumNumber)).toEqual([]);
   });
 });

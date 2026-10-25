@@ -170,6 +170,8 @@ export const collectionTexts = {
       onlyMachine: "nur {museumNumber}",
       allMachinesOfModel: "alle Geräte des Modells {machineModel}",
       submit: "Foto anhängen",
+      /** Sent without a photo – the page has no file to choose, only a photo to take (ST-054 code review). */
+      photoRequired: "Bitte ein Foto aufnehmen oder auswählen.",
     },
     back: "Zurück zum Gerät",
   },

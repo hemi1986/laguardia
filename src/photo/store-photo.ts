@@ -40,7 +40,8 @@ export async function withStoredPhoto<Result, Error extends string>(
 /**
  * The same for several photos (ST-032, a work log entry's): every photo is accepted before any is stored, so one that
  * cannot be accepted stores none; all are stored at once, the command runs with their references in the order they
- * were sent (and with their sizes and media type), and every one is deleted again if storing one of them fails, or the command is rejected or throws.
+ * were sent (and with their sizes and media type), and every one is deleted again if storing one of them fails, or
+ * the command is rejected or throws.
  */
 export async function withStoredPhotos<Result, Error extends string>(
   sentPhotos: readonly Uint8Array[],

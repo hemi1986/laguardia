@@ -21,6 +21,7 @@ type Texts = {
   onlyMachine: string;
   allMachinesOfModel: string;
   submit: string;
+  photoRequired: string;
 };
 
 type ErrorCode = NonNullable<AttachPhotoState>["error"];
@@ -89,7 +90,7 @@ export function AttachPhotoForm({
       </Field>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{photoRejectionText(state)}</Rejection>
+          <Rejection>{attachPhotoRejectionText(state, texts)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending || preparingPhoto}>
@@ -97,4 +98,12 @@ export function AttachPhotoForm({
       </Button>
     </form>
   );
+}
+
+/** The rejection in words: the page asks for a photo, never a file, and a photo sent along must be chosen again (G8a). */
+export function attachPhotoRejectionText(
+  state: NonNullable<AttachPhotoState>,
+  texts: Pick<Texts, "photoRequired">,
+): string {
+  return photoRejectionText(state, { "file-required": texts.photoRequired });
 }
