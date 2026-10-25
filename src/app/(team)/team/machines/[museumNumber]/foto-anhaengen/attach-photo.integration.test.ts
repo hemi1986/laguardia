@@ -71,4 +71,53 @@ describe("the form that attaches a camera photo", () => {
     expect(meta.exif).toBeUndefined();
     expect(meta.format).toBe("jpeg");
   });
+
+  it("ST-054: Photo of a machine model", async () => {
+    const [lg042, lg043] = await machinesOfOneModel(db, 2);
+
+    const state = await photoForm(lg042.machineId, memoryStorage())(
+      { attachTo: "machine-model", title: "Original playfield" },
+      await aPhonePhoto(),
+    );
+
+    expect(state).toBeNull();
+    for (const { museumNumber } of [lg042, lg043])
+      expect(await filesOf(museumNumber)).toEqual([{ title: "Original playfield", fileCategory: "photo" }]);
+  });
+
+  it("ST-054: Title is required", async () => {
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const storage = memoryStorage();
+
+    const state = await photoForm(lg042.machineId, storage)({ attachTo: "machine", title: " " }, await aPhonePhoto());
+
+    expect(state).toMatchObject({ error: "title-required", photoAgain: true });
+    expect(await filesOf(lg042.museumNumber)).toEqual([]);
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("ST-054: Non-image content is rejected", async () => {
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const storage = memoryStorage();
+    const notAnImage = new File([new TextEncoder().encode("%PDF-1.7 not a photo")], "photo.jpg", {
+      type: "image/jpeg",
+    });
+
+    const state = await photoForm(lg042.machineId, storage)({ attachTo: "machine", title: "Wiring" }, notAnImage);
+
+    expect(state).toMatchObject({ error: "not-an-image" });
+    expect(state).not.toHaveProperty("photoAgain");
+    expect(await filesOf(lg042.museumNumber)).toEqual([]);
+    expect(storage.names()).toEqual([]);
+  });
+
+  it("attaches nothing when the form is sent without a photo", async () => {
+    const [lg042] = await machinesOfOneModel(db, 1);
+
+    const state = await photoForm(lg042.machineId, memoryStorage())({ attachTo: "machine", title: "No photo" });
+
+    expect(state).toMatchObject({ error: "file-required" });
+    expect(state).not.toHaveProperty("photoAgain");
+    expect(await filesOf(lg042.museumNumber)).toEqual([]);
+  });
 });
