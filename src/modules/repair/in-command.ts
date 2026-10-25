@@ -4,7 +4,8 @@ import { repairEvents } from "./events";
 /** A triage outcome as a page confirms it (G3). */
 export type TriagedInCommand =
   | { outcome: "defect-recorded"; defectId: string }
-  | { outcome: "linked"; defectId: string }
+  /** `reopened`: the same command reopened the linked defect (POL-LinkReopensResolvedDefect, ST-053). */
+  | { outcome: "linked"; defectId: string; reopened: boolean }
   | { outcome: "resolved-on-the-spot" }
   | { outcome: "dismissed" };
 
@@ -21,8 +22,14 @@ export function triageOutcomeIn(
     switch (entry.type) {
       case "EVT-DefectRecorded":
         return entry.data.defectId ? { outcome: "defect-recorded", defectId: String(entry.data.defectId) } : undefined;
-      case "EVT-ProblemReportLinkedToDefect":
-        return entry.data.defectId ? { outcome: "linked", defectId: String(entry.data.defectId) } : undefined;
+      case "EVT-ProblemReportLinkedToDefect": {
+        if (!entry.data.defectId) return undefined;
+        const defectId = String(entry.data.defectId);
+        const reopened = entriesOf(repairEvents, command).some(
+          (other) => other.type === "EVT-DefectReopened" && other.aggregate.id === defectId,
+        );
+        return { outcome: "linked", defectId, reopened };
+      }
       case "EVT-ProblemResolvedOnTheSpot":
         return { outcome: "resolved-on-the-spot" };
       case "EVT-ProblemReportDismissed":

@@ -8,11 +8,13 @@ import { named } from "./named";
 /**
  * What a page confirms after a triage outcome (G3) – the triage list after triaging (ST-018 – ST-022) and the machine
  * record after reporting and triaging in one step (ST-023, ST-052): the defect recorded (with the machine's new status
- * when the same step changed it), the defect linked to, that the problem was resolved on the spot, or dismissed.
+ * when the same step changed it), the defect linked to (and that it is open again when linking reopened it, ST-053),
+ * that the problem was resolved on the spot, or dismissed.
  */
 export type TriageConfirmation =
   | { outcome: "defect-recorded"; museumNumber: string; title: string; newStatus: MachineStatus | undefined }
-  | { outcome: "linked"; museumNumber: string; title: string }
+  /** `reopened`: the linked defect was resolved, and linking reopened it (ST-053). */
+  | { outcome: "linked"; museumNumber: string; title: string; reopened: boolean }
   | { outcome: "resolved-on-the-spot"; museumNumber: string }
   | { outcome: "dismissed"; museumNumber: string };
 
@@ -57,7 +59,8 @@ export async function loadTriageConfirmation(
   }
   const defect = await defectTitle(db, triaged.defectId);
   if (!defect) return undefined;
-  if (triaged.outcome === "linked") return { outcome: "linked", museumNumber, title: defect.title };
+  if (triaged.outcome === "linked")
+    return { outcome: "linked", museumNumber, title: defect.title, reopened: triaged.reopened };
   return {
     outcome: "defect-recorded",
     museumNumber,
@@ -79,7 +82,7 @@ export function triageConfirmationText(confirmation: TriageConfirmation): string
           : "")
       );
     case "linked":
-      return link.linked(confirmation.museumNumber, confirmation.title);
+      return link.linked(confirmation.museumNumber, confirmation.title) + (confirmation.reopened ? link.reopened : "");
     case "resolved-on-the-spot":
       return resolveOnTheSpot.resolved(confirmation.museumNumber);
     case "dismissed":
