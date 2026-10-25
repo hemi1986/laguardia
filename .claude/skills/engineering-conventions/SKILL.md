@@ -206,7 +206,7 @@ decision's reasons for refusing are one function next to it (`claimRefusal(defec
 and Repair's `defectActionRefusals` asks for the team member looking at the page (below) – no second copy of the rule
 in the page (G11). What a confirmation names but the aggregate does not keep (whom a defect was taken
 over from) is a reference in the event's journal data, listed in `events.yaml` and in the catalogue, and read back typed with
-`readJournal` (`lastDefectActionBy`) – only for the confirmation, never taken from the address.
+`entriesOf(repairEvents, command)` (`defectActionIn`) – only for the confirmation, never taken from the address.
 
 **What a team member can do to a defect** (architecture reviews 2026-10-11, 2026-10-18): `src/modules/repair/defect-actions.ts`
 describes each action on a defect once, in the order the page offers them (`defectActions`): its command's reason for
@@ -224,7 +224,7 @@ In the app, `defect-action-pages.ts` says how each action looks – its form pag
 confirmation text –, and every Server Action of a defect runs through `defectFormAction(action, { fields, input })`
 (`defect-action.ts`): the access check, the action's command, then `/team/defects/<id>?done=<action>`. The page reads
 `done` back only as an action there is (`doneActionOf`) and confirms it only when the defect's latest journal event is
-that action by the team member looking at it (`lastDefectActionBy`) – never from the address alone, and without a state
+that action by the team member looking at it (`defectActionIn` on `lastCommandBy`) – never from the address alone, and without a state
 field per action. **A new command on a defect** adds: its description and command in Repair, its journal projection in
 `repairEvents`, its entry in `defect-action-pages.ts` and – if it needs input – its form folder, whose `actions.ts` only
 says which fields it reads and how they become the input.
@@ -258,10 +258,14 @@ member looking at the page ran it. The command layer gives every journal entry i
 (`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
 is confirmed from there, never from a flag in the address. Which events mean what stays the owning module's: each
 module answers typed questions about a command (`collectionChangesIn`, `machineRegisteredIn`, `machineModelChangeIn`,
-`fileAttachedIn`, `triageOutcomeIn`, `problemReportedIn`, `maintenanceRecordedIn`, `maintenancePlanChangedBy`), built on
-`entriesOf(<module>Events, command)` – no page matches an event type by string. The triage outcomes share one module,
+`fileAttachedIn`, `triageOutcomeIn`, `problemReportedIn`, `maintenanceRecordedIn`, `defectActionIn`), built on
+`entriesOf(<module>Events, command)` – no page matches an event type by string. **The page reads the latest command
+once** and hands it to each module's `…In` (architecture review 2026-10-25): the defect page asks Repair's
+`defectActionIn` and, after a reopening, Collection's `collectionChangesIn` of the same command. Only
+`maintenancePlanChangedBy` reads it itself: the maintenance plan is one aggregate whose ID stays inside Maintenance,
+and no other module answers about its commands. The triage outcomes share one module,
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
-`loadMachineConfirmation` and shows one `confirmation`; the defect page's `lastDefectActionBy` asks the same latest command.
+`loadMachineConfirmation` and shows one `confirmation`.
 **The one exception** is the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
 is nobody to bind the confirmation to – it says only that a report was sent, nothing stored.
 

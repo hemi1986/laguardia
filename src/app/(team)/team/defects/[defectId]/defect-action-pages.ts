@@ -1,4 +1,4 @@
-import { defectActions, type DefectAction, type LastDefectAction } from "@/modules/repair";
+import { defectActions, type DefectAction, type DefectActionInCommand } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 
 const { defects: texts } = teamMessages;
@@ -10,7 +10,7 @@ export type ConfirmationAbout = {
   holdReason: string;
   suitableForHelpers: boolean;
   /** Repair's answer, with the name of whose claim it released. */
-  changedDetails: LastDefectAction["changedDetails"];
+  changedDetails: DefectActionInCommand["changedDetails"];
 };
 
 type ActionPage = {

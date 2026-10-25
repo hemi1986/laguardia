@@ -77,11 +77,11 @@ export { logWorkCommand } from "./log-work-command";
 export type { LogWorkError, LogWorkInput } from "./log-work";
 export {
   defectActions,
-  lastDefectActionBy,
+  defectActionIn,
   type DefectAction,
   type DefectActionRefusals,
   type DefectTeamMember,
-  type LastDefectAction,
+  type DefectActionInCommand,
 } from "./defect-actions";
 export { defectActionCommands } from "./defect-action-commands";
 export { problemReportedIn, triageOutcomeIn, type TriagedInCommand } from "./in-command";

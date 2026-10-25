@@ -1,11 +1,4 @@
-import {
-  entriesOf,
-  lastCommandBy,
-  type CatalogueEntry,
-  type Database,
-  type Role,
-  type TeamMemberId,
-} from "@/platform/command";
+import { entriesOf, type CatalogueEntry, type JournalEntry, type Role, type TeamMemberId } from "@/platform/command";
 import { changeDetailsRefusal } from "./change-defect-details";
 import { assignRefusal, claimRefusal } from "./claim-defect";
 import type { Defect } from "./defect";
@@ -151,30 +144,25 @@ export function defectActionRefusals(
 }
 
 /**
- * What this team member just did to the defect – the action of the defect's latest event, if it is theirs; undefined
- * when someone else acted last, or nobody did. For the confirmation after an action (G3): the address alone cannot make
- * a page confirm anything. The journal is read for this one answer, never to rebuild state (ADR 0002). After a claim it
- * names whom the defect was taken over from, if anyone; a claim made for someone else is an assignment, and names whom
- * the defect was assigned to (ST-026). After a change of its details it names which changed and whose claim that
- * released, if anyone's (ST-031).
+ * The action one command did to a defect, with what its confirmation names: after a claim whom the defect was taken
+ * over from, if anyone; a claim made for someone else is an assignment, and names whom the defect was assigned to
+ * (ST-026). After a change of its details it names which changed and whose claim that released, if anyone's (ST-031).
  */
-export type LastDefectAction = DefectActionDetails & { action: DefectAction };
+export type DefectActionInCommand = DefectActionDetails & { action: DefectAction };
 
-export async function lastDefectActionBy(
-  db: Database,
-  defectId: string,
-  teamMemberId: string,
-): Promise<LastDefectAction | undefined> {
-  // The same rule as every confirmation (G3): the latest command on the defect, run by this team member.
-  const command = await lastCommandBy(db, { aggregateId: defectId }, teamMemberId);
-  const latest =
-    command &&
-    entriesOf(repairEvents, command)
-      .filter(
-        (entry) =>
-          entry.aggregate.id === defectId && defectActions.some((action) => descriptions[action].event === entry.type),
-      )
-      .at(-1);
+/**
+ * What one command did to the defect – the action of its latest event on the defect – asked of the events
+ * `lastCommandBy` returns (the latest command on the defect, if the team member looking ran it); undefined when the
+ * command did no action on it. For the confirmation after an action (G3): the address alone cannot make a page confirm
+ * anything. The journal is read for this one answer, never to rebuild state (ADR 0002).
+ */
+export function defectActionIn(command: readonly JournalEntry[], defectId: string): DefectActionInCommand | undefined {
+  const latest = entriesOf(repairEvents, command)
+    .filter(
+      (entry) =>
+        entry.aggregate.id === defectId && defectActions.some((action) => descriptions[action].event === entry.type),
+    )
+    .at(-1);
   if (!latest) return undefined;
   type Data = typeof latest.data;
   for (const action of defectActions) {

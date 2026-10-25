@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { deactivateAccount } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf, type Actor } from "@/platform/command";
+import { executeCommand, journalOf, lastCommandBy, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { defectDetails, claimDefectCommand, lastDefectActionBy, openDefects, resolveDefectCommand } from ".";
+import { defectDetails, claimDefectCommand, defectActionIn, openDefects, resolveDefectCommand } from ".";
 import { anOpenDefectIn } from "@/test-support/defects";
 
 /** CMD-ClaimDefect (ST-025) through the command layer: a team member claims a defect or takes it over. */
@@ -60,9 +60,13 @@ describe("CMD-ClaimDefect", () => {
     const takenOver = await claim(defectId, 1, anna, "2026-10-12T10:00:00Z");
 
     expect(takenOver).toEqual({ ok: true, result: { defectId } });
-    expect((await lastDefectActionBy(db, defectId, anna.teamMemberId))?.takenOverFrom).toBe(tom.teamMemberId);
+    const lastBy = async (teamMemberId: string) => {
+      const command = await lastCommandBy(db, { aggregateId: defectId }, teamMemberId);
+      return command && defectActionIn(command, defectId);
+    };
+    expect((await lastBy(anna.teamMemberId))?.takenOverFrom).toBe(tom.teamMemberId);
     // … asked only of the claimant the event made: for anyone else it says nothing.
-    expect(await lastDefectActionBy(db, defectId, tom.teamMemberId)).toBeUndefined();
+    expect(await lastBy(tom.teamMemberId)).toBeUndefined();
     // Anna is its claimant – Tom no longer is: a defect has at most one.
     expect(await claimantOf(machineId)).toBe(anna.teamMemberId);
     expect((await defectDetails(db, defectId))?.claim).toEqual({
