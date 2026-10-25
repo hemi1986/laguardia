@@ -64,7 +64,7 @@ test("ST-037: Large manual is attached", async ({ page }) => {
   await page.getByRole("button", { name: "Datei anhängen" }).click();
 
   await expect(page.getByRole("main").getByRole("status")).toHaveText("„MM Schematics“ angehängt.");
-  const link = filesSection(page).getByRole("link", { name: "MM Schematics" });
+  const link = filesSection(page).getByRole("link", { name: "MM Schematics", exact: true });
   const opened = await page.request.get((await link.getAttribute("href"))!);
   expect(opened.status()).toBe(200);
   expect(opened.headers()["content-type"]).toBe("application/pdf");
@@ -100,7 +100,7 @@ test("ST-037: Other formats are only downloaded", async ({ page }) => {
   });
   await page.getByRole("button", { name: "Datei anhängen" }).click();
 
-  const link = filesSection(page).getByRole("link", { name: "MM sound ROM image" });
+  const link = filesSection(page).getByRole("link", { name: "MM sound ROM image", exact: true });
   const opened = await page.request.get((await link.getAttribute("href"))!);
 
   expect(opened.status()).toBe(200);
@@ -115,7 +115,7 @@ test("ST-037: Files are team-only", async ({ page, browser }) => {
   await fillIn(page, { title: "MM Operations Manual", category: "Handbuch", attachTo: `nur ${museumNumber}` });
   await page.getByRole("button", { name: "Datei anhängen" }).click();
   const fileAddress = (await filesSection(page)
-    .getByRole("link", { name: "MM Operations Manual" })
+    .getByRole("link", { name: "MM Operations Manual", exact: true })
     .getAttribute("href"))!;
 
   const stranger = await (await browser.newContext()).newPage();

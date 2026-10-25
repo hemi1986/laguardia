@@ -42,3 +42,4 @@ export type UploadAddress = object;
 
 export { memoryStorage, type MemoryStorage } from "./memory-storage";
 export { blobStorage } from "./blob-storage";
+export { deleteRemovedContent } from "./delete-removed-content";

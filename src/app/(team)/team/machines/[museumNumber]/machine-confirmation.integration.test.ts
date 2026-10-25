@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { attachFileCommand, changeMachineStatusCommand, moveMachineCommand } from "@/modules/collection";
+import {
+  attachFileCommand,
+  changeMachineStatusCommand,
+  moveMachineCommand,
+  removeFileCommand,
+} from "@/modules/collection";
 import { reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -72,6 +77,35 @@ describe("the machine record's confirmation", () => {
     });
     expect(
       await loadMachineConfirmation(db, clock, tom.teamMemberId, record, { attached: attached.result.fileId }),
+    ).toBeUndefined();
+  });
+
+  it("confirms a file the technician just removed, naming it from the kept record (ST-038)", async () => {
+    for (const member of [anna, tom]) await anExistingTeamMember(db, member);
+    const machineId = await aRegisteredMachine(db);
+    const at = { db, clock, newId: randomUUID };
+    const attached = await executeCommand(
+      attachFileCommand,
+      {
+        machineId,
+        attachTo: "machine-model",
+        title: "MM Manual (wrong edition)",
+        fileCategory: "manual",
+        content: { name: `files/${randomUUID()}`, size: 10, contentType: "application/pdf" },
+      },
+      { actor: anna, ...at },
+    );
+    if (!attached.ok) throw new Error(attached.error);
+    const { fileId } = attached.result;
+    await executeCommand(removeFileCommand, { fileId, version: 0 }, { actor: tom, ...at });
+
+    expect(await confirmationOf(machineId, { fileRemoved: fileId }, tom.teamMemberId)).toEqual({
+      kind: "file-removed",
+      title: "MM Manual (wrong edition)",
+    });
+    expect(await confirmationOf(machineId, { fileRemoved: fileId }, anna.teamMemberId)).toBeUndefined();
+    expect(
+      await confirmationOf(await aRegisteredMachine(db), { fileRemoved: fileId }, tom.teamMemberId),
     ).toBeUndefined();
   });
 

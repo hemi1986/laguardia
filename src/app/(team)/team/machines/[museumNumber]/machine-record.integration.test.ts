@@ -176,7 +176,7 @@ describe("the machine record", () => {
 
     const html = await page("LG-013");
 
-    expect(html).toContain("<dt class=\"text-muted-foreground\">Status</dt><dd>Ausgemustert</dd>");
+    expect(html).toContain('<dt class="text-muted-foreground">Status</dt><dd>Ausgemustert</dd>');
     // Retirement is no entry of the status history – it still ends with the change to Out of order.
     const newest = html.indexOf("Spielbereit → Außer Betrieb");
     expect(newest).toBeGreaterThan(-1);
@@ -416,6 +416,21 @@ describe("the machine record", () => {
       );
       expect(files).toContain("LG-042 wiring notes");
       expect(files).not.toContain("Noch keine Dateien");
+    });
+
+    it("offers removing each file to technicians only (ST-038, G11)", async () => {
+      const machineId = await registered("LG-043", "2026-10-01T09:00:00Z");
+      const manual = await attached(machineId, "machine-model", "MM Manual (wrong edition)", "manual");
+
+      const files = section(await page("LG-043"), "Dateien");
+
+      expect(files).toMatch(
+        new RegExp(`<a [^>]*href="/team/machines/LG-043/datei-entfernen/${manual}"[^>]*>Entfernen</a>`),
+      );
+      expect(files).toContain('aria-label="„MM Manual (wrong edition)“ entfernen"');
+      expect(section(await page("LG-043", { id: randomUUID(), role: "helper" }), "Dateien")).not.toContain(
+        "datei-entfernen",
+      );
     });
   });
 });

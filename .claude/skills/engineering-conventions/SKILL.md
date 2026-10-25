@@ -426,7 +426,8 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when Blob cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`).
-- **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020) or a failed command – never as a compensation after a committed one.
+- **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020; a removed file, ST-038) or a failed command – never as a compensation after a committed one.
+- **Content a command removes on purpose is declared by the command** (ST-038 code review): `aggregateCommand({ …, removesContent: (result) => name })`; the Server Action runner deletes it after the commit in every step (`deleteRemovedContent`, `src/platform/storage/`) – a failed delete is logged by name, the removal stands. No form wires it.
 ### Files uploaded from the browser (ST-085, ADR 0009)
 
 Files (up to 100 MB, `FILE_SIZE_LIMIT`) never pass through a function: the browser uploads them straight to the private

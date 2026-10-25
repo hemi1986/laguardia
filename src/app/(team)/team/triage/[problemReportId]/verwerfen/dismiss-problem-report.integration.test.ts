@@ -48,7 +48,6 @@ function dismissForm(problemReportId: string, storage: ContentStorage) {
     {
       fields: dismissFields,
       input: (fields) => dismissInput(fields, problemReportId),
-      removesPhoto: (result) => result.removedPhoto,
       onSuccess: async () => {},
     },
   );

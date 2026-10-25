@@ -8,8 +8,8 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { removePhoto, withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
-import { blobStorage, type ContentStorage } from "@/platform/storage";
+import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference } from "@/photo";
+import { blobStorage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 
 /**
@@ -33,16 +33,11 @@ export type FormDefinition<Input, Result, Field extends string> = {
   fields: readonly Field[];
   /** Reads and converts the fields (Q19): no validation, no default – a missing value stays "no value given". */
   input: (fields: FormFields<Field>) => Input;
-  /**
-   * The photo the command removed on purpose, if any (ST-020: a spam dismissal) – deleted from the storage after the
-   * command was committed, before `onSuccess`. A failed delete is logged and does not undo the command (ADR 0007).
-   */
-  removesPhoto?: (result: Result) => PhotoReference | undefined;
   /** After the command succeeded, e.g. `revalidatePath` and `redirect` (which ends the action). */
   onSuccess: (result: Result) => Promise<void>;
 };
 
-/** `storage`: where a form's photo is stored (ST-016) or a removed one deleted (ST-020) – Vercel Blob unless a test injects another. */
+/** `storage`: where a form's photo is stored (ST-016) or removed content deleted (ST-020, ST-038) – Vercel Blob unless a test injects another. */
 export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
   currentPerson: () => Promise<Actor>;
   storage?: ContentStorage;
@@ -51,7 +46,7 @@ export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
 /** A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference. */
 export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input"
 > & {
   photo: { field: string; owner: PhotoOwner };
   input: (fields: FormFields<Field>, photo: PhotoReference | undefined) => Input;
@@ -65,7 +60,7 @@ export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
  */
 export type PhotosFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input"
 > & {
   photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: Error } };
   input: (fields: FormFields<Field>, photos: PhotoReference[]) => Input;
@@ -81,7 +76,7 @@ export type PhotoFormState<Error extends string, Field extends string> =
  */
 export type UploadFormDefinition<Input, Result, Field extends string, Refusal extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto"
+  "input"
 > & {
   upload: {
     /** The field with the uploaded content's name. */
@@ -102,7 +97,7 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
  */
 export type EachFormDefinition<Input, Result, Error extends string, Field extends string> = Omit<
   FormDefinition<Input, Result, Field>,
-  "input" | "removesPhoto" | "onSuccess"
+  "input" | "onSuccess"
 > & {
   each: { field: string };
   input: (fields: FormFields<Field>, item: string) => Input;
@@ -198,7 +193,11 @@ export function formRunner(dependencies: RunnerDependencies) {
     if ("photo" in definition) {
       // One photo: only the first file of its field is read – more files are never stored (code review ST-032).
       const { photo, input, ...rest } = definition;
-      return photosStep(dependencies, command, { ...rest, photos: photo, input: (fields, [one]) => input(fields, one) });
+      return photosStep(dependencies, command, {
+        ...rest,
+        photos: photo,
+        input: (fields, [one]) => input(fields, one),
+      });
     }
     if ("photos" in definition) return photosStep(dependencies, command, definition);
     return withoutContent(dependencies, command, definition);
@@ -224,8 +223,7 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
       actor: await currentPerson(),
     });
     if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
-    const removed = definition.removesPhoto?.(outcome.result);
-    if (removed) await removePhoto(storage ?? blobStorage(), removed);
+    await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
   };
@@ -260,6 +258,7 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
         (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) || outcome.error === atMost?.error;
       return photos.length > 0 && !ofThePhotos ? { ...state, photoAgain: true } : state;
     }
+    await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
   };
@@ -294,13 +293,14 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
       ) as { readonly [F in Field]: string };
       return { error: outcome.error, values };
     }
+    await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
   };
 }
 
 function eachStep<Input, Result, Error extends string, Field extends string>(
-  { currentPerson, storage: _storage, ...dependencies }: RunnerDependencies,
+  { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
   definition: EachFormDefinition<Input, Result, CommandError<typeof command>, Field>,
 ): FormStateAction<EachFormState<CommandError<typeof command>, Field>> {
@@ -329,6 +329,7 @@ function eachStep<Input, Result, Error extends string, Field extends string>(
         break;
       }
     }
+    for (const { result } of done) await deleteWhatItRemoved(storage, command, result);
     if (done.length === 0) {
       const shared = rejected.every(({ error }) => error === rejected[0].error);
       return { error: rejected[0].error, values: valuesOf(fields), chosen, ...(shared ? {} : { rejected }) };
@@ -360,4 +361,17 @@ function valuesOf<Field extends string>(fields: FormFields<Field>): { readonly [
   return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, value ?? ""])) as {
     readonly [F in Field]: string;
   };
+}
+
+/**
+ * Deletes the stored content a committed command says it removed (`Command.removesContent`, ST-020, ST-038) – after
+ * the commit, so a failed delete is only logged and the removal stands (ADR 0009).
+ */
+async function deleteWhatItRemoved<Result>(
+  storage: ContentStorage | undefined,
+  command: { removesContent?: (result: Result) => string | undefined },
+  result: Result,
+): Promise<void> {
+  const removed = command.removesContent?.(result);
+  if (removed) await deleteRemovedContent(storage ?? blobStorage(), removed);
 }

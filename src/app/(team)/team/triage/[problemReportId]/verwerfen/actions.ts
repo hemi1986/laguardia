@@ -41,7 +41,6 @@ export async function dismissAction(
   const state = await formAction(dismissProblemReportCommand, {
     fields: dismissFields,
     input: (fields) => dismissInput(fields, problemReportId),
-    removesPhoto: ({ removedPhoto }) => removedPhoto,
     onSuccess: async () => {
       revalidatePath("/team/triage");
       redirect(`/team/triage?dismissed=${problemReportId}`);
