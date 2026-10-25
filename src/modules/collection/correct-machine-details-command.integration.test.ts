@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, type Actor } from "@/platform/command";
+import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   correctMachineDetailsCommand,
   createMachineModelCommand,
+  machineOfMuseumNumber,
   machineForTeamForm,
   machineRecord,
   registerMachineCommand,
@@ -156,5 +157,42 @@ describe("CMD-CorrectMachineDetails", () => {
     expect(await correct("LG-042", { museumNumber: "LG-043" }, tom)).toEqual({ ok: false, error: "not-authorized" });
     expect(await correct("LG-042", { serialNumber: "MM-12345" }, tom)).toEqual({ ok: false, error: "not-authorized" });
     expect(await machineRecord(db, "LG-042")).toMatchObject({ museumNumber: "LG-042", serialNumber: undefined });
+  });
+
+  it("removes a mistyped serial number when the field is emptied (user, 2026-10-25)", async () => {
+    await aMachine("LG-042");
+    await corrected("LG-042", { serialNumber: "MM-12345" });
+
+    await corrected("LG-042", { serialNumber: "  " });
+
+    expect((await machineRecord(db, "LG-042"))?.serialNumber).toBeUndefined();
+  });
+
+  it("journals both museum numbers and never the typed serial number", async () => {
+    const machineId = await aMachine("LG-420");
+
+    await corrected("LG-420", { museumNumber: "LG-042", serialNumber: "MM-12345" });
+
+    const entry = (await journalOf(db, { aggregateId: machineId })).find(
+      (journaled) => journaled.type === "EVT-MachineDetailsCorrected",
+    );
+    expect(entry).toMatchObject({ machineId, data: { museumNumber: "LG-042", previousMuseumNumber: "LG-420" } });
+    expect(JSON.stringify(entry?.data)).not.toContain("MM-12345");
+  });
+
+  it("keeps every earlier museum number reserved, leading to the current one", async () => {
+    const machineId = await aMachine("LG-420");
+    await corrected("LG-420", { museumNumber: "LG-042" });
+    await corrected("LG-042", { museumNumber: "LG-024" });
+
+    expect(await machineOfMuseumNumber(db, "LG-420")).toEqual({ machineId, museumNumber: "LG-024" });
+    expect(await machineOfMuseumNumber(db, "LG-042")).toEqual({ machineId, museumNumber: "LG-024" });
+    expect(await register("LG-042")).toEqual({ ok: false, error: "museum-number-taken" });
+  });
+
+  it("rejects a correction that changes nothing", async () => {
+    await aMachine("LG-042");
+
+    expect(await correct("LG-042", {})).toEqual({ ok: false, error: "machine-details-unchanged" });
   });
 });
