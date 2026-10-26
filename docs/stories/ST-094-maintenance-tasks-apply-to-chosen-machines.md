@@ -9,7 +9,7 @@ risk: high
 events: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineModelCorrected]
 depends_on: []
 labels: [ui, maintenance, feature:per-machine-maintenance]
-status: in-progress
+status: done
 ---
 
 ## Story
