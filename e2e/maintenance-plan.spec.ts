@@ -3,8 +3,9 @@ import { aHelper, expect, logIn, openMore, pageWidth, test, unique } from "./fix
 
 /**
  * The maintenance plan on a phone (ST-040): „Mehr“ → „Wartungsplan“ → „Wartungsaufgabe hinzufügen“ → the form page
- * → back on the plan with the confirmation and the new maintenance task, its restriction in words and when it is first
- * due. Native controls only, so the same works without JavaScript; helpers find no way there. „Ändern“ on a task leads
+ * → back on the plan with the confirmation and the new maintenance task and how many machines it applies to (ST-094;
+ * the machines are chosen in `maintenance-plan-machines.spec.ts`). Native controls only, so the same works without
+ * JavaScript; helpers find no way there. „Ändern“ on a task leads
  * to its change form, which also removes it after asking once (ST-041, G10b). Needs the e2e technician
  * each local run creates (ST-083); the preview database has none before ST-068, so this runs locally only.
  */
@@ -16,20 +17,17 @@ test.beforeEach(() => {
 });
 
 /** Fills in the form „Wartungsaufgabe hinzufügen“ the way a technician does. */
-async function fillIn(page: Page, name: string, { category, technology }: { category: string; technology?: string }) {
+async function fillIn(page: Page, name: string) {
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Anleitung").fill("Glass out, clean both sides.");
   await page.getByLabel("Intervall in Monaten").fill("1");
   await page.getByLabel("Für Helfer:innen geeignet").check();
-  await page.getByLabel("Nur für Kategorie").selectOption({ label: category });
-  if (technology) await page.getByLabel("Und nur für Technik").selectOption({ label: technology });
-  await page.getByLabel("Start").fill("2026-10-01");
 }
 
 /** A maintenance task added through the form – back on the maintenance plan, which lists it. */
 async function aMaintenanceTask(page: Page, name: string) {
   await page.goto("/team/maintenance-plan/new");
-  await fillIn(page, name, { category: "Flipper" });
+  await fillIn(page, name);
   await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
 }
@@ -48,14 +46,13 @@ test("a technician adds a maintenance task to the maintenance plan", async ({ pa
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Wartungsaufgabe hinzufügen");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 
-  await fillIn(page, name, { category: "Flipper" });
+  await fillIn(page, name);
   await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
 
   const main = page.getByRole("main");
   await expect(main.getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
   const entry = main.getByRole("listitem").filter({ hasText: name });
-  await expect(entry).toContainText("Jeden Monat · Nur Flipper · Für Helfer:innen geeignet");
-  await expect(entry).toContainText("Start 01.10.2026 · erstmals fällig 01.11.2026");
+  await expect(entry).toContainText("Jeden Monat · Gilt für kein Gerät · Für Helfer:innen geeignet");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
 
@@ -75,26 +72,24 @@ test("helpers find no maintenance plan, and are sent away from its address", asy
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("a rejected maintenance task keeps what was typed, and is added once the restriction fits", async ({ page }) => {
+  test("a rejected maintenance task keeps what was typed, and is added once it is complete", async ({ page }) => {
     await logIn(page);
     const name = unique("Clean & adjust score reels");
     await page.goto("/team/maintenance-plan/new");
 
-    await fillIn(page, name, { category: "Arcade", technology: "EM (Flipper)" });
+    // A name of spaces only passes the browser's check and is rejected by the command.
+    await fillIn(page, "   ");
     await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
 
-    await expect(page.getByRole("main")).toContainText("Diese Technik passt nicht zu dieser Kategorie.");
-    await expect(page.getByLabel("Name")).toHaveValue(name);
-    await expect(page.getByLabel("Start")).toHaveValue("2026-10-01");
-    await expect(page.getByLabel("Und nur für Technik")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByRole("main")).toContainText("Bitte einen Namen angeben.");
+    await expect(page.getByLabel("Name")).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByLabel("Anleitung")).toHaveValue("Glass out, clean both sides.");
+    await expect(page.getByLabel("Intervall in Monaten")).toHaveValue("1");
 
-    await page.getByLabel("Nur für Kategorie").selectOption({ label: "Flipper" });
+    await page.getByLabel("Name").fill(name);
     await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
 
     await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
-    await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: name })).toContainText(
-      "Nur Flipper · EM",
-    );
   });
 
   test("ST-041: Removing asks once", async ({ page }) => {
@@ -145,10 +140,12 @@ test("a technician changes a maintenance task and is back on the maintenance pla
 
   await page.getByLabel("Intervall in Monaten").fill("2");
   await page.getByLabel("Für Helfer:innen geeignet").uncheck();
-  await page.getByLabel("Und nur für Technik").selectOption({ label: "EM (Flipper)" });
+  // No restriction to a machine category or technology and no start date to change any more (ST-094).
+  await expect(page.getByLabel("Start")).toHaveCount(0);
+  await expect(page.getByLabel("Und nur für Technik")).toHaveCount(0);
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
 
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ geändert.`);
-  await expect(entryOf(page, name)).toContainText("Alle 2 Monate · Nur Flipper · EM");
+  await expect(entryOf(page, name)).toContainText("Alle 2 Monate · Gilt für kein Gerät");
   await expect(entryOf(page, name)).not.toContainText("Für Helfer:innen geeignet");
 });
