@@ -294,7 +294,7 @@ describe("the Server Action runner for a field posted once per ticked checkbox (
       many: { field: "machineId" },
       input: ({ version, name, intervalMonths }, chosen) => ({
         version: Number(version),
-        change: "add",
+        change: "add" as const,
         task: {
           name: name ?? "",
           instruction: "Do it",
