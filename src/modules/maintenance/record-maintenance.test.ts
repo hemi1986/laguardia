@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import type { MaintenanceTask } from "./maintenance-plan";
+import type { MaintenanceTaskWithMachines } from "./maintenance-plan";
 import { recordMaintenance, type MaintenanceFacts, type RecordMaintenanceInput } from "./record-maintenance";
 
 /**
@@ -14,18 +14,16 @@ const tom = { kind: "team-member", teamMemberId: "tom", role: "technician" } as 
 const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
 const as = (actor: typeof anna | typeof tom) => ({ actor, clock: tenthOfJune, newId: () => "record-1" });
 
-const cleanGlass: MaintenanceTask = {
+const cleanGlass: MaintenanceTaskWithMachines = {
   id: "clean-glass",
   name: "Clean glass (inside & out)",
   instruction: "Glass out, clean both sides.",
   intervalMonths: 1,
   suitableForHelpers: true,
-  machineCategory: undefined,
-  technology: undefined,
-  startDate: "2026-01-01",
   removedAt: undefined,
+  machines: [{ id: "m-1", maintenanceTaskId: "clean-glass", machineId: "lg-042", addedAt: new Date("2026-01-01T00:00:00Z") }],
 };
-const lg042 = { id: "lg-042", machineCategory: "pinball", technology: "dmd", retired: false } as const;
+const lg042 = { id: "lg-042", retired: false } as const;
 const facts: MaintenanceFacts = { maintenanceTask: cleanGlass, machine: lg042 };
 const input: RecordMaintenanceInput = {
   maintenanceTaskId: "clean-glass",
@@ -113,7 +111,7 @@ describe("CMD-RecordMaintenance – the decision", () => {
   });
 
   it("ST-044: Maintenance task must apply to the machine", () => {
-    const joysticks = { ...cleanGlass, id: "joysticks", machineCategory: "arcade" as const };
+    const joysticks = { ...cleanGlass, id: "joysticks", machines: [] };
 
     expect(record({ maintenanceTaskId: "joysticks" }, { maintenanceTask: joysticks })).toEqual({
       ok: false,

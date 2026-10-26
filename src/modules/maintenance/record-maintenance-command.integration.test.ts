@@ -35,8 +35,8 @@ let machineModelId: string;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
 
-/** A maintenance task of its own, applying to every machine, started on 1 January 2026. */
-async function aMaintenanceTask(name: string, intervalMonths = 1, suitableForHelpers = true) {
+/** A maintenance task of its own, applying to the given machines, added on 1 December 2025. */
+async function aMaintenanceTask(name: string, machineIds: string[], intervalMonths = 1, suitableForHelpers = true) {
   const added = await executeCommand(
     changeMaintenancePlanCommand,
     {
@@ -47,9 +47,7 @@ async function aMaintenanceTask(name: string, intervalMonths = 1, suitableForHel
         instruction: "As usual.",
         intervalMonths,
         suitableForHelpers,
-        machineCategory: undefined,
-        technology: undefined,
-        startDate: "2026-01-01",
+        machineIds,
       },
     },
     { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
@@ -77,7 +75,7 @@ async function dueThatDay(day: string, maintenanceTaskId: string, machineId: str
   return due.find((task) => task.id === maintenanceTaskId)?.machines.find((machine) => machine.machineId === machineId);
 }
 
-/** A machine of its own – registered in 2025, so the task's start date is its last done. */
+/** A machine of its own – registered in 2025. */
 async function aMachine(machineStatus: MachineStatus = "playable") {
   const registered = await executeCommand(
     registerMachineCommand,
@@ -104,8 +102,8 @@ afterAll(() => isolated.close());
 
 describe("CMD-RecordMaintenance", () => {
   it("ST-044: Back-dating up to 7 days", async () => {
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
     const lg042 = await aMachine();
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
 
     const recorded = await record(cleanGlass, lg042, "2026-06-03");
 
@@ -126,9 +124,21 @@ describe("CMD-RecordMaintenance", () => {
     });
   });
 
+  it("ST-094: Maintenance is recorded only on a machine the task applies to", async () => {
+    const lg020 = await aMachine();
+    const lg042 = await aMachine();
+    const joysticks = await aMaintenanceTask("Test joysticks, buttons, coin door", [lg020]);
+
+    expect(await record(joysticks, lg042, undefined)).toEqual({ ok: false, error: "maintenance-task-does-not-apply" });
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+
+    expect((await record(joysticks, lg020, undefined)).ok).toBe(true);
+    expect(await maintenanceRecords(db, { machineId: lg020 })).toHaveLength(1);
+  });
+
   it("ST-044: Maintenance on a machine not on display counts", async () => {
-    const cleanPlayfield = await aMaintenanceTask("Clean playfield", 3);
     const lg030 = await aMachine("not-on-display");
+    const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg030], 3);
 
     expect((await record(cleanPlayfield, lg030, undefined)).ok).toBe(true);
 
@@ -151,8 +161,8 @@ describe("CMD-RecordMaintenance", () => {
   });
 
   it("journals the maintenance record on its machine – never its note", async () => {
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
     const lg042 = await aMachine();
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
 
     const recorded = await executeCommand(
       recordMaintenanceCommand,
@@ -178,8 +188,8 @@ describe("CMD-RecordMaintenance", () => {
   });
 
   it("is not for visitors, and rejects an unknown machine or maintenance task", async () => {
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
     const lg042 = await aMachine();
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
 
     expect(await record(cleanGlass, lg042, undefined, { actor: { kind: "visitor" } })).toEqual({
       ok: false,
@@ -190,8 +200,8 @@ describe("CMD-RecordMaintenance", () => {
   });
 
   it("ST-039: Actions on a retired machine are rejected", async () => {
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
     const lg013 = await aMachine();
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg013]);
     const at = { actor: tom, db, clock: fixedClock("2026-06-01T09:00:00Z"), newId: randomUUID };
     const retired = await executeCommand(
       retireMachineCommand,
@@ -222,8 +232,8 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
   const anna = { role: "helper" } as const;
 
   it("says on each due machine whether they may record the task there – never when nobody asks", async () => {
-    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
     const lg042 = await aMachine();
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042], 1, false);
     const offered = async (teamMember?: { role: "helper" | "technician" }) =>
       (await dueMaintenance(db, tenthOfJune, teamMember))
         .find((task) => task.id === fuses)
@@ -235,8 +245,9 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
   });
 
   it("answers for one machine: the task, why it would refuse them, and the dates it accepts", async () => {
-    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", 1, false);
-    const machine = await machineForMaintenance(db, await aMachine());
+    const lg042 = await aMachine();
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042], 1, false);
+    const machine = await machineForMaintenance(db, lg042);
 
     expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine!, tom)).toEqual({
       maintenanceTask: { id: fuses, name: expect.stringContaining("Check fuses"), instruction: "As usual." },
