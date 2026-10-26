@@ -47,6 +47,7 @@ const KIND_LABEL: Record<string, string> = {
 export const STATUSES = ["draft", "review", "ready", "in-progress", "done", "superseded"] as const;
 /** Statuses that require a finished story: size set, no [OPEN] markers. */
 export const COMMITTED = new Set(["ready", "in-progress", "done"]);
+export const MAX_SCENARIOS = 10;
 const PRIORITIES = ["must", "should", "could", "wont"];
 
 // --------------------------------------------------------------------------
@@ -640,6 +641,14 @@ export function validateStories(report: Report, only: string | null = null, leni
     if (m.size === "XL") {
       const msg = "size XL – split the story";
       if (COMMITTED.has(status)) r.error(where, msg);
+      else r.warn(where, msg);
+    }
+    // Every scenario is a red → green cycle in /implement; past ten the story is too big or restates UX
+    // guideline patterns (user, 2026-10-26). `ready` ones were approved under the older rules.
+    const scenarioTotal = scenarioTitlesIn(s.body).length;
+    if (m.type === "story" && scenarioTotal > MAX_SCENARIOS && (status === "draft" || status === "review")) {
+      const msg = `${scenarioTotal} scenarios, at most ${MAX_SCENARIOS} – split the story, or reference the UX guideline (G-number) instead of restating its pattern as scenarios`;
+      if (status === "review") r.error(where, msg);
       else r.warn(where, msg);
     }
     if (m.type === "story" && COMMITTED.has(status) && !list(m.events).length) {

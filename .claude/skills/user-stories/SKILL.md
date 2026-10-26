@@ -68,7 +68,7 @@ What follows from that, and has caught us out before (story review 2026-09-29):
 There is no script that re-sorts the backlog, because there is nothing to sort – only story files and this rule.
 
 ## Status Workflow
-`draft` (in progress) → `review` (finished, waiting for PO + lead-dev) → `ready` (after user approval; `size` set, no `[OPEN]`) → `in-progress` → `done`.
+`draft` (in progress) → `review` (finished, waiting for the story review) → `ready` (after user approval; `size` set, no `[OPEN]`) → `in-progress` → `done`.
 
 Discovery ends at `ready`. The engineering workflow (`/implement`) sets `in-progress` and `done` with `node .claude/skills/implement/scripts/story-status.ts`; the validation hook enforces the same rules when the file is edited directly:
 - `in-progress` and `done` need all `depends_on` stories `done`.
@@ -111,6 +111,7 @@ Tech tasks: `## Task`, `## Acceptance Criteria` (checklist).
 - **INVEST**: independent, negotiable, valuable, estimable, small, testable.
 - Gherkin in English (`Given / When / Then / And / But`). At least a happy path + one error/edge case.
 - Scenarios describe **behavior**, not UI details ("clicks the blue button" ✗) and not technology.
+- **At most 10 scenarios** per story – each one is a red → green cycle in `/implement`. Spend them on domain behavior and real rejections. A pattern `docs/product/ux-guidelines.md` already defines (grouping, collapsing, kept choices after a rejection) is a G-number in the Context, tested once where the pattern is built, not restated as scenarios. More left → split (patterns below). The validator warns in `draft` and refuses `review`.
 - Measurable outcomes: "Then the pinball machine has the status 'out of order'" instead of "Then it works".
 - Non-functional requirements as concrete scenarios or checklist items with a number.
 - Terms exactly as in the glossary `CONTEXT.md`; never use an `_Avoid_` synonym.

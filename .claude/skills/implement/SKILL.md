@@ -9,7 +9,7 @@ argument-hint: "[ST-NNN – empty = next ready story]"
 
 Story: **$ARGUMENTS** (empty → `node .claude/skills/implement/scripts/next-story.ts`; a story already `in-progress` is finished first).
 
-The main session writes the code together with the user; subagents only review. Two checkpoints belong to the user: the **test plan** (step 2) and **acceptance + merge** (step 7). Everything in between runs without asking, unless the story turns out to be wrong (see *When the story is wrong*).
+The main session writes the code; subagents only review. One checkpoint belongs to the user: **acceptance + merge** (step 7). Everything before it runs without asking (user, 2026-10-26 – a `ready` story is good enough to build up to the pull request), unless the story turns out to be wrong (see *When the story is wrong*) or a seam is missing from the catalog (step 2).
 
 Engineering conventions: `.claude/skills/engineering-conventions/SKILL.md` – read it if it exists; it describes the module layout, how commands and read models are built, and the **seam catalog**.
 
@@ -18,18 +18,18 @@ Engineering conventions: `.claude/skills/engineering-conventions/SKILL.md` – r
 2. `node .claude/skills/implement/scripts/story-context.ts ST-NNN` – the context pack: story, exact test titles, dependencies, events/commands/rules/invariants, glossary, data model, ADRs. Read it completely; it is your source, not memory.
 3. `git switch -c st-NNN-<slug>` (slug from the file name), then `node .claude/skills/implement/scripts/story-status.ts ST-NNN in-progress` and commit `ST-NNN: start`.
 
-## 2. Test plan → user checkpoint
+## 2. Test plan
 Call the Skill tool for `tdd` (and `codebase-design` when a new module or interface is involved).
-Present one table and wait for the user's approval:
+Show one table and go on to step 3 without waiting:
 
 | Scenario (exact test title) | Seam | Test type | Test file |
 |---|---|---|---|
 
 - **Story**: one row per Gherkin scenario. **Tech task**: one row per checklist item that can be tested; the rest gets its evidence named (setting, document). **Spike**: no table – see *Spikes*.
-- Seams come from the seam catalog in the engineering conventions. A seam not in the catalog is a decision for the user – say so explicitly.
+- Seams come from the seam catalog in the engineering conventions. A seam not in the catalog is a decision for the user – the one case where you stop here and ask.
 - Name anything the story leaves open. Don't guess – see *When the story is wrong*.
 
-The user's approval is the "confirmed seams" the tdd skill requires.
+Seams from the catalog are the "confirmed seams" the tdd skill requires; the user approved the catalog.
 
 ## 3. Red → green, one scenario at a time
 - Per row: write the test (title exactly `ST-NNN: <scenario title>`), run it and see it fail for the right reason, write the minimal code to pass, run it green. Commit: `ST-NNN: <scenario title>`.
@@ -62,7 +62,7 @@ Say which lane you picked and why in one line.
 Tell the reviewers the follow-up hurdle below, so they grade findings with it in mind.
 
 ## 6. Refactor
-- Fix all blockers and majors **inside this story**, and the minors you agree with; say which minors you skip and why.
+- Fix all blockers and majors **inside this story**, and the minors you agree with; say which minors you skip and why. Where a finding offers options, apply the recommended one without asking; ask only when no option is recommended or a follow-up story is at stake.
 - **Follow-up hurdle** – a finding becomes a new story only if all of these hold:
   1. it is a security or data-loss risk, or it blocks a *named* upcoming story;
   2. it cannot be fixed in this story within about an hour;
@@ -81,7 +81,7 @@ Tell the reviewers the follow-up hurdle below, so they grade findings with it in
 ## 8. Wrap-up
 Summarize in a few lines: scenarios implemented, review findings fixed/skipped, follow-ups created, glossary/ADR changes. Then:
 - Suggest `/improve-codebase-architecture` after the foundation stories, when a bounded context is complete, or about every 8–10 done stories.
-- Name the next story (`node .claude/skills/implement/scripts/next-story.ts`).
+- Name the next story (`node .claude/skills/implement/scripts/next-story.ts`) and tell the user to start it in a fresh session (`/clear`, then `/implement`): every turn re-reads the whole session, so a second story in the same one costs several times the first.
 
 ## Spikes
 A spike answers its **Question** within its **Timebox** – no test plan, no TDD for throwaway experiments.

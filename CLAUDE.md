@@ -69,19 +69,19 @@ Initial discovery:
 1. `/event-storming` – grills the vision, then big picture; afterwards `/event-storming <process>` for detailed flows
 2. `@domain-architect` – contexts, aggregates, data model, glossary, ADR proposals (incl. tech stack)
 3. `@requirements-engineer` – derive stories from events/commands
-4. `/review-stories` – PO + lead dev in parallel (plus ux-designer for `ui` stories), user approves → `status: ready`
+4. `/review-stories` – one lead-dev pass (value, build, UX), user approves → `status: ready`
 5. Hand-off: `docs/stories/BACKLOG.md` lists all `ready` stories in implementation order for the engineering workflow
 
 Later features and changes: `/feature <idea>` – grills the idea, runs a focused event storming, updates domain model/ADRs, derives stories (label `feature:<slug>`) and runs the story review on them – the user approves in that review.
 
 Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story whose dependencies are done):
 1. Prepare – branch, `in-progress`, context pack from the discovery artifacts
-2. Test plan – scenario → seam → test; **the user approves**
+2. Test plan – scenario → seam → test; the user is asked only for a seam outside the catalog
 3. Red → green per scenario (`tdd`)
 4. `verify.ts` – lint, module boundaries, types, tests, traceability; the full browser run once before the push, CI repeats it on the pull request
 5. Review, scaled to the risk of the diff – **light lane** (size S, no events/commands/migrations/form input/new dependency): `@acceptance-tester` only; **normal lane**: `@code-reviewer` and `@acceptance-tester` in parallel, `/code-review` for L/XL or shared platform code, `/security-review` when the diff touches input handling, login/roles/session, uploads/files or security headers
-6. Refactor – fix findings in the story; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
-7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**
+6. Refactor – fix findings in the story, the recommended option without asking; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
+7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**; the next story starts in a fresh session
 
 After the foundation stories, per finished bounded context or about every 8–10 **domain** stories: `/improve-codebase-architecture` for the code and `/groom-backlog` for what is still planned – not in between. Progress is measured in done domain stories and scenarios (`docs/stories/BACKLOG.md`), not in the total number of stories. Technical groundwork is pulled in just in time: into the first story that needs it.
 
