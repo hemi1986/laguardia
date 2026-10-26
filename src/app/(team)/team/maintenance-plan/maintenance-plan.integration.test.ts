@@ -5,6 +5,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
 import { changeMaintenancePlanCommand, maintenancePlan } from "@/modules/maintenance";
+import { aRegisteredMachine } from "@/test-support/machines";
 import { fixedClock } from "@/platform/clock";
 import type { Actor } from "@/platform/command";
 import { commandErrorText, teamMessages } from "@/platform/messages";
@@ -12,7 +13,7 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "./maintenance-plan";
-import { addMaintenanceTaskFields, addMaintenanceTaskInput } from "./new/add-maintenance-task-input";
+import { addMaintenanceTaskFields, addMaintenanceTaskInput, MACHINE_FIELD } from "./new/add-maintenance-task-input";
 import {
   changeMaintenanceTaskFields,
   changeMaintenanceTaskInput,
@@ -38,6 +39,7 @@ function formOf(actor: Actor) {
     changeMaintenancePlanCommand,
     {
       fields: addMaintenanceTaskFields,
+      many: { field: MACHINE_FIELD },
       input: addMaintenanceTaskInput,
       onSuccess: async ({ maintenanceTaskId }) => void added.push(maintenanceTaskId),
     },
@@ -46,7 +48,7 @@ function formOf(actor: Actor) {
 }
 
 /** The form as the technician fills it in – at the version of the plan the page shows now. */
-async function filledIn(fields: Record<string, string | undefined>) {
+async function filledIn(fields: Record<string, string | undefined>, machineIds: string[] = []) {
   const { version } = await maintenancePlan(db);
   const all: Record<string, string | undefined> = {
     version: String(version),
@@ -54,15 +56,14 @@ async function filledIn(fields: Record<string, string | undefined>) {
     instruction: "Glass out, clean both sides.",
     intervalMonths: "1",
     suitableForHelpers: "on",
-    machineCategory: "pinball",
-    technology: "",
-    startDate: "2026-10-01",
     ...fields,
   };
   // A checkbox that is not ticked is not sent at all.
-  return post(
+  const form = post(
     Object.fromEntries(Object.entries(all).filter((entry): entry is [string, string] => entry[1] !== undefined)),
   );
+  for (const machineId of machineIds) form.append(MACHINE_FIELD, machineId);
+  return form;
 }
 
 /** The entry of the maintenance task of that name on the page – its name as the HTML writes it. */
@@ -85,35 +86,34 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
   it("adds the maintenance task, which the maintenance plan then lists with all it was given", async () => {
     const name = `Clean glass (inside & out) ${randomUUID()}`;
     const form = formOf(tom);
+    const machines = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
 
-    expect(await form.action(null, await filledIn({ name }))).toBeNull();
+    expect(await form.action(null, await filledIn({ name }, machines))).toBeNull();
 
     expect(form.added).toHaveLength(1);
     const entry = entryOf(await page(), name);
     expect(entry).toContain("Glass out, clean both sides.");
     expect(entry).toContain("Jeden Monat");
     expect(entry).toContain("Für Helfer:innen geeignet");
-    expect(entry).toContain("Nur Flipper");
-    expect(entry).toContain("Start 01.10.2026 · erstmals fällig 01.11.2026");
+    expect(entry).toContain("Gilt für 2 Geräte");
+    // No restriction to a machine category or technology and no start date any more.
+    expect(entry).not.toContain("Nur Flipper");
+    expect(entry).not.toContain("Start ");
   });
 
-  it("names the restriction in words – a machine category with its technology, or none", async () => {
-    const reels = `Clean & adjust score reels ${randomUUID()}`;
-    const everywhere = `Check the power cord ${randomUUID()}`;
-    await formOf(tom).action(
-      null,
-      await filledIn({ name: reels, machineCategory: "pinball", technology: "em", intervalMonths: "6" }),
-    );
-    await formOf(tom).action(
-      null,
-      await filledIn({ name: everywhere, machineCategory: "", suitableForHelpers: undefined }),
-    );
+  it("says how many machines each task applies to – none, one or several", async () => {
+    const none = `Oil the gum machine ${randomUUID()}`;
+    const one = `Check the power cord ${randomUUID()}`;
+    const [first, second] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    await formOf(tom).action(null, await filledIn({ name: none, suitableForHelpers: undefined }));
+    await formOf(tom).action(null, await filledIn({ name: one, intervalMonths: "6" }, [first]));
 
     const html = await page();
-    expect(entryOf(html, reels)).toContain("Nur Flipper · EM");
-    expect(entryOf(html, reels)).toContain("Alle 6 Monate");
-    expect(entryOf(html, everywhere)).toContain("Alle Geräte");
-    expect(entryOf(html, everywhere)).not.toContain("Für Helfer:innen geeignet");
+    expect(entryOf(html, none)).toContain("Gilt für kein Gerät");
+    expect(entryOf(html, none)).not.toContain("Für Helfer:innen geeignet");
+    expect(entryOf(html, one)).toContain("Gilt für 1 Gerät");
+    expect(entryOf(html, one)).toContain("Alle 6 Monate");
+    expect(second).toBeDefined();
   });
 
   it("keeps what was typed when it is rejected, and never fills in a value", async () => {
@@ -121,26 +121,15 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
     expect(zero).toMatchObject({ error: "interval-not-positive", values: { name: "Wax", intervalMonths: "0" } });
     expect(commandErrorText(teamMessages, zero!.error)).toBe("Bitte ein Intervall von mindestens 1 Monat angeben.");
 
-    // No interval, a broken one, no start date – each is "nothing given", which the command rejects.
+    // No interval and a broken one are "nothing given", which the command rejects.
     expect((await formOf(tom).action(null, await filledIn({ intervalMonths: "" })))?.error).toBe(
       "interval-not-positive",
     );
     expect((await formOf(tom).action(null, await filledIn({ intervalMonths: "1.5" })))?.error).toBe(
       "interval-not-positive",
     );
-    expect((await formOf(tom).action(null, await filledIn({ startDate: "" })))?.error).toBe("start-date-required");
-    expect((await formOf(tom).action(null, await filledIn({ startDate: "31.01.2026" })))?.error).toBe(
-      "start-date-required",
-    );
-    // Not a real calendar date: rejected at the form, never a failing insert.
-    expect((await formOf(tom).action(null, await filledIn({ startDate: "2026-02-31" })))?.error).toBe(
-      "start-date-required",
-    );
     expect((await formOf(tom).action(null, await filledIn({ intervalMonths: "99999999999" })))?.error).toBe(
       "interval-too-long",
-    );
-    expect((await formOf(tom).action(null, await filledIn({ machineCategory: "", technology: "lcd" })))?.error).toBe(
-      "technology-without-machine-category",
     );
   });
 
