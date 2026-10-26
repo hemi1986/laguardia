@@ -4,15 +4,20 @@
 
 **Progress: 56 of 67 domain stories done** · scenarios 493 of 637
 
-**95 stories** · In Progress: 0 · Ready: 11 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 11
+**95 stories** · In Progress: 1 · Ready: 10 · In Review: 0 · Draft: 0 · Done: 73 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-094](ST-094-maintenance-tasks-apply-to-chosen-machines.md) | Maintenance tasks apply to the machines a technician chooses, due at once on each | story | Maintenance | must | L | high | – |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-094](ST-094-maintenance-tasks-apply-to-chosen-machines.md) | Maintenance tasks apply to the machines a technician chooses, due at once on each | story | Maintenance | must | L | high | – |
 | [ST-095](ST-095-change-the-machines-of-a-maintenance-task.md) | Change the machines of a maintenance task | story | Maintenance | must | M | medium | ST-094 |
 | [ST-096](ST-096-change-a-machines-maintenance-tasks-on-its-record.md) | Change a machine's maintenance tasks from its machine record | story | Maintenance | must | M | medium | ST-095 |
 | [ST-097](ST-097-choose-maintenance-tasks-when-registering-a-machine.md) | Choose a new machine's maintenance tasks when registering it | story | Maintenance | must | M | high | ST-096 |
