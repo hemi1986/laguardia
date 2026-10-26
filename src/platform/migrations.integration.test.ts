@@ -78,3 +78,76 @@ describe("migration 0023_machine_model_category_history", () => {
     expect(rows).toEqual([{ machine_category: "arcade", technology: "crt" }]);
   });
 });
+
+/** The state production had before ST-094: tasks restricted to a machine category and technology, with a start date. */
+async function beforeSt094(db: NodePgDatabase) {
+  const tom = randomUUID();
+  await db.execute(sql`
+    INSERT INTO team_member (id, name, email, username, role)
+    VALUES (${tom}, 'Tom', 'tom@example.org', 'tom', 'technician')`);
+  const model = async (title: string, category: string, technology: string) => {
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${id}, ${title}, 'Bally', ${category}, ${technology})`);
+    await db.execute(sql`
+      INSERT INTO machine_model_category_change (id, machine_model_id, machine_category, technology, holds_from)
+      VALUES (${randomUUID()}, ${id}, ${category}, ${technology}, '2025-01-01T00:00:00Z')`);
+    return id;
+  };
+  const machine = async (modelId: string, museumNumber: string, registeredAt: string, retired = false) => {
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine (id, museum_number, machine_model_id, location, machine_status, registered_at, retired_at,
+        retired_by, retirement_reason)
+      VALUES (${id}, ${museumNumber}, ${modelId}, 'Hall 1', 'in-order', ${registeredAt},
+        ${retired ? "2026-03-01T00:00:00Z" : null}, ${retired ? tom : null}, ${retired ? "Sold" : null})`);
+    return id;
+  };
+  const task = async (name: string, startDate: string, restriction?: { category: string; technology?: string }) => {
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO maintenance_task (id, maintenance_plan_id, name, instruction, interval_months, suitable_for_helpers,
+        machine_category, technology, start_date)
+      VALUES (${id}, '7a1e0f40-0000-4000-8000-000000000040', ${name}, 'Do it', 12, false,
+        ${restriction?.category ?? null}, ${restriction?.technology ?? null}, ${startDate})`);
+    return id;
+  };
+  const done = async (taskId: string, machineId: string, date: string, recordedAt: string) => {
+    await db.execute(sql`
+      INSERT INTO maintenance_record (id, machine_id, maintenance_task_id, outcome, date, recorded_by, recorded_at)
+      VALUES (${randomUUID()}, ${machineId}, ${taskId}, 'done', ${date}, ${tom}, ${recordedAt})`);
+  };
+  return { model, machine, task, done };
+}
+
+async function machinesOf(db: NodePgDatabase, taskId: string) {
+  const { rows } = await db.execute<{ museum_number: string; added_at: Date }>(sql`
+    SELECT m.museum_number, tm.added_at FROM maintenance_task_machine tm JOIN machine m ON m.id = tm.machine_id
+    WHERE tm.maintenance_task_id = ${taskId} ORDER BY m.museum_number`);
+  return rows.map((row) => ({ museumNumber: row.museum_number, addedAt: new Date(row.added_at).toISOString() }));
+}
+
+describe("migration 0032_maintenance_task_machines", () => {
+  it("ST-094: Migration – existing tasks apply to the machines they apply to today", async () => {
+    const db = await isolated.reset("0031_file-removal");
+    const before = await beforeSt094(db);
+    const em = await before.model("Fireball", "pinball", "em");
+    const dmd = await before.model("Medieval Madness", "pinball", "dmd");
+    await before.machine(em, "LG-005", "2025-11-01T10:00:00Z");
+    await before.machine(dmd, "LG-042", "2025-11-01T10:00:00Z");
+    await before.machine(em, "LG-007", "2025-11-01T10:00:00Z", true);
+    const reels = await before.task("Clean & adjust score reels / stepper units", "2026-01-01", {
+      category: "pinball",
+      technology: "em",
+    });
+    const journalBefore = await db.execute(sql`SELECT count(*)::int AS count FROM event_journal`);
+
+    await isolated.migrate();
+
+    expect((await machinesOf(db, reels)).map((each) => each.museumNumber)).toEqual(["LG-005"]);
+    expect(await db.execute(sql`SELECT count(*)::int AS count FROM event_journal`)).toMatchObject({
+      rows: journalBefore.rows,
+    });
+  });
+});

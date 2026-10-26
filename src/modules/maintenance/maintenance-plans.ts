@@ -1,9 +1,14 @@
 import { eq } from "drizzle-orm";
-import type { MachineCategory, Technology } from "@/modules/collection";
+import { machinesForMaintenance } from "@/modules/collection";
 import { aggregateStore, entities, type Database } from "@/platform/command";
-import { maintenanceDates, type CalendarDate } from "@/platform/time";
-import { MAINTENANCE_PLAN_ID, type MaintenancePlan, type MaintenanceTask } from "./maintenance-plan";
-import { maintenancePlan as maintenancePlanTable, maintenanceTask } from "./schema";
+import {
+  MAINTENANCE_PLAN_ID,
+  type MachineOfTask,
+  type MaintenancePlan,
+  type MaintenanceTask,
+  type MaintenanceTaskWithMachines,
+} from "./maintenance-plan";
+import { maintenancePlan as maintenancePlanTable, maintenanceTask, maintenanceTaskMachine } from "./schema";
 
 /** The maintenance tasks of the plan (ST-040) – changed in place, never deleted. */
 const maintenanceTasks = entities({
@@ -15,33 +20,42 @@ const maintenanceTasks = entities({
     instruction: row.instruction,
     intervalMonths: row.intervalMonths,
     suitableForHelpers: row.suitableForHelpers,
-    machineCategory: row.machineCategory ?? undefined,
-    technology: row.technology ?? undefined,
-    startDate: row.startDate,
     removedAt: row.removedAt ?? undefined,
   }),
   // null, not undefined: an update leaves out undefined columns.
-  toRow: (task) => ({
-    ...task,
-    machineCategory: task.machineCategory ?? null,
-    technology: task.technology ?? null,
-    removedAt: task.removedAt ?? null,
-  }),
+  toRow: (task) => ({ ...task, removedAt: task.removedAt ?? null }),
 });
 
-/** How AGG-MaintenancePlan is stored (ST-040): its one row, versioned (HS-16), with its maintenance tasks. */
+/** The machines of the maintenance tasks (ST-094) – added with the task, never changed once stored. */
+const machinesOfTasks = entities({
+  table: maintenanceTaskMachine,
+  owner: "maintenancePlanId",
+  toEntity: (row): MachineOfTask => ({
+    id: row.id,
+    maintenanceTaskId: row.maintenanceTaskId,
+    machineId: row.machineId,
+    addedAt: row.addedAt,
+  }),
+  toRow: (machine) => machine,
+});
+
+/** How AGG-MaintenancePlan is stored (ST-040): its one row, versioned (HS-16), with its maintenance tasks and their machines. */
 export const maintenancePlans = aggregateStore({
   type: "AGG-MaintenancePlan",
   table: maintenancePlanTable,
-  entities: { maintenanceTasks },
-  toState: (row, lists): MaintenancePlan => ({ id: row.id, maintenanceTasks: lists.maintenanceTasks }),
+  entities: { maintenanceTasks, machinesOfTasks },
+  toState: (row, lists): MaintenancePlan => ({
+    id: row.id,
+    maintenanceTasks: lists.maintenanceTasks,
+    machinesOfTasks: lists.machinesOfTasks,
+  }),
   toRow: (plan: MaintenancePlan) => ({ id: plan.id }),
 });
 
-/** A maintenance task as the maintenance plan lists it (RM-MaintenancePlan), with when it is first due. */
+/** A maintenance task as the maintenance plan lists it (RM-MaintenancePlan), with how many machines it applies to. */
 export type ListedMaintenanceTask = Omit<MaintenanceTask, "removedAt"> & {
-  /** One interval after its start date, which counts as last done (HS-12) – month ends clamped (ST-003). */
-  firstDue: CalendarDate;
+  /** Machines it applies to that are not retired – a retired machine never counts (ST-094). */
+  machineCount: number;
 };
 
 /** The version of the maintenance plan – what the form page of adding a maintenance task posts (HS-16). */
@@ -54,29 +68,24 @@ export async function maintenancePlanVersion(db: Database): Promise<number> {
 }
 
 /**
- * RM-MaintenancePlan (ST-040): the maintenance plan's tasks that are not removed, in the order they were added, and the
- * version a change of the plan names (HS-16).
+ * RM-MaintenancePlan (ST-040, ST-094): the maintenance plan's tasks that are not removed, in the order they were added,
+ * how many machines each applies to – counting only machines Collection publishes for maintenance, which are not
+ * retired – and the version a change of the plan names (HS-16).
  */
 export async function maintenancePlan(
   db: Database,
 ): Promise<{ version: number; maintenanceTasks: ListedMaintenanceTask[] }> {
-  const [version, stored] = await Promise.all([
+  const [version, tasks, machines] = await Promise.all([
     maintenancePlanVersion(db),
-    maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID]),
+    activeMaintenanceTasks(db),
+    machinesForMaintenance(db),
   ]);
-  const tasks = activeOf(stored.get(MAINTENANCE_PLAN_ID) ?? []);
+  const notRetired = new Set(machines.map((machine) => machine.id));
   return {
     version,
-    maintenanceTasks: tasks.map((task) => ({
-      id: task.id,
-      name: task.name,
-      instruction: task.instruction,
-      intervalMonths: task.intervalMonths,
-      suitableForHelpers: task.suitableForHelpers,
-      machineCategory: task.machineCategory,
-      technology: task.technology,
-      startDate: task.startDate,
-      firstDue: maintenanceDates(task.startDate, task.intervalMonths).dueDate,
+    maintenanceTasks: tasks.map(({ machines: ofTask, removedAt: _removedAt, ...task }) => ({
+      ...task,
+      machineCount: ofTask.filter((machine) => notRetired.has(machine.machineId)).length,
     })),
   };
 }
@@ -93,25 +102,26 @@ export async function maintenanceTaskName(db: Database, maintenanceTaskId: strin
   return row?.name;
 }
 
-/** The maintenance tasks of the plan that are not removed – a removed maintenance task is never due (invariant). */
-export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceTask[]> {
-  return activeOf((await maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID])).get(MAINTENANCE_PLAN_ID) ?? []);
+/** The maintenance tasks of the plan that are not removed, with their machines – a removed task is never due (invariant). */
+export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceTaskWithMachines[]> {
+  const [tasks, machines] = await Promise.all([
+    maintenanceTasks.load(db, [MAINTENANCE_PLAN_ID]),
+    machinesOfTasks.load(db, [MAINTENANCE_PLAN_ID]),
+  ]);
+  return withMachines(tasks.get(MAINTENANCE_PLAN_ID) ?? [], machines.get(MAINTENANCE_PLAN_ID) ?? []).filter(
+    (task) => !task.removedAt,
+  );
 }
 
-function activeOf(tasks: MaintenanceTask[]): MaintenanceTask[] {
-  return tasks.filter((task) => !task.removedAt);
+/** The tasks with their machines each. */
+export function withMachines(tasks: MaintenanceTask[], machines: MachineOfTask[]): MaintenanceTaskWithMachines[] {
+  return tasks.map((task) => ({ ...task, machines: machines.filter((each) => each.maintenanceTaskId === task.id) }));
 }
 
 /**
- * Whether a maintenance task applies to a machine of the given machine model (HS-10): without a restriction to every
- * machine, with one only to machines whose machine model has that machine category – and, if the task names one, that
- * technology. The due maintenance list (ST-043) asks it per machine.
+ * Whether a maintenance task applies to a machine (CONTEXT.md: Machines of a maintenance task): the machine is one of
+ * its machines. A retired machine never counts – the readers of Collection's machines leave it out themselves.
  */
-export function maintenanceTaskAppliesTo(
-  task: Pick<MaintenanceTask, "machineCategory" | "technology">,
-  model: { machineCategory: MachineCategory; technology: Technology | undefined },
-): boolean {
-  if (task.machineCategory && task.machineCategory !== model.machineCategory) return false;
-  if (task.technology && task.technology !== model.technology) return false;
-  return true;
+export function maintenanceTaskAppliesTo(task: Pick<MaintenanceTaskWithMachines, "machines">, machineId: string): boolean {
+  return task.machines.some((machine) => machine.machineId === machineId);
 }

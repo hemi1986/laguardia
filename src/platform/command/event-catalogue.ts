@@ -9,8 +9,11 @@ import { journalEntryOf, type Database, type JournalEntry, type JournalEvent, ty
  * to the catalogue, and readers get the journal back typed by the same projection – both directions in one place.
  */
 
-/** A value the journal may hold for an event: a reference or a fact from a fixed list. */
-export type JournalValue = string | number | boolean | null;
+/**
+ * A value the journal may hold for an event: a reference or a fact from a fixed list – or a list of references, for an
+ * event that concerns several of them (the machines added to a maintenance task, ST-094).
+ */
+export type JournalValue = string | number | boolean | null | readonly string[];
 
 type Projected = {
   aggregateId: string;

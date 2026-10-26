@@ -1,5 +1,5 @@
 import { eventCatalogue } from "@/platform/command";
-import type { MaintenancePlanChanged } from "./change-maintenance-plan";
+import type { MachinesOfMaintenanceTaskChanged, MaintenancePlanChanged } from "./change-maintenance-plan";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import type { MaintenanceRecorded } from "./record-maintenance";
 
@@ -15,6 +15,20 @@ export const maintenanceEvents = eventCatalogue({
       aggregateId: MAINTENANCE_PLAN_ID,
       machineId: null,
       data: { maintenanceTaskId: event.maintenanceTaskId, change: event.change },
+    }),
+  },
+  "EVT-MachinesOfMaintenanceTaskChanged": {
+    aggregate: "AGG-MaintenancePlan",
+    // It names no single machine (ST-094): the machines added and removed are references in the data, so a machine's
+    // own journal does not list it – machine IDs only, no text.
+    project: (event: MachinesOfMaintenanceTaskChanged) => ({
+      aggregateId: MAINTENANCE_PLAN_ID,
+      machineId: null,
+      data: {
+        maintenanceTaskId: event.maintenanceTaskId,
+        machinesAdded: event.machinesAdded,
+        machinesRemoved: event.machinesRemoved,
+      },
     }),
   },
   "EVT-MaintenanceRecorded": {

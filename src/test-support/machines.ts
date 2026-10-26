@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { createMachineModelCommand, registerMachineCommand, type MachineStatus } from "@/modules/collection";
+import {
+  createMachineModelCommand,
+  machineForTeamForm,
+  machineLabels,
+  registerMachineCommand,
+  type MachineStatus,
+} from "@/modules/collection";
+import { retireMachineCommand } from "@/modules/repair";
+import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor, type Database } from "@/platform/command";
 import { anExistingTeamMember } from "./team-members";
 
@@ -49,6 +57,24 @@ export async function machinesOfOneModel(
     machines.push(machine.result);
   }
   return machines;
+}
+
+/**
+ * A machine retired – through the retirement of Repair, which closes what is open on it (ST-039). Retiring is a
+ * technician's command; `retiredAt` is the instant it happened.
+ */
+export async function retireMachine(db: Database, machineId: string, retiredAt = "2026-10-15T10:00:00Z"): Promise<void> {
+  const technician: Actor = { kind: "team-member", teamMemberId: TEST_TECHNICIAN, role: "technician" };
+  await anExistingTeamMember(db, technician);
+  const label = (await machineLabels(db, [machineId])).get(machineId);
+  const machine = label && (await machineForTeamForm(db, label.museumNumber));
+  if (!machine) throw new Error(`no machine ${machineId}`);
+  const retired = await executeCommand(
+    retireMachineCommand,
+    { machineId, version: machine.version, reason: "Sold to a collector" },
+    { actor: technician, db, clock: fixedClock(retiredAt), newId: randomUUID },
+  );
+  if (!retired.ok) throw new Error(retired.error);
 }
 
 /**

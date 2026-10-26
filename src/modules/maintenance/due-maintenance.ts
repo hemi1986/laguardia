@@ -1,14 +1,8 @@
-import {
-  machinesForMaintenance,
-  type MachineCategory,
-  type MachineForMaintenance,
-  type Technology,
-} from "@/modules/collection";
+import { machinesForMaintenance, type MachineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, calendarDate, graceDays, maintenanceDates, today, type CalendarDate } from "@/platform/time";
-import type { MaintenanceTask } from "./maintenance-plan";
-import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
+import { activeMaintenanceTasks } from "./maintenance-plans";
 import { lastDoneByRecord, lastDoneKey } from "./maintenance-records";
 import { recordRefusal } from "./record-maintenance";
 
@@ -18,7 +12,8 @@ export type DueMachine = {
   museumNumber: string;
   machineModelTitle: string;
   location: string;
-  lastDone: CalendarDate;
+  /** None on a machine the task newly applies to and nobody has done it on yet – it is due at once (ST-094). */
+  lastDone: CalendarDate | undefined;
   dueSince: CalendarDate;
   /** Due for more than 25 % of the interval (EVT-MaintenanceTaskOverdue, ST-003). */
   overdue: boolean;
@@ -35,9 +30,6 @@ export type DueMaintenanceTask = {
   name: string;
   instruction: string;
   suitableForHelpers: boolean;
-  /** Its restriction – which machines it applies to (HS-10). */
-  machineCategory: MachineCategory | undefined;
-  technology: Technology | undefined;
   machines: DueMachine[];
   /** How many of its machines it is overdue on. */
   overdueCount: number;
@@ -49,10 +41,10 @@ export type DueMaintenanceTask = {
  * – computed when the page loads (ADR 0002). The tasks with the most overdue machines first, then the most due
  * machines, then by name (user, 2026-10-15); within a task its machines by location.
  *
- * Last done is the latest of the task's start date, the machine's registration date (HS-20), the day the task began
- * to apply after a machine model correction (ST-036, D5) and its latest maintenance record *done* (ST-044) – a record
- * *partially done* restarts nothing. A machine *Not on display* is never due; after
- * its return a task that was already due counts from the return (ST-056).
+ * A task applies to the machines a technician chose for it (ST-094). On a machine it newly applies to it is due at
+ * once – since the day the machine was added –; last done is then the latest maintenance record *done* recorded since
+ * (HS-24, ST-044) – a record *partially done* restarts nothing – and the interval runs on that machine alone. A machine
+ * *Not on display* is never due; after its return a task that was already due counts from the return (ST-056).
  *
  * `teamMember` is who looks at it: each due machine says whether they may record the task there (ST-044, G11).
  */
@@ -96,19 +88,12 @@ export async function dueOn(
   ]);
   const due = tasks.flatMap((task) => {
     const dueMachines = machines.flatMap((machine) => {
+      const added = task.machines.find((each) => each.machineId === machine.id);
       // A machine Not on display is never due; maintenance recorded there still counts (HS-13, ST-056).
-      if (machine.machineStatus === "not-on-display" || !maintenanceTaskAppliesTo(task, machine)) return [];
-      // The latest record *done* – but never before the start date, the registration or the day the task began to
-      // apply, which count as last done too (user, 2026-10-15, ST-044; ST-036).
-      const appliesSince = appliesSinceCorrection(task, machine.categoryHistory);
-      const lastDone = latest(
-        task.startDate,
-        calendarDate(machine.registeredAt),
-        appliesSince && calendarDate(appliesSince),
-        recorded.get(lastDoneKey(task.id, machine.id)),
-      );
+      if (!added || machine.machineStatus === "not-on-display") return [];
+      const lastDone = recorded.get(lastDoneKey(task.id, machine.id));
       const { dueDate, overdueFrom } = dueAfterReturn(
-        maintenanceDates(lastDone, task.intervalMonths),
+        lastDone ? maintenanceDates(lastDone, task.intervalMonths) : dueAtOnce(calendarDate(added.addedAt), task.intervalMonths),
         machine.returnedToDisplayAt && calendarDate(machine.returnedToDisplayAt),
         task.intervalMonths,
       );
@@ -133,8 +118,6 @@ export async function dueOn(
         name: task.name,
         instruction: task.instruction,
         suitableForHelpers: task.suitableForHelpers,
-        machineCategory: task.machineCategory,
-        technology: task.technology,
         machines: dueMachines.sort(byLocation),
         overdueCount: dueMachines.filter((machine) => machine.overdue).length,
       },
@@ -144,23 +127,6 @@ export async function dueOn(
     (a, b) =>
       b.overdueCount - a.overdueCount || b.machines.length - a.machines.length || a.name.localeCompare(b.name, "de"),
   );
-}
-
-/**
- * Since when a task has applied without a break, when that began with a correction of the machine model (ST-036): the
- * first entry of the latest run of the category history the task applies to – none when it has applied since the
- * creation (or the history is empty), where the registration and the start date already count.
- */
-function appliesSinceCorrection(
-  task: Pick<MaintenanceTask, "machineCategory" | "technology">,
-  history: MachineForMaintenance["categoryHistory"],
-): Date | undefined {
-  let runStart: number | undefined;
-  for (const [index, entry] of history.entries()) {
-    if (!maintenanceTaskAppliesTo(task, entry)) runStart = undefined;
-    else runStart ??= index;
-  }
-  return runStart === undefined || runStart === 0 ? undefined : history[runStart].holdsFrom;
 }
 
 /** By location as people read it – "row 2" before "row 10" –, then by museum number. */
@@ -174,9 +140,15 @@ export function byLocation(
   );
 }
 
-/** The latest of the given calendar dates – they compare as text. */
-function latest(...dates: (CalendarDate | undefined)[]): CalendarDate {
-  return dates.filter((date): date is CalendarDate => date !== undefined).reduce((a, b) => (b > a ? b : a));
+/**
+ * A task that newly applies to a machine is due at once, since the day the machine was added (ST-094); overdue 25 % of
+ * the actual days of the interval *starting on that day* after it, like a task due on the return (`graceDays`).
+ */
+function dueAtOnce(
+  addedOn: CalendarDate,
+  intervalMonths: number,
+): { dueDate: CalendarDate; overdueFrom: CalendarDate } {
+  return { dueDate: addedOn, overdueFrom: addDays(addedOn, graceDays(addedOn, intervalMonths)) };
 }
 
 /**

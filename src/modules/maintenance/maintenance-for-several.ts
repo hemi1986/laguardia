@@ -38,7 +38,7 @@ export async function maintenanceForSeveral(
   const task = tasks.find((candidate) => candidate.id === maintenanceTaskId);
   if (!task) return undefined;
   const dueHere = (await dueOn(db, clock, machines, teamMember)).find((due) => due.id === task.id);
-  const applicable = machines.filter((machine) => maintenanceTaskAppliesTo(task, machine));
+  const applicable = machines.filter((machine) => maintenanceTaskAppliesTo(task, machine.id));
   const refusals = applicable.map((machine) => recordRefusal(task, machine, teamMember));
   const offered = applicable.filter((_machine, index) => refusals[index] === undefined);
   const dueIds = new Set(dueHere?.machines.map((machine) => machine.machineId));
