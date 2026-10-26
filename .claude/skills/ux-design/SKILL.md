@@ -36,8 +36,9 @@ Everything else a person triggers has a screen, and if nobody designs it, it get
 act, and what they see afterwards? If any of the three is unclear, the feature has an open UX question – raise it
 in the grilling round, don't settle it while writing code.
 
-Stories with a frontend part carry the label **`ui`**. `/review-stories` and `/groom-backlog` route them to the
-`ux-designer` by that label, so a missing label means a story nobody looks at from this side.
+Stories with a frontend part carry the label **`ui`**. `/review-stories` (the lead-dev's UX lens) and
+`/groom-backlog` (the `ux-designer`) pick them by that label, so a missing label means a story nobody looks at from
+this side.
 
 ## The UX frontier – what to grill
 

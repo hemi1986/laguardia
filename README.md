@@ -51,7 +51,7 @@ flowchart LR
     IM -.->|story is wrong:<br/>back to review| RE
 ```
 
-You make the decisions at fixed points: answering grilling rounds, accepting ADRs, approving stories in the review, approving each story's test plan, accepting and merging each story.
+You make the decisions at fixed points: answering grilling rounds, accepting ADRs, approving stories in the review, accepting and merging each story.
 
 ### 1 · Initial discovery (completed – 64 stories are `ready`)
 
@@ -60,7 +60,7 @@ You make the decisions at fixed points: answering grilling rounds, accepting ADR
 /event-storming defect reporting         # detailed flow, as often as needed
 @domain-architect Derive bounded contexts, aggregates and the logical data model from docs/domain/events.yaml. Prepare ADR 0001 for the tech stack decision.
 @requirements-engineer Derive stories for all commands in context BC-….
-/review-stories                          # PO + lead dev in parallel, you approve → ready
+/review-stories                          # one lead-dev pass, you approve → ready
 ```
 
 ### 2 · Engineering – one story at a time
@@ -75,7 +75,7 @@ Each run of `/implement`:
 | # | Step | You |
 |---|---|---|
 | 1 | Branch `st-NNN-…`, status `in-progress`, context pack from the discovery artifacts | |
-| 2 | Test plan: every Gherkin scenario → a seam → a test | **approve** |
+| 2 | Test plan: every Gherkin scenario → a seam → a test | only a seam outside the catalog |
 | 3 | Red → green, one scenario at a time (`tdd` skill), one commit per scenario | |
 | 4 | `verify.ts`: lint incl. module boundaries, types, tests, traceability | |
 | 5 | Review in parallel: `@code-reviewer`, `@acceptance-tester`, `/code-review`, `/security-review` where it applies | |
@@ -146,7 +146,8 @@ docs/                          all other artifacts (source of truth): product, d
   package.json, tsconfig.json  tooling dependencies and type check
   agents/
     product-owner              value, scope, priority                        (Sonnet)
-    lead-dev                   size, risk, slicing                           (Sonnet)
+    lead-dev                   story review: value, size, risk, slicing, UX  (Sonnet)
+    ux-designer                UX guidelines, screen audits in grooming      (Sonnet)
     requirements-engineer      derives and revises stories                   (Opus)
     domain-architect           contexts, aggregates, data model, ADRs        (Opus)
     code-reviewer              ADR/boundary conformance, language, test quality, smells   (Opus)
@@ -160,7 +161,7 @@ docs/                          all other artifacts (source of truth): product, d
     domain-model/              language (CONTEXT.md), contexts, aggregates, data model
     architect/                 architecture decisions: ADR format, tech stack guide
     user-stories/              story rules, schema, validator, backlog renderer
-    review-stories/            /review-stories  – PO + lead dev in parallel, approval
+    review-stories/            /review-stories  – one lead-dev pass (value, build, UX), approval
     implement/                 /implement       – engineering workflow + its scripts
     tdd/                       red → green loop, good tests, seams            (mattpocock/skills, adapted)
     codebase-design/           deep-module vocabulary                         (mattpocock/skills)

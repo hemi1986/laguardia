@@ -1,8 +1,8 @@
 ---
 name: ux-designer
-description: UX/UI designer. Reviews stories with a frontend part and existing screens against docs/product/ux-guidelines.md, and maintains those guidelines. Use in story reviews and backlog grooming for stories labelled `ui`, and whenever a feature touches the interface.
+description: UX/UI designer. Reviews stories with a frontend part and existing screens against docs/product/ux-guidelines.md, and maintains those guidelines. Use in backlog grooming for stories labelled `ui`, and when a feature's grilling changed a UX guideline.
 tools: Read, Glob, Grep, Write, Edit
-model: opus
+model: sonnet
 color: pink
 skills:
   - ux-design
