@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { claimDefectCommand, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
-import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
+import { changeMaintenancePlanCommand, maintenancePlanVersion, recordMaintenanceCommand } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -68,25 +68,29 @@ async function aMachine(museumNumber?: string, registeredAt = "2026-01-01T09:00:
   return registered.machineId;
 }
 
-/** A maintenance task every 3 months from its start date – from 2026-01-01, due from 2026-04-01 on a machine registered before. */
-async function aMaintenanceTask(name: string, suitableForHelpers: boolean, startDate = "2026-01-01") {
-  await run(
+/** A maintenance task every 3 months for those machines, added on that day – due at once on each of them (ST-094). */
+async function aMaintenanceTask(name: string, suitableForHelpers: boolean, machineIds: string[], addedOn: string) {
+  const added = await run(
     executeCommand(
       changeMaintenancePlanCommand,
       {
         version: await maintenancePlanVersion(db),
         change: "add",
-        task: {
-          name,
-          instruction: `${name} – how to`,
-          intervalMonths: 3,
-          suitableForHelpers,
-          machineCategory: undefined,
-          technology: undefined,
-          startDate,
-        },
+        task: { name, instruction: `${name} – how to`, intervalMonths: 3, suitableForHelpers, machineIds },
       },
-      as("2025-12-01T09:00:00Z"),
+      as(`${addedOn}T09:00:00Z`),
+    ),
+  );
+  return added.maintenanceTaskId;
+}
+
+/** The task done on the machine on that day – due again one interval later. */
+async function doneOn(maintenanceTaskId: string, machineId: string, on: string) {
+  await run(
+    executeCommand(
+      recordMaintenanceCommand,
+      { maintenanceTaskId, machineId, outcome: "done", date: undefined, note: "" },
+      as(`${on}T10:00:00Z`),
     ),
   );
 }
@@ -152,12 +156,13 @@ describe("the helper dashboard", () => {
   });
 
   it("ST-049: Helper sees due maintenance tasks suitable for helpers as counts", async () => {
-    // Registered before the start date, so due since 2026-04-01 – overdue by NOW; the other two due since 2026-06-01.
-    await aMachine("LG-042");
-    await aMachine("LG-043", "2026-03-01T09:00:00Z");
-    await aMachine("LG-044", "2026-03-01T09:00:00Z");
-    await aMaintenanceTask("Clean glass (inside & out)", true);
-    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", false);
+    // Added on 2026-02-01 and never done on LG-042 – due since then, overdue by NOW; done on the other two on
+    // 2026-03-01 – due since 2026-06-01.
+    const [lg042, lg043, lg044] = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", true, [lg042, lg043, lg044], "2026-02-01");
+    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", false, [lg042, lg043, lg044], "2026-02-01");
+    await doneOn(cleanGlass, lg043, "2026-03-01");
+    await doneOn(cleanGlass, lg044, "2026-03-01");
 
     const { data, html } = await dashboard();
 
@@ -172,7 +177,9 @@ describe("the helper dashboard", () => {
   it("ST-049: Nothing is open for a helper", async () => {
     // A defect not suitable for helpers, and a maintenance task suitable for helpers that is due from 2026-08-01 only.
     await anOpenDefect("Display flickers");
-    await aMaintenanceTask("Clean glass (inside & out)", true, "2026-05-01");
+    const lg042 = await aMachine("LG-042");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", true, [lg042], "2026-05-01");
+    await doneOn(cleanGlass, lg042, "2026-05-01");
 
     const { html } = await dashboard();
 

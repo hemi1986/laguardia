@@ -84,25 +84,17 @@ async function aMachine(museumNumber: string, machineStatus: MachineStatus = "pl
   return registered.machineId;
 }
 
-/** A maintenance task every 3 months from 2026-01-01 – due from 2026-04-01 and overdue at NOW on every machine. */
-async function aMaintenanceTask(name: string) {
+/** A maintenance task every 3 months, added on 2026-04-01 for those machines – due at once and overdue at NOW on each. */
+async function aMaintenanceTask(name: string, machineIds: string[]) {
   await run(
     executeCommand(
       changeMaintenancePlanCommand,
       {
         version: await maintenancePlanVersion(db),
         change: "add",
-        task: {
-          name,
-          instruction: `${name} – how to`,
-          intervalMonths: 3,
-          suitableForHelpers: false,
-          machineCategory: undefined,
-          technology: undefined,
-          startDate: "2026-01-01",
-        },
+        task: { name, instruction: `${name} – how to`, intervalMonths: 3, suitableForHelpers: false, machineIds },
       },
-      as("2025-12-01T09:00:00Z"),
+      as("2026-04-01T09:00:00Z"),
     ),
   );
 }
@@ -328,9 +320,8 @@ describe("the technician dashboard", () => {
   });
 
   it("ST-058: Overdue maintenance tasks are counted, not listed by machine", async () => {
-    await aMachine("LG-042");
-    await aMachine("LG-043");
-    await aMaintenanceTask("Wax playfield");
+    const machines = [await aMachine("LG-042"), await aMachine("LG-043")];
+    await aMaintenanceTask("Wax playfield", machines);
 
     const { data, html } = await dashboard();
 
@@ -412,8 +403,7 @@ describe("the technician dashboard", () => {
   });
 
   it("ST-058: An empty section says so next to a filled one", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Wax playfield");
+    await aMaintenanceTask("Wax playfield", [await aMachine("LG-042")]);
 
     const { html } = await dashboard();
 

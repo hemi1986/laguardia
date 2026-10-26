@@ -222,3 +222,21 @@ export async function openDefectsEntry(page: Page, museumNumber: string) {
   await expect(entries).toHaveCount(1);
   return entries;
 }
+
+/** The fold of „Geräte der Wartungsaufgabe“ (a native `<details>`) that holds that machine. */
+export const groupOf = (page: Page, museumNumber: string) => page.locator("details").filter({ hasText: museumNumber });
+
+/** Opens the fold that holds that machine – they are closed when the page opens – and returns it. */
+export async function openedGroup(page: Page, museumNumber: string) {
+  const group = groupOf(page, museumNumber);
+  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
+  return group;
+}
+
+/** Ticks these machines in „Geräte der Wartungsaufgabe“, opening the group each is in. */
+export async function tickMachines(page: Page, ...machines: { museumNumber: string }[]) {
+  for (const { museumNumber } of machines) {
+    await openedGroup(page, museumNumber);
+    await page.getByRole("checkbox", { name: new RegExp(museumNumber) }).check();
+  }
+}

@@ -1,10 +1,10 @@
-import { aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
+import { aMachine, expect, logIn, pageWidth, test, tickMachines, unique } from "./fixtures";
 
 /**
  * The due maintenance list on a phone (ST-043): „Wartung“ in the navigation's line (G19 row 5), the filter for
- * helpers as a plain GET form that works without JavaScript. Every machine a browser test registers is registered
- * today, so nothing is ever due here – the list with its tasks, counts and machines is tested on the page's data and
- * its rendering (`src/app/(team)/team/maintenance/due-maintenance.integration.test.ts`). Needs the e2e technician each
+ * helpers as a plain GET form that works without JavaScript. A maintenance task is due at once on every machine it
+ * applies to (ST-094), so the browser tests choose only machines that are Not on display for their tasks: nothing is
+ * ever due here – the list with its tasks, counts and machines is tested on the page's data and its rendering (`src/app/(team)/team/maintenance/due-maintenance.integration.test.ts`). Needs the e2e technician each
  * local run creates (ST-083); the preview database has none before ST-068, so this runs locally only.
  */
 const username = process.env.E2E_TEAM_USERNAME;
@@ -51,14 +51,14 @@ test.describe("recording for several machines without JavaScript", () => {
 
   test("the ticked machines are recorded, and the list confirms them", async ({ page }) => {
     await logIn(page);
-    const first = await aMachine(page);
-    const second = await aMachine(page);
+    const first = await aMachine(page, "not-on-display");
+    const second = await aMachine(page, "not-on-display");
     const name = unique("Clean glass (inside & out)");
     await page.goto("/team/maintenance-plan/new");
     await page.getByLabel("Name").fill(name);
     await page.getByLabel("Anleitung").fill("Glass out, clean both sides.");
     await page.getByLabel("Intervall in Monaten").fill("1");
-    await page.getByLabel("Start").fill(new Date().toISOString().slice(0, 10));
+    await tickMachines(page, first, second);
     await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
     const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
     const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
@@ -93,13 +93,13 @@ test.describe("recording from the machine record without JavaScript", () => {
     page,
   }) => {
     await logIn(page);
-    const machine = await aMachine(page);
+    const machine = await aMachine(page, "not-on-display");
     const name = unique("Clean playfield");
     await page.goto("/team/maintenance-plan/new");
     await page.getByLabel("Name").fill(name);
     await page.getByLabel("Anleitung").fill("Wipe the playfield.");
     await page.getByLabel("Intervall in Monaten").fill("3");
-    await page.getByLabel("Start").fill(new Date().toISOString().slice(0, 10));
+    await tickMachines(page, machine);
     await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
     const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
     const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;

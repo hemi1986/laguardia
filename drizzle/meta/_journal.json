@@ -225,6 +225,13 @@
       "when": 1792942289307,
       "tag": "0031_file-removal",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793045442376,
+      "tag": "0032_maintenance_task_machines",
+      "breakpoints": true
     }
   ]
 }

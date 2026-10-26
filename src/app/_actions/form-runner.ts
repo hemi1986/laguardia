@@ -108,6 +108,21 @@ export type EachFormDefinition<Input, Result, Error extends string, Field extend
 };
 
 /**
+ * A form whose checkboxes are values of one command (ST-094: the machines of a new maintenance task) – the field the
+ * browser posts once per ticked checkbox, and the input with all of them as posted. Unlike `each` the command runs once
+ * for all, and nothing is left out: a value posted twice reaches the command twice, so it can reject it.
+ */
+export type ManyFormDefinition<Input, Result, Field extends string> = Omit<FormDefinition<Input, Result, Field>, "input"> & {
+  many: { field: string };
+  input: (fields: FormFields<Field>, chosen: readonly string[]) => Input;
+};
+
+/** After a rejection of such a form: the values that were chosen (a ticked checkbox is no field the state can echo). */
+export type ManyFormState<Error extends string, Field extends string> =
+  | (NonNullable<FormState<Error, Field>> & { chosen: readonly string[] })
+  | null;
+
+/**
  * What a form run once per chosen item did: the items done with their results, the rejected ones with why, and those
  * never run because a command failed on the way (it is logged) – the ones done stay done.
  */
@@ -159,6 +174,7 @@ const isPhotoError = (error: string): error is PhotoError => Object.hasOwn(rejec
  * - **`each`** (ST-045) – the command once per chosen item, each in its own transaction: a rejected item does not stop
  *   the others. Nothing chosen is rejected (`nothing-chosen`); when every item is rejected the form stays, with the
  *   one reason they share or each item's own.
+ * - **`many`** (ST-094) – one command with all the values ticked in one field, as posted; a rejection keeps them.
  * Each step is its own function, typed with the state its overload promises; `formAction` only picks the step.
  */
 export function formRunner(dependencies: RunnerDependencies) {
@@ -166,6 +182,10 @@ export function formRunner(dependencies: RunnerDependencies) {
     command: Command<Input, Result, Error>,
     definition: EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ): FormStateAction<EachFormState<CommandError<typeof command>, Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
+    definition: ManyFormDefinition<Input, Result, Field>,
+  ): FormStateAction<ManyFormState<CommandError<typeof command>, Field>>;
   function formAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: UploadFormDefinition<Input, Result, Field, Refusal>,
@@ -189,9 +209,11 @@ export function formRunner(dependencies: RunnerDependencies) {
       | PhotoFormDefinition<Input, Result, Field>
       | PhotosFormDefinition<Input, Result, Error, Field>
       | UploadFormDefinition<Input, Result, Field, Error>
+      | ManyFormDefinition<Input, Result, Field>
       | EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ) {
     if ("each" in definition) return eachStep(dependencies, command, definition);
+    if ("many" in definition) return manyStep(dependencies, command, definition);
     if ("upload" in definition) return uploadStep(dependencies, command, definition);
     if ("photo" in definition) {
       // One photo: only the first file of its field is read – more files are never stored (code review ST-032).
@@ -298,6 +320,26 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
       ) as { readonly [F in Field]: string };
       return { error: outcome.error, values };
     }
+    await deleteWhatItRemoved(storage, command, outcome.result);
+    await definition.onSuccess(outcome.result);
+    return null;
+  };
+}
+
+function manyStep<Input, Result, Error extends string, Field extends string>(
+  { currentPerson, storage, ...dependencies }: RunnerDependencies,
+  command: Command<Input, Result, Error>,
+  definition: ManyFormDefinition<Input, Result, Field>,
+): FormStateAction<ManyFormState<CommandError<typeof command>, Field>> {
+  return async (_previous, formData) => {
+    const fields = fieldsOf(formData, definition.fields);
+    // As posted, in the order of the form: a forged post may name one twice, which the command rejects.
+    const chosen = formData.getAll(definition.many.field).filter((item): item is string => typeof item === "string");
+    const outcome = await executeCommand(command, definition.input(fields, chosen), {
+      ...dependencies,
+      actor: await currentPerson(),
+    });
+    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields), chosen };
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;

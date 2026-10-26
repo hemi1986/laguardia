@@ -108,14 +108,18 @@ async function statusChanged(machineId: string, version: number, machineStatus: 
   );
 }
 
-/** A maintenance task in the maintenance plan – its start date counts as last done. */
+/**
+ * A maintenance task for those machines, added on that day (by default 1 April 2026) – due at once on each of them
+ * (ST-094), so without a record it is due since then and overdue 25 % of the interval later.
+ */
 async function aMaintenanceTask(
   name: string,
+  machineIds: string[],
   {
     intervalMonths = 3,
     suitableForHelpers = false,
-    startDate = "2026-01-01",
-  }: Partial<{ intervalMonths: number; suitableForHelpers: boolean; startDate: string }> = {},
+    addedOn = "2026-04-01",
+  }: Partial<{ intervalMonths: number; suitableForHelpers: boolean; addedOn: string }> = {},
 ) {
   return (
     await run(
@@ -124,17 +128,9 @@ async function aMaintenanceTask(
         {
           version: await maintenancePlanVersion(db),
           change: "add",
-          task: {
-            name,
-            instruction: `${name} – how to`,
-            intervalMonths,
-            suitableForHelpers,
-            machineCategory: undefined,
-            technology: undefined,
-            startDate,
-          },
+          task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers, machineIds },
         },
-        { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
+        { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
       ),
     )
   ).maintenanceTaskId;
@@ -216,8 +212,8 @@ async function pageAt(url: URL, on: string, viewer: Person) {
 describe("section 5 „Wartung“ of the machine record", () => {
   it("ST-047: Machine record shows maintenance records", async () => {
     const lg042 = await aMachine("LG-042");
-    const switchTest = await aMaintenanceTask("Switch test (every switch)");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
+    const switchTest = await aMaintenanceTask("Switch test (every switch)", [lg042]);
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], { suitableForHelpers: true });
     await recorded(switchTest, lg042, "2026-06-02", {
       actor: ben,
       outcome: "partially-done",
@@ -243,7 +239,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
   it("ST-047: Only the 5 latest maintenance records are on the machine record", async () => {
     const lg042 = await aMachine("LG-042");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
     for (const day of ["01", "02", "03", "04", "05", "06", "07"]) {
       await recorded(cleanGlass, lg042, `2026-06-${day}`, { note: `Glass of 2026-06-${day}` });
     }
@@ -278,9 +274,9 @@ describe("section 5 „Wartung“ of the machine record", () => {
   });
 
   it("ST-047: Machine record shows due and overdue maintenance tasks", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-03-03" });
-    await aMaintenanceTask("Wax playfield", { intervalMonths: 3, startDate: "2026-01-01" });
+    const lg042 = await aMachine("LG-042");
+    await aMaintenanceTask("Clean playfield", [lg042], { addedOn: "2026-06-03" });
+    await aMaintenanceTask("Wax playfield", [lg042]);
 
     const { due } = await page("LG-042", "2026-06-10");
 
@@ -293,9 +289,9 @@ describe("section 5 „Wartung“ of the machine record", () => {
   });
 
   it("ST-047: Helpers record only maintenance suitable for helpers from the machine record", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
-    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", { suitableForHelpers: false });
+    const lg042 = await aMachine("LG-042");
+    await aMaintenanceTask("Clean glass (inside & out)", [lg042], { suitableForHelpers: true });
+    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042], { suitableForHelpers: false });
 
     const { due } = await page("LG-042", "2026-06-10", anna);
 
@@ -306,7 +302,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
   it("ST-047: Machines not on display show nothing due", async () => {
     const lg030 = await aMachine("LG-030");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg030], { addedOn: "2026-01-01" });
     await recorded(cleanGlass, lg030, "2026-03-15", { note: "Before the restoration" });
     await statusChanged(lg030, 0, "not-on-display", "2026-03-20");
 
@@ -321,7 +317,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
   it("says nothing due on a machine retired while Not on display, and still lists its records", async () => {
     const lg031 = await aMachine("LG-031");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg031], { addedOn: "2026-01-01" });
     await recorded(cleanGlass, lg031, "2026-03-15", { note: "Before the restoration" });
     await statusChanged(lg031, 0, "not-on-display", "2026-03-20");
     await run(
@@ -342,7 +338,8 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
   it("ST-047: Nothing due and nothing recorded says so", async () => {
     await aMachine("LG-050");
-    await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 3, startDate: "2026-06-01" });
+    // The task applies to another machine only: on LG-050 nothing is due.
+    await aMaintenanceTask("Clean glass (inside & out)", [await aMachine("LG-051")]);
 
     const { due, records } = await page("LG-050", "2026-06-10");
 
@@ -351,10 +348,10 @@ describe("section 5 „Wartung“ of the machine record", () => {
   });
 
   it("shows the overdue maintenance tasks first, then the longest due", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Due last", { intervalMonths: 3, startDate: "2026-03-08" });
-    await aMaintenanceTask("Overdue", { intervalMonths: 3, startDate: "2026-01-01" });
-    await aMaintenanceTask("Due first", { intervalMonths: 3, startDate: "2026-03-03" });
+    const lg042 = await aMachine("LG-042");
+    await aMaintenanceTask("Due last", [lg042], { addedOn: "2026-06-08" });
+    await aMaintenanceTask("Overdue", [lg042]);
+    await aMaintenanceTask("Due first", [lg042], { addedOn: "2026-06-03" });
 
     const { due } = await page("LG-042", "2026-06-10");
 
@@ -368,7 +365,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
   it("groups all maintenance records by the year they were carried out, the newest first", async () => {
     const lg042 = await aMachine("LG-042");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { startDate: "2025-01-01" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], { addedOn: "2025-01-01" });
     await recorded(cleanGlass, lg042, "2025-11-20", { note: "Glass of 2025-11-20" });
     await recorded(cleanGlass, lg042, "2026-02-03", { note: "Glass of 2026-02-03" });
     await recorded(cleanGlass, lg042, "2026-05-04", { note: "Glass of 2026-05-04" });
@@ -388,7 +385,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
   it("confirms a maintenance record only on its own machine", async () => {
     const lg042 = await aMachine("LG-042");
     await aMachine("LG-043");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
     const { maintenanceRecordId } = await recorded(cleanGlass, lg042, "2026-06-10");
     const at = (address: string) => new URL(address, "https://laguardia.example");
 
@@ -429,10 +426,9 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
     it("ST-047: Recording maintenance from the machine record", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanPlayfield = await aMaintenanceTask("Clean playfield", {
-        intervalMonths: 3,
+      const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg042], {
         suitableForHelpers: true,
-        startDate: "2026-03-03",
+        addedOn: "2026-06-03",
       });
       const before = await page("LG-042", "2026-06-10", anna);
       expect(entryOf(before.due, "Clean playfield")).toContain(
@@ -457,7 +453,7 @@ describe("section 5 „Wartung“ of the machine record", () => {
 
     it("ST-047: A rejected recording still leads back to the machine record", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-03-03" });
+      const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg042], { addedOn: "2026-06-03" });
       const link = /href="([^"]*)"[^>]*>Wartung erfassen</.exec(
         entryOf((await page("LG-042", "2026-06-10")).due, "Clean playfield"),
       )![1];

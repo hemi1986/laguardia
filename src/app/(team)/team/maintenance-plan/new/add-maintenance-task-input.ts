@@ -8,11 +8,20 @@ export const addMaintenanceTaskFields = ["version", "name", ...maintenanceTaskFi
 
 export type AddMaintenanceTaskField = (typeof addMaintenanceTaskFields)[number];
 
-/** Reads the form „Wartungsaufgabe hinzufügen“ (ST-040, Q19): its name, and the details every maintenance task has. */
-export function addMaintenanceTaskInput(fields: FormFields<AddMaintenanceTaskField>): ChangeMaintenancePlanInput {
+/** The field the browser posts once per ticked machine – the runner reads them all, as posted (ST-094). */
+export const MACHINE_FIELD = "machineId";
+
+/**
+ * Reads the form „Wartungsaufgabe hinzufügen“ (ST-040, ST-094, Q19): its name, the details every maintenance task has
+ * and the machines ticked – exactly as posted, so a forged step that names one twice reaches the command.
+ */
+export function addMaintenanceTaskInput(
+  fields: FormFields<AddMaintenanceTaskField>,
+  machineIds: readonly string[],
+): ChangeMaintenancePlanInput {
   return {
     version: versionSeen(fields.version),
     change: "add",
-    task: { name: fields.name ?? "", ...maintenanceTaskChangesOf(fields) },
+    task: { name: fields.name ?? "", ...maintenanceTaskChangesOf(fields), machineIds },
   };
 }

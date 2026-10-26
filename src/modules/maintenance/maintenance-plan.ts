@@ -1,10 +1,8 @@
-import type { MachineCategory, Technology } from "@/modules/collection";
-import type { CalendarDate } from "@/platform/time";
-
 /**
  * A maintenance task of the maintenance plan (CONTEXT.md: Maintenance task; data model, ST-040): a recurring job with a
- * time-based interval in whole months, a short instruction, a *suitable for helpers* mark and optionally a restriction
- * to a machine category, or a machine category and a technology. Its start date counts as last done (HS-12).
+ * time-based interval in whole months, a short instruction and a *suitable for helpers* mark. Which machines it applies
+ * to is a list of its own (`MachineOfTask`) – no restriction to a machine category or technology and no start date
+ * (FLOW-PerMachineMaintenance, ST-094).
  */
 export type MaintenanceTask = {
   id: string;
@@ -13,13 +11,20 @@ export type MaintenanceTask = {
   /** Whole months, positive. */
   intervalMonths: number;
   suitableForHelpers: boolean;
-  /** No machine category: it applies to every machine. */
-  machineCategory: MachineCategory | undefined;
-  /** Only with a machine category it fits (AGG-MaintenancePlan invariant). */
-  technology: Technology | undefined;
-  startDate: CalendarDate;
   /** When it was removed (ST-041) – a removed maintenance task never becomes due again. */
   removedAt: Date | undefined;
+};
+
+/**
+ * One of the machines a maintenance task applies to (data model: Machine of the task, CONTEXT.md: Machines of a
+ * maintenance task): the machine and the moment it was added. The task is due at once from then on, and only done
+ * maintenance records recorded since then count for last done (HS-24). A retired machine's entry stays and never counts.
+ */
+export type MachineOfTask = {
+  id: string;
+  maintenanceTaskId: string;
+  machineId: string;
+  addedAt: Date;
 };
 
 /** The ID of the one maintenance plan – created by the migration `drizzle/0019_maintenance_plan.sql`. */
@@ -30,4 +35,10 @@ export type MaintenancePlan = {
   id: string;
   /** In the order they were added. */
   maintenanceTasks: MaintenanceTask[];
+  /** The machines of all maintenance tasks, in the order they were added. */
+  machinesOfTasks: MachineOfTask[];
 };
+
+/** A maintenance task with the IDs of the machines it applies to – retired ones may be among them (they never count). */
+export type MaintenanceTaskWithMachines = MaintenanceTask & { machines: MachineOfTask[] };
+

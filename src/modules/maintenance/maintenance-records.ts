@@ -1,10 +1,10 @@
-import { and, count, desc, eq, inArray, max } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
-import { activeMaintenanceTasks, maintenancePlans } from "./maintenance-plans";
+import { activeMaintenanceTasks, maintenancePlans, withMachines } from "./maintenance-plans";
 import {
   LONGEST_BACK_DATING_DAYS,
   recordRefusal,
@@ -14,7 +14,7 @@ import {
   type RecordMaintenanceError,
   type RecordMaintenanceInput,
 } from "./record-maintenance";
-import { maintenanceRecord, maintenanceTask } from "./schema";
+import { maintenanceRecord, maintenanceTask, maintenanceTaskMachine } from "./schema";
 
 function toRecord(row: typeof maintenanceRecord.$inferSelect): MaintenanceRecord {
   return {
@@ -48,7 +48,9 @@ export async function maintenanceFacts(tx: Database, input: RecordMaintenanceInp
     machineForMaintenance(tx, input.machineId),
   ]);
   return {
-    maintenanceTask: plan?.state.maintenanceTasks.find((task) => task.id === input.maintenanceTaskId),
+    maintenanceTask: plan && withMachines(plan.state.maintenanceTasks, plan.state.machinesOfTasks).find(
+      (task) => task.id === input.maintenanceTaskId,
+    ),
     machine,
   };
 }
@@ -89,7 +91,9 @@ export async function latestMaintenanceRecords(
 
 /**
  * The day each maintenance task was last *done* on each of the given machines – only *done* restarts the interval
- * (ST-044). Keyed by `lastDoneKey(task, machine)`; a pair without a record *done* is not in the map.
+ * (ST-044), and only a record recorded since the machine was last added to the task counts (HS-24, ST-094; a record
+ * recorded at the very moment of adding counts). Keyed by `lastDoneKey(task, machine)`; a pair without such a record is
+ * not in the map.
  */
 export async function lastDoneByRecord(
   db: Database,
@@ -103,7 +107,20 @@ export async function lastDoneByRecord(
       date: max(maintenanceRecord.date),
     })
     .from(maintenanceRecord)
-    .where(and(eq(maintenanceRecord.outcome, "done"), inArray(maintenanceRecord.machineId, [...machineIds])))
+    .innerJoin(
+      maintenanceTaskMachine,
+      and(
+        eq(maintenanceRecord.maintenanceTaskId, maintenanceTaskMachine.maintenanceTaskId),
+        eq(maintenanceRecord.machineId, maintenanceTaskMachine.machineId),
+      ),
+    )
+    .where(
+      and(
+        eq(maintenanceRecord.outcome, "done"),
+        inArray(maintenanceRecord.machineId, [...machineIds]),
+        gte(maintenanceRecord.recordedAt, maintenanceTaskMachine.addedAt),
+      ),
+    )
     .groupBy(maintenanceRecord.maintenanceTaskId, maintenanceRecord.machineId);
   return new Map(
     rows.flatMap((row) => (row.date ? [[lastDoneKey(row.maintenanceTaskId, row.machineId), row.date] as const] : [])),
@@ -141,7 +158,7 @@ export async function maintenanceForRecording(
   db: Database,
   clock: Clock,
   maintenanceTaskId: string,
-  machine: Omit<MachineForRecording, "id">,
+  machine: MachineForRecording,
   teamMember: { role: Role },
 ): Promise<MaintenanceForRecording | undefined> {
   const task = (await activeMaintenanceTasks(db)).find((candidate) => candidate.id === maintenanceTaskId);

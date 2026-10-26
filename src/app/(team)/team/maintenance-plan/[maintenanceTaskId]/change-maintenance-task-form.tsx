@@ -6,7 +6,7 @@ import { rejectionText } from "@/app/_actions/rejection-text";
 import { Button } from "@/components/ui/button";
 import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
-import { MaintenanceTaskFields, type Choices } from "../maintenance-task-fields";
+import { MaintenanceTaskFields } from "../maintenance-task-fields";
 import { changeMaintenanceTaskAction } from "./actions";
 
 const { maintenancePlan: texts } = teamMessages;
@@ -18,9 +18,6 @@ export type TaskAsItIs = {
   instruction: string;
   intervalMonths: string;
   suitableForHelpers: boolean;
-  machineCategory: string;
-  technology: string;
-  startDate: string;
 };
 
 /**
@@ -35,8 +32,11 @@ export function ChangeMaintenanceTaskForm({
   task,
   version,
   removed,
-  ...choices
-}: Choices & { task: TaskAsItIs; version: number; removed: boolean }) {
+}: {
+  task: TaskAsItIs;
+  version: number;
+  removed: boolean;
+}) {
   const [state, action, pending] = useActionState(changeMaintenanceTaskAction, null);
   const rejectionId = useId();
   if (removed && !state) return <p>{texts.notInPlan}</p>;
@@ -74,7 +74,6 @@ export function ChangeMaintenanceTaskForm({
         kept={keptKey(state)}
         error={state?.error}
         rejectionId={rejectionId}
-        {...choices}
       />
       {state?.error && (
         <div id={rejectionId}>

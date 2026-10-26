@@ -1,11 +1,9 @@
-import { technologiesOf, type MachineCategory, type Technology } from "@/modules/collection";
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
-import { isCalendarDate, type CalendarDate } from "@/platform/time";
-import type { MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
+import type { MachineOfTask, MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
 
 /**
  * CMD-ChangeMaintenancePlan (AGG-MaintenancePlan): a technician changes the museum-wide maintenance plan – adds a
- * maintenance task (ST-040), changes one or removes it (ST-041).
+ * maintenance task with the machines it applies to (ST-040, ST-094), changes one or removes it (ST-041).
  */
 
 /** Who may change the maintenance plan – technicians only. */
@@ -13,19 +11,19 @@ export const maintenancePlanActors = ["technician"] as const;
 
 type ChangingPerson = ActorOf<(typeof maintenancePlanActors)[number]>;
 
-/** A maintenance task as the technician gives it – nothing given is undefined, and the decision says what is missing. */
-export type NewMaintenanceTask = {
-  name: string;
+/** The details of a maintenance task – everything but its name, which a change keeps (ST-041) and its machines. */
+export type MaintenanceTaskDetails = {
   instruction: string;
   intervalMonths: number | undefined;
   suitableForHelpers: boolean;
-  machineCategory: MachineCategory | undefined;
-  technology: Technology | undefined;
-  startDate: CalendarDate | undefined;
 };
 
-/** The details of a maintenance task – everything but its name, which a change keeps (ST-041). */
-export type MaintenanceTaskDetails = Omit<NewMaintenanceTask, "name">;
+/**
+ * A maintenance task as the technician gives it – nothing given is undefined, and the decision says what is missing.
+ * `machineIds` are the machines it applies to (none is allowed), exactly as posted: a forged step may name one La Guardia
+ * does not know, or one twice.
+ */
+export type NewMaintenanceTask = MaintenanceTaskDetails & { name: string; machineIds: readonly string[] };
 
 export type ChangeMaintenancePlanInput = {
   /** The version of the maintenance plan the technician saw (HS-16). */
@@ -46,34 +44,66 @@ export type MaintenancePlanChanged = {
   changedBy: TeamMemberId;
 };
 
+/** EVT-MachinesOfMaintenanceTaskChanged – names no single machine: the machines added (and removed) in one step. */
+export type MachinesOfMaintenanceTaskChanged = {
+  type: "EVT-MachinesOfMaintenanceTaskChanged";
+  maintenanceTaskId: string;
+  machinesAdded: readonly string[];
+  machinesRemoved: readonly string[];
+  changedBy: TeamMemberId;
+};
+
 export type ChangeMaintenancePlanError =
   | "name-required"
   | "instruction-required"
   | "interval-not-positive"
   | "interval-too-long"
-  | "start-date-required"
-  | "start-date-out-of-range"
-  | "technology-without-machine-category"
-  | "technology-does-not-fit-machine-category"
-  | "maintenance-task-unknown";
+  | "maintenance-task-unknown"
+  | "unknown-machine"
+  | "machine-retired"
+  | "machine-chosen-twice";
 
 /**
- * Technical limits, not rules of the domain (ST-040 code review, 2026-10-15): beyond them the calendar arithmetic of
- * due dates (ST-003) leaves four-digit years, and the maintenance plan could no longer be shown.
+ * What the decision reads besides the plan: the chosen machines as Collection knows them – one entry per machine that
+ * exists (a machine La Guardia does not know is missing), read in the command's transaction (context map).
+ */
+export type ChosenMachines = ReadonlyMap<string, { retired: boolean }>;
+
+/**
+ * Technical limit, not a rule of the domain (ST-040 code review, 2026-10-15): beyond it the calendar arithmetic of due
+ * dates (ST-003) leaves four-digit years, and the maintenance plan could no longer be shown.
  */
 export const LONGEST_INTERVAL_MONTHS = 1200;
-export const EARLIEST_START_DATE = "1900-01-01";
-export const LATEST_START_DATE = "2999-12-31";
 
 export function changeMaintenancePlan(
   plan: MaintenancePlan,
   input: ChangeMaintenancePlanInput,
   { actor, clock, newId }: DecisionContext<ChangingPerson>,
-): Decision<MaintenancePlan, MaintenancePlanChanged, ChangeMaintenancePlanError> {
-  const changed = (maintenanceTasks: MaintenanceTask[], maintenanceTaskId: string, change: MaintenancePlanChange) => ({
+  chosen: ChosenMachines,
+): Decision<MaintenancePlan, MaintenancePlanChanged | MachinesOfMaintenanceTaskChanged, ChangeMaintenancePlanError> {
+  const changed = (
+    maintenanceTasks: MaintenanceTask[],
+    maintenanceTaskId: string,
+    change: MaintenancePlanChange,
+    machines: MachineOfTask[] = [],
+  ) => ({
     ok: true as const,
-    state: { ...plan, maintenanceTasks },
-    events: [{ type: "EVT-MaintenancePlanChanged" as const, maintenanceTaskId, change, changedBy: actor.teamMemberId }],
+    state: { ...plan, maintenanceTasks, machinesOfTasks: [...plan.machinesOfTasks, ...machines] },
+    events: [
+      { type: "EVT-MaintenancePlanChanged" as const, maintenanceTaskId, change, changedBy: actor.teamMemberId },
+      // A change that adds nothing records no event for the machines.
+      ...(machines.length === 0
+        ? []
+        : [
+            {
+              type: "EVT-MachinesOfMaintenanceTaskChanged" as const,
+              maintenanceTaskId,
+              machinesAdded: machines.map((machine) => machine.machineId),
+              machinesRemoved: [],
+              changedBy: actor.teamMemberId,
+            },
+          ]),
+    ],
   });
 
   if (input.change === "add") {
@@ -81,9 +111,19 @@ export function changeMaintenancePlan(
     if (!name) return { ok: false, error: "name-required" };
     const details = detailsOf(input.task);
     if (!details.ok) return details;
-    // The start date counts as last done: the task is first due one interval later (HS-12).
+    // Only the machines of a sent step that La Guardia knows, once each, and not retired – or the whole step is
+    // rejected (HS-22: a task and its machines are stored together or not at all).
+    const refusal = machinesRefusal(input.task.machineIds, chosen);
+    if (refusal) return { ok: false, error: refusal };
     const added: MaintenanceTask = { id: newId(), name, ...details.details, removedAt: undefined };
-    return changed([...plan.maintenanceTasks, added], added.id, "added");
+    // The task is due at once on every machine it newly applies to: from the moment it was added (HS-24).
+    const machines = input.task.machineIds.map((machineId) => ({
+      id: newId(),
+      maintenanceTaskId: added.id,
+      machineId,
+      addedAt: clock.now(),
+    }));
+    return changed([...plan.maintenanceTasks, added], added.id, "added", machines);
   }
 
   // A removed maintenance task is gone from the plan: it is never changed or removed again (invariant, ST-041).
@@ -100,11 +140,22 @@ export function changeMaintenancePlan(
   return changed(replaced({ ...existing, ...details.details }), existing.id, "changed");
 }
 
+/** Why the chosen machines cannot be the machines of a new maintenance task – none if they can. */
+function machinesRefusal(
+  machineIds: readonly string[],
+  chosen: ChosenMachines,
+): Extract<ChangeMaintenancePlanError, "unknown-machine" | "machine-retired" | "machine-chosen-twice"> | undefined {
+  if (new Set(machineIds).size !== machineIds.length) return "machine-chosen-twice";
+  if (machineIds.some((machineId) => !chosen.has(machineId))) return "unknown-machine";
+  if (machineIds.some((machineId) => chosen.get(machineId)?.retired)) return "machine-retired";
+  return undefined;
+}
+
 /** The rules every maintenance task keeps, whether added or changed (AGG-MaintenancePlan invariants). */
 function detailsOf(
   task: MaintenanceTaskDetails,
 ):
-  | { ok: true; details: Omit<MaintenanceTask, "id" | "name" | "removedAt"> }
+  | { ok: true; details: Pick<MaintenanceTask, "instruction" | "intervalMonths" | "suitableForHelpers"> }
   | { ok: false; error: ChangeMaintenancePlanError } {
   const instruction = task.instruction.trim();
   if (!instruction) return { ok: false, error: "instruction-required" };
@@ -112,24 +163,8 @@ function detailsOf(
     return { ok: false, error: "interval-not-positive" };
   }
   if (task.intervalMonths > LONGEST_INTERVAL_MONTHS) return { ok: false, error: "interval-too-long" };
-  if (!task.startDate || !isCalendarDate(task.startDate)) return { ok: false, error: "start-date-required" };
-  if (task.startDate < EARLIEST_START_DATE || task.startDate > LATEST_START_DATE) {
-    return { ok: false, error: "start-date-out-of-range" };
-  }
-  // A restriction to a technology fits the restricted machine category (AGG-MaintenancePlan invariant, HS-10).
-  if (task.technology && !task.machineCategory) return { ok: false, error: "technology-without-machine-category" };
-  if (task.technology && task.machineCategory && !technologiesOf(task.machineCategory).includes(task.technology)) {
-    return { ok: false, error: "technology-does-not-fit-machine-category" };
-  }
   return {
     ok: true,
-    details: {
-      instruction,
-      intervalMonths: task.intervalMonths,
-      suitableForHelpers: task.suitableForHelpers,
-      machineCategory: task.machineCategory,
-      technology: task.technology,
-      startDate: task.startDate,
-    },
+    details: { instruction, intervalMonths: task.intervalMonths, suitableForHelpers: task.suitableForHelpers },
   };
 }

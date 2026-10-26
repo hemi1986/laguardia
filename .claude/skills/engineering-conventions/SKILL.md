@@ -118,6 +118,17 @@ JSX transform falls back to `createElement` and warns about the select's option 
 `formAction`; its Server Action mirrors the contract by hand: `(previous, formData) => { error, values } | null`, used
 with `useActionState`, and `values` never holds a password (`src/app/login/actions.ts`, `log-in-form.tsx`).
 
+**Choosing many out of a long list: `GroupedChoice`** (`src/components/ui/grouped-choice.tsx`, ST-094, UX guideline
+G27, first used for the machines of a maintenance task; ST-095 to ST-098 use it again). Every entry is a native checkbox
+posted under one `name`; the entries sit in groups that are native `<details>` – they open without JavaScript, are
+closed when the page opens, except those with a choice in them (after a rejection) –, and the header names the group and
+how many of it are chosen. With JavaScript the count follows every tick and „Alle auswählen“ ticks the group (the
+button renders only after hydration, `useSyncExternalStore`); without it the count says what was chosen when the page
+opened. It carries no domain logic and no texts: the page maps its domain groups to `ChoiceGroup`s with the German
+labels, and the client form passes the header function and the button text. Key it on `keptKey(state)` so a rejection
+starts it again from the values the state kept. Group order and grouping are Collection's (`groupMachines`).
+**No-JavaScript test passed:** native checkboxes in a native fold (`e2e/maintenance-plan-machines.spec.ts`).
+
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
 `Badge`", "Use `Skeleton`", "use `toast`" are each a new file to maintain and a second UI package in the bundle.
 Adding one happens in a story, with a reason – `Confirmation`/`Rejection` in `src/components/ui/message.tsx`
@@ -233,6 +244,20 @@ says which fields it reads and how they become the input.
 (`recordOffered`), and the form page asks `maintenanceForRecording(db, clock, taskId, machine, teamMember)` for the
 task, the refusal (`whyNot`) and the dates allowed. The page keeps no rule of its own (G11); `recordRefusal` stays
 inside the module.
+
+**The machines of a maintenance task** (ST-094, FLOW-PerMachineMaintenance): the plan's state holds them as a flat list
+`machinesOfTasks` next to `maintenanceTasks` (both `entities`, owned by the one plan; `MaintenanceTaskWithMachines`
+joins them for readers) – a machine of the task has the moment it was added. A task **applies** to a machine that is one
+of its machines and not retired (`maintenanceTaskAppliesTo`, plus the retired machine being left out of Collection's
+published machines); category, technology and machine model corrections play no part. Due on a machine: *last done* is
+the latest done record **recorded since the machine was added** (`lastDoneByRecord` joins the machines of the task and
+compares `recorded_at` with `added_at`, the very moment included); without one the task is due since the day it was
+added (`dueAtOnce`, overdue `graceDays` of the interval starting that day later), and the HS-20 rule of the return
+applies on top. CMD-ChangeMaintenancePlan adds a task and its machines in one step (`EVT-MaintenancePlanChanged` and
+`EVT-MachinesOfMaintenanceTaskChanged`): its `facts` read each chosen machine through Collection's `machineForMaintenance`
+(retirement lock shared, ADR 0010) **in the order of the machine IDs**, the decision rejects an unknown, a retired or a
+doubled machine as a whole. The page names the machines retired meanwhile from the posted values (`retiredAmong`) – a
+command error is a code, the museum numbers come from the page.
 
 **Maintenance's lists read Collection's machines themselves** (architecture review 2026-10-25): Collection publishes
 its machines for maintenance (context map, Published Language), and the answers over them read them in one call –
@@ -405,6 +430,11 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   `nothing-chosen`; when every item is rejected the form stays (`EachFormState`: the ticked `chosen` items, and
   `rejected` per item only when the reasons differ). The page landed on confirms each record by `lastCommandBy` (G3);
   the items left out are named in the address, but their reason is the owning module's answer now – never the address's.
+- **A form whose checkboxes are values of one command** (first: ST-094, the machines of a new maintenance task) passes
+  `many: { field }` and `input: (fields, chosen) => …`: the command runs **once** with all the values ticked in that
+  field, **as posted** – in the order of the form and without removing a value posted twice, so the decision can reject a
+  forged step that names one twice. Unlike `each` nothing is left out and one rejection rejects all; the state after a
+  rejection holds the ticked values as `chosen` (`ManyFormState`). Nothing ticked is an empty list – the decision decides.
 - **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo) => …`: the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
 - **A form with several photos** (ST-032) passes `photos: { field, owner, atMost: { count, error } }` and
   `input: (fields, photos) => …` – the browser posts the file field once per photo (`PhotosField`,
@@ -473,6 +503,10 @@ the only way:
 
 - `data` holds **only references and non-personal facts** (a new status, a priority, a defect ID) – **never free text a person typed** (descriptions, notes, reasons). Text lives only in the aggregate, where it can be removed (spam dismissal, personal data). Decided 2026-09-27.
 - Set `machineId` whenever the event concerns a machine – timelines and "new since last visit" (ST-050) query by it.
+- **An event that concerns several machines names none** (ST-094, `EVT-MachinesOfMaintenanceTaskChanged`): `machineId`
+  stays `null`, and the machines are references in the data – `JournalValue` may be a list of strings
+  (`machinesAdded`, `machinesRemoved`). A machine's own timeline therefore does not list the event; read it from the
+  plan's aggregate (`journalOf(db, { aggregateId })`). Only IDs go in, never text.
 - **The event catalogue per module** (`src/modules/<module>/events.ts`, `eventCatalogue` from the command layer; ST-079, architecture review 2026-10-17): per event type its aggregate and its projection – the aggregate ID, the machine and the only fields that reach the journal. Commands pass `<module>Events.journal`; `events.test.ts` next to each catalogue checks it against `events.yaml` (the event exists there, on its own aggregate or on that of a command producing it).
 - Read it typed with `readJournal(db, <module>Events, { types, aggregateIds, machineId, since, notBy })` – the data of each entry is typed by its projection (partial: older entries may lack a later field); `journalOf(db, { aggregateId } | { machineId })` stays for tests and untyped looks. It is never replayed to rebuild state.
 
@@ -601,6 +635,11 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 ## Migrations
 
 Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQL (triggers) goes at the end of the generated file. A **foreign key to another module's table** is hand-written SQL in the migration too – a module's schema never imports another module's tables (e.g. `problem_report.reporter_team_member_id` → `team_member.id`). Migrations run in the Vercel build (`npm run db:migrate`) and in the test database reset. Locally: `npm run db:up`, `npm run db:migrate:dev`.
+A migration that moves **data** from an old shape to a new one (ST-094: the restrictions and start dates of the maintenance
+tasks become chosen machines) is a hand-written `DO $$ … $$` block in the same migration, after the new table and before
+the old columns are dropped. Name its variables `v_…` – a plpgsql variable named like a column is ambiguous. It writes no
+event journal entry when it is a data change, not a step a person took. It is tested with
+`isolatedTestDatabase(…).reset("<tag before>")`, data inserted with SQL as production had it, then `.migrate()`.
 
 ## Tests
 
@@ -640,6 +679,13 @@ Change `schema.ts`, then `npm run db:generate -- --name <what>`; hand-written SQ
   { suitableForHelpers })`, `openDefect`, `openDefectsEntry`, `unique` / `uniqueId`, `pageWidth`, `TECHNICIAN`. A spec
   defines a helper of its own only for what is particular to it – never a second copy of one of these.
 - **Browser tests** must run against the preview too: no reliance on local data, unique texts per run; a page reached with `page.request` needs a navigation first, which sets the preview's bypass cookie. `e2e/security.spec.ts` (CSRF on `/login`) and `e2e/home.spec.ts` need no account and run there.
+- **A scenario of a done story that a later story supersedes** (ST-094; ST-036, ST-040, ST-041, ST-043): a done story is
+  never reopened, so its scenario stays in its file – but its test goes together with the change that makes it untrue,
+  and `docs/stories/superseded-scenarios.json` lists the scenario with the story that supersedes it
+  (`{ "ST-040": { "<scenario title>": "ST-094" } }`). `check-scenarios.ts` (so `verify.ts`) then expects **no** test for it
+  and refuses a stale entry: no such scenario in the story, the superseding story neither in progress nor done, or a
+  test still there. The superseding story's pull request lists the scenarios and the tests it changed, each with its
+  reason; no other test is weakened. A scenario kept with a new set-up keeps its title and test.
 - Never weaken or delete a test to get green.
 
 ## Seam catalog

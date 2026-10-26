@@ -1,0 +1,24 @@
+{
+  "ST-036": {
+    "Correcting the technology changes the applicable maintenance tasks": "ST-094",
+    "A task that no longer applies leaves the due list": "ST-094"
+  },
+  "ST-040": {
+    "Technician adds a maintenance task": "ST-094",
+    "Restriction to machine category and technology": "ST-094",
+    "Restriction must fit": "ST-094",
+    "Technology restriction needs a machine category": "ST-094",
+    "Month-end start date": "ST-094",
+    "Start date is required": "ST-094"
+  },
+  "ST-041": {
+    "Narrowed restriction removes machines from the due list": "ST-094",
+    "Changing the start date": "ST-094",
+    "Invalid change is rejected": "ST-094"
+  },
+  "ST-043": {
+    "Maintenance task becomes due": "ST-094",
+    "Machine registered after the start date": "ST-094",
+    "Restriction decides which machines are listed": "ST-094"
+  }
+}

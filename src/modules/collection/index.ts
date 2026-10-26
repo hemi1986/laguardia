@@ -25,6 +25,7 @@ export type { CorrectMachineModelError, CorrectMachineModelInput } from "./corre
 export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
+export { groupMachines, type MachineGroup } from "./machine-groups";
 export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTeam } from "./machine-models";
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";

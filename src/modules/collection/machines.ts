@@ -2,7 +2,6 @@ import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, or, sql } f
 import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import { filesOfMachine, type FileOfMachine } from "./files";
-import { categoryHistory } from "./machine-models";
 import {
   machineStatuses,
   type Machine,
@@ -437,8 +436,9 @@ export async function machineLabels(
 
 /**
  * A machine as maintenance needs it (context map: Collection → Maintenance, Published Language): which machine, where
- * it stands, what kind of machine its machine model is – to decide which maintenance tasks apply –, since when its
- * machine model is of that kind (ST-036), and when it was registered, which can be its last done (ST-043).
+ * it stands and what kind of machine its machine model is – to group the machines a technician chooses for a
+ * maintenance task (ST-094). Which maintenance tasks apply to it is Maintenance's own list; the machine model's
+ * category history plays no part any more and is not published.
  */
 export type MachineForMaintenance = {
   id: string;
@@ -447,13 +447,6 @@ export type MachineForMaintenance = {
   location: string;
   machineCategory: MachineCategory;
   technology: Technology | undefined;
-  /**
-   * Its machine model's category history, the oldest first (ST-036): the machine category and technology from each
-   * point in time on – a task that newly applies after a correction counts as last done on the correction date. The
-   * first entry is always the machine model's creation (the migration gave every older model one).
-   */
-  categoryHistory: { machineCategory: MachineCategory; technology: Technology | undefined; holdsFrom: Date }[];
-  registeredAt: Date;
   /** Its machine status now – a machine *Not on display* is never due (ST-056). */
   machineStatus: MachineStatus;
   /** When it last came back from *Not on display* – none if it never was (ST-056, HS-20). */
@@ -476,12 +469,10 @@ export async function machinesForMaintenance(
     .select({
       id: machine.id,
       museumNumber: machine.museumNumber,
-      machineModelId: machine.machineModelId,
       machineModelTitle: machineModel.title,
       location: machine.location,
       machineCategory: machineModel.machineCategory,
       technology: machineModel.technology,
-      registeredAt: machine.registeredAt,
       machineStatus: machine.machineStatus,
       // The latest change of the status history away from Not on display – the status as a typed parameter.
       returnedToDisplayAt: sql<Date | null>`(SELECT max(${machineStatusChange.changedAt}) FROM ${machineStatusChange}
@@ -492,23 +483,17 @@ export async function machinesForMaintenance(
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(and(isNull(machine.retiredAt), machineId === undefined ? undefined : eq(machine.id, machineId)));
-  const histories = await categoryHistory.load(db, [...new Set(rows.map((row) => row.machineModelId))]);
-  return rows.map(({ machineModelId, ...row }) => ({
+  return rows.map((row) => ({
     ...row,
     technology: row.technology ?? undefined,
-    categoryHistory: (histories.get(machineModelId) ?? []).map(({ machineCategory, technology, holdsFrom }) => ({
-      machineCategory,
-      technology,
-      holdsFrom,
-    })),
     returnedToDisplayAt: row.returnedToDisplayAt ?? undefined,
     retired: false as const,
   }));
 }
 
 /**
- * One machine as maintenance needs it to check a maintenance record (context map, Collection → Maintenance: the
- * machine category and technology decide which maintenance tasks apply; a retired machine gets none, ST-044). Takes
+ * One machine as maintenance needs it to check a maintenance record or the machines chosen for a maintenance task
+ * (context map, Collection → Maintenance: whether the machine exists and is retired, ST-044, ST-094). Takes
  * the machine's retirement lock shared in a command (ADR 0010), so a retirement in flight decides first; a page reads
  * it with `{ inCommand: false }`. Undefined for an unknown machine.
  */
@@ -519,8 +504,6 @@ export async function machineForMaintenance(
 ): Promise<
   | {
       id: string;
-      machineCategory: MachineCategory;
-      technology: Technology | undefined;
       location: string;
       retired: boolean;
     }
@@ -529,21 +512,12 @@ export async function machineForMaintenance(
   if (!isId(machineId)) return undefined;
   if (inCommand) await retirementLock(db, machineId, "shared");
   const [row] = await db
-    .select({
-      id: machine.id,
-      machineCategory: machineModel.machineCategory,
-      technology: machineModel.technology,
-      location: machine.location,
-      retiredAt: machine.retiredAt,
-    })
+    .select({ id: machine.id, location: machine.location, retiredAt: machine.retiredAt })
     .from(machine)
-    .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(eq(machine.id, machineId));
   return (
     row && {
       id: row.id,
-      machineCategory: row.machineCategory,
-      technology: row.technology ?? undefined,
       location: row.location,
       retired: row.retiredAt !== null,
     }

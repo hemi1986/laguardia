@@ -5,7 +5,6 @@ import { isId } from "@/platform/command";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
-import { maintenanceTaskChoices } from "../maintenance-task-choices";
 import { ChangeMaintenanceTaskForm } from "./change-maintenance-task-form";
 
 const { maintenancePlan: texts } = teamMessages;
@@ -38,11 +37,7 @@ export default async function ChangeMaintenanceTaskPage({
             instruction: task?.instruction ?? "",
             intervalMonths: task ? String(task.intervalMonths) : "",
             suitableForHelpers: task?.suitableForHelpers ?? false,
-            machineCategory: task?.machineCategory ?? "",
-            technology: task?.technology ?? "",
-            startDate: task?.startDate ?? "",
           }}
-          {...maintenanceTaskChoices}
         />
       ) : (
         <p>{texts.notInPlan}</p>

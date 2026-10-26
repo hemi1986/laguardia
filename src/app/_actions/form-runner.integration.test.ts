@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { changeMaintenancePlanCommand, maintenancePlan, maintenancePlanVersion } from "@/modules/maintenance";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { journalOf, type Actor } from "@/platform/command";
@@ -278,5 +279,66 @@ describe("the Server Action runner once per chosen item (ST-045)", () => {
     await expect(reportOnEach({ kind: "visitor" }, {}, first)(null, ticked("Glass", [first]))).rejects.toThrow(
       "the database went away",
     );
+  });
+});
+
+describe("the Server Action runner for a field posted once per ticked checkbox (ST-094)", () => {
+  const technician = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+
+  /** CMD-ChangeMaintenancePlan from a form with the machines ticked in one field – one command for all of them. */
+  async function addTaskWith(machineIds: string[], interval = "3") {
+    await anExistingTeamMember(db, technician);
+    const outcome: { added?: string } = {};
+    const state = await runnerActingAs(technician)(changeMaintenancePlanCommand, {
+      fields: ["version", "name", "intervalMonths"],
+      many: { field: "machineId" },
+      input: ({ version, name, intervalMonths }, chosen) => ({
+        version: Number(version),
+        change: "add" as const,
+        task: {
+          name: name ?? "",
+          instruction: "Do it",
+          intervalMonths: Number(intervalMonths),
+          suitableForHelpers: false,
+          machineIds: chosen,
+        },
+      }),
+      onSuccess: async ({ maintenanceTaskId }) => {
+        outcome.added = maintenanceTaskId;
+      },
+    })(null, ticked({ version: String(await maintenancePlanVersion(db)), name: `Wax ${randomUUID()}`, intervalMonths: interval }, machineIds));
+    return { state, outcome };
+  }
+
+  function ticked(fields: Record<string, string>, machineIds: string[]) {
+    const form = post(fields);
+    for (const machineId of machineIds) form.append("machineId", machineId);
+    return form;
+  }
+
+  it("runs the command once with all ticked values", async () => {
+    const [first, second] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+
+    const { state, outcome } = await addTaskWith([second, first]);
+
+    expect(state).toBeNull();
+    const task = (await maintenancePlan(db)).maintenanceTasks.find((each) => each.id === outcome.added);
+    expect(task?.machineCount).toBe(2);
+  });
+
+  it("keeps what was ticked after a rejection – a value posted twice reaches the command twice", async () => {
+    const machineId = await aRegisteredMachine(db);
+
+    const { state, outcome } = await addTaskWith([machineId, machineId]);
+
+    expect(state).toMatchObject({ error: "machine-chosen-twice", chosen: [machineId, machineId] });
+    expect(outcome.added).toBeUndefined();
+  });
+
+  it("runs the command with nothing ticked – a task for no machine is a task", async () => {
+    const { state, outcome } = await addTaskWith([]);
+
+    expect(state).toBeNull();
+    expect(outcome.added).toBeDefined();
   });
 });

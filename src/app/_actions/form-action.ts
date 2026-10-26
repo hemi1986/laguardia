@@ -15,6 +15,8 @@ export type {
   FormDefinition,
   FormFields,
   FormState,
+  ManyFormDefinition,
+  ManyFormState,
   PhotoFormDefinition,
   PhotoFormState,
   UploadFormDefinition,

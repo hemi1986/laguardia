@@ -215,6 +215,22 @@ export function scenarioCoverage(story: d.Story, titles = testTitles()): { cover
   return { covered, missing };
 }
 
+/**
+ * Scenarios of finished stories that a later story replaced (ST-094): `docs/stories/superseded-scenarios.json` maps a
+ * story ID to its scenario titles and the story that superseded each. A done story is never reopened, but its
+ * scenario can stop being true – its test is then removed together with the superseding story's change, and the
+ * scenario is listed here instead, with the reason in that story's pull request. `check-scenarios.ts` accepts no test
+ * for a listed scenario and refuses a stale entry.
+ */
+export const SUPERSEDED_SCENARIOS_FILE = "docs/stories/superseded-scenarios.json";
+
+export function supersededScenarios(): Map<string, Map<string, string>> {
+  const file = join(d.ROOT, SUPERSEDED_SCENARIOS_FILE);
+  if (!existsSync(file)) return new Map();
+  const raw = JSON.parse(readFileSync(file, "utf8")) as Record<string, Record<string, string>>;
+  return new Map(Object.entries(raw).map(([id, scenarios]) => [id, new Map(Object.entries(scenarios))]));
+}
+
 /** Domain IDs (`CMD-ReportProblem`, `EVT-DefectRecorded`, …) used in application code (not tests). */
 export function domainIdsInCode(): Map<string, string[]> {
   const out = new Map<string, string[]>();

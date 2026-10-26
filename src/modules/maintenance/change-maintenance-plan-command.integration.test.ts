@@ -4,10 +4,11 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { aRegisteredMachine, retireMachine } from "@/test-support/machines";
 import {
   changeMaintenancePlanCommand,
+  dueMaintenance,
   maintenancePlan,
-  maintenanceTaskAppliesTo,
   type ChangeMaintenancePlanInput,
   type MaintenanceTaskDetails,
   type NewMaintenanceTask,
@@ -34,9 +35,7 @@ const aTask = (overrides: Partial<NewMaintenanceTask>): NewMaintenanceTask => ({
   instruction: "Do it carefully.",
   intervalMonths: 3,
   suitableForHelpers: false,
-  machineCategory: undefined,
-  technology: undefined,
-  startDate: "2026-10-01",
+  machineIds: [],
   ...overrides,
 });
 
@@ -58,8 +57,9 @@ beforeAll(async () => {
 });
 
 describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
-  it("ST-040: Technician adds a maintenance task", async () => {
+  it("ST-094: A technician adds a maintenance task with its machines", async () => {
     const name = `Clean glass (inside & out) ${randomUUID()}`;
+    const [lg005, lg042, lg020] = [await aRegisteredMachine(db), await aRegisteredMachine(db), await aRegisteredMachine(db)];
 
     const added = await add(
       aTask({
@@ -67,8 +67,7 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
         instruction: "Glass out, clean both sides.",
         intervalMonths: 1,
         suitableForHelpers: true,
-        machineCategory: "pinball",
-        startDate: "2026-10-01",
+        machineIds: [lg005, lg042],
       }),
     );
 
@@ -79,48 +78,80 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
       instruction: "Glass out, clean both sides.",
       intervalMonths: 1,
       suitableForHelpers: true,
-      machineCategory: "pinball",
-      technology: undefined,
-      startDate: "2026-10-01",
-      // The start date counts as last done: first due one interval later (HS-12).
-      firstDue: "2026-11-01",
+      machineCount: 2,
     });
-    const [entry] = await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID }).then((entries) =>
-      entries.filter((candidate) => candidate.data.maintenanceTaskId === task?.id),
+    // It applies to the two chosen machines and not to the third: it is due at once on those only.
+    const dueOn = (await dueMaintenance(db, fixedClock("2026-10-15T10:00:00Z"))).find((due) => due.id === task?.id);
+    expect(dueOn?.machines.map((machine) => machine.machineId).sort()).toEqual([lg005, lg042].sort());
+    expect(dueOn?.machines.map((machine) => machine.machineId)).not.toContain(lg020);
+    const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
+      (candidate) => candidate.data.maintenanceTaskId === task?.id,
     );
-    // Only references and non-personal facts in the journal – the name and the instruction are typed text.
-    expect(entry).toMatchObject({
-      type: "EVT-MaintenancePlanChanged",
+    // Both events of the one step; only references and non-personal facts – the name and the instruction are typed text.
+    expect(entries.map((entry) => entry.type)).toEqual(["EVT-MaintenancePlanChanged", "EVT-MachinesOfMaintenanceTaskChanged"]);
+    expect(entries[0]).toMatchObject({ actor: tom, data: { maintenanceTaskId: task?.id, change: "added" } });
+    expect(entries[1]).toMatchObject({
       actor: tom,
-      data: { maintenanceTaskId: task?.id, change: "added" },
+      machineId: null,
+      data: { maintenanceTaskId: task?.id, machinesAdded: [lg005, lg042], machinesRemoved: [] },
     });
-    expect(JSON.stringify(entry.data)).not.toContain("Glass out");
+    expect(JSON.stringify(entries)).not.toContain("Glass out");
   });
 
-  it("ST-040: Restriction to machine category and technology", async () => {
-    const name = `Clean & adjust score reels / stepper units ${randomUUID()}`;
+  it("ST-094: A task for no machine", async () => {
+    const name = `Oil the gum machine ${randomUUID()}`;
+    await aRegisteredMachine(db);
 
-    expect((await add(aTask({ name, machineCategory: "pinball", technology: "em" }))).ok).toBe(true);
+    expect((await add(aTask({ name, machineIds: [] }))).ok).toBe(true);
 
-    const task = (await listed(name))!;
-    expect(task).toMatchObject({ machineCategory: "pinball", technology: "em" });
-    expect(maintenanceTaskAppliesTo(task, { machineCategory: "pinball", technology: "em" })).toBe(true);
-    for (const model of [
-      { machineCategory: "pinball", technology: "solid-state" },
-      { machineCategory: "pinball", technology: undefined },
-      { machineCategory: "arcade", technology: "crt" },
-      { machineCategory: "other", technology: undefined },
-    ] as const) {
-      expect(maintenanceTaskAppliesTo(task, model), `${model.machineCategory} / ${model.technology}`).toBe(false);
-    }
+    const task = await listed(name);
+    expect(task).toMatchObject({ machineCount: 0 });
+    expect((await dueMaintenance(db, fixedClock("2026-10-15T10:00:00Z"))).find((due) => due.id === task?.id)).toBeUndefined();
+    const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
+      (candidate) => candidate.data.maintenanceTaskId === task?.id,
+    );
+    // Nothing was added to the task: no event for its machines.
+    expect(entries.map((entry) => entry.type)).toEqual(["EVT-MaintenancePlanChanged"]);
   });
 
-  it("ST-040: Month-end start date", async () => {
-    const name = `Check the flipper bushings ${randomUUID()}`;
+  it("rejects a non-positive interval and stores nothing", async () => {
+    const name = `Wax the playfield ${randomUUID()}`;
+    const machineId = await aRegisteredMachine(db);
+    const { version } = await maintenancePlan(db);
 
-    expect((await add(aTask({ name, intervalMonths: 1, startDate: "2026-01-31" }))).ok).toBe(true);
+    expect(await add(aTask({ name, intervalMonths: 0, machineIds: [machineId] }))).toEqual({
+      ok: false,
+      error: "interval-not-positive",
+    });
 
-    expect(await listed(name)).toMatchObject({ startDate: "2026-01-31", firstDue: "2026-02-28" });
+    expect(await listed(name)).toBeUndefined();
+    expect((await maintenancePlan(db)).version).toBe(version);
+  });
+
+  it("rejects the whole step when a chosen machine was retired meanwhile", async () => {
+    const name = `Wax the playfield ${randomUUID()}`;
+    const [lg005, lg044] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const { version } = await maintenancePlan(db);
+    await retireMachine(db, lg044);
+
+    expect(await add(aTask({ name, machineIds: [lg005, lg044] }))).toEqual({ ok: false, error: "machine-retired" });
+
+    // Neither the task nor any of its machines is stored, and the plan stays at its version.
+    expect(await listed(name)).toBeUndefined();
+    expect((await maintenancePlan(db)).version).toBe(version);
+  });
+
+  it("rejects the whole step for an unknown or doubled machine", async () => {
+    const name = `Wax the playfield ${randomUUID()}`;
+    const lg005 = await aRegisteredMachine(db);
+    const { version } = await maintenancePlan(db);
+
+    expect(await add(aTask({ name, machineIds: [lg005, randomUUID()] }))).toEqual({ ok: false, error: "unknown-machine" });
+    expect(await add(aTask({ name, machineIds: [lg005, "not-an-id"] }))).toEqual({ ok: false, error: "unknown-machine" });
+    expect(await add(aTask({ name, machineIds: [lg005, lg005] }))).toEqual({ ok: false, error: "machine-chosen-twice" });
+
+    expect(await listed(name)).toBeUndefined();
+    expect((await maintenancePlan(db)).version).toBe(version);
   });
 
   it("ST-040: Helpers cannot change the maintenance plan", async () => {
@@ -128,6 +159,17 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     const { version } = await maintenancePlan(db);
 
     expect(await add(aTask({ name }), anna)).toEqual({ ok: false, error: "not-authorized" });
+
+    expect(await listed(name)).toBeUndefined();
+    expect((await maintenancePlan(db)).version).toBe(version);
+  });
+
+  it("ST-094: Helpers cannot add maintenance tasks", async () => {
+    const name = `Wax the playfield ${randomUUID()}`;
+    const machineId = await aRegisteredMachine(db);
+    const { version } = await maintenancePlan(db);
+
+    expect(await add(aTask({ name, machineIds: [machineId] }), anna)).toEqual({ ok: false, error: "not-authorized" });
 
     expect(await listed(name)).toBeUndefined();
     expect((await maintenancePlan(db)).version).toBe(version);
@@ -171,22 +213,8 @@ describe("CMD-ChangeMaintenancePlan – changing and removing a maintenance task
       instruction: task.instruction,
       intervalMonths: task.intervalMonths,
       suitableForHelpers: task.suitableForHelpers,
-      machineCategory: task.machineCategory,
-      technology: task.technology,
-      startDate: task.startDate,
       ...overrides,
     },
-  });
-
-  it("ST-041: Invalid change is rejected", async () => {
-    const name = `Clean playfield ${randomUUID()}`;
-    await add(aTask({ name, machineCategory: "pinball", technology: "dmd" }));
-    const task = (await listed(name))!;
-
-    const rejected = await change(keeping(task, { machineCategory: "arcade", technology: "em" }));
-
-    expect(rejected).toEqual({ ok: false, error: "technology-does-not-fit-machine-category" });
-    expect(await listed(name)).toMatchObject({ machineCategory: "pinball", technology: "dmd" });
   });
 
   it("ST-041: The interval must stay positive", async () => {

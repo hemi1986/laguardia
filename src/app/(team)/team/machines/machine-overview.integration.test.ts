@@ -91,26 +91,22 @@ async function anOpenDefect(machineId: string, title: string) {
 }
 
 /**
- * A maintenance task every machine gets, by default every 3 months from 1 January 2026 – so on a machine without a
- * record it has been overdue since late April, and on 4 October 2026 (the test's clock).
+ * A maintenance task for those machines, by default every 3 months and added on 1 April 2026 – so on a machine without
+ * a record it has been due at once since then and overdue since late April, and on 4 October 2026 (the test's clock).
  */
-async function aMaintenanceTask(name: string, { intervalMonths = 3, startDate = "2026-01-01" } = {}) {
+async function aMaintenanceTask(
+  name: string,
+  machineIds: string[],
+  { intervalMonths = 3, addedOn = "2026-04-01" } = {},
+) {
   const outcome = await executeCommand(
     changeMaintenancePlanCommand,
     {
       version: await maintenancePlanVersion(db),
       change: "add",
-      task: {
-        name,
-        instruction: `${name} – how to`,
-        intervalMonths,
-        suitableForHelpers: false,
-        machineCategory: undefined,
-        technology: undefined,
-        startDate,
-      },
+      task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers: false, machineIds },
     },
-    { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
+    { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
   );
   if (!outcome.ok) throw new Error(outcome.error);
   return outcome.result.maintenanceTaskId;
@@ -241,12 +237,12 @@ describe("the machine overview with open defects", () => {
 
 describe("the machine overview with overdue maintenance tasks", () => {
   it("ST-057: Machine overview shows the number of overdue maintenance tasks", async () => {
-    await registered("LG-042");
+    const lg042 = await registered("LG-042");
     const lg043 = await registered("LG-043");
-    const glass = await aMaintenanceTask("Clean the glass");
-    const rubbers = await aMaintenanceTask("Check the rubbers");
+    const glass = await aMaintenanceTask("Clean the glass", [lg042, lg043]);
+    const rubbers = await aMaintenanceTask("Check the rubbers", [lg042, lg043]);
     // Due since 1 September 2026, overdue only from December – due, not overdue, is not counted (Out of Scope).
-    await aMaintenanceTask("Clean the playfield", { intervalMonths: 12, startDate: "2025-09-01" });
+    await aMaintenanceTask("Clean the playfield", [lg042, lg043], { intervalMonths: 12, addedOn: "2026-09-01" });
     await recordedDone(glass, lg043, "2026-10-01");
     await recordedDone(rubbers, lg043, "2026-10-01");
 
@@ -259,8 +255,8 @@ describe("the machine overview with overdue maintenance tasks", () => {
 
   it("ST-057: Recording removes the task from the count", async () => {
     const lg042 = await registered("LG-042");
-    const glass = await aMaintenanceTask("Clean the glass");
-    await aMaintenanceTask("Check the rubbers");
+    const glass = await aMaintenanceTask("Clean the glass", [lg042]);
+    await aMaintenanceTask("Check the rubbers", [lg042]);
     expect(entryOf(await overview(), "LG-042")).toContain("2 Wartungsaufgaben überfällig");
 
     await recordedDone(glass, lg042, "2026-10-04");

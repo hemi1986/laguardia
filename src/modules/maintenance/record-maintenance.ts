@@ -1,8 +1,7 @@
-import type { MachineCategory, Technology } from "@/modules/collection";
 import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/platform/command";
 import { addDays, isCalendarDate, today, type CalendarDate } from "@/platform/time";
 import type { MaintenanceOutcome } from "./maintenance-outcome";
-import type { MaintenanceTask } from "./maintenance-plan";
+import type { MaintenanceTaskWithMachines } from "./maintenance-plan";
 import { maintenanceTaskAppliesTo } from "./maintenance-plans";
 
 /**
@@ -35,14 +34,12 @@ export type RecordMaintenanceInput = {
 /** The machine as maintenance needs it to decide – Collection's published facts (context map). */
 export type MachineForRecording = {
   id: string;
-  machineCategory: MachineCategory;
-  technology: Technology | undefined;
   retired: boolean;
 };
 
 /** What the decision reads besides the input: the maintenance task from the plan and the machine from Collection. */
 export type MaintenanceFacts = {
-  maintenanceTask: MaintenanceTask | undefined;
+  maintenanceTask: MaintenanceTaskWithMachines | undefined;
   machine: MachineForRecording | undefined;
 };
 
@@ -89,8 +86,8 @@ export type RecordMaintenanceError =
  */
 export function recordRefusal(
   maintenanceTask:
-    (Pick<MaintenanceTask, "suitableForHelpers" | "machineCategory" | "technology"> & { removedAt?: Date }) | undefined,
-  machine: Omit<MachineForRecording, "id"> | undefined,
+    (Pick<MaintenanceTaskWithMachines, "suitableForHelpers" | "machines"> & { removedAt?: Date }) | undefined,
+  machine: MachineForRecording | undefined,
   teamMember: { role: Role },
 ):
   | "maintenance-task-unknown"
@@ -103,7 +100,7 @@ export function recordRefusal(
   if (!maintenanceTask || maintenanceTask.removedAt) return "maintenance-task-unknown";
   if (!machine) return "unknown-machine";
   if (machine.retired) return "machine-retired";
-  if (!maintenanceTaskAppliesTo(maintenanceTask, machine)) return "maintenance-task-does-not-apply";
+  if (!maintenanceTaskAppliesTo(maintenanceTask, machine.id)) return "maintenance-task-does-not-apply";
   if (teamMember.role === "helper" && !maintenanceTask.suitableForHelpers)
     return "maintenance-not-suitable-for-helpers";
   return undefined;

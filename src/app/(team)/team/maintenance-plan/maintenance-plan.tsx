@@ -4,14 +4,13 @@ import { Confirmation } from "@/components/ui/message";
 import type { ListedMaintenanceTask } from "@/modules/maintenance";
 import type { MaintenancePlanConfirmation } from "./maintenance-plan-data";
 import { teamMessages } from "@/platform/messages";
-import { formatCalendarDate } from "@/platform/time";
 
-const { maintenancePlan: texts, machineModels, terms } = teamMessages;
+const { maintenancePlan: texts, terms } = teamMessages;
 
 /**
  * The maintenance plan (RM-MaintenancePlan, ST-040): „Wartungsaufgabe hinzufügen“ directly under the heading (G2,
- * G2a), then every maintenance task with its instruction, interval, mark, restriction in words (G6), – from its
- * start date – when it is first due, and „Ändern“, which leads to its change form (ST-041, G5). Texts are plain text:
+ * G2a), then every maintenance task with its instruction, interval, mark, how many machines it applies to (G27) and
+ * „Ändern“, which leads to its change form (ST-041, G5). Texts are plain text:
  * React escapes them.
  */
 export function MaintenancePlanView({
@@ -38,21 +37,8 @@ export function MaintenancePlanView({
                 <h2 className="text-base font-medium">{task.name}</h2>
                 <p className="whitespace-pre-line">{task.instruction}</p>
                 <p className="text-muted-foreground">
-                  {texts.every(task.intervalMonths)} ·{" "}
-                  {task.machineCategory
-                    ? texts.onlyFor(
-                        [
-                          machineModels.categories[task.machineCategory],
-                          task.technology && machineModels.technologies[task.technology],
-                        ]
-                          .filter(Boolean)
-                          .join(" · "),
-                      )
-                    : texts.allMachines}
+                  {texts.every(task.intervalMonths)} · {texts.appliesTo(task.machineCount)}
                   {task.suitableForHelpers && ` · ${terms["Suitable for helpers"]}`}
-                </p>
-                <p className="text-muted-foreground">
-                  {texts.startAndFirstDue(formatCalendarDate(task.startDate), formatCalendarDate(task.firstDue))}
                 </p>
                 <Link
                   href={`/team/maintenance-plan/${task.id}`}
