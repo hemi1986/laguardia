@@ -9,6 +9,8 @@ export const maintenanceTexts = {
     counts: (machines: number, overdue: number) =>
       `${machines === 1 ? "1 Gerät" : `${machines} Geräte`}${overdue > 0 ? `, ${overdue} überfällig` : ""}`,
     lastDoneAndDue: (lastDone: string, due: string) => `Zuletzt erledigt ${lastDone} · fällig seit ${due}`,
+    /** A task newly applying to a machine is due at once and has not been done there yet (ST-094). */
+    dueSinceNeverDone: (due: string) => `Noch nicht erledigt · fällig seit ${due}`,
     overdue: "Überfällig",
     nothingDue: "Gerade ist keine Wartung fällig.",
     nothingDueForHelpers: "Gerade ist keine Wartung für Helfer:innen fällig.",
@@ -83,18 +85,28 @@ export const maintenanceTexts = {
     questionBack: "Zurück",
     notInPlan: "Diese Wartungsaufgabe ist nicht im Wartungsplan.",
     every: (months: number) => (months === 1 ? "Jeden Monat" : `Alle ${months} Monate`),
-    onlyFor: (restriction: string) => `Nur ${restriction}`,
-    allMachines: "Alle Geräte",
-    startAndFirstDue: (start: string, firstDue: string) => `Start ${start} · erstmals fällig ${firstDue}`,
+    /** How many machines a task applies to – a retired machine never counts (ST-094). */
+    appliesTo: (count: number) => (count === 0 ? "Gilt für kein Gerät" : count === 1 ? "Gilt für 1 Gerät" : `Gilt für ${count} Geräte`),
     name: "Name",
     instruction: "Anleitung",
     intervalMonths: "Intervall in Monaten",
-    machineCategory: "Nur für Kategorie",
-    technology: "Und nur für Technik",
-    noRestriction: "Alle",
-    startDate: "Start",
-    startDateHint: "Gilt als zuletzt erledigt – fällig wird die Aufgabe ein Intervall später.",
     back: "Zurück zum Wartungsplan",
+    /** The machines of a maintenance task, chosen in groups that fold (ST-094, G27). */
+    machines: {
+      title: "Geräte der Wartungsaufgabe",
+      noMachineYet:
+        "Noch kein Gerät erfasst. Die Wartungsaufgabe lässt sich trotzdem hinzufügen und gilt dann für kein Gerät.",
+      selectAll: "Alle auswählen",
+      /** „Flipper · EM – 4 von 6 ausgewählt“; a group without a technology is named by its category alone. */
+      groupHeader: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
+      /** After the museum number and the title: a machine that cannot become due while it is away (G27). */
+      notOnDisplay: "Nicht ausgestellt",
+      entry: (museumNumber: string, title: string) => `${museumNumber} · ${title}`,
+      /** The reasons a rejected step names (ST-094) – nothing was stored. */
+      retiredMeanwhile: (museumNumbers: readonly string[]) =>
+        `${museumNumbers.length === 1 ? `${museumNumbers[0]} ist` : `${museumNumbers.join(", ")} sind`} inzwischen ausgemustert. Es wurde nichts gespeichert.`,
+      unknown: "Dieses Gerät gibt es nicht. Es wurde nichts gespeichert.",
+    },
   },
 } as const;
 
@@ -115,7 +127,6 @@ export const maintenanceErrors = {
   "instruction-required": "Bitte eine Anleitung angeben.",
   "interval-not-positive": "Bitte ein Intervall von mindestens 1 Monat angeben.",
   "interval-too-long": "Bitte ein Intervall von höchstens 1200 Monaten angeben.",
-  "start-date-required": "Bitte ein Startdatum angeben.",
-  "start-date-out-of-range": "Bitte ein Startdatum zwischen 1900 und 2999 angeben.",
-  "technology-without-machine-category": "Eine Technik geht nur zusammen mit einer Kategorie.",
+  /** Choosing the machines of a new maintenance task (ST-094) – only a forged step can choose one twice. */
+  "machine-chosen-twice": "Ein Gerät wurde mehrfach gewählt. Es wurde nichts gespeichert.",
 } as const;

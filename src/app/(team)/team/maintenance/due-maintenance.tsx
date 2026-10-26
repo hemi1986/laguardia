@@ -59,7 +59,9 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
                 </p>
                 <p>{machine.location}</p>
                 <p className="text-muted-foreground">
-                  {texts.lastDoneAndDue(formatCalendarDate(machine.lastDone), formatCalendarDate(machine.dueSince))}
+                  {machine.lastDone
+                    ? texts.lastDoneAndDue(formatCalendarDate(machine.lastDone), formatCalendarDate(machine.dueSince))
+                    : texts.dueSinceNeverDone(formatCalendarDate(machine.dueSince))}
                 </p>
                 {machine.overdue && <p className="font-medium">{texts.overdue}</p>}
                 {/* The one action people come to the list for (G5), offered only where it will be accepted (G11). */}
