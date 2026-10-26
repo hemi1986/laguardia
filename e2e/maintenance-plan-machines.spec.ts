@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
+import { aMachine, expect, groupOf, logIn, openedGroup, pageWidth, test, unique } from "./fixtures";
 
 /**
  * Choosing the machines of a new maintenance task on a phone (ST-094, G27): „Geräte der Wartungsaufgabe“ in groups
@@ -34,21 +34,15 @@ async function anArcadeMachine(page: Page) {
   return { museumNumber: (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0] };
 }
 
-/** The group of the form that holds that machine. */
-const groupOf = (page: Page, museumNumber: string) => page.locator("details").filter({ hasText: museumNumber });
-
 const header = (group: ReturnType<typeof groupOf>) => group.locator("summary");
-
-async function opened(page: Page, museumNumber: string) {
-  const group = groupOf(page, museumNumber);
-  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await header(group).click();
-  return group;
-}
+const opened = openedGroup;
 
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("ST-094: Choosing a whole group works only with JavaScript", async ({ page }) => {
+  test("the machines are ticked one by one, and the count says what was chosen when the page opened", async ({
+    page,
+  }) => {
     await logIn(page);
     const machine = await aMachine(page, "not-on-display");
     await page.goto("/team/maintenance-plan/new");
@@ -66,7 +60,7 @@ test.describe("without JavaScript", () => {
     await expect(page.getByRole("button", { name: "Alle auswählen" })).toHaveCount(0);
   });
 
-  test("ST-094: A rejected task keeps the chosen machines and opens their groups", async ({ page }) => {
+  test("a rejected task keeps the chosen machines and opens their groups in the browser", async ({ page }) => {
     await logIn(page);
     const flipper = await aMachine(page, "not-on-display");
     const arcade = await anArcadeMachine(page);
@@ -93,11 +87,23 @@ test.describe("without JavaScript", () => {
 });
 
 test.describe("with JavaScript", () => {
-  test("ST-094: Choosing a whole group works only with JavaScript", async ({ page }) => {
+  test("ST-094: Choosing a whole group works only with JavaScript", async ({ page, browser, baseURL }) => {
     await logIn(page);
     const machine = await aMachine(page, "not-on-display");
-    await page.goto("/team/maintenance-plan/new");
 
+    // Given JavaScript is switched off: „Alle auswählen“ is not shown, the header keeps the count of the page's opening.
+    const withoutScripts = await browser.newContext({ javaScriptEnabled: false, baseURL, viewport: { width: 360, height: 800 } });
+    const plain = await withoutScripts.newPage();
+    await logIn(plain);
+    await plain.goto("/team/maintenance-plan/new");
+    await expect(groupOf(plain, machine.museumNumber).locator("summary")).toContainText(/Flipper – 0 von \d+ ausgewählt/);
+    await expect(plain.getByRole("button", { name: "Alle auswählen" })).toHaveCount(0);
+    await (await openedGroup(plain, machine.museumNumber)).getByRole("checkbox", { name: new RegExp(machine.museumNumber) }).check();
+    await expect(groupOf(plain, machine.museumNumber).locator("summary")).toContainText(/Flipper – 0 von \d+ ausgewählt/);
+    await withoutScripts.close();
+
+    // But with JavaScript „Alle auswählen“ ticks the whole group.
+    await page.goto("/team/maintenance-plan/new");
     const group = groupOf(page, machine.museumNumber);
     await expect(header(group)).toContainText(/Flipper – 0 von \d+ ausgewählt/);
     await group.getByRole("button", { name: "Alle auswählen" }).click();
@@ -105,7 +111,8 @@ test.describe("with JavaScript", () => {
     // The whole group is chosen and the header follows, in the same count it opened with.
     const total = Number((await header(group).textContent())!.match(/(\d+) von (\d+)/)![2]);
     await expect(header(group)).toContainText(`Flipper – ${total} von ${total} ausgewählt`);
-    // The group stays closed while it is chosen as a whole; opened, every machine in it is ticked.
+    // The button in the header does not fold the group: it stays closed while it is chosen as a whole.
+    await expect(group).not.toHaveAttribute("open", "");
     await opened(page, machine.museumNumber);
     await expect(group.getByRole("checkbox", { name: new RegExp(machine.museumNumber) })).toBeChecked();
     expect(await pageWidth(page)).toBeLessThanOrEqual(360);

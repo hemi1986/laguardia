@@ -114,7 +114,7 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     expect(entries.map((entry) => entry.type)).toEqual(["EVT-MaintenancePlanChanged"]);
   });
 
-  it("ST-094: The interval must be positive", async () => {
+  it("rejects a non-positive interval and stores nothing", async () => {
     const name = `Wax the playfield ${randomUUID()}`;
     const machineId = await aRegisteredMachine(db);
     const { version } = await maintenancePlan(db);
@@ -128,7 +128,7 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     expect((await maintenancePlan(db)).version).toBe(version);
   });
 
-  it("ST-094: A machine retired meanwhile rejects the whole step", async () => {
+  it("rejects the whole step when a chosen machine was retired meanwhile", async () => {
     const name = `Wax the playfield ${randomUUID()}`;
     const [lg005, lg044] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const { version } = await maintenancePlan(db);
@@ -141,7 +141,7 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     expect((await maintenancePlan(db)).version).toBe(version);
   });
 
-  it("ST-094: An unknown or doubled machine in a forged step rejects the whole step", async () => {
+  it("rejects the whole step for an unknown or doubled machine", async () => {
     const name = `Wax the playfield ${randomUUID()}`;
     const lg005 = await aRegisteredMachine(db);
     const { version } = await maintenancePlan(db);

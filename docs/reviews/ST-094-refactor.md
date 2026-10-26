@@ -1,0 +1,7 @@
+# ST-094 – findings handled (main session)
+
+Fixed in the story: code review #1 (the rejection texts, the kept choice and the open groups are now asserted under the scenario titles at the form seam, `new/add-rejections.integration.test.ts`; the command tests carry plain titles), #2 (one test per title: the no-JavaScript half runs in its own browser context inside the titled test), #4 (the browser test asserts the fold stays closed after „Alle auswählen“), #7, #8 (`groupOf`/`openedGroup`/`tickMachines` in `e2e/fixtures.ts`); `/code-review`: ticks made before hydration are no longer reset (uncontrolled checkboxes, the state only mirrors them).
+
+Skipped minors / revisit when: code review #3 (the plan is not offered to helpers – covered by the untitled e2e test "helpers find no maintenance plan"), #5/#10 and `/code-review` queries per machine (museum scale, a technician-only step; revisit with a Collection read for several machines when ST-095–ST-097 add more callers), #6 (name stays; the retired machine is left out by the readers of Collection's machines), #9 (lock order is by construction; no two-transaction test), `/code-review` on `groupMachines` and `dueOn` loops (museum scale).
+Acceptance remarks: backdated records dated before the old floor but recorded after it now count (HS-24 rule "recorded since"; only development and preview data exist, accepted in the story review); migration branch (b) is a no-op in practice (a record dated on or after the floor is always recorded after its midnight).
+Follow-ups that pass the hurdle: none.

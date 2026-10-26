@@ -104,7 +104,7 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
   it("says how many machines each task applies to – none, one or several", async () => {
     const none = `Oil the gum machine ${randomUUID()}`;
     const one = `Check the power cord ${randomUUID()}`;
-    const [first, second] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const first = await aRegisteredMachine(db);
     await formOf(tom).action(null, await filledIn({ name: none, suitableForHelpers: undefined }));
     await formOf(tom).action(null, await filledIn({ name: one, intervalMonths: "6" }, [first]));
 
@@ -113,7 +113,6 @@ describe("the form „Wartungsaufgabe hinzufügen“ and the maintenance plan", 
     expect(entryOf(html, none)).not.toContain("Für Helfer:innen geeignet");
     expect(entryOf(html, one)).toContain("Gilt für 1 Gerät");
     expect(entryOf(html, one)).toContain("Alle 6 Monate");
-    expect(second).toBeDefined();
   });
 
   it("keeps what was typed when it is rejected, and never fills in a value", async () => {

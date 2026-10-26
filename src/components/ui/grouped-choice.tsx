@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /** One group of the choice: a name for the header and its entries (checkboxes). */
 export type ChoiceGroup = {
@@ -50,18 +50,26 @@ export function GroupedChoice({
     () => new Set(groups.filter((group) => group.entries.some((entry) => initiallyChosen.includes(entry.value))).map((group) => group.key)),
   );
 
-  const toggle = (value: string, ticked: boolean) =>
-    setChosen((now) => {
-      const next = new Set(now);
-      if (ticked) next.add(value);
-      else next.delete(value);
-      return next;
-    });
-  const tickAll = (group: ChoiceGroup) =>
-    setChosen((now) => new Set([...now, ...group.entries.map((entry) => entry.value)]));
+  // The checkboxes are the source of truth, not React's state: they are uncontrolled, so a tick made before the page
+  // hydrated is not reset to the initial choice. The state only mirrors them for the headers' counts.
+  const root = useRef<HTMLDivElement>(null);
+  const sync = () =>
+    setChosen(
+      new Set(
+        Array.from(root.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked') ?? []).map(
+          (input) => input.value,
+        ),
+      ),
+    );
+  useEffect(sync, []);
+  const tickAll = (group: ChoiceGroup) => {
+    for (const input of root.current?.querySelectorAll<HTMLInputElement>(`input[data-group="${CSS.escape(group.key)}"]`) ?? [])
+      input.checked = true;
+    sync();
+  };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={root} className="flex flex-col gap-2">
       {groups.map((group) => (
         <details key={group.key} open={openWithPage.has(group.key) || undefined} className="rounded-md border px-3 py-2">
           <summary className="cursor-pointer text-sm font-medium">
@@ -86,8 +94,9 @@ export function GroupedChoice({
                     type="checkbox"
                     name={name}
                     value={entry.value}
-                    checked={chosen.has(entry.value)}
-                    onChange={(event) => toggle(entry.value, event.target.checked)}
+                    data-group={group.key}
+                    defaultChecked={initiallyChosen.includes(entry.value)}
+                    onChange={sync}
                     className="mt-0.5 size-4 shrink-0"
                   />
                   <span className="min-w-0">{entry.label}</span>

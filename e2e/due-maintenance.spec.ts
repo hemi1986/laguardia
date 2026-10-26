@@ -1,5 +1,4 @@
-import type { Page } from "@playwright/test";
-import { aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
+import { aMachine, expect, logIn, pageWidth, test, tickMachines, unique } from "./fixtures";
 
 /**
  * The due maintenance list on a phone (ST-043): „Wartung“ in the navigation's line (G19 row 5), the filter for
@@ -10,18 +9,6 @@ import { aMachine, expect, logIn, pageWidth, test, unique } from "./fixtures";
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
-
-/**
- * Ticks these machines in „Geräte der Wartungsaufgabe“: opens the group each is in (a native fold, closed when the
- * page opens) and ticks it.
- */
-async function tickMachines(page: Page, ...machines: { museumNumber: string }[]) {
-  for (const { museumNumber } of machines) {
-    const group = page.locator("details").filter({ hasText: museumNumber });
-    if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
-    await page.getByRole("checkbox", { name: new RegExp(museumNumber) }).check();
-  }
-}
 
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
