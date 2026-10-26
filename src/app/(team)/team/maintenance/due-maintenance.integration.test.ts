@@ -50,7 +50,8 @@ import { MaintenancePlanView } from "../maintenance-plan/maintenance-plan";
 /**
  * The due maintenance list (RM-DueMaintenance, ST-043): Maintenance's maintenance tasks, due on Collection's machines
  * (Maintenance reads them), computed when the page loads (ADR 0002). In a database of its own, so "nothing is due"
- * and exact counts can be arranged. Without maintenance records (ST-044), a task's start date is its last done.
+ * and exact counts can be arranged. A task is due at once on every machine it newly applies to (ST-094); without a
+ * maintenance record (ST-044) recorded since, that is its due date.
  */
 const isolated = isolatedTestDatabase("due_maintenance");
 let db: NodePgDatabase;
@@ -124,22 +125,18 @@ async function aMachine(
   return registered.machineId;
 }
 
-/** A maintenance task in the maintenance plan – its start date counts as last done. */
+/**
+ * A maintenance task in the maintenance plan for those machines, added on that day – by default 1 April 2026: due at
+ * once on each of them (ST-094), so without a record it is due since then.
+ */
 async function aMaintenanceTask(
   name: string,
+  machineIds: string[],
   {
     intervalMonths = 3,
-    machineCategory = undefined,
-    technology = undefined,
     suitableForHelpers = false,
-    startDate = "2026-01-01",
-  }: Partial<{
-    intervalMonths: number;
-    machineCategory: MachineCategory;
-    technology: Technology;
-    suitableForHelpers: boolean;
-    startDate: string;
-  }> = {},
+    addedOn = "2026-04-01",
+  }: Partial<{ intervalMonths: number; suitableForHelpers: boolean; addedOn: string }> = {},
 ) {
   const added = await run(
     executeCommand(
@@ -147,17 +144,9 @@ async function aMaintenanceTask(
       {
         version: await maintenancePlanVersion(db),
         change: "add",
-        task: {
-          name,
-          instruction: `${name} – how to`,
-          intervalMonths,
-          suitableForHelpers,
-          machineCategory,
-          technology,
-          startDate,
-        },
+        task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers, machineIds },
       },
-      { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
+      { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
     ),
   );
   return added.maintenanceTaskId;
@@ -167,7 +156,7 @@ async function aMaintenanceTask(
 async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTaskDetails>, on = "2026-02-01") {
   const plan = await maintenancePlan(db);
   const task = plan.maintenanceTasks.find((each) => each.id === maintenanceTaskId)!;
-  const { instruction, intervalMonths, suitableForHelpers, machineCategory, technology, startDate } = task;
+  const { instruction, intervalMonths, suitableForHelpers } = task;
   return run(
     executeCommand(
       changeMaintenancePlanCommand,
@@ -175,7 +164,7 @@ async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTa
         version: plan.version,
         change: "change",
         maintenanceTaskId,
-        task: { instruction, intervalMonths, suitableForHelpers, machineCategory, technology, startDate, ...changes },
+        task: { instruction, intervalMonths, suitableForHelpers, ...changes },
       },
       { actor: tom, db, clock: fixedClock(`${on}T09:00:00Z`), newId: randomUUID },
     ),
@@ -238,60 +227,76 @@ async function page(on: string, filter: DueMaintenanceFilter = {}, viewer: typeo
   return { data, html: renderToStaticMarkup(createElement(DueMaintenanceView, { data })) };
 }
 
-describe("the due maintenance list", () => {
-  it("ST-043: Maintenance task becomes due", async () => {
-    await aMachine("LG-042", { location: "Hall 1, row 3", registeredAt: "2025-06-01T09:00:00Z" });
-    const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3, machineCategory: "pinball" });
+/** The maintenance plan as Tom sees it, back from a change – `params`: the address the change led to. */
+async function planPage(params: Record<string, string> = {}) {
+  const data = await loadMaintenancePlan(db, tom.teamMemberId, params);
+  return { data, html: renderToStaticMarkup(createElement(MaintenancePlanView, data)) };
+}
 
-    const { data, html } = await page("2026-04-02", { maintenanceTaskId: cleanPlayfield });
+describe("the due maintenance list", () => {
+  it("ST-094: The task is due at once on every chosen machine", async () => {
+    const lg005 = await aMachine("LG-005", { location: "Hall 1, row 3" });
+    const lg042 = await aMachine("LG-042", { location: "Hall 1, row 4" });
+    await aMachine("LG-020");
+    // Today is 10 June 2026.
+    const wax = await aMaintenanceTask("Wax playfield", [lg005, lg042], { intervalMonths: 12, addedOn: "2026-06-10" });
+
+    const { data, html } = await page("2026-06-10", { maintenanceTaskId: wax });
 
     expect(data.chosen?.machines).toEqual([
       expect.objectContaining({
-        museumNumber: "LG-042",
+        museumNumber: "LG-005",
         machineModelTitle: "Medieval Madness pinball/dmd",
         location: "Hall 1, row 3",
-        lastDone: "2026-01-01",
-        dueSince: "2026-04-01",
+        lastDone: undefined,
+        dueSince: "2026-06-10",
         overdue: false,
       }),
+      expect.objectContaining({ museumNumber: "LG-042", lastDone: undefined, dueSince: "2026-06-10" }),
     ]);
-    expect(html).toContain("Zuletzt erledigt 01.01.2026 · fällig seit 01.04.2026");
-    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>LG-042<\/a>/);
+    expect(html).toContain("Noch nicht erledigt · fällig seit 10.06.2026");
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-005"[^>]*>LG-005<\/a>/);
+    expect(html).not.toContain("LG-020");
   });
 
-  it("ST-043: Machine registered after the start date", async () => {
-    const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3, machineCategory: "pinball" });
-    await aMachine("LG-061", { registeredAt: "2026-05-15T08:00:00Z" });
+  it("ST-094: Each machine's interval runs on its own", async () => {
+    const lg005 = await aMachine("LG-005");
+    const lg042 = await aMachine("LG-042");
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg005, lg042], {
+      intervalMonths: 1,
+      addedOn: "2026-06-01",
+    });
+    expect((await page("2026-06-01", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toHaveLength(2);
 
-    // Due since 1 April for machines registered before the start date – not for LG-061.
-    const june = await page("2026-06-01", { maintenanceTaskId: cleanPlayfield });
-    expect(june.data.tasks).toEqual([]);
-    expect(june.html).not.toContain("LG-061");
+    await recorded(cleanGlass, lg005, "2026-06-03");
+    await recorded(cleanGlass, lg042, "2026-06-20");
 
-    const august = await page("2026-08-15", { maintenanceTaskId: cleanPlayfield });
-    expect(august.data.chosen?.machines).toEqual([
-      expect.objectContaining({ museumNumber: "LG-061", lastDone: "2026-05-15", dueSince: "2026-08-15" }),
+    expect(await listedOn("2026-07-02", cleanGlass)).toEqual([]);
+    expect((await page("2026-07-03", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-005", lastDone: "2026-06-03", dueSince: "2026-07-03" }),
     ]);
-    expect((await page("2026-08-14")).data.tasks).toEqual([]);
+    expect((await page("2026-07-20", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-005", dueSince: "2026-07-03" }),
+      expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-06-20", dueSince: "2026-07-20" }),
+    ]);
   });
 
   it("ST-043: The list first shows each due maintenance task with its counts", async () => {
-    // On the pinball machines: due since 1 April 2026 (3 months), overdue from 24 April on the three registered before
-    // the start date; the nine registered on 25 January are due since 25 April, not yet overdue on 1 May.
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
-      intervalMonths: 3,
-      machineCategory: "pinball",
-      startDate: "2026-01-01",
+    // Twelve pinball machines: Clean glass is added on 1 January 2026 (3 months), so it is due since then and overdue
+    // from 24 January on the three it was never done on; the nine it was done on 25 January are due since 25 April,
+    // not yet overdue on 1 May.
+    const pinball: string[] = [];
+    for (const number of ["001", "002", "003"]) pinball.push(await aMachine(`LG-${number}`));
+    const doneInJanuary: string[] = [];
+    for (let index = 0; index < 9; index++) doneInJanuary.push(await aMachine(`LG-1${String(index).padStart(2, "0")}`));
+    const lg201 = await aMachine("LG-201", { machineCategory: "arcade", technology: "crt" });
+    const lg202 = await aMachine("LG-202", { machineCategory: "arcade", technology: "lcd" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [...pinball, ...doneInJanuary], {
+      addedOn: "2026-01-01",
     });
+    for (const machineId of doneInJanuary) await recorded(cleanGlass, machineId, "2026-01-25");
     // On the two arcade machines: due since 25 April (1 month), overdue only from 3 May.
-    await aMaintenanceTask("Wax playfield", { intervalMonths: 1, machineCategory: "arcade", startDate: "2026-03-25" });
-    for (const number of ["001", "002", "003"])
-      await aMachine(`LG-${number}`, { registeredAt: "2025-06-01T09:00:00Z" });
-    for (let index = 0; index < 9; index++) {
-      await aMachine(`LG-1${String(index).padStart(2, "0")}`, { registeredAt: "2026-01-25T09:00:00Z" });
-    }
-    await aMachine("LG-201", { machineCategory: "arcade", technology: "crt", registeredAt: "2025-06-01T09:00:00Z" });
-    await aMachine("LG-202", { machineCategory: "arcade", technology: "lcd", registeredAt: "2025-06-01T09:00:00Z" });
+    await aMaintenanceTask("Wax playfield", [lg201, lg202], { intervalMonths: 1, addedOn: "2026-04-25" });
 
     const { data, html } = await page("2026-05-01");
 
@@ -308,11 +313,13 @@ describe("the due maintenance list", () => {
   });
 
   it("ST-043: Due maintenance tasks are grouped by maintenance task and sorted by location", async () => {
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
-    await aMachine("LG-044", { location: "Hall 2, row 1" });
-    await aMachine("LG-042", { location: "Hall 1, row 3" });
-    await aMachine("LG-043", { location: "Hall 1, row 1" });
-    await aMachine("LG-045", { location: "Hall 1, row 10" });
+    const machines = [
+      await aMachine("LG-044", { location: "Hall 2, row 1" }),
+      await aMachine("LG-042", { location: "Hall 1, row 3" }),
+      await aMachine("LG-043", { location: "Hall 1, row 1" }),
+      await aMachine("LG-045", { location: "Hall 1, row 10" }),
+    ];
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", machines, { suitableForHelpers: true });
 
     const { data, html } = await page("2026-04-02", { maintenanceTaskId: cleanGlass });
 
@@ -330,8 +337,9 @@ describe("the due maintenance list", () => {
   });
 
   it("ST-043: Nothing is due", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Clean playfield", { intervalMonths: 3, startDate: "2026-01-01" });
+    const lg042 = await aMachine("LG-042");
+    const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg042], { addedOn: "2026-03-01" });
+    await recorded(cleanPlayfield, lg042, "2026-03-15");
 
     const { data, html } = await page("2026-03-31");
 
@@ -342,9 +350,9 @@ describe("the due maintenance list", () => {
   });
 
   it("ST-043: Filter suitable for helpers", async () => {
-    await aMachine("LG-042");
-    await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
-    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", {
+    const lg042 = await aMachine("LG-042");
+    await aMaintenanceTask("Clean glass (inside & out)", [lg042], { suitableForHelpers: true });
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042], {
       suitableForHelpers: false,
     });
 
@@ -370,9 +378,9 @@ describe("the due maintenance list", () => {
   });
 
   it("ST-043: Maintenance task becomes overdue after 25% of the interval", async () => {
-    await aMachine("LG-042", { registeredAt: "2024-06-01T09:00:00Z" });
-    // Without maintenance records (ST-044): the start date is the last done.
-    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2025-01-01" });
+    const lg042 = await aMachine("LG-042");
+    // Without maintenance records (ST-044): due at once, since the day the machine was added to the task.
+    const wax = await aMaintenanceTask("Wax playfield", [lg042], { intervalMonths: 12, addedOn: "2026-01-01" });
 
     const march = await page("2026-03-01", { maintenanceTaskId: wax });
     expect(march.data.chosen?.machines).toEqual([
@@ -388,24 +396,11 @@ describe("the due maintenance list", () => {
     expect(april.data.tasks).toEqual([{ id: wax, name: "Wax playfield", machineCount: 1, overdueCount: 1 }]);
   });
 
-  it("ST-043: Restriction decides which machines are listed", async () => {
-    await aMachine("LG-042", { machineCategory: "pinball", technology: "dmd" });
-    await aMachine("LG-005", { machineCategory: "pinball", technology: "em" });
-    const reels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
-      machineCategory: "pinball",
-      technology: "em",
-    });
-
-    const { data } = await page("2026-04-02", { maintenanceTaskId: reels });
-
-    expect(data.chosen?.machines.map((machine) => machine.museumNumber)).toEqual(["LG-005"]);
-  });
-
   it("ST-043: Retired machines and removed maintenance tasks are not listed", async () => {
     const lg013 = await aMachine("LG-013");
-    await aMachine("LG-042");
-    await aMaintenanceTask("Clean playfield");
-    const wax = await aMaintenanceTask("Wax playfield");
+    const lg042 = await aMachine("LG-042");
+    await aMaintenanceTask("Clean playfield", [lg013, lg042]);
+    const wax = await aMaintenanceTask("Wax playfield", [lg013, lg042]);
     await run(
       executeCommand(
         retireMachineCommand,
@@ -424,15 +419,48 @@ describe("the due maintenance list", () => {
     expect(chosen.html).not.toContain("LG-013");
   });
 
+  it("ST-094: A machine retired later no longer counts", async () => {
+    const lg005 = await aMachine("LG-005");
+    const lg044 = await aMachine("LG-044");
+    const wax = await aMaintenanceTask("Wax playfield", [lg005, lg044]);
+    expect(await listedOn("2026-04-02", wax)).toEqual(["LG-005", "LG-044"]);
+    const countOf = async () =>
+      (await planPage()).data.plan.maintenanceTasks.find((task) => task.id === wax)?.machineCount;
+    expect(await countOf()).toBe(2);
+
+    await run(
+      executeCommand(
+        retireMachineCommand,
+        { machineId: lg044, version: 0, reason: "Sold" },
+        { actor: tom, db, clock: fixedClock("2026-04-02T09:00:00Z"), newId: randomUUID },
+      ),
+    );
+
+    expect(await countOf()).toBe(1);
+    expect((await planPage()).html).toContain("Gilt für 1 Gerät");
+    expect(await listedOn("2026-04-02", wax)).toEqual(["LG-005"]);
+    const several = await loadRecordForSeveral(db, fixedClock("2026-04-02T10:00:00Z"), wax, {
+      id: tom.teamMemberId,
+      role: tom.role,
+    });
+    expect([...(several?.due ?? []), ...(several?.others ?? [])].map((machine) => machine.museumNumber)).toEqual([
+      "LG-005",
+    ]);
+  });
+
   it("shows the tasks with the most overdue machines first, then the most due machines, then by name", async () => {
-    // Registered before the start dates: overdue on 1 May. Registered on 25 January: due since 25 April, not overdue.
-    for (const number of ["001", "002"]) await aMachine(`LG-${number}`, { registeredAt: "2025-06-01T09:00:00Z" });
-    await aMachine("LG-101", { technology: "em", registeredAt: "2026-01-25T09:00:00Z" });
-    await aMachine("LG-102", { technology: "em", registeredAt: "2026-01-25T09:00:00Z" });
-    await aMaintenanceTask("B – overdue on two", { machineCategory: "pinball", technology: "dmd" });
-    await aMaintenanceTask("C – due on two", { machineCategory: "pinball", technology: "em" });
-    await aMaintenanceTask("A – due on two", { machineCategory: "pinball", technology: "em" });
-    await aMaintenanceTask("D – due on four, overdue on two", { machineCategory: "pinball" });
+    // LG-001 and LG-002 never had any of it done: overdue on 1 May. LG-101 and LG-102 had D done on 25 January – due
+    // since 25 April, not overdue – and are on A and C, which are added on 25 April.
+    const [lg001, lg002] = [await aMachine("LG-001"), await aMachine("LG-002")];
+    const [lg101, lg102] = [await aMachine("LG-101"), await aMachine("LG-102")];
+    await aMaintenanceTask("B – overdue on two", [lg001, lg002]);
+    await aMaintenanceTask("C – due on two", [lg101, lg102], { addedOn: "2026-04-25" });
+    await aMaintenanceTask("A – due on two", [lg101, lg102], { addedOn: "2026-04-25" });
+    const d = await aMaintenanceTask("D – due on four, overdue on two", [lg001, lg002, lg101, lg102], {
+      addedOn: "2026-01-01",
+    });
+    await recorded(d, lg101, "2026-01-25");
+    await recorded(d, lg102, "2026-01-25");
 
     const { data } = await page("2026-05-01");
 
@@ -447,7 +475,7 @@ describe("the due maintenance list", () => {
   describe("after maintenance is recorded (ST-044)", () => {
     it("ST-044: Helper records maintenance as done", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], {
         intervalMonths: 1,
         suitableForHelpers: true,
       });
@@ -474,7 +502,7 @@ describe("the due maintenance list", () => {
 
     it("ST-044: Recording a task that is not due restarts the interval", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], { intervalMonths: 1 });
       await recorded(cleanGlass, lg042, "2026-06-01");
       expect(await listedOn("2026-06-15", cleanGlass)).toEqual([]);
 
@@ -490,7 +518,7 @@ describe("the due maintenance list", () => {
 
     it("ST-044: Partially done does not reset the interval", async () => {
       const lg042 = await aMachine("LG-042");
-      const switchTest = await aMaintenanceTask("Switch test (every switch)", { intervalMonths: 3 });
+      const switchTest = await aMaintenanceTask("Switch test (every switch)", [lg042]);
       expect(await listedOn("2026-06-10", switchTest)).toEqual(["LG-042"]);
 
       await recorded(switchTest, lg042, "2026-06-10", {
@@ -506,7 +534,7 @@ describe("the due maintenance list", () => {
         }),
       ]);
       expect((await page("2026-06-10", { maintenanceTaskId: switchTest })).data.chosen?.machines).toEqual([
-        expect.objectContaining({ museumNumber: "LG-042", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
+        expect.objectContaining({ museumNumber: "LG-042", lastDone: undefined, dueSince: "2026-04-01" }),
       ]);
     });
   });
@@ -529,9 +557,9 @@ describe("the due maintenance list", () => {
     }
 
     it("offers „Wartung erfassen“ on each due machine – to helpers only for tasks suitable for helpers", async () => {
-      await aMachine("LG-042");
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
-      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+      const lg042 = await aMachine("LG-042");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], { suitableForHelpers: true });
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042]);
 
       const link = (task: string) => `href="/team/maintenance/erfassen?task=${task}&amp;machine=LG-042"`;
       expect((await page("2026-04-02", { maintenanceTaskId: cleanGlass }, anna)).html).toContain(link(cleanGlass));
@@ -540,8 +568,8 @@ describe("the due maintenance list", () => {
     });
 
     it("shows the form page with the task and the machine, and says why to someone it would refuse", async () => {
-      await aMachine("LG-042", { location: "Hall 1, row 3" });
-      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+      const lg042 = await aMachine("LG-042", { location: "Hall 1, row 3" });
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042]);
       const clock = fixedClock("2026-06-10T10:00:00Z");
       const asAnna = { id: anna.teamMemberId, role: anna.role };
 
@@ -576,7 +604,7 @@ describe("the due maintenance list", () => {
 
     it("records it as the signed-in team member, and the list confirms it", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], {
         intervalMonths: 1,
         suitableForHelpers: true,
       });
@@ -595,7 +623,7 @@ describe("the due maintenance list", () => {
 
     it("keeps what was typed when it is rejected – a forged role is not read", async () => {
       const lg042 = await aMachine("LG-042");
-      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks");
+      const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042]);
       const typed = {
         maintenanceTaskId: fuses,
         machineId: lg042,
@@ -621,8 +649,8 @@ describe("the due maintenance list", () => {
 
   describe("machines not on display and returning to display (ST-056)", () => {
     it("ST-056: Machines not on display are never due", async () => {
-      const lg030 = await aMachine("LG-030", { registeredAt: "2024-01-01T09:00:00Z" });
-      await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1, startDate: "2024-06-01" });
+      const lg030 = await aMachine("LG-030");
+      await aMaintenanceTask("Clean glass (inside & out)", [lg030], { intervalMonths: 1, addedOn: "2024-06-01" });
       await statusChanged(lg030, 0, "not-on-display", "2024-07-01");
 
       const { data, html } = await page("2026-06-10");
@@ -633,10 +661,10 @@ describe("the due maintenance list", () => {
     });
 
     it("ST-056: Task already due at the return counts from the return date", async () => {
-      const lg030 = await aMachine("LG-030", { registeredAt: "2025-01-01T09:00:00Z" });
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+      const lg030 = await aMachine("LG-030");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg030], {
         intervalMonths: 1,
-        startDate: "2025-05-01",
+        addedOn: "2025-05-01",
       });
       await statusChanged(lg030, 0, "not-on-display", "2025-06-01");
 
@@ -645,7 +673,7 @@ describe("the due maintenance list", () => {
       expect((await page("2026-06-01", { maintenanceTaskId: cleanGlass })).data.chosen?.machines).toEqual([
         expect.objectContaining({
           museumNumber: "LG-030",
-          lastDone: "2025-05-01",
+          lastDone: undefined,
           dueSince: "2026-06-01",
           overdue: false,
         }),
@@ -658,8 +686,8 @@ describe("the due maintenance list", () => {
     });
 
     it("ST-056: Task not yet due at the return follows the normal rule", async () => {
-      const lg030 = await aMachine("LG-030", { registeredAt: "2025-01-01T09:00:00Z" });
-      const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2025-01-01" });
+      const lg030 = await aMachine("LG-030");
+      const wax = await aMaintenanceTask("Wax playfield", [lg030], { intervalMonths: 12, addedOn: "2025-01-01" });
       await statusChanged(lg030, 0, "not-on-display", "2025-12-01");
       await recorded(wax, lg030, "2026-03-01");
 
@@ -674,7 +702,7 @@ describe("the due maintenance list", () => {
 
     it("ST-056: Going off display removes a due task from the list", async () => {
       const lg042 = await aMachine("LG-042");
-      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)");
+      const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042]);
       expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
 
       await statusChanged(lg042, 0, "not-on-display", "2026-04-02");
@@ -682,10 +710,26 @@ describe("the due maintenance list", () => {
       expect(await listedOn("2026-04-02", cleanGlass)).toEqual([]);
       expect((await page("2026-04-02")).data.tasks).toEqual([]);
     });
+
+    it("ST-094: A machine not on display becomes due on its return", async () => {
+      const lg030 = await aMachine("LG-030");
+      await statusChanged(lg030, 0, "not-on-display", "2026-03-01");
+      const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg030], { addedOn: "2026-04-01" });
+
+      // Not due while it is Not on display – however long that is.
+      expect((await page("2026-09-30")).data.tasks).toEqual([]);
+
+      await statusChanged(lg030, 1, "playable", "2026-10-01");
+
+      expect(await listedOn("2026-09-30", cleanPlayfield)).toEqual([]);
+      expect((await page("2026-10-01", { maintenanceTaskId: cleanPlayfield })).data.chosen?.machines).toEqual([
+        expect.objectContaining({ museumNumber: "LG-030", lastDone: undefined, dueSince: "2026-10-01" }),
+      ]);
+    });
   });
 });
 
-describe("a machine model correction (ST-036)", () => {
+describe("a machine model correction (ST-094: it changes nothing in maintenance)", () => {
   /** A machine model of its own – the one the scenario corrects –, with one machine registered on 1 June 2025. */
   async function aMachineOfItsOwnModel(
     museumNumber: string,
@@ -717,86 +761,36 @@ describe("a machine model correction (ST-036)", () => {
     return { machineId, technologyCorrected };
   }
 
-  it("ST-036: Correcting the technology changes the applicable maintenance tasks", async () => {
+  it("ST-094: A machine model correction changes nothing in maintenance", async () => {
     const lg005 = await aMachineOfItsOwnModel("LG-005", "Fireball", "pinball", "solid-state");
-    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
+    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", [lg005.machineId], {
       intervalMonths: 3,
-      machineCategory: "pinball",
-      technology: "em",
+      addedOn: "2026-04-01",
     });
-    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", { intervalMonths: 3 });
-    await recorded(fuses, lg005.machineId, "2026-03-02");
-    await recorded(fuses, lg005.machineId, "2026-05-04", { outcome: "partially-done", note: "one fuse ordered" });
-    const before = await maintenanceRecords(db, { machineId: lg005.machineId });
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg005.machineId], {
+      intervalMonths: 3,
+      addedOn: "2026-04-01",
+    });
+    await recorded(scoreReels, lg005.machineId, "2026-05-01");
+    const dueBefore = (await page("2026-08-01")).data.tasks.map(({ name, machineCount }) => [name, machineCount]);
 
     await lg005.technologyCorrected("em", "2026-06-01");
 
-    // Newly applying: last done on the correction date (HS-20, D5) – not due since April, as its start date would say.
-    expect(await listedOn("2026-08-31", scoreReels)).toEqual([]);
-    expect((await page("2026-09-01", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
-      expect.objectContaining({ museumNumber: "LG-005", lastDone: "2026-06-01", dueSince: "2026-09-01" }),
+    // Still applies to LG-005, next due as before – counted from 1 May, not from the correction.
+    expect(await listedOn("2026-07-31", scoreReels)).toEqual([]);
+    expect((await page("2026-08-01", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
+      expect.objectContaining({ museumNumber: "LG-005", lastDone: "2026-05-01", dueSince: "2026-08-01" }),
     ]);
-    expect(await maintenanceRecords(db, { machineId: lg005.machineId })).toEqual(before);
-    expect(before).toHaveLength(2);
-  });
-
-  it("ST-036: A task that no longer applies leaves the due list", async () => {
-    const lg020 = await aMachineOfItsOwnModel("LG-020", "Galaxian", "arcade", "crt");
-    const monitor = await aMaintenanceTask("Check monitor geometry, convergence, capacitors", {
-      intervalMonths: 3,
-      machineCategory: "arcade",
-      technology: "crt",
-    });
-    await recorded(monitor, lg020.machineId, "2026-03-02", { outcome: "partially-done", note: "convergence pending" });
-    expect(await listedOn("2026-05-02", monitor)).toEqual(["LG-020"]);
-
-    await lg020.technologyCorrected("lcd", "2026-05-02");
-
-    expect(await listedOn("2026-05-02", monitor)).toEqual([]);
-    expect(await maintenanceRecords(db, { machineId: lg020.machineId })).toEqual([
-      expect.objectContaining({ maintenanceTaskId: monitor, outcome: "partially-done" }),
-    ]);
-  });
-
-  it("a task that applies again after a second correction counts from that one (ST-036 code review)", async () => {
-    const lg007 = await aMachineOfItsOwnModel("LG-007", "Gorgar", "pinball", "em");
-    const scoreReels = await aMaintenanceTask("Clean & adjust score reels / stepper units", {
-      intervalMonths: 3,
-      machineCategory: "pinball",
-      technology: "em",
-    });
-
-    await lg007.technologyCorrected("solid-state", "2026-02-01");
-    await lg007.technologyCorrected("em", "2026-05-04");
-
-    expect(await listedOn("2026-08-03", scoreReels)).toEqual([]);
-    expect((await page("2026-08-04", { maintenanceTaskId: scoreReels })).data.chosen?.machines).toEqual([
-      expect.objectContaining({ museumNumber: "LG-007", lastDone: "2026-05-04", dueSince: "2026-08-04" }),
-    ]);
-  });
-
-  it("a task that applied before and after a correction keeps its last done", async () => {
-    const lg006 = await aMachineOfItsOwnModel("LG-006", "Eight Ball", "pinball", "solid-state");
-    const rubbers = await aMaintenanceTask("Replace rubbers", { intervalMonths: 3, machineCategory: "pinball" });
-
-    await lg006.technologyCorrected("em", "2026-03-15");
-
-    expect((await page("2026-04-02", { maintenanceTaskId: rubbers })).data.chosen?.machines).toEqual([
-      expect.objectContaining({ museumNumber: "LG-006", lastDone: "2026-01-01", dueSince: "2026-04-01" }),
-    ]);
+    // And no task starts or stops applying: what is due is exactly what was.
+    expect((await page("2026-08-01")).data.tasks.map(({ name, machineCount }) => [name, machineCount])).toEqual(dueBefore);
+    expect(await listedOn("2026-08-01", fuses)).toEqual(["LG-005"]);
   });
 });
 
 describe("changing and removing a maintenance task (ST-041)", () => {
-  /** The maintenance plan as Tom sees it, back from a change – `params`: the address the change led to. */
-  async function planPage(params: Record<string, string> = {}) {
-    const data = await loadMaintenancePlan(db, tom.teamMemberId, params);
-    return { data, html: renderToStaticMarkup(createElement(MaintenancePlanView, data)) };
-  }
-
   it("ST-041: Technician changes the interval", async () => {
     const lg042 = await aMachine("LG-042");
-    const cleanPlayfield = await aMaintenanceTask("Clean playfield", { intervalMonths: 3 });
+    const cleanPlayfield = await aMaintenanceTask("Clean playfield", [lg042], { addedOn: "2025-12-01" });
     await recorded(cleanPlayfield, lg042, "2026-01-01");
 
     await changed(cleanPlayfield, { intervalMonths: 2 }, "2026-01-15");
@@ -811,8 +805,8 @@ describe("changing and removing a maintenance task (ST-041)", () => {
   });
 
   it("ST-041: Technician changes the suitable-for-helpers mark", async () => {
-    await aMachine("LG-042");
-    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", {
+    const lg042 = await aMachine("LG-042");
+    const fuses = await aMaintenanceTask("Check fuses, connectors, boards for burn marks", [lg042], {
       suitableForHelpers: false,
     });
     expect((await page("2026-04-02", { suitableForHelpers: true })).data.tasks).toEqual([]);
@@ -831,7 +825,7 @@ describe("changing and removing a maintenance task (ST-041)", () => {
   it("ST-041: Technician removes a maintenance task", async () => {
     const lg042 = await aMachine("LG-042");
     const lg043 = await aMachine("LG-043");
-    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12 });
+    const wax = await aMaintenanceTask("Wax playfield", [lg042, lg043], { intervalMonths: 12, addedOn: "2026-01-01" });
     await recorded(wax, lg042, "2026-01-10");
     await recorded(wax, lg043, "2026-01-12", { outcome: "partially-done", note: "Only the lower half" });
 
@@ -851,37 +845,6 @@ describe("changing and removing a maintenance task (ST-041)", () => {
     ]);
   });
 
-  it("ST-041: Narrowed restriction removes machines from the due list", async () => {
-    const lg042 = await aMachine("LG-042", { machineCategory: "pinball", technology: "dmd" });
-    await aMachine("LG-005", { machineCategory: "pinball", technology: "em" });
-    const cleanPlayfield = await aMaintenanceTask("Clean playfield");
-    await recorded(cleanPlayfield, lg042, "2026-03-20", { outcome: "partially-done" });
-    expect(await listedOn("2026-04-02", cleanPlayfield)).toEqual(["LG-005", "LG-042"]);
-
-    await changed(cleanPlayfield, { machineCategory: "pinball", technology: "em" }, "2026-04-02");
-
-    expect(await listedOn("2026-04-02", cleanPlayfield)).toEqual(["LG-005"]);
-    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
-      expect.objectContaining({ maintenanceTaskId: cleanPlayfield, outcome: "partially-done" }),
-    ]);
-  });
-
-  it("ST-041: Changing the start date", async () => {
-    await aMachine("LG-042", { registeredAt: "2025-03-01T09:00:00Z" });
-    const lg043 = await aMachine("LG-043", { registeredAt: "2025-05-01T09:00:00Z" });
-    const wax = await aMaintenanceTask("Wax playfield", { intervalMonths: 12, startDate: "2026-01-01" });
-    await recorded(wax, lg043, "2026-05-01");
-
-    await changed(wax, { startDate: "2026-04-01" }, "2026-06-01");
-
-    expect(await listedOn("2027-03-31", wax)).toEqual([]);
-    expect(await listedOn("2027-04-01", wax)).toEqual(["LG-042"]);
-    const { data } = await page("2027-05-01", { maintenanceTaskId: wax });
-    expect(data.chosen?.machines.map(({ museumNumber, dueSince }) => [museumNumber, dueSince])).toEqual([
-      ["LG-042", "2027-04-01"],
-      ["LG-043", "2027-05-01"],
-    ]);
-  });
 });
 
 describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
@@ -922,7 +885,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("ST-045: Helper records a maintenance task for several machines", async () => {
     const machines = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", machines, {
       intervalMonths: 1,
       suitableForHelpers: true,
     });
@@ -961,10 +924,9 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     const lg045 = await aMachine("LG-045", { location: "Hall 1, row 3" });
     const lg046 = await aMachine("LG-046", { location: "Hall 1, row 10" });
     const lg090 = await aMachine("LG-090", { machineCategory: "arcade", technology: "crt" });
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
-      intervalMonths: 3,
-      machineCategory: "pinball",
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg045, lg046], {
       suitableForHelpers: true,
+      addedOn: "2026-01-01",
     });
     await recorded(cleanGlass, lg045, "2026-03-30");
     await recorded(cleanGlass, lg046, "2026-03-30");
@@ -981,10 +943,30 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     expect(html).not.toContain(lg090);
     expect(html).not.toContain("LG-090");
   });
+  it("ST-094: Recording for several machines offers the machines of the task", async () => {
+    const lg042 = await aMachine("LG-042", { location: "Hall 1, row 1" });
+    const lg045 = await aMachine("LG-045", { location: "Hall 1, row 2" });
+    const lg050 = await aMachine("LG-050", { location: "Hall 1, row 3" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg045], {
+      addedOn: "2026-01-01",
+      suitableForHelpers: true,
+    });
+    await recorded(cleanGlass, lg045, "2026-03-30");
+    expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042"]);
+
+    const { data, html } = await selection("2026-04-02", cleanGlass, anna);
+
+    expect(data?.due.map((machine) => machine.museumNumber)).toEqual(["LG-042"]);
+    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045"]);
+    expect(checkboxOf(html, lg042)).toContain("checked");
+    expect(checkboxOf(html, lg045)).toBeDefined();
+    expect(checkboxOf(html, lg050)).toBeUndefined();
+  });
+
   it("ST-045: Machines that are not due can be included", async () => {
     const lg042 = await aMachine("LG-042");
     const lg045 = await aMachine("LG-045");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg045], { intervalMonths: 1 });
     await recorded(cleanGlass, lg045, "2026-06-01");
     expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042"]);
 
@@ -1005,7 +987,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("ST-045: A machine that fails a rule does not stop the others", async () => {
     const [lg042, lg043, lg044] = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", {
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg043, lg044], {
       intervalMonths: 1,
       suitableForHelpers: true,
     });
@@ -1033,7 +1015,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("names a machine left out even when Maintenance would accept it now", async () => {
     const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { intervalMonths: 1 });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg043], { intervalMonths: 1 });
     const form = severalFormOf(tom, "2026-06-10");
     expect(
       await form.action(null, ticked({ maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "" }, [lg042])),
@@ -1047,7 +1029,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("ST-045: Nothing selected is rejected", async () => {
     const lg042 = await aMachine("LG-042");
-    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", { suitableForHelpers: true });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042], { suitableForHelpers: true });
     const form = severalFormOf(anna, "2026-04-02");
 
     const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "", note: "Hall 1" };
@@ -1061,7 +1043,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("ST-045: Helpers cannot record several machines for a task not suitable for helpers", async () => {
     const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
-    const psu = await aMaintenanceTask("Check PSU voltages, connectors, board");
+    const psu = await aMaintenanceTask("Check PSU voltages, connectors, board", [lg042, lg043]);
     const form = severalFormOf(anna, "2026-04-02");
 
     const fields = { maintenanceTaskId: psu, outcome: "done", date: "", note: "", role: "technician" };
