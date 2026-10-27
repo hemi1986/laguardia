@@ -287,6 +287,19 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
   task that is in the plan, with how many machines it applies to now – a change that changes nothing records no event, so
   there is nothing to ask the journal (G33).
 
+**Changing the tasks of one machine from its machine record** (ST-096, the same `CMD-ChangeMachinesOfMaintenanceTask` seen from the
+machine): a second command object with the same ID, `changeMaintenanceTasksOfMachineCommand` – input `{ machineId, seen, ticked }`
+over *task* IDs, versionless like the one from a task. Its decision (`changeMaintenanceTasksOfMachine`) applies each touched task
+through `withMachinesChanged`, which both commands share, and emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
+changed**, none for a task whose tick did not. The whole change is rejected, or none of it stored: a retired or unknown machine
+(also when nothing would change), a task La Guardia does not know (`maintenance-task-unknown`) or one removed meanwhile
+(`maintenance-task-removed`, which the Server Action names from the posted IDs with `removedMaintenanceTaskNames` – a code carries no
+text). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
+`machineMaintenance` also answers `taskCount` and `changeOffered` (Maintenance's own rule for the viewer, G11). The form page is
+`…/machines/[museumNumber]/wartungsaufgaben-aendern/`; its landing `?tasksChanged=1` is a **fourth exception** of *A confirmation
+after an action* – the machine record says how many tasks apply to it *now*, because a change that changes nothing records no
+event and the event of one that does names no machine.
+
 **Maintenance's lists read Collection's machines themselves** (architecture review 2026-10-25): Collection publishes
 its machines for maintenance (context map, Published Language), and the answers over them read them in one call –
 `dueMaintenance`, `maintenanceForSeveral(db, clock, taskId, teamMember)` and `machineMaintenance(db, clock, machineId,
@@ -304,7 +317,7 @@ with that section's data from that module.
 
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
-`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` is the exception named under *Changing the machines of a task*); the page confirms it only when `lastCommandBy(db, { machineId } |
+`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` and `?tasksChanged=` are the exceptions named under *Changing the machines of a task* and *Changing the tasks of one machine*); the page confirms it only when `lastCommandBy(db, { machineId } |
 { aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team
 member looking at the page ran it. The command layer gives every journal entry its command's ID
 (`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
