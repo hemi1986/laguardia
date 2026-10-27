@@ -51,6 +51,8 @@ export const maintenanceTaskMachine = pgTable(
       .references(() => maintenanceTask.id),
     machineId: uuid("machine_id").notNull(),
     addedAt: timestamp("added_at", { withTimezone: true }).notNull(),
+    /** When a technician removed the machine from the task (ST-095) – the entry stays; adding it again clears it. */
+    removedAt: timestamp("removed_at", { withTimezone: true }),
   },
   (t) => [unique("maintenance_task_machine_task_machine_unique").on(t.maintenanceTaskId, t.machineId)],
 );

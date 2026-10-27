@@ -1,29 +1,20 @@
-import { machineForMaintenance } from "@/modules/collection";
 import { aggregateCommand, type Database } from "@/platform/command";
 import {
   changeMaintenancePlan,
   maintenancePlanActors,
   type ChangeMaintenancePlanInput,
-  type ChosenMachines,
 } from "./change-maintenance-plan";
+import { readChosenMachines, type ChosenMachines } from "./chosen-machines";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { maintenancePlans } from "./maintenance-plans";
 import { maintenanceEvents } from "./events";
 
 /**
- * The chosen machines of an added maintenance task as Collection knows them (context map), read in the command's
- * transaction. Each read takes the machine's retirement lock shared (ADR 0010), so a retirement in flight decides
- * first – in the order of the machine IDs, so two steps cannot wait for each other. Nothing else is read: changing or
- * removing a task chooses no machine.
+ * The chosen machines of an added maintenance task as Collection knows them. Nothing is read for changing or removing a
+ * task: that chooses no machine.
  */
 export async function chosenMachines(tx: Database, input: ChangeMaintenancePlanInput): Promise<ChosenMachines> {
-  const found = new Map<string, { retired: boolean }>();
-  if (input.change !== "add") return found;
-  for (const machineId of [...new Set(input.task.machineIds)].sort()) {
-    const machine = await machineForMaintenance(tx, machineId);
-    if (machine) found.set(machineId, { retired: machine.retired });
-  }
-  return found;
+  return input.change === "add" ? readChosenMachines(tx, input.task.machineIds) : new Map();
 }
 
 /**

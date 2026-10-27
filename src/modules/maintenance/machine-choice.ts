@@ -1,5 +1,6 @@
 import { groupMachines, machinesForMaintenance, type MachineGroup } from "@/modules/collection";
 import type { Database } from "@/platform/command";
+import { activeMaintenanceTasks } from "./maintenance-plans";
 
 /** A machine a technician can choose for a maintenance task – what they recognise it by, and whether it is away. */
 export type ChoosableMachine = {
@@ -8,16 +9,28 @@ export type ChoosableMachine = {
   machineModelTitle: string;
   /** Not on display: it can be chosen, but the task becomes due only on its return (HS-20, G27). */
   notOnDisplay: boolean;
+  /** The task applies to it – always false while choosing for a task that is not there yet (ST-095). */
+  chosen: boolean;
 };
 
 /**
  * RM-MachineChoiceForMaintenanceTask (ST-094): the machines a technician can choose for a maintenance task – every
  * machine that is not retired, in groups by machine category and technology as CONTEXT.md orders them, by museum
- * number inside a group; a group without a machine is not there. On Collection's machines as it publishes them for
- * maintenance (context map, read here in one call).
+ * number inside a group; a group without a machine is not there. With a maintenance task (ST-095, changing its machines)
+ * each machine says whether the task applies to it. On Collection's machines as it publishes them for maintenance
+ * (context map, read here in one call).
  */
-export async function machineChoiceForMaintenanceTask(db: Database): Promise<MachineGroup<ChoosableMachine>[]> {
-  const machines = await machinesForMaintenance(db);
+export async function machineChoiceForMaintenanceTask(
+  db: Database,
+  maintenanceTaskId?: string,
+): Promise<MachineGroup<ChoosableMachine>[]> {
+  const [machines, tasks] = await Promise.all([
+    machinesForMaintenance(db),
+    maintenanceTaskId ? activeMaintenanceTasks(db) : [],
+  ]);
+  const among = new Set(
+    tasks.find((task) => task.id === maintenanceTaskId)?.machines.map((machine) => machine.machineId),
+  );
   return groupMachines(
     machines.map((machine) => ({
       machineId: machine.id,
@@ -26,6 +39,7 @@ export async function machineChoiceForMaintenanceTask(db: Database): Promise<Mac
       machineCategory: machine.machineCategory,
       technology: machine.technology,
       notOnDisplay: machine.machineStatus === "not-on-display",
+      chosen: among.has(machine.id),
     })),
   ).map((group) => ({
     ...group,

@@ -1,0 +1,1 @@
+ALTER TABLE "maintenance_task_machine" ADD COLUMN "removed_at" timestamp with time zone;

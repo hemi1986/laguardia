@@ -23,7 +23,13 @@ export function MaintenancePlanView({
 }) {
   return (
     <>
-      {confirmation && <Confirmation>{texts[confirmation.change](confirmation.name)}</Confirmation>}
+      {confirmation && (
+        <Confirmation>
+          {confirmation.change === "machines"
+            ? texts.nowAppliesTo(confirmation.name, confirmation.machineCount)
+            : texts[confirmation.change](confirmation.name)}
+        </Confirmation>
+      )}
       <Link href="/team/maintenance-plan/new" className={buttonVariants({ className: "self-start" })}>
         {texts.add}
       </Link>

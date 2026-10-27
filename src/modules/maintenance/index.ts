@@ -7,6 +7,11 @@ export type {
   MaintenanceTaskDetails,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
+export { changeMachinesOfMaintenanceTaskCommand } from "./change-machines-of-maintenance-task-command";
+export type {
+  ChangeMachinesOfMaintenanceTaskError,
+  ChangeMachinesOfMaintenanceTaskInput,
+} from "./change-machines-of-maintenance-task";
 export {
   maintenancePlan,
   maintenancePlanVersion,

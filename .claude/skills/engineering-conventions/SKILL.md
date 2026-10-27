@@ -126,7 +126,9 @@ how many of it are chosen. With JavaScript the count follows every tick and „A
 button renders only after hydration, `useSyncExternalStore`); without it the count says what was chosen when the page
 opened. It carries no domain logic and no texts: the page maps its domain groups to `ChoiceGroup`s with the German
 labels, and the client form passes the header function and the button text. Key it on `keptKey(state)` so a rejection
-starts it again from the values the state kept. Group order and grouping are Collection's (`groupMachines`).
+starts it again from the values the state kept. A form that starts with the current choice ticked (ST-095, changing the
+machines of a task) passes `openWithChoice={!!state}`: the groups stay closed until a rejection opens those with a
+choice. Group order and grouping are Collection's (`groupMachines`).
 **No-JavaScript test passed:** native checkboxes in a native fold (`e2e/maintenance-plan-machines.spec.ts`).
 
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
@@ -259,6 +261,32 @@ applies on top. CMD-ChangeMaintenancePlan adds a task and its machines in one st
 doubled machine as a whole. The page names the machines retired meanwhile from the posted values (`retiredAmong`) – a
 command error is a code, the museum numbers come from the page.
 
+**Changing the machines of a task: a versionless set delta** (ST-095, `CMD-ChangeMachinesOfMaintenanceTask`). The plan is
+one aggregate that technicians change rarely, but two changes of different machines must both stand – so this command
+carries what the technician *changed*, not the state they saw: the form posts the machines as they were ticked when the
+page opened (`seen`) and the machines ticked now, the decision adds the machines newly ticked and removes the machines
+unticked, and every machine the technician did not touch stays as it is *now*. A change that is already made – a machine
+added by someone else meanwhile, one already removed – is **nothing to do, not a conflict**. The pieces:
+- `versionless: true` on the command definition: a person's command needs no version, the plan row is loaded `FOR UPDATE`
+  and two such commands run one after the other (`aggregate.ts`; only for a set delta whose decision treats a repeated
+  change as nothing to do). `mayChangeNothing: true`: when the decision returns no events, the command ends successfully
+  without a journal entry and the version stays – every other command that journals nothing still throws.
+- A machine removed is marked (`removedAt` on its entry, nothing is deleted); `withMachines` and the due calculation leave
+  it out. Added again, the *same* entry starts anew (`addedAt` now, `removedAt` cleared), so only records recorded since
+  count for last done (HS-24); an entry exists once per task and machine (unique).
+- The command's facts read only the machines the change touches (newly ticked or unticked) (`readChosenMachines`, retirement lock shared, in the order of
+  the IDs – taken after the plan row's `FOR UPDATE`, which is safe because no retirement step locks the maintenance plan;
+  a future policy on a retirement that touches the plan would have to revisit ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects
+  everything. A machine that is not listed (retired) is in neither `seen` nor `ticked`, so it stays among the machines.
+- The form (`…/[maintenanceTaskId]/geraete-aendern/`): `seen` is a declared field (a hidden field, the IDs joined by a
+  comma), so a rejection **keeps** it – an action re-renders the page with what is stored now, and a retry must still mean
+  what the technician changed. The command's result names no task when nothing changed, so the Server Action builds its
+  `formAction` per call and takes the task for the landing from the form. `GroupedChoice` gets
+  `openWithChoice={!!state}`: closed while the choice is only the current one, open after a rejection.
+- The confirmation is a third exception of *A confirmation after an action*: `?machinesChanged=<task>` is shown for a
+  task that is in the plan, with how many machines it applies to now – a change that changes nothing records no event, so
+  there is nothing to ask the journal (G33).
+
 **Maintenance's lists read Collection's machines themselves** (architecture review 2026-10-25): Collection publishes
 its machines for maintenance (context map, Published Language), and the answers over them read them in one call –
 `dueMaintenance`, `maintenanceForSeveral(db, clock, taskId, teamMember)` and `machineMaintenance(db, clock, machineId,
@@ -276,7 +304,7 @@ with that section's data from that module.
 
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
-`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`); the page confirms it only when `lastCommandBy(db, { machineId } |
+`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` is the exception named under *Changing the machines of a task*); the page confirms it only when `lastCommandBy(db, { machineId } |
 { aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team
 member looking at the page ran it. The command layer gives every journal entry its command's ID
 (`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
@@ -537,7 +565,7 @@ Every aggregate table has `version integer not null default 0`; `aggregateStore`
 2. lets the decision run on it – a **domain rejection comes first** ("already triaged by Eva", ST-018), because it explains more than a conflict;
 3. saves at the **version the acting person saw** and increments it – `version-conflict` when someone changed the aggregate in between and nothing domain-specific explains it. **When the save fails the version check, the layer loads what is stored now and runs the decision again** (ST-018): a domain rejection there wins – the second of two technicians triaging at the same moment gets "already triaged", not a conflict (`src/modules/repair/record-defect-concurrency.integration.test.ts`, two real transactions). The facts are read again for that second decision. It relies on PostgreSQL's default isolation, READ COMMITTED: after the failed `UPDATE` waited for the other transaction, the next read sees what it committed – a stricter isolation level would need a retry instead.
 
-Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise. Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
+Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise (the one exception is a `versionless` set delta, see *Changing the machines of a task*). Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
 
 ## Automatic policies
 

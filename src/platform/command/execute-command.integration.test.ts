@@ -111,6 +111,86 @@ describe("command layer", () => {
     await expect(executeCommand(silent, undefined, deps(visitor))).rejects.toThrow(/journals no event/);
   });
 
+  describe("a set delta (ST-095): versionless, and may change nothing", () => {
+    /** A store that holds one aggregate at version 3 and notes how it was loaded and saved. */
+    function countingStore() {
+      const seen: { lock?: boolean; savedAt?: number } = {};
+      const store: AggregateStore<{ id: string }> = {
+        type: "AGG-Test",
+        load: async (_tx, id, options) => {
+          seen.lock = options?.lock;
+          return { state: { id }, version: 3 };
+        },
+        insert: async () => {},
+        update: async (_tx, _state, expectedVersion) => {
+          seen.savedAt = expectedVersion;
+          return true;
+        },
+      };
+      return { store, seen };
+    }
+    const journal = () => ({
+      type: "EVT-TestDone" as const,
+      aggregate: { type: "AGG-Test" as const, id: "x" },
+      machineId: null,
+      data: {},
+    });
+    const delta = (
+      store: AggregateStore<{ id: string }>,
+      extra: { versionless?: true; mayChangeNothing?: true },
+      events: number,
+    ) =>
+      aggregateCommand({
+        id: "CMD-TestDelta",
+        allowedActors: ["technician"],
+        store,
+        target: () => ({ id: "x" }),
+        decide: (state) => ({
+          ok: true as const,
+          state,
+          events: Array.from({ length: events }, () => ({ type: "EVT-TestDone" })),
+        }),
+        journal,
+        result: () => undefined,
+        ...extra,
+      });
+
+    it("lets a person's command name no version: the row is locked and saved at the version it holds", async () => {
+      const { store, seen } = countingStore();
+
+      const outcome = await executeCommand(delta(store, { versionless: true }, 1), undefined, deps(technician));
+
+      expect(outcome).toEqual({ ok: true, result: undefined });
+      expect(seen).toEqual({ lock: true, savedAt: 3 });
+    });
+
+    it("still refuses a person's command without a version when it is not versionless", async () => {
+      const { store } = countingStore();
+
+      await expect(executeCommand(delta(store, {}, 1), undefined, deps(technician))).rejects.toThrow(
+        /needs the version/,
+      );
+    });
+
+    it("ends successfully without saving or journaling when the command may change nothing", async () => {
+      const { store, seen } = countingStore();
+      const nothing = delta(store, { versionless: true, mayChangeNothing: true }, 0);
+
+      const outcome = await executeCommand(nothing, undefined, deps(technician));
+
+      expect(outcome).toEqual({ ok: true, result: undefined });
+      expect(seen.savedAt).toBeUndefined();
+    });
+
+    it("still refuses a command that journals nothing without the option", async () => {
+      const { store } = countingStore();
+
+      await expect(executeCommand(delta(store, { versionless: true }, 0), undefined, deps(technician))).rejects.toThrow(
+        /journals no event/,
+      );
+    });
+  });
+
   it("keeps the journal append-only: changing or deleting entries is refused by the database", async () => {
     const machineId = await aRegisteredMachine(db);
     await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, deps(visitor));

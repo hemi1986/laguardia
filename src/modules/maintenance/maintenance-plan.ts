@@ -25,6 +25,8 @@ export type MachineOfTask = {
   maintenanceTaskId: string;
   machineId: string;
   addedAt: Date;
+  /** When it was removed from the task (ST-095): it is no longer one of the machines of the task and never counts. */
+  removedAt: Date | undefined;
 };
 
 /** The ID of the one maintenance plan – created by the migration `drizzle/0019_maintenance_plan.sql`. */
@@ -41,4 +43,3 @@ export type MaintenancePlan = {
 
 /** A maintenance task with the IDs of the machines it applies to – retired ones may be among them (they never count). */
 export type MaintenanceTaskWithMachines = MaintenanceTask & { machines: MachineOfTask[] };
-

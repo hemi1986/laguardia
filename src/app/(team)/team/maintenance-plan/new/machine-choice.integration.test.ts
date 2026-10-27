@@ -21,7 +21,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "../maintenance-plan";
 import { AddMaintenanceTaskForm } from "./add-maintenance-task-form";
 import { loadAddMaintenanceTask } from "./add-maintenance-task-data";
-import { retiredAmong } from "./retired-among";
+import { retiredAmong } from "../retired-among";
 
 /**
  * The machines „Wartungsaufgabe hinzufügen“ offers (RM-MachineChoiceForMaintenanceTask, ST-094, G27): in groups by
@@ -97,7 +97,9 @@ const numbered = (from: number, count: number) =>
 /** The form page as the technician gets it: the markup, and the texts of the headers of its groups, in order. */
 async function formPage() {
   const html = renderToStaticMarkup(createElement(AddMaintenanceTaskForm, await loadAddMaintenanceTask(db)));
-  const headers = [...html.matchAll(/<summary[^>]*>(.*?)<\/summary>/g)].map((match) => match[1].replace(/<[^>]+>/g, ""));
+  const headers = [...html.matchAll(/<summary[^>]*>(.*?)<\/summary>/g)].map((match) =>
+    match[1].replace(/<[^>]+>/g, ""),
+  );
   return { html, headers };
 }
 
@@ -162,7 +164,13 @@ describe("the machines to choose for a new maintenance task", () => {
         {
           version,
           change: "add",
-          task: { name: "Oil the gum machine", instruction: "Oil it.", intervalMonths: 12, suitableForHelpers: false, machineIds: [] },
+          task: {
+            name: "Oil the gum machine",
+            instruction: "Oil it.",
+            intervalMonths: 12,
+            suitableForHelpers: false,
+            machineIds: [],
+          },
         },
         { actor: tom, db, newId: randomUUID },
       ),

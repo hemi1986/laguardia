@@ -124,6 +124,11 @@ export type Command<Input, Result, Error extends string> = {
    * `Command<…, unknown, …>` like before.
    */
   removesContent?(result: Result): string | undefined;
+  /**
+   * The command may end successfully having changed nothing (ST-095: a set delta that is already made) – it then journals
+   * nothing. Every other command that journals no event is a bug and throws.
+   */
+  mayChangeNothing?: true;
 };
 
 export type CommandResult<Result, Error extends string> =
@@ -151,7 +156,9 @@ export async function executeCommand<Input, Result, Error extends string>(
     const result = await db.transaction(async (tx) => {
       const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
       // Every command writes its journal entry (Definition of Done); only a policy may have nothing to do.
-      if (rows.length === 0) throw new Error(`${command.id} succeeded but journals no event`);
+      if (rows.length === 0 && !command.mayChangeNothing)
+        throw new Error(`${command.id} succeeded but journals no event`);
+      if (rows.length === 0) return result;
       // One ID for everything the command journals – a page asks the journal what one command did (G3, lastCommandBy).
       // Not from the injected generator: it is no domain ID, and tests count the IDs a command takes.
       const commandId = randomUUID();

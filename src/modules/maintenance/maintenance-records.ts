@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, max } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
@@ -48,9 +48,11 @@ export async function maintenanceFacts(tx: Database, input: RecordMaintenanceInp
     machineForMaintenance(tx, input.machineId),
   ]);
   return {
-    maintenanceTask: plan && withMachines(plan.state.maintenanceTasks, plan.state.machinesOfTasks).find(
-      (task) => task.id === input.maintenanceTaskId,
-    ),
+    maintenanceTask:
+      plan &&
+      withMachines(plan.state.maintenanceTasks, plan.state.machinesOfTasks).find(
+        (task) => task.id === input.maintenanceTaskId,
+      ),
     machine,
   };
 }
@@ -112,6 +114,7 @@ export async function lastDoneByRecord(
       and(
         eq(maintenanceRecord.maintenanceTaskId, maintenanceTaskMachine.maintenanceTaskId),
         eq(maintenanceRecord.machineId, maintenanceTaskMachine.machineId),
+        isNull(maintenanceTaskMachine.removedAt),
       ),
     )
     .where(

@@ -13,13 +13,18 @@ const noSubscription = () => () => {};
 
 /** False while the server renders and until the browser has hydrated the page – what needs JavaScript waits for it. */
 function useHydrated(): boolean {
-  return useSyncExternalStore(noSubscription, () => true, () => false);
+  return useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
 }
 
 /**
  * Choosing many entries out of a long list (UX guideline G27): every entry a native checkbox posted under `name`, the
  * entries in groups that fold – a native `<details>`, so a group opens without JavaScript – and are closed when the page
- * opens, except groups with a choice in them (after a rejection the person sees what they sent). A header names the
+ * opens, except groups with a choice in them (after a rejection the person sees what they sent) – unless the form says
+ * `openWithChoice={false}`: a form that starts with the current choice ticked (changing it) still opens closed. A header names the
  * group and how many of it are chosen; with JavaScript the count follows every tick and „Alle auswählen“ ticks the
  * whole group – without it the count says what was chosen when the page opened and the entries are ticked one by one.
  *
@@ -32,6 +37,7 @@ export function GroupedChoice({
   chosen: initiallyChosen,
   header,
   selectAll,
+  openWithChoice = true,
 }: {
   /** The name each ticked entry is posted under. */
   name: string;
@@ -42,12 +48,21 @@ export function GroupedChoice({
   header: (group: string, chosen: number, total: number) => string;
   /** „Alle auswählen“ – shown only with JavaScript. */
   selectAll: string;
+  /** Whether a group with a choice in it opens with the page – false while the choice is only the current one. */
+  openWithChoice?: boolean;
 }) {
   const hydrated = useHydrated();
   const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(initiallyChosen));
   // Which groups open with the page: the ones with a choice in them at that moment – decided once.
   const [openWithPage] = useState(
-    () => new Set(groups.filter((group) => group.entries.some((entry) => initiallyChosen.includes(entry.value))).map((group) => group.key)),
+    () =>
+      new Set(
+        openWithChoice
+          ? groups
+              .filter((group) => group.entries.some((entry) => initiallyChosen.includes(entry.value)))
+              .map((group) => group.key)
+          : [],
+      ),
   );
 
   // The checkboxes are the source of truth, not React's state: they are uncontrolled, so a tick made before the page
@@ -63,7 +78,9 @@ export function GroupedChoice({
     );
   useEffect(sync, []);
   const tickAll = (group: ChoiceGroup) => {
-    for (const input of root.current?.querySelectorAll<HTMLInputElement>(`input[data-group="${CSS.escape(group.key)}"]`) ?? [])
+    for (const input of root.current?.querySelectorAll<HTMLInputElement>(
+      `input[data-group="${CSS.escape(group.key)}"]`,
+    ) ?? [])
       input.checked = true;
     sync();
   };
@@ -71,10 +88,18 @@ export function GroupedChoice({
   return (
     <div ref={root} className="flex flex-col gap-2">
       {groups.map((group) => (
-        <details key={group.key} open={openWithPage.has(group.key) || undefined} className="rounded-md border px-3 py-2">
+        <details
+          key={group.key}
+          open={openWithPage.has(group.key) || undefined}
+          className="rounded-md border px-3 py-2"
+        >
           <summary className="cursor-pointer text-sm font-medium">
             <span>
-              {header(group.label, group.entries.filter((entry) => chosen.has(entry.value)).length, group.entries.length)}
+              {header(
+                group.label,
+                group.entries.filter((entry) => chosen.has(entry.value)).length,
+                group.entries.length,
+              )}
             </span>
             {hydrated && (
               <button
