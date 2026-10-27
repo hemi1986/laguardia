@@ -37,7 +37,7 @@ La Guardia is software for the pinball museum to manage its pinball machines: re
 | `user-stories`, `/review-stories` | story format, validation, review |
 | `ux-design` | how we decide the interface: the UX frontier to grill, what a story says about a screen, review order |
 | `/groom-backlog` | periodic challenge of the open backlog: still worth building, dependencies, priorities |
-| `/implement` | engineering entry point: one story test-first, verify, review, refactor, acceptance |
+| `/implement` | engineering entry point: one story test-first, verify, review, refactor, acceptance by the acceptance tester |
 | `tdd` | red → green loop, good tests, seams |
 | `codebase-design` | vocabulary for deep modules: module, interface, depth, seam, adapter, leverage, locality |
 | `/improve-codebase-architecture` | periodic scan for deepening opportunities, then grilling on the chosen one |
@@ -81,7 +81,7 @@ Engineering, story by story: `/implement [ST-NNN]` (empty = next ready story who
 4. `verify.ts` – lint, module boundaries, types, tests, traceability; the full browser run once before the push, CI repeats it on the pull request
 5. Review, scaled to the risk of the diff – **light lane** (size S, no events/commands/migrations/form input/new dependency): `@acceptance-tester` only; **normal lane**: `@code-reviewer` and `@acceptance-tester` in parallel, `/code-review` for L/XL or shared platform code, `/security-review` when the diff touches input handling, login/roles/session, uploads/files or security headers
 6. Refactor – fix findings in the story, the recommended option without asking; a follow-up story only past the follow-up hurdle (security/data-loss risk or blocks a named story, and can't be fixed in about an hour, and no existing story can take it)
-7. Pull request, acceptance on the preview deployment, `done` – **the user accepts and merges**; the next story starts in a fresh session
+7. Acceptance tester's verdict → `done`, pull request – **the user only merges** (asked again only when something goes badly wrong); the next story starts in a fresh session
 
 After the foundation stories, per finished bounded context or about every 8–10 **domain** stories: `/improve-codebase-architecture` for the code and `/groom-backlog` for what is still planned – not in between. Progress is measured in done domain stories and scenarios (`docs/stories/BACKLOG.md`), not in the total number of stories. Technical groundwork is pulled in just in time: into the first story that needs it.
 
