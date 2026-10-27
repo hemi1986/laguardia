@@ -39,6 +39,12 @@ export function machinesTickedNewly(input: Pick<ChangeMachinesOfMaintenanceTaskI
   return input.ticked.filter((machineId) => !seen.has(machineId));
 }
 
+/** The machines the change touches – newly ticked or unticked – which the command reads from Collection. */
+export function machinesTouched(input: Pick<ChangeMachinesOfMaintenanceTaskInput, "seen" | "ticked">): string[] {
+  const ticked = new Set(input.ticked);
+  return [...new Set([...machinesTickedNewly(input), ...input.seen.filter((machineId) => !ticked.has(machineId))])];
+}
+
 export function changeMachinesOfMaintenanceTask(
   plan: MaintenancePlan,
   input: ChangeMachinesOfMaintenanceTaskInput,
@@ -48,17 +54,19 @@ export function changeMachinesOfMaintenanceTask(
   // A removed maintenance task is final: its machines never change again (invariant).
   const task = plan.maintenanceTasks.find((each) => each.id === input.maintenanceTaskId && !each.removedAt);
   if (!task) return { ok: false, error: "maintenance-task-unknown" };
-  // The whole change is rejected, or none of it is stored – also when the machine is already among the machines.
-  const toAdd = machinesTickedNewly(input);
-  const refusal = machinesRefusal(input.ticked, chosen, toAdd);
-  if (refusal) return { ok: false, error: refusal };
-
   const ticked = new Set(input.ticked);
   const entries = plan.machinesOfTasks.filter((each) => each.maintenanceTaskId === task.id);
   const among = new Set(entries.filter((each) => !each.removedAt).map((each) => each.machineId));
   // Adding one that is already among the machines, or removing one that no longer is, changes nothing.
-  const added = [...new Set(toAdd)].filter((machineId) => !among.has(machineId));
-  const removed = [...new Set(input.seen)].filter((machineId) => !ticked.has(machineId) && among.has(machineId));
+  const added = [...new Set(machinesTickedNewly(input))].filter((machineId) => !among.has(machineId));
+  // The whole change is rejected, or none of it is stored – a machine already among the machines needs no check.
+  const refusal = machinesRefusal(input.ticked, chosen, added);
+  if (refusal) return { ok: false, error: refusal };
+  // A machine retired meanwhile stays among the machines even when the form still names it as seen: not being offered
+  // is not unticking it.
+  const removed = [...new Set(input.seen)].filter(
+    (machineId) => !ticked.has(machineId) && among.has(machineId) && !chosen.get(machineId)?.retired,
+  );
   if (added.length === 0 && removed.length === 0) return { ok: true, state: plan, events: [] };
 
   const now = clock.now();

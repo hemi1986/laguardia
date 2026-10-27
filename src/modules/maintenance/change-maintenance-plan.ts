@@ -1,7 +1,5 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
 import type { ChosenMachines } from "./chosen-machines";
-
-export type { ChosenMachines };
 import type { MachineOfTask, MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
 
 /**
@@ -36,6 +34,8 @@ export type ChangeMaintenancePlanInput = {
   | { change: "change"; maintenanceTaskId: string; task: MaintenanceTaskDetails }
   | { change: "remove"; maintenanceTaskId: string }
 );
+
+export type { ChosenMachines };
 
 /** What a change of the maintenance plan did to one maintenance task. */
 export type MaintenancePlanChange = "added" | "changed" | "removed";

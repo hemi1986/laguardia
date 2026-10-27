@@ -233,6 +233,34 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     expect(entry.data).toMatchObject({ machinesAdded: [lg042], machinesRemoved: [] });
   });
 
+  it("a machine retired after it was seen stays among the machines on a retry", async () => {
+    const [lg005, lg042, lg043] = [
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+    ];
+    const task = await aTask([lg005, lg042]);
+    await retireMachine(db, lg042);
+
+    // The retry still names LG-042 as seen, but the page no longer offers it – so it is not ticked.
+    await changed(task, { seen: [lg005, lg042], ticked: [lg005, lg043] });
+
+    expect(await countOf(task)).toBe(2); // LG-005 and LG-043; the retired LG-042 is still among the machines
+    const [entry] = (await machineEvents(task)).slice(-1);
+    expect(entry.data).toMatchObject({ machinesAdded: [lg043], machinesRemoved: [] });
+  });
+
+  it("a machine already among the machines needs no check when someone ticks it", async () => {
+    const [lg005, lg043] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const task = await aTask([lg005]);
+    await changed(task, { seen: [lg005], ticked: [lg005, lg043] }, { actor: eva });
+    await retireMachine(db, lg043);
+
+    const toms = await change(task, { seen: [lg005], ticked: [lg005, lg043] });
+
+    expect(toms).toMatchObject({ ok: true });
+  });
+
   it("a machine retired meanwhile rejects the whole change", async () => {
     const [lg043, lg044] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const task = await aTask([], { name: "Clean glass (inside & out)" });

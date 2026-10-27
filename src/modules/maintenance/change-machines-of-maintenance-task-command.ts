@@ -2,7 +2,7 @@ import { aggregateCommand, type Database } from "@/platform/command";
 import {
   changeMachinesActors,
   changeMachinesOfMaintenanceTask,
-  machinesTickedNewly,
+  machinesTouched,
   type ChangeMachinesOfMaintenanceTaskInput,
 } from "./change-machines-of-maintenance-task";
 import { readChosenMachines, type ChosenMachines } from "./chosen-machines";
@@ -10,12 +10,12 @@ import { maintenanceEvents } from "./events";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { maintenancePlans } from "./maintenance-plans";
 
-/** The machines newly ticked as Collection knows them – only those can be added, so only those are read. */
+/** The machines the change touches as Collection knows them: those to add must exist and stay, those to remove must not be retired. */
 export async function machinesToAdd(
   tx: Database,
   input: ChangeMachinesOfMaintenanceTaskInput,
 ): Promise<ChosenMachines> {
-  return readChosenMachines(tx, machinesTickedNewly(input));
+  return readChosenMachines(tx, machinesTouched(input));
 }
 
 /**
