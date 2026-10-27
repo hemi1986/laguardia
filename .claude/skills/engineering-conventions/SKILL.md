@@ -127,7 +127,8 @@ button renders only after hydration, `useSyncExternalStore`); without it the cou
 opened. It carries no domain logic and no texts: the page maps its domain groups to `ChoiceGroup`s with the German
 labels, and the client form passes the header function and the button text. Key it on `keptKey(state)` so a rejection
 starts it again from the values the state kept. A form that starts with the current choice ticked (ST-095, changing the
-machines of a task) passes `openWithChoice={!!state}`: the groups stay closed until a rejection opens those with a choice. Group order and grouping are Collection's (`groupMachines`).
+machines of a task) passes `openWithChoice={!!state}`: the groups stay closed until a rejection opens those with a
+choice. Group order and grouping are Collection's (`groupMachines`).
 **No-JavaScript test passed:** native checkboxes in a native fold (`e2e/maintenance-plan-machines.spec.ts`).
 
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use
