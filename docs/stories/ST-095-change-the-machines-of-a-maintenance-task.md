@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue]
 depends_on: [ST-094]
 labels: [ui, maintenance, feature:per-machine-maintenance]
-status: in-progress
+status: done
 ---
 
 ## Story
