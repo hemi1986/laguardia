@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { machinesForMaintenance } from "@/modules/collection";
-import { aggregateStore, entities, type Database } from "@/platform/command";
+import { aggregateStore, entities, isId, type Database } from "@/platform/command";
 import {
   MAINTENANCE_PLAN_ID,
   type MachineOfTask,
@@ -105,6 +105,21 @@ export async function maintenanceTaskName(db: Database, maintenanceTaskId: strin
     .from(maintenanceTask)
     .where(eq(maintenanceTask.id, maintenanceTaskId));
   return row?.name;
+}
+
+/**
+ * The names of the maintenance tasks among the given IDs that were removed from the plan, in the order they were added –
+ * what a rejected change names when a task was removed meanwhile (ST-096). An ID that is no maintenance task is left out.
+ */
+export async function removedMaintenanceTaskNames(db: Database, maintenanceTaskIds: readonly string[]): Promise<string[]> {
+  const ids = [...new Set(maintenanceTaskIds.filter(isId))];
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ name: maintenanceTask.name })
+    .from(maintenanceTask)
+    .where(and(inArray(maintenanceTask.id, ids), isNotNull(maintenanceTask.removedAt)))
+    .orderBy(asc(maintenanceTask.position));
+  return rows.map((row) => row.name);
 }
 
 /** The maintenance tasks of the plan that are not removed, with their machines – a removed task is never due (invariant). */

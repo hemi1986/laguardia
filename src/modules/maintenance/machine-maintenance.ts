@@ -2,8 +2,10 @@ import { machinesForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import type { CalendarDate } from "@/platform/time";
+import { changeMachinesActors } from "./change-machines-of-maintenance-task";
 import { dueOn } from "./due-maintenance";
 import { latestMaintenanceRecords, type NamedMaintenanceRecord } from "./maintenance-records";
+import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
 
 /** A maintenance task due on the machine; `recordOffered`: CMD-RecordMaintenance would accept the team member (G11). */
 export type MachineDueMaintenanceTask = {
@@ -24,6 +26,10 @@ export type MachineMaintenance = {
   latestRecords: NamedMaintenanceRecord[];
   /** How many maintenance records it has in all. */
   recordCount: number;
+  /** How many maintenance tasks apply to it (ST-096) – none for a retired machine, which never counts. */
+  taskCount: number;
+  /** CMD-ChangeMachinesOfMaintenanceTask would accept the team member for this machine (ST-096, G11). */
+  changeOffered: boolean;
 };
 
 /**
@@ -39,10 +45,11 @@ export async function machineMaintenance(
   { teamMember, latestRecordCount }: { teamMember: { role: Role }; latestRecordCount: number },
 ): Promise<MachineMaintenance> {
   const published = machinesForMaintenance(db, { machineId });
-  const [machines, due, latest] = await Promise.all([
+  const [machines, due, latest, tasks] = await Promise.all([
     published,
     published.then((machines) => dueOn(db, clock, machines, teamMember)),
     latestMaintenanceRecords(db, machineId, latestRecordCount),
+    activeMaintenanceTasks(db),
   ]);
   return {
     notOnDisplay: machines.some((machine) => machine.machineStatus === "not-on-display"),
@@ -59,5 +66,7 @@ export async function machineMaintenance(
       .sort((a, b) => Number(b.overdue) - Number(a.overdue) || a.dueSince.localeCompare(b.dueSince)),
     latestRecords: latest.records,
     recordCount: latest.total,
+    taskCount: machines.length === 0 ? 0 : tasks.filter((task) => maintenanceTaskAppliesTo(task, machineId)).length,
+    changeOffered: machines.length > 0 && (changeMachinesActors as readonly string[]).includes(teamMember.role),
   };
 }

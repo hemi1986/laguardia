@@ -297,3 +297,117 @@ test.describe("without JavaScript", () => {
     await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ gilt jetzt für 1 Gerät.`);
   });
 });
+
+/**
+ * Changing the maintenance tasks of one machine from its machine record (ST-096, G27, G29, G33, G34): section 5 says how
+ * many tasks apply and ends with „Wartungsaufgaben ändern“, whose groups – by interval – are closed with the applying
+ * tasks ticked; sending lands on the machine record with how many apply now. The form page's data, the rejections and the
+ * confirmations are tested at `machines/[museumNumber]/wartungsaufgaben-aendern/change-tasks.integration.test.ts`. In this
+ * file because it changes the one maintenance plan like the tests above.
+ */
+const taskGroupOf = (page: Page, name: string) => page.locator("details").filter({ hasText: name });
+
+async function openedTask(page: Page, name: string) {
+  const group = taskGroupOf(page, name);
+  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
+  return page.getByRole("checkbox", { name: new RegExp(name.replace(/[()&]/g, ".")) });
+}
+
+test("a technician changes the maintenance tasks of a machine from its machine record", async ({ page }) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  const [applying, other] = [unique("Clean glass (inside & out)"), unique("Wax playfield")];
+  await aMaintenanceTask(page, applying, machine);
+  await aMaintenanceTask(page, other);
+
+  await page.goto(`/team/machines/${machine.museumNumber}`);
+  const main = page.getByRole("main");
+  await expect(main.getByText("Für dieses Gerät gilt 1 Wartungsaufgabe.")).toBeVisible();
+  await main.getByRole("link", { name: "Wartungsaufgaben ändern" }).click();
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartungsaufgaben ändern · ${machine.museumNumber}`);
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+  await expect(taskGroupOf(page, applying)).not.toHaveAttribute("open", "");
+  await expect(taskGroupOf(page, applying).locator("summary")).toContainText(/Alle 12 Monate – \d+ von \d+ ausgewählt/);
+  await expect(await openedTask(page, applying)).toBeChecked();
+  await expect(await openedTask(page, other)).not.toBeChecked();
+  await (await openedTask(page, other)).check();
+  await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();
+
+  // Back on the machine record, which says how many tasks apply now.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(machine.museumNumber);
+  await expect(main.getByRole("status")).toHaveText(`Für ${machine.museumNumber} gelten jetzt 2 Wartungsaufgaben.`);
+  await expect(main.getByText("Für dieses Gerät gelten 2 Wartungsaufgaben.")).toBeVisible();
+
+  // Sent again without a change: the same landing, no rejection (G33).
+  await main.getByRole("link", { name: "Wartungsaufgaben ändern" }).click();
+  await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();
+  await expect(main.getByRole("status")).toHaveText(`Für ${machine.museumNumber} gelten jetzt 2 Wartungsaufgaben.`);
+});
+
+test("helpers see how many tasks apply to a machine, not „Wartungsaufgaben ändern“, and are sent away from its address", async ({
+  page,
+}) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  const helper = await aHelper(page);
+  await logIn(page, helper);
+
+  await page.goto(`/team/machines/${machine.museumNumber}`);
+  await expect(page.getByRole("main").getByText("Für dieses Gerät gilt keine Wartungsaufgabe.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Wartungsaufgaben ändern" })).toHaveCount(0);
+  await page.goto(`/team/machines/${machine.museumNumber}/wartungsaufgaben-aendern`);
+  await expect(page).toHaveURL(/\/team$/);
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("the maintenance tasks of a machine are changed by ticking natively, in a native fold", async ({ page }) => {
+    await logIn(page);
+    const machine = await aMachine(page, "not-on-display");
+    const name = unique("Oil the gum machine");
+    await aMaintenanceTask(page, name);
+
+    await page.goto(`/team/machines/${machine.museumNumber}/wartungsaufgaben-aendern`);
+    await expect(page.getByRole("button", { name: "Alle auswählen" })).toHaveCount(0);
+    await (await openedTask(page, name)).check();
+    await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();
+
+    await expect(page.getByRole("main").getByRole("status")).toHaveText(
+      `Für ${machine.museumNumber} gilt jetzt 1 Wartungsaufgabe.`,
+    );
+  });
+});
+
+test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({ page, context }) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  const [removed, kept] = [unique("Wax playfield"), unique("Clean glass (inside & out)")];
+  await aMaintenanceTask(page, removed);
+  await aMaintenanceTask(page, kept);
+  await page.goto(`/team/machines/${machine.museumNumber}/wartungsaufgaben-aendern`);
+  await (await openedTask(page, removed)).check();
+  await (await openedTask(page, kept)).check();
+
+  // Another technician removes „removed“ from the maintenance plan meanwhile.
+  const other = await context.newPage();
+  await other.goto("/team/maintenance-plan");
+  await other
+    .getByRole("listitem")
+    .filter({ hasText: removed })
+    .getByRole("link", { name: `„${removed}“ ändern` })
+    .click();
+  await other.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
+  await other.getByRole("button", { name: "Entfernen" }).click();
+  await expect(other.getByRole("main").getByRole("status")).toHaveText(`„${removed}“ ist nicht mehr im Wartungsplan.`);
+
+  await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    `„${removed}“ ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.`,
+  );
+  // The removed task is no longer offered; the other tick is kept and its group open.
+  await expect(page.getByRole("checkbox", { name: new RegExp(removed) })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: new RegExp(kept.replace(/[()&]/g, ".")) })).toBeChecked();
+});

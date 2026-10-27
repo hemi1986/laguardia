@@ -9,7 +9,9 @@ import type { MachineRecordData } from "./machine-record-data";
 /**
  * What the machine record confirms (G3): the status change (ST-012), the move (ST-034), the correction of its details
  * – under a new museum number or not (ST-035), the problem report (ST-015),
- * the file attached (ST-037) or removed (ST-038), the maintenance recorded from it (ST-047), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
+ * the file attached (ST-037) or removed (ST-038), the maintenance recorded from it (ST-047), its maintenance tasks changed
+ * (ST-096 – the exception: a change that changes nothing records no event, so the record says how many tasks apply *now*
+ * with it, whoever opens the address, like ST-095's `?machinesChanged`), the retirement (ST-039) or the triage outcome of reporting and triaging in one step (ST-023, ST-052).
  */
 export type MachineRecordConfirmation =
   | { kind: "status-changed" }
@@ -21,6 +23,7 @@ export type MachineRecordConfirmation =
   | { kind: "file-attached"; title: string }
   | { kind: "file-removed"; title: string }
   | { kind: "maintenance-recorded" }
+  | { kind: "maintenance-tasks-changed" }
   | { kind: "triaged"; triaged: TriageConfirmation };
 
 /**
@@ -61,6 +64,9 @@ export async function loadMachineConfirmation(
     if (!command || !maintenanceRecordedIn(command, maintenanceRecordId)) return undefined;
     const recorded = await maintenanceRecordById(db, maintenanceRecordId);
     return recorded?.machineId === record.id ? { kind: "maintenance-recorded" } : undefined;
+  }
+  if (query.tasksChanged !== undefined) {
+    return { kind: "maintenance-tasks-changed" };
   }
   const asked = (["statusChanged", "moved", "corrected", "retired", "problemReported"] as const).find(
     (name) => query[name] !== undefined,

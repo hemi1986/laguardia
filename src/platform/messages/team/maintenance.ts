@@ -52,6 +52,37 @@ export const maintenanceTexts = {
     recordsTitle: (museumNumber: string) => `Wartungseinträge · ${museumNumber}`,
     year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     backToMachine: "Zurück zum Gerät",
+    /** How many maintenance tasks apply to the machine (ST-096) – the names are on the form page. */
+    tasksApply: (count: number) =>
+      count === 0
+        ? "Für dieses Gerät gilt keine Wartungsaufgabe."
+        : count === 1
+          ? "Für dieses Gerät gilt 1 Wartungsaufgabe."
+          : `Für dieses Gerät gelten ${count} Wartungsaufgaben.`,
+    changeTasks: "Wartungsaufgaben ändern",
+  },
+  /** Changing the maintenance tasks of one machine from its machine record (ST-096, G27, G34): a form page of its own. */
+  changeTasks: {
+    title: (museumNumber: string) => `Wartungsaufgaben ändern · ${museumNumber}`,
+    open: "Wartungsaufgaben ändern",
+    legend: "Wartungsaufgaben des Geräts",
+    submit: "Wartungsaufgaben ändern",
+    back: "Zurück zum Gerät",
+    toPlan: "Zum Wartungsplan",
+    retired: "Dieses Gerät ist ausgemustert – seine Wartungsaufgaben lassen sich nicht mehr ändern.",
+    /** After the name of a task: it can be done by helpers (G27). */
+    suitableForHelpers: "Für Helfer:innen geeignet",
+    /** The confirmation on the machine record – also when nothing changed (G33). */
+    nowApply: (museumNumber: string, count: number) =>
+      count === 0
+        ? `Für ${museumNumber} gilt jetzt keine Wartungsaufgabe.`
+        : count === 1
+          ? `Für ${museumNumber} gilt jetzt 1 Wartungsaufgabe.`
+          : `Für ${museumNumber} gelten jetzt ${count} Wartungsaufgaben.`,
+    /** The reasons a rejected change names – nothing was stored. */
+    removedMeanwhile: (names: readonly string[]) =>
+      `${names.map((name) => `„${name}“`).join(", ")} ${names.length === 1 ? "ist" : "sind"} nicht mehr im Wartungsplan. Es wurde nichts gespeichert.`,
+    unknown: "Diese Wartungsaufgabe gibt es nicht. Es wurde nichts gespeichert.",
   },
   /** Recording one maintenance task for several machines at once (ST-045): a selection page of its own (G4a). */
   recordForSeveral: {
@@ -130,6 +161,8 @@ export const maintenanceTexts = {
 export const maintenanceErrors = {
   /** Recording maintenance (ST-044). */
   "maintenance-task-unknown": "Diese Wartungsaufgabe gibt es nicht mehr.",
+  /** Changing the maintenance tasks of a machine (ST-096): a task was removed from the maintenance plan meanwhile. */
+  "maintenance-task-removed": "Eine Wartungsaufgabe ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.",
   "maintenance-task-does-not-apply": "Diese Wartungsaufgabe gilt nicht für dieses Gerät.",
   "maintenance-not-suitable-for-helpers": "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
   "outcome-required": "Bitte ein Ergebnis auswählen.",
