@@ -332,6 +332,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     expect(await machineEvents(task)).toHaveLength(eventsBefore);
   });
 
+  // „Geräte ändern“ not being offered to a helper is the page's access check: `e2e/maintenance-plan-machines.spec.ts`.
   it("ST-095: Helpers cannot change the machines of a task", async () => {
     const [lg005, lg042] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const task = await aTask([lg005], { name: "Clean glass (inside & out)" });

@@ -35,8 +35,6 @@ export type ChangeMaintenancePlanInput = {
   | { change: "remove"; maintenanceTaskId: string }
 );
 
-export type { ChosenMachines };
-
 /** What a change of the maintenance plan did to one maintenance task. */
 export type MaintenancePlanChange = "added" | "changed" | "removed";
 

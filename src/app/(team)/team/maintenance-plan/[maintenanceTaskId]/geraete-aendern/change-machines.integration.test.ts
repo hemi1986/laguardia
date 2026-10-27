@@ -4,15 +4,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
-import {
-  createMachineModelCommand,
-  registerMachineCommand,
-  type MachineStatus,
-} from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand, type MachineStatus } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   changeMachinesOfMaintenanceTaskCommand,
   changeMaintenancePlanCommand,
+  dueMaintenance,
   maintenancePlan,
   maintenancePlanVersion,
 } from "@/modules/maintenance";
@@ -156,7 +153,25 @@ const landing = async (maintenanceTaskId: string) =>
     ),
   );
 
+const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
+
 describe("the form page „Geräte ändern“", () => {
+  it("ST-095: A technician adds a machine to a maintenance task", async () => {
+    const [lg005, lg042, lg043] = [await aMachine("LG-005"), await aMachine("LG-042"), await aMachine("LG-043")];
+    const task = await aTask("Clean glass (inside & out)", [lg005, lg042]);
+
+    // Opens „Geräte ändern“, ticks LG-043 as well and sends the change on 10 June 2026.
+    const seen = (await loadChangeMachines(db, task)).chosen;
+    expect(await send(task, seen, [...seen, lg043])).toBeNull();
+
+    expect((await loadChangeMachines(db, task)).chosen).toEqual([lg005, lg042, lg043]);
+    const due = (await dueMaintenance(db, tenthOfJune)).find((each) => each.id === task);
+    expect(due?.machines.find((machine) => machine.machineId === lg043)?.dueSince).toBe("2026-06-10");
+    const html = await landing(task);
+    expect(html).toContain("„Clean glass (inside &amp; out)“ gilt jetzt für 3 Geräte.");
+    expect(html).toContain("Gilt für 3 Geräte");
+  });
+
   it("ST-095: The machines the task applies to are ticked, the groups closed", async () => {
     const machines = [];
     for (const museumNumber of ["LG-005", "LG-006", "LG-007", "LG-008", "LG-009", "LG-010"])
@@ -207,7 +222,9 @@ describe("the form page „Geräte ändern“", () => {
     expect(machinesRejectionText({ error: state!.error, retired })).toBe(
       "LG-044 ist inzwischen ausgemustert. Es wurde nichts gespeichert.",
     );
-    // Nothing is stored; LG-044 is no longer offered, while LG-043 stays ticked and its group is open.
+    // Nothing is stored; LG-044 is no longer offered, while LG-043 stays ticked and its group is open. (The static
+    // render of the whole form has no action state, so the open group is checked on the choice the form renders with
+    // `openWithChoice` after a rejection; the browser tests cover the form itself.)
     expect((await loadChangeMachines(db, task)).chosen).toEqual([]);
     const choice = await choiceAfter(task, state!.chosen);
     expect(choice).not.toContain("LG-044");
@@ -232,11 +249,15 @@ describe("back on the maintenance plan", () => {
     const [lg005, lg042] = [await aMachine("LG-005"), await aMachine("LG-042")];
     const task = await aTask("Clean glass (inside & out)", [lg005, lg042]);
     const version = await maintenancePlanVersion(db);
+    const dueBefore = (await dueMaintenance(db, tenthOfJune)).find((each) => each.id === task);
 
     const outcome = await send(task, [lg005, lg042], [lg005, lg042]);
 
     expect(outcome).toBeNull();
     expect(await maintenancePlanVersion(db)).toBe(version); // nothing was recorded
+    // The due dates of LG-005 and LG-042 stay as they were.
+    expect((await dueMaintenance(db, tenthOfJune)).find((each) => each.id === task)).toEqual(dueBefore);
+    expect(dueBefore?.machines.map((machine) => machine.dueSince)).toEqual(["2026-03-01", "2026-03-01"]);
     const html = await landing(task);
     expect(html).toContain("„Clean glass (inside &amp; out)“ gilt jetzt für 2 Geräte.");
     expect(html).toContain("Gilt für 2 Geräte");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { changeMaintenancePlan, type ChosenMachines, type NewMaintenanceTask } from "./change-maintenance-plan";
+import { changeMaintenancePlan, type NewMaintenanceTask } from "./change-maintenance-plan";
+import type { ChosenMachines } from "./chosen-machines";
 import type { MaintenancePlan } from "./maintenance-plan";
 
 /**

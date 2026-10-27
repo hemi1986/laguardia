@@ -232,7 +232,7 @@ test("ST-095: The task's page shows the count and leads to the form page", async
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`„${name}“ ändern`);
 });
 
-test("ST-095: A technician adds a machine to a maintenance task", async ({ page }) => {
+test("a technician adds a machine on the form page and lands on the plan with the count", async ({ page }) => {
   await logIn(page);
   const [lg1, lg2, lg3] = [
     await aMachine(page, "not-on-display"),

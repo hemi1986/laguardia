@@ -274,8 +274,9 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
 - A machine removed is marked (`removedAt` on its entry, nothing is deleted); `withMachines` and the due calculation leave
   it out. Added again, the *same* entry starts anew (`addedAt` now, `removedAt` cleared), so only records recorded since
   count for last done (HS-24); an entry exists once per task and machine (unique).
-- The command's facts read only the machines newly ticked (`readChosenMachines`, retirement lock shared, in the order of
-  the IDs – before any lock of its own, ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects
+- The command's facts read only the machines the change touches (newly ticked or unticked) (`readChosenMachines`, retirement lock shared, in the order of
+  the IDs – taken after the plan row's `FOR UPDATE`, which is safe because no retirement step locks the maintenance plan;
+  a future policy on a retirement that touches the plan would have to revisit ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects
   everything. A machine that is not listed (retired) is in neither `seen` nor `ticked`, so it stays among the machines.
 - The form (`…/[maintenanceTaskId]/geraete-aendern/`): `seen` is a declared field (a hidden field, the IDs joined by a
   comma), so a rejection **keeps** it – an action re-renders the page with what is stored now, and a retry must still mean
