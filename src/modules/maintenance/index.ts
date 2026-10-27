@@ -22,6 +22,7 @@ export {
   maintenancePlanVersion,
   maintenanceTaskAppliesTo,
   maintenanceTaskName,
+  removedMaintenanceTaskNames,
   type ListedMaintenanceTask,
 } from "./maintenance-plans";
 export { dueMaintenance, overdueMaintenanceCounts, type DueMachine, type DueMaintenanceTask } from "./due-maintenance";
@@ -44,3 +45,4 @@ export {
 export { maintenancePlanChangedBy, maintenanceRecordedIn } from "./in-command";
 export { maintenanceForSeveral, type MachineToChoose, type MaintenanceForSeveral } from "./maintenance-for-several";
 export { machineChoiceForMaintenanceTask, type ChoosableMachine } from "./machine-choice";
+export { maintenanceTaskChoiceForMachine, type ChoosableTask, type TaskGroup } from "./maintenance-task-choice";

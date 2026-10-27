@@ -11,7 +11,8 @@ const { machineMaintenance: texts, dueMaintenance, recordMaintenance } = teamMes
 /**
  * Section 5 of the machine record, „Wartung“ (ST-047, G18): first the due maintenance tasks – an overdue one marked in
  * words (G6a) – with „Wartung erfassen“ where Maintenance would accept the viewer (G11); then the latest maintenance
- * records, the newest first, and the link to all of them. Texts are plain text: React escapes them.
+ * records, the newest first, and the link to all of them; at its end how many maintenance tasks apply to the machine and,
+ * for a technician, „Wartungsaufgaben ändern“ (ST-096, G29, G11). Texts are plain text: React escapes them.
  */
 export function MachineMaintenanceSection({
   maintenance,
@@ -69,6 +70,15 @@ export function MachineMaintenanceSection({
                 </Link>
               )}
             </>
+          )}
+          <p className="text-sm">{texts.tasksApply(maintenance.taskCount)}</p>
+          {maintenance.changeOffered && (
+            <Link
+              href={`${machine}/wartungsaufgaben-aendern`}
+              className={buttonVariants({ variant: "outline", size: "sm", className: "self-start" })}
+            >
+              {texts.changeTasks}
+            </Link>
           )}
         </CardContent>
       </Card>

@@ -289,6 +289,8 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
       return texts.fileAttached(confirmation.title);
     case "maintenance-recorded":
       return teamMessages.recordMaintenance.recorded(record.museumNumber);
+    case "maintenance-tasks-changed":
+      return teamMessages.changeTasks.nowApply(record.museumNumber, record.maintenance.taskCount);
     case "triaged":
       return triageConfirmationText(confirmation.triaged);
   }
