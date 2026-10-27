@@ -45,6 +45,38 @@ export function machinesTouched(input: Pick<ChangeMachinesOfMaintenanceTaskInput
   return [...new Set([...machinesTickedNewly(input), ...input.seen.filter((machineId) => !ticked.has(machineId))])];
 }
 
+/**
+ * The plan after machines were added to and removed from one maintenance task (the machines of a task, ST-095): a machine
+ * removed is marked, never deleted; one added again after a removal starts its entry anew, so only records recorded from
+ * now on count (HS-24). Shared by the change from the task (ST-095) and from the machine record (ST-096).
+ */
+export function withMachinesChanged(
+  plan: MaintenancePlan,
+  maintenanceTaskId: string,
+  { added, removed }: { added: readonly string[]; removed: readonly string[] },
+  { now, newId }: { now: Date; newId: () => string },
+): MaintenancePlan {
+  const entries = plan.machinesOfTasks.filter((each) => each.maintenanceTaskId === maintenanceTaskId);
+  const addedMachines = added.map((machineId) => {
+    const earlier = entries.find((each) => each.machineId === machineId);
+    return earlier
+      ? { ...earlier, addedAt: now, removedAt: undefined }
+      : { id: newId(), maintenanceTaskId, machineId, addedAt: now, removedAt: undefined };
+  });
+  const removedMachines = entries
+    .filter((each) => !each.removedAt && removed.includes(each.machineId))
+    .map((each) => ({ ...each, removedAt: now }));
+  const changedEntries = new Map([...addedMachines, ...removedMachines].map((each) => [each.id, each]));
+  const known = new Set(plan.machinesOfTasks.map((each) => each.id));
+  return {
+    ...plan,
+    machinesOfTasks: [
+      ...plan.machinesOfTasks.map((each) => changedEntries.get(each.id) ?? each),
+      ...addedMachines.filter((each) => !known.has(each.id)),
+    ],
+  };
+}
+
 export function changeMachinesOfMaintenanceTask(
   plan: MaintenancePlan,
   input: ChangeMachinesOfMaintenanceTaskInput,
@@ -69,28 +101,9 @@ export function changeMachinesOfMaintenanceTask(
   );
   if (added.length === 0 && removed.length === 0) return { ok: true, state: plan, events: [] };
 
-  const now = clock.now();
-  const addedMachines = added.map((machineId) => {
-    // Added again after a removal: the entry starts anew, so only records recorded from now on count (HS-24).
-    const earlier = entries.find((each) => each.machineId === machineId);
-    return earlier
-      ? { ...earlier, addedAt: now, removedAt: undefined }
-      : { id: newId(), maintenanceTaskId: task.id, machineId, addedAt: now, removedAt: undefined };
-  });
-  const removedMachines = entries
-    .filter((each) => !each.removedAt && removed.includes(each.machineId))
-    .map((each) => ({ ...each, removedAt: now }));
-  const changedEntries = new Map([...addedMachines, ...removedMachines].map((each) => [each.id, each]));
-  const known = new Set(plan.machinesOfTasks.map((each) => each.id));
   return {
     ok: true,
-    state: {
-      ...plan,
-      machinesOfTasks: [
-        ...plan.machinesOfTasks.map((each) => changedEntries.get(each.id) ?? each),
-        ...addedMachines.filter((each) => !known.has(each.id)),
-      ],
-    },
+    state: withMachinesChanged(plan, task.id, { added, removed }, { now: clock.now(), newId }),
     events: [
       {
         type: "EVT-MachinesOfMaintenanceTaskChanged",
