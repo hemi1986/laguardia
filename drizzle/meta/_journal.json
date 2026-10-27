@@ -232,6 +232,13 @@
       "when": 1793045442376,
       "tag": "0032_maintenance_task_machines",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793131271655,
+      "tag": "0033_machines_of_task_removed_at",
+      "breakpoints": true
     }
   ]
 }

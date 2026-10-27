@@ -26,7 +26,10 @@ const maintenanceTasks = entities({
   toRow: (task) => ({ ...task, removedAt: task.removedAt ?? null }),
 });
 
-/** The machines of the maintenance tasks (ST-094) – added with the task, never changed once stored. */
+/**
+ * The machines of the maintenance tasks (ST-094): one entry per task and machine, kept for good. Removing a machine marks
+ * its entry (`removedAt`), adding it again starts the entry anew (ST-095) – the journal keeps who did what and when.
+ */
 const machinesOfTasks = entities({
   table: maintenanceTaskMachine,
   owner: "maintenancePlanId",
@@ -35,8 +38,10 @@ const machinesOfTasks = entities({
     maintenanceTaskId: row.maintenanceTaskId,
     machineId: row.machineId,
     addedAt: row.addedAt,
+    removedAt: row.removedAt ?? undefined,
   }),
-  toRow: (machine) => machine,
+  // null, not undefined: an update leaves out undefined columns.
+  toRow: (machine) => ({ ...machine, removedAt: machine.removedAt ?? null }),
 });
 
 /** How AGG-MaintenancePlan is stored (ST-040): its one row, versioned (HS-16), with its maintenance tasks and their machines. */
@@ -113,15 +118,21 @@ export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceT
   );
 }
 
-/** The tasks with their machines each. */
+/** The tasks with the machines each applies to now – a machine removed from a task (ST-095) is not one of them. */
 export function withMachines(tasks: MaintenanceTask[], machines: MachineOfTask[]): MaintenanceTaskWithMachines[] {
-  return tasks.map((task) => ({ ...task, machines: machines.filter((each) => each.maintenanceTaskId === task.id) }));
+  return tasks.map((task) => ({
+    ...task,
+    machines: machines.filter((each) => each.maintenanceTaskId === task.id && !each.removedAt),
+  }));
 }
 
 /**
  * Whether a maintenance task applies to a machine (CONTEXT.md: Machines of a maintenance task): the machine is one of
  * its machines. A retired machine never counts – the readers of Collection's machines leave it out themselves.
  */
-export function maintenanceTaskAppliesTo(task: Pick<MaintenanceTaskWithMachines, "machines">, machineId: string): boolean {
+export function maintenanceTaskAppliesTo(
+  task: Pick<MaintenanceTaskWithMachines, "machines">,
+  machineId: string,
+): boolean {
   return task.machines.some((machine) => machine.machineId === machineId);
 }

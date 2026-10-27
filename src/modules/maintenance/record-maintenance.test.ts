@@ -21,7 +21,15 @@ const cleanGlass: MaintenanceTaskWithMachines = {
   intervalMonths: 1,
   suitableForHelpers: true,
   removedAt: undefined,
-  machines: [{ id: "m-1", maintenanceTaskId: "clean-glass", machineId: "lg-042", addedAt: new Date("2026-01-01T00:00:00Z") }],
+  machines: [
+    {
+      id: "m-1",
+      maintenanceTaskId: "clean-glass",
+      machineId: "lg-042",
+      addedAt: new Date("2026-01-01T00:00:00Z"),
+      removedAt: undefined,
+    },
+  ],
 };
 const lg042 = { id: "lg-042", retired: false } as const;
 const facts: MaintenanceFacts = { maintenanceTask: cleanGlass, machine: lg042 };

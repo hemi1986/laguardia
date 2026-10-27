@@ -1,4 +1,7 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
+import type { ChosenMachines } from "./chosen-machines";
+
+export type { ChosenMachines };
 import type { MachineOfTask, MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
 
 /**
@@ -64,12 +67,6 @@ export type ChangeMaintenancePlanError =
   | "machine-chosen-twice";
 
 /**
- * What the decision reads besides the plan: the chosen machines as Collection knows them – one entry per machine that
- * exists (a machine La Guardia does not know is missing), read in the command's transaction (context map).
- */
-export type ChosenMachines = ReadonlyMap<string, { retired: boolean }>;
-
-/**
  * Technical limit, not a rule of the domain (ST-040 code review, 2026-10-15): beyond it the calendar arithmetic of due
  * dates (ST-003) leaves four-digit years, and the maintenance plan could no longer be shown.
  */
@@ -122,6 +119,7 @@ export function changeMaintenancePlan(
       maintenanceTaskId: added.id,
       machineId,
       addedAt: clock.now(),
+      removedAt: undefined,
     }));
     return changed([...plan.maintenanceTasks, added], added.id, "added", machines);
   }
@@ -140,14 +138,18 @@ export function changeMaintenancePlan(
   return changed(replaced({ ...existing, ...details.details }), existing.id, "changed");
 }
 
-/** Why the chosen machines cannot be the machines of a new maintenance task – none if they can. */
-function machinesRefusal(
+/**
+ * Why the chosen machines cannot be the machines of a maintenance task – none if they can. Of the `toCheck` among them
+ * (all of them unless said otherwise) each must be known and not retired; a machine chosen twice is refused in any case.
+ */
+export function machinesRefusal(
   machineIds: readonly string[],
   chosen: ChosenMachines,
+  toCheck: readonly string[] = machineIds,
 ): Extract<ChangeMaintenancePlanError, "unknown-machine" | "machine-retired" | "machine-chosen-twice"> | undefined {
   if (new Set(machineIds).size !== machineIds.length) return "machine-chosen-twice";
-  if (machineIds.some((machineId) => !chosen.has(machineId))) return "unknown-machine";
-  if (machineIds.some((machineId) => chosen.get(machineId)?.retired)) return "machine-retired";
+  if (toCheck.some((machineId) => !chosen.has(machineId))) return "unknown-machine";
+  if (toCheck.some((machineId) => chosen.get(machineId)?.retired)) return "machine-retired";
   return undefined;
 }
 
