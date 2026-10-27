@@ -379,3 +379,35 @@ test.describe("without JavaScript", () => {
     );
   });
 });
+
+test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({ page, context }) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  const [removed, kept] = [unique("Wax playfield"), unique("Clean glass (inside & out)")];
+  await aMaintenanceTask(page, removed);
+  await aMaintenanceTask(page, kept);
+  await page.goto(`/team/machines/${machine.museumNumber}/wartungsaufgaben-aendern`);
+  await (await openedTask(page, removed)).check();
+  await (await openedTask(page, kept)).check();
+
+  // Another technician removes „removed“ from the maintenance plan meanwhile.
+  const other = await context.newPage();
+  await other.goto("/team/maintenance-plan");
+  await other
+    .getByRole("listitem")
+    .filter({ hasText: removed })
+    .getByRole("link", { name: `„${removed}“ ändern` })
+    .click();
+  await other.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
+  await other.getByRole("button", { name: "Entfernen" }).click();
+  await expect(other.getByRole("main").getByRole("status")).toHaveText(`„${removed}“ ist nicht mehr im Wartungsplan.`);
+
+  await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    `„${removed}“ ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.`,
+  );
+  // The removed task is no longer offered; the other tick is kept and its group open.
+  await expect(page.getByRole("checkbox", { name: new RegExp(removed) })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: new RegExp(kept.replace(/[()&]/g, ".")) })).toBeChecked();
+});

@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 58 of 67 domain stories done** · scenarios 532 of 637
+**Progress: 59 of 67 domain stories done** · scenarios 545 of 637
 
-**95 stories** · In Progress: 1 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 75 · Superseded: 11
+**95 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 76 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-096](ST-096-change-a-machines-maintenance-tasks-on-its-record.md) | Change a machine's maintenance tasks from its machine record | story | Maintenance | must | M | medium | ST-095 |
 
 ## Ready
 
@@ -78,6 +72,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-077](ST-077-rebuild-account-pages-with-ui-components.md) | Rebuild the account pages with the shared UI components | tech-task | Repair | must | M | medium | ST-076 |
 | [ST-094](ST-094-maintenance-tasks-apply-to-chosen-machines.md) | Maintenance tasks apply to the machines a technician chooses, due at once on each | story | Maintenance | must | L | high | – |
 | [ST-095](ST-095-change-the-machines-of-a-maintenance-task.md) | Change the machines of a maintenance task | story | Maintenance | must | M | medium | ST-094 |
+| [ST-096](ST-096-change-a-machines-maintenance-tasks-on-its-record.md) | Change a machine's maintenance tasks from its machine record | story | Maintenance | must | M | medium | ST-095 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
