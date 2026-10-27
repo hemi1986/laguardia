@@ -40,7 +40,7 @@ flowchart LR
         ES["/event-storming"] --> DA["@domain-architect"] --> RE["@requirements-engineer"] --> RS["/review-stories"]
     end
     subgraph E["2 · Engineering, story by story"]
-        IM["/implement"] --> PR["PR + acceptance<br/>you merge"]
+        IM["/implement"] --> PR["PR, already done<br/>you merge"]
         PR -->|next story| IM
     end
     subgraph F["3 · Later features"]
@@ -51,7 +51,7 @@ flowchart LR
     IM -.->|story is wrong:<br/>back to review| RE
 ```
 
-You make the decisions at fixed points: answering grilling rounds, accepting ADRs, approving stories in the review, accepting and merging each story.
+You make the decisions at fixed points: answering grilling rounds, accepting ADRs, approving stories in the review, merging each story (the acceptance tester accepts it; you are asked again only when something goes badly wrong).
 
 ### 1 · Initial discovery (completed – 64 stories are `ready`)
 
@@ -80,7 +80,7 @@ Each run of `/implement`:
 | 4 | `verify.ts`: lint incl. module boundaries, types, tests, traceability | |
 | 5 | Review in parallel: `@code-reviewer`, `@acceptance-tester`, `/code-review`, `/security-review` where it applies | |
 | 6 | Refactor on the findings; bigger ones become follow-up stories | |
-| 7 | Pull request, check on the preview deployment at phone size, status `done` | **accept and merge** |
+| 7 | Acceptance tester's verdict, status `done`, pull request (preview deployment at phone size, if you want to look) | **merge** |
 
 When a story turns out to be wrong or unclear, `/implement` stops, marks it `[OPEN]`, sets it back to `review` and it goes through discovery again – the code never decides open questions.
 

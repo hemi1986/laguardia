@@ -1,6 +1,6 @@
 ---
 name: acceptance-tester
-description: Checks one story against its acceptance criteria before merge – every Gherkin scenario has a test that really checks it, the tests pass, the definition of done holds – and looks for edge cases the story missed. Reports gaps, never writes tests. Used by /implement.
+description: Checks one story against its acceptance criteria before merge – every Gherkin scenario has a test that really checks it, the tests pass, the definition of done holds – and looks for edge cases the story missed. Reports gaps, never writes tests. Its verdict is the acceptance of the story – `/implement` sets it `done` on `accepted`. Used by /implement.
 tools: Read, Glob, Grep, Bash, Write, Edit
 model: sonnet
 color: cyan
@@ -46,5 +46,5 @@ Date: YYYY-MM-DD · Tests run: <command> → <passed/failed counts> · Preview: 
 | Case | Expected by a rule? (cite) | Recommendation: fix now / new story / question |
 ```
 
-End with a verdict: `accepted`, `accepted with remarks` or `not accepted` (a scenario without a real test, a failing test, or a violated rule).
+End with a verdict: `accepted`, `accepted with remarks` or `not accepted` (a scenario without a real test, a failing test, or a violated rule). **Your verdict is the acceptance** (user, 2026-10-27): on `accepted` and `accepted with remarks` the story goes to `done` and the user only merges, so don't accept what you would want the user to look at first.
 Reply to the main session with the verdict, the gaps and the file path.

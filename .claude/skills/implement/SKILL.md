@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Engineering workflow – implements one story from docs/stories/ test-first on its own branch, verifies, has it reviewed by code-reviewer and acceptance-tester, refactors, and hands it to the user for acceptance and merge.
+description: Engineering workflow – implements one story from docs/stories/ test-first on its own branch, verifies, has it reviewed by code-reviewer and acceptance-tester, refactors, and sets it `done` on the acceptance tester's verdict and hands the pull request to the user to merge.
 disable-model-invocation: true
 argument-hint: "[ST-NNN – empty = next ready story]"
 ---
@@ -9,7 +9,7 @@ argument-hint: "[ST-NNN – empty = next ready story]"
 
 Story: **$ARGUMENTS** (empty → `node .claude/skills/implement/scripts/next-story.ts`; a story already `in-progress` is finished first).
 
-The main session writes the code; subagents only review. One checkpoint belongs to the user: **acceptance + merge** (step 7). Everything before it runs without asking (user, 2026-10-26 – a `ready` story is good enough to build up to the pull request), unless the story turns out to be wrong (see *When the story is wrong*) or a seam is missing from the catalog (step 2).
+The main session writes the code; subagents only review. One checkpoint belongs to the user: the **merge** (step 7). Everything before it runs without asking (user, 2026-10-26 – a `ready` story is good enough to build up to the pull request; user, 2026-10-27 – the acceptance tester accepts the story, the user does not), unless the story turns out to be wrong (see *When the story is wrong*) or a seam is missing from the catalog (step 2).
 
 Engineering conventions: `.claude/skills/engineering-conventions/SKILL.md` – read it if it exists; it describes the module layout, how commands and read models are built, and the **seam catalog**.
 
@@ -73,10 +73,11 @@ Tell the reviewers the follow-up hurdle below, so they grade findings with it in
 - Refactor only with green tests; the tests must not change unless they were wrong (then say so). Run `node .claude/skills/implement/scripts/verify.ts` again (without `--e2e`) plus the browser specs the refactor touched – see step 4.
 
 ## 7. Acceptance and merge → user checkpoint
-1. Open a pull request: title `ST-NNN: <story title>`, body = the scenarios as a checklist, links to the story and both review files, the preview URL, remaining minors. (No `gh` CLI, or it isn't authenticated: push and give the user the compare URL `git push` prints.)
-2. The user checks the preview on a phone (360 px) and accepts.
-3. `node .claude/skills/implement/scripts/story-status.ts ST-NNN done` – refuses unless every scenario has its test (story) or every checklist item is ticked (spike/tech task) and all dependencies are done. Commit `ST-NNN: done`, push.
-4. **The user merges.** Afterwards: `git switch main && git pull`.
+The **acceptance tester's verdict is the acceptance** (user, 2026-10-27): the story is `done` in the pull request, so the user only merges.
+1. After the refactor, check the verdict in `docs/reviews/ST-NNN-acceptance.md`. `accepted` or `accepted with remarks` → continue. `not accepted` → fix the gaps in the story and run the `acceptance-tester` again, until it accepts. Only when something goes badly wrong – the verdict stays `not accepted` after a second round, a scenario can't be met as written, the preview shows a defect the tester couldn't see – ask the user, the way *When the story is wrong* describes.
+2. `node .claude/skills/implement/scripts/story-status.ts ST-NNN done` – refuses unless every scenario has its test (story) or every checklist item is ticked (spike/tech task) and all dependencies are done. Commit `ST-NNN: done`, push.
+3. Open a pull request: title `ST-NNN: <story title>`, body = the scenarios as a checklist, links to the story and both review files, the acceptance verdict, the preview URL, remaining minors, and anything the user must approve (a conventions change). (No `gh` CLI, or it isn't authenticated: push and give the user the compare URL `git push` prints.)
+4. **The user merges** – on the preview if they want to look first. Afterwards: `git switch main && git pull`.
 
 ## 8. Wrap-up
 Summarize in a few lines: scenarios implemented, review findings fixed/skipped, follow-ups created, glossary/ADR changes. Then:
