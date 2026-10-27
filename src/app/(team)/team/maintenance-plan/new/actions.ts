@@ -13,7 +13,7 @@ import {
   MACHINE_FIELD,
   type AddMaintenanceTaskField,
 } from "./add-maintenance-task-input";
-import { retiredAmong } from "./retired-among";
+import { retiredAmong } from "../retired-among";
 
 const MAINTENANCE_PLAN = "/team/maintenance-plan";
 

@@ -2,6 +2,9 @@
  * The team UI's texts of the Maintenance context (BC-Maintenance): due maintenance, recording it, the maintenance
  * plan.
  */
+/** „kein Gerät“, „1 Gerät“, „3 Geräte“ – how many machines a maintenance task applies to. */
+const devices = (count: number) => (count === 0 ? "kein Gerät" : count === 1 ? "1 Gerät" : `${count} Geräte`);
+
 export const maintenanceTexts = {
   /** The due maintenance list (ST-043): the due tasks with their counts first, a task's machines after choosing it (G4a). */
   dueMaintenance: {
@@ -86,7 +89,18 @@ export const maintenanceTexts = {
     notInPlan: "Diese Wartungsaufgabe ist nicht im Wartungsplan.",
     every: (months: number) => (months === 1 ? "Jeden Monat" : `Alle ${months} Monate`),
     /** How many machines a task applies to – a retired machine never counts (ST-094). */
-    appliesTo: (count: number) => (count === 0 ? "Gilt für kein Gerät" : count === 1 ? "Gilt für 1 Gerät" : `Gilt für ${count} Geräte`),
+    appliesTo: (count: number) => `Gilt für ${devices(count)}`,
+    /** The confirmation after changing the machines of a maintenance task – also when nothing changed (ST-095, G33). */
+    nowAppliesTo: (name: string, count: number) => `„${name}“ gilt jetzt für ${devices(count)}.`,
+    /** The form page of changing the machines of a maintenance task (ST-095, G27, G34). */
+    changeMachines: {
+      open: "Geräte ändern",
+      title: (name: string) => `Geräte ändern · ${name}`,
+      submit: "Geräte ändern",
+      back: "Zurück zur Wartungsaufgabe",
+      noMachineYet: "Noch kein Gerät erfasst.",
+      register: "Gerät erfassen",
+    },
     name: "Name",
     instruction: "Anleitung",
     intervalMonths: "Intervall in Monaten",

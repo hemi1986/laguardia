@@ -11,7 +11,7 @@ import { teamMessages } from "@/platform/messages";
 import { MaintenanceTaskFields, fieldOf } from "../maintenance-task-fields";
 import { addMaintenanceTaskAction } from "./actions";
 import { MACHINE_FIELD } from "./add-maintenance-task-input";
-import { addRejectionText } from "./add-rejection-text";
+import { machinesRejectionText } from "../machines-rejection-text";
 
 const { maintenancePlan: texts } = teamMessages;
 
@@ -60,7 +60,7 @@ export function AddMaintenanceTaskForm({ version, groups }: { version: number; g
       </fieldset>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{addRejectionText(state)}</Rejection>
+          <Rejection>{machinesRejectionText(state)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

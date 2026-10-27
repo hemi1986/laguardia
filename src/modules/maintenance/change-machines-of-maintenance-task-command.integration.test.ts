@@ -111,7 +111,7 @@ async function record(maintenanceTaskId: string, machineId: string, date: string
 }
 
 describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
-  it("ST-095: A technician adds a machine to a maintenance task", async () => {
+  it("adds a machine to a task, due at once from that day, journaled by machine ID", async () => {
     const [lg005, lg042, lg043] = [
       await aRegisteredMachine(db),
       await aRegisteredMachine(db),
@@ -233,7 +233,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     expect(entry.data).toMatchObject({ machinesAdded: [lg042], machinesRemoved: [] });
   });
 
-  it("ST-095: A machine retired meanwhile rejects the change", async () => {
+  it("a machine retired meanwhile rejects the whole change", async () => {
     const [lg043, lg044] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const task = await aTask([], { name: "Clean glass (inside & out)" });
     await retireMachine(db, lg044);
@@ -262,7 +262,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     expect(await machineEvents(task)).toHaveLength(eventsBefore);
   });
 
-  it("ST-095: A change that changes nothing records nothing and is confirmed", async () => {
+  it("a change that changes nothing records no event and leaves version and due dates", async () => {
     const [lg005, lg042] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const task = await aTask([lg005, lg042], { name: "Clean glass (inside & out)" });
     const version = await maintenancePlanVersion(db);
@@ -277,7 +277,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     expect(await countOf(task)).toBe(2);
   });
 
-  it("ST-095: Removing every machine leaves the task for no machine", async () => {
+  it("removing every machine leaves the task for no machine", async () => {
     const lg090 = await aRegisteredMachine(db);
     const task = await aTask([lg090], { name: "Oil the gum machine" });
 
