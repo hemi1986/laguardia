@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { fixedClock } from "@/platform/clock";
-import { executeCommand } from "@/platform/command";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { changeMaintenancePlanCommand, maintenancePlan, maintenancePlanChangedBy } from ".";
+import { maintenancePlanChangedBy } from ".";
 
 const maintenanceTaskAddedBy = (db: NodePgDatabase, maintenanceTaskId: string, teamMemberId: string) =>
   maintenancePlanChangedBy(db, { maintenanceTaskId, change: "added" }, teamMemberId);
@@ -26,24 +25,12 @@ beforeAll(async () => {
 afterAll(() => isolated.close());
 
 async function added(actor: typeof tom) {
-  const { version } = await maintenancePlan(db);
-  const outcome = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version,
-      change: "add",
-      task: {
-        name: `Task ${randomUUID()}`,
-        instruction: "Clean it.",
-        intervalMonths: 3,
-        suitableForHelpers: false,
-        machineIds: [],
-      },
-    },
-    { actor, db, clock: fixedClock("2026-10-18T14:00:00Z"), newId: randomUUID },
-  );
-  if (!outcome.ok) throw new Error(outcome.error);
-  return outcome.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name: `Task ${randomUUID()}`,
+    intervalMonths: 3,
+    at: "2026-10-18T14:00:00Z",
+    by: actor,
+  });
 }
 
 describe("a maintenance task just added", () => {

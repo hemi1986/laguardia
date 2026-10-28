@@ -3,9 +3,10 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { changeMaintenancePlanCommand, maintenancePlanVersion, recordMaintenanceCommand } from "@/modules/maintenance";
+import { recordMaintenanceCommand } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import {
   recordDefectCommand,
@@ -99,17 +100,7 @@ async function aMaintenanceTask(
   machineIds: string[],
   { intervalMonths = 3, addedOn = "2026-04-01" } = {},
 ) {
-  const outcome = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version: await maintenancePlanVersion(db),
-      change: "add",
-      task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers: false, machineIds },
-    },
-    { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
-  );
-  if (!outcome.ok) throw new Error(outcome.error);
-  return outcome.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, { name, machineIds, intervalMonths, at: `${addedOn}T09:00:00Z`, by: tom });
 }
 
 /** The maintenance task recorded as done on the machine, on that day (CMD-RecordMaintenance). */

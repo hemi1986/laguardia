@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn, removeMaintenanceTaskIn } from "@/test-support/maintenance";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -8,7 +9,6 @@ import { aRegisteredMachine, retireMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   changeMachinesOfMaintenanceTaskCommand,
-  changeMaintenancePlanCommand,
   dueMaintenance,
   maintenancePlan,
   maintenancePlanVersion,
@@ -44,23 +44,14 @@ async function aTask(
   machineIds: string[],
   { name = "Wax playfield", intervalMonths = 12, addedAt = "2026-03-01T10:00:00Z" } = {},
 ) {
-  const added = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version: await maintenancePlanVersion(db),
-      change: "add",
-      task: {
-        name: `${name} ${randomUUID()}`,
-        instruction: "As usual.",
-        intervalMonths,
-        suitableForHelpers: true,
-        machineIds,
-      },
-    },
-    { actor: tom, db, clock: fixedClock(addedAt), newId: randomUUID },
-  );
-  if (!added.ok) throw new Error(added.error);
-  return added.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name: `${name} ${randomUUID()}`,
+    machineIds,
+    intervalMonths,
+    suitableForHelpers: true,
+    at: addedAt,
+    by: tom,
+  });
 }
 
 type Change = { seen: string[]; ticked: string[] };
@@ -318,12 +309,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
   it("ST-095: The machines of a removed task never change", async () => {
     const [lg005, lg042] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
     const task = await aTask([lg005]);
-    const removed = await executeCommand(
-      changeMaintenancePlanCommand,
-      { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId: task },
-      { actor: tom, db, clock: fixedClock(tenthOfJune), newId: randomUUID },
-    );
-    expect(removed).toMatchObject({ ok: true });
+    await removeMaintenanceTaskIn(db, task, { at: tenthOfJune, by: tom });
     const eventsBefore = (await machineEvents(task)).length;
 
     const outcome = await change(task, { seen: [lg005], ticked: [lg042] });

@@ -5,12 +5,8 @@ import {
   aHelper,
   aMachine,
   aMachineModel,
-  aMaintenancePlan,
-  aMaintenanceRecord,
-  aMaintenanceTask,
   aProblemReport,
   aTechnician,
-  BUILDER_TIME,
 } from "./builders";
 
 describe("test-data builders", () => {
@@ -61,20 +57,6 @@ describe("test-data builders", () => {
       claimedBy: eva.id,
       claimedAt: new Date("2026-09-01T08:00:00Z"),
     });
-  });
-
-  it("build a maintenance plan whose tasks keep their restriction and interval in months", () => {
-    const task = aMaintenanceTask({ intervalMonths: 3, restriction: { machineCategory: "pinball", technology: "em" } });
-
-    expect(aMaintenancePlan({ tasks: [task] }).tasks).toEqual([task]);
-    expect(task).toMatchObject({ intervalMonths: 3, restriction: { machineCategory: "pinball", technology: "em" } });
-  });
-
-  it("build a maintenance record for a machine and maintenance task, done by default", () => {
-    const record = aMaintenanceRecord();
-
-    expect(record).toMatchObject({ outcome: "done", recordedAt: BUILDER_TIME });
-    expect(record.machineId).not.toBe(record.maintenanceTaskId);
   });
 
   it("build team members with each role", () => {

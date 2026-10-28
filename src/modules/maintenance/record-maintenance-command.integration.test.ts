@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn, removeMaintenanceTaskIn } from "@/test-support/maintenance";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   changeMachineStatusCommand,
@@ -14,10 +15,8 @@ import { reportProblemCommand, retireMachineCommand } from "@/modules/repair";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
-  changeMaintenancePlanCommand,
   dueMaintenance,
   maintenanceForRecording,
-  maintenancePlanVersion,
   maintenanceRecords,
   recordMaintenanceCommand,
   type MaintenanceOutcome,
@@ -37,23 +36,15 @@ const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
 
 /** A maintenance task of its own, applying to the given machines, added on 1 December 2025. */
 async function aMaintenanceTask(name: string, machineIds: string[], intervalMonths = 1, suitableForHelpers = true) {
-  const added = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version: await maintenancePlanVersion(db),
-      change: "add",
-      task: {
-        name: `${name} ${randomUUID()}`,
-        instruction: "As usual.",
-        intervalMonths,
-        suitableForHelpers,
-        machineIds,
-      },
-    },
-    { actor: tom, db, clock: fixedClock("2025-12-01T09:00:00Z"), newId: randomUUID },
-  );
-  if (!added.ok) throw new Error(added.error);
-  return added.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name: `${name} ${randomUUID()}`,
+    machineIds,
+    intervalMonths,
+    suitableForHelpers,
+    instruction: "As usual.",
+    at: "2025-12-01T09:00:00Z",
+    by: tom,
+  });
 }
 
 function record(
@@ -260,12 +251,7 @@ describe("what Maintenance offers the team member who asks (G11)", () => {
     );
     expect(await maintenanceForRecording(db, tenthOfJune, randomUUID(), machine!, tom)).toBeUndefined();
 
-    const removed = await executeCommand(
-      changeMaintenancePlanCommand,
-      { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId: fuses },
-      { actor: tom, db, clock: tenthOfJune, newId: randomUUID },
-    );
-    if (!removed.ok) throw new Error(removed.error);
+    await removeMaintenanceTaskIn(db, fuses, { at: tenthOfJune.now().toISOString(), by: tom });
     expect(await maintenanceForRecording(db, tenthOfJune, fuses, machine!, tom)).toBeUndefined();
   });
 });

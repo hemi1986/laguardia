@@ -3,21 +3,20 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn, removeMaintenanceTaskIn, maintenancePlanJournal } from "@/test-support/maintenance";
 import { formRunner } from "@/app/_actions/form-runner";
 import { GroupedChoice } from "@/components/ui/grouped-choice";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   changeMachinesOfMaintenanceTaskCommand,
-  changeMaintenancePlanCommand,
   changeMaintenanceTasksOfMachineCommand,
   dueMaintenance,
-  maintenancePlanVersion,
   removedMaintenanceTaskNames,
 } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf } from "@/platform/command";
+import { executeCommand } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { post } from "@/test-support/forms";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -80,26 +79,11 @@ async function aMachine(museumNumber: string, machineStatus: "playable" | "not-o
 
 /** A maintenance task, added on 1 March 2026, that applies to the given machines. */
 async function aTask(name: string, machineIds: string[], { intervalMonths = 12, suitableForHelpers = false } = {}) {
-  const added = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version: await maintenancePlanVersion(db),
-      change: "add",
-      task: { name, instruction: "As usual.", intervalMonths, suitableForHelpers, machineIds },
-    },
-    { actor: tom, db, clock: fixedClock("2026-03-01T10:00:00Z"), newId: randomUUID },
-  );
-  if (!added.ok) throw new Error(added.error);
-  return added.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, { name, machineIds, intervalMonths, suitableForHelpers, by: tom });
 }
 
 async function removeTask(maintenanceTaskId: string) {
-  const removed = await executeCommand(
-    changeMaintenancePlanCommand,
-    { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId },
-    { actor: eva, db, clock: fixedClock("2026-06-09T10:00:00Z"), newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
+  await removeMaintenanceTaskIn(db, maintenanceTaskId, { by: eva });
 }
 
 const tenthOfJune = fixedClock("2026-06-10T10:00:00Z");
@@ -267,11 +251,11 @@ describe("the form page „Wartungsaufgaben ändern“", () => {
     await aTask("Clean glass (inside & out)", [lg042]);
     await aTask("Wax playfield", [lg042]);
     const { chosen } = await formPage("LG-042");
-    const eventsBefore = (await journalOf(db, { aggregateId: "7a1e0f40-0000-4000-8000-000000000040" })).length;
+    const eventsBefore = (await maintenancePlanJournal(db)).length;
 
     expect(await send(lg042, chosen, chosen)).toBeNull();
 
-    expect(await journalOf(db, { aggregateId: "7a1e0f40-0000-4000-8000-000000000040" })).toHaveLength(eventsBefore);
+    expect(await maintenancePlanJournal(db)).toHaveLength(eventsBefore);
     expect((await landing("LG-042")).html).toContain("Für LG-042 gelten jetzt 2 Wartungsaufgaben.");
   });
 

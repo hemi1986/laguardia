@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import {
   changeMachineStatusCommand,
   createMachineModelCommand,
@@ -10,13 +11,7 @@ import {
   type MachineStatus,
 } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import {
-  changeMaintenancePlanCommand,
-  maintenancePlanVersion,
-  maintenanceRecords,
-  recordMaintenanceCommand,
-  type MaintenanceOutcome,
-} from "@/modules/maintenance";
+import { maintenanceRecords, recordMaintenanceCommand, type MaintenanceOutcome } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -121,19 +116,14 @@ async function aMaintenanceTask(
     addedOn = "2026-04-01",
   }: Partial<{ intervalMonths: number; suitableForHelpers: boolean; addedOn: string }> = {},
 ) {
-  return (
-    await run(
-      executeCommand(
-        changeMaintenancePlanCommand,
-        {
-          version: await maintenancePlanVersion(db),
-          change: "add",
-          task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers, machineIds },
-        },
-        { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
-      ),
-    )
-  ).maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name,
+    machineIds,
+    intervalMonths,
+    suitableForHelpers,
+    at: `${addedOn}T09:00:00Z`,
+    by: tom,
+  });
 }
 
 /** A maintenance record made on that day, for that day (CMD-RecordMaintenance, ST-044). */

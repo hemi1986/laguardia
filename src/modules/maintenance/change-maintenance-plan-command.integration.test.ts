@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, describe, expect, it } from "vitest";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
-import { testDatabase } from "@/test-support/database";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { aRegisteredMachine, retireMachine } from "@/test-support/machines";
 import {
@@ -18,9 +19,13 @@ import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 /**
  * CMD-ChangeMaintenancePlan (ST-040) through the command layer: a technician adds a maintenance task to the one
  * museum-wide maintenance plan, observed through RM-MaintenancePlan and the journal. Every test adds to the same plan
- * – it reads the version it changes, and finds its own maintenance task by a name no other test uses.
+ * – it reads the version it changes, and finds its own maintenance task by a name no other test uses. A database of its
+ * own: another test file changing the one plan in the shared database meanwhile would raise the version it read.
  */
-const db = testDatabase();
+const isolated = isolatedTestDatabase("change_maintenance_plan");
+let db: NodePgDatabase;
+
+afterAll(() => isolated.close());
 
 /** One kind of change of the plan, without the version – the test reads the version stored now. */
 type ChangeOf<Change extends ChangeMaintenancePlanInput["change"]> = Omit<
@@ -52,6 +57,7 @@ async function add(task: NewMaintenanceTask, actor: Actor = tom) {
 const listed = async (name: string) => (await maintenancePlan(db)).maintenanceTasks.find((task) => task.name === name);
 
 beforeAll(async () => {
+  db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, anna, "Anna");
 });
