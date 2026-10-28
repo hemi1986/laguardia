@@ -20,6 +20,17 @@ if (existsSync(localSettings)) process.loadEnvFile(localSettings);
 
 const baseURL = process.env.BASE_URL;
 
+/**
+ * The specs that change the one maintenance plan (architecture review 2026-10-28): every change raises its version, so
+ * a form one worker has open meets "Jemand hat das inzwischen geändert" when another worker changed the plan meanwhile.
+ * They run one after the other in a worker of their own; everything else stays parallel.
+ */
+const changesTheMaintenancePlan = [
+  "maintenance-plan.spec.ts",
+  "maintenance-plan-machines.spec.ts",
+  "due-maintenance.spec.ts",
+];
+
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
@@ -38,12 +49,17 @@ export default defineConfig({
     screenshot: "off",
     video: "off",
   },
+  projects: [
+    { name: "maintenance-plan", testMatch: changesTheMaintenancePlan, workers: 1 },
+    { name: "parallel", testIgnore: changesTheMaintenancePlan },
+  ],
   // Locally (ST-083): a dev server of their own on port 3100 against laguardia_e2e_test, prepared before it serves –
   // never the developer's server on 3000 nor its database. Not reused: a server already on 3100 fails the run.
   webServer: baseURL
     ? undefined
     : {
-        command: "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/e2e-server.ts",
+        command:
+          "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/e2e-server.ts",
         url: `http://localhost:${E2E_PORT}`,
         reuseExistingServer: false,
         timeout: 180_000, // the first run compiles cold in .next-e2e

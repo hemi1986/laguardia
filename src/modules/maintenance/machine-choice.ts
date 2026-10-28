@@ -1,6 +1,7 @@
 import { groupMachines, machinesForMaintenance, type MachineGroup } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { activeMaintenanceTasks } from "./maintenance-plans";
+import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 
 /** A machine a technician can choose for a maintenance task – what they recognise it by, and whether it is away. */
 export type ChoosableMachine = {
@@ -28,9 +29,7 @@ export async function machineChoiceForMaintenanceTask(
     machinesForMaintenance(db),
     maintenanceTaskId ? activeMaintenanceTasks(db) : [],
   ]);
-  const among = new Set(
-    tasks.find((task) => task.id === maintenanceTaskId)?.machines.map((machine) => machine.machineId),
-  );
+  const task = tasks.find((each) => each.id === maintenanceTaskId);
   return groupMachines(
     machines.map((machine) => ({
       machineId: machine.id,
@@ -39,7 +38,7 @@ export async function machineChoiceForMaintenanceTask(
       machineCategory: machine.machineCategory,
       technology: machine.technology,
       notOnDisplay: machine.machineStatus === "not-on-display",
-      chosen: among.has(machine.id),
+      chosen: !!task && maintenanceTaskAppliesTo(task, machine.id),
     })),
   ).map((group) => ({
     ...group,

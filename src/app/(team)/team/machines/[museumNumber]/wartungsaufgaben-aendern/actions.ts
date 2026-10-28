@@ -48,10 +48,12 @@ export async function changeTasksAction(previous: ChangeTasksState, formData: Fo
     },
   });
   const state = await changeTasks(previous, formData);
-  // The command's reason is a code; the rejection names the tasks removed meanwhile, as the page sees them now.
+  // The command's reason is a code; the rejection names the tasks removed meanwhile, as the page sees them now – only
+  // the newly ticked ones: one only unticked is no longer offered and so skipped, never the cause.
   if (state?.error === "maintenance-task-removed") {
-    const seen = state.values.seen.split(SEEN_SEPARATOR);
-    return { ...state, removed: await removedMaintenanceTaskNames(database(), [...state.chosen, ...seen]) };
+    const seen = new Set(state.values.seen.split(SEEN_SEPARATOR));
+    const newlyTicked = state.chosen.filter((maintenanceTaskId) => !seen.has(maintenanceTaskId));
+    return { ...state, removed: await removedMaintenanceTaskNames(database(), newlyTicked) };
   }
   return state;
 }

@@ -7,20 +7,20 @@ export type {
   MaintenanceTaskDetails,
   NewMaintenanceTask,
 } from "./change-maintenance-plan";
-export { changeMachinesOfMaintenanceTaskCommand } from "./change-machines-of-maintenance-task-command";
+export {
+  changeMachinesOfMaintenanceTaskCommand,
+  changeMaintenanceTasksOfMachineCommand,
+} from "./change-machines-of-maintenance-task-command";
 export type {
   ChangeMachinesOfMaintenanceTaskError,
   ChangeMachinesOfMaintenanceTaskInput,
-} from "./change-machines-of-maintenance-task";
-export { changeMaintenanceTasksOfMachineCommand } from "./change-tasks-of-machine-command";
-export type {
   ChangeMaintenanceTasksOfMachineError,
   ChangeMaintenanceTasksOfMachineInput,
-} from "./change-tasks-of-machine";
+} from "./change-machines-of-maintenance-task";
+export { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 export {
   maintenancePlan,
   maintenancePlanVersion,
-  maintenanceTaskAppliesTo,
   maintenanceTaskName,
   removedMaintenanceTaskNames,
   type ListedMaintenanceTask,

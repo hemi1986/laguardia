@@ -3,7 +3,8 @@ import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
 import { byLocation, dueOn } from "./due-maintenance";
-import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
+import { activeMaintenanceTasks } from "./maintenance-plans";
+import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 import { LONGEST_BACK_DATING_DAYS, recordRefusal, type RecordMaintenanceError } from "./record-maintenance";
 
 /** A machine the selection offers – what the team member recognises it by. */

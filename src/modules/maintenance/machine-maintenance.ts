@@ -2,10 +2,11 @@ import { machinesForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import type { CalendarDate } from "@/platform/time";
-import { changeMachinesActors } from "./change-machines-of-maintenance-task";
+import { changeMachinesOffered } from "./change-machines-of-maintenance-task";
 import { dueOn } from "./due-maintenance";
 import { latestMaintenanceRecords, type NamedMaintenanceRecord } from "./maintenance-records";
-import { activeMaintenanceTasks, maintenanceTaskAppliesTo } from "./maintenance-plans";
+import { activeMaintenanceTasks } from "./maintenance-plans";
+import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 
 /** A maintenance task due on the machine; `recordOffered`: CMD-RecordMaintenance would accept the team member (G11). */
 export type MachineDueMaintenanceTask = {
@@ -67,6 +68,6 @@ export async function machineMaintenance(
     latestRecords: latest.records,
     recordCount: latest.total,
     taskCount: machines.length === 0 ? 0 : tasks.filter((task) => maintenanceTaskAppliesTo(task, machineId)).length,
-    changeOffered: machines.length > 0 && (changeMachinesActors as readonly string[]).includes(teamMember.role),
+    changeOffered: machines.length > 0 && changeMachinesOffered(teamMember.role),
   };
 }

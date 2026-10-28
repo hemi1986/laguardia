@@ -1,5 +1,6 @@
 import type { Database } from "@/platform/command";
 import { activeMaintenanceTasks } from "./maintenance-plans";
+import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 
 /** A maintenance task a technician can choose for a machine – what they recognise it by, and whether it applies. */
 export type ChoosableTask = {
@@ -26,7 +27,7 @@ export async function maintenanceTaskChoiceForMachine(db: Database, machineId: s
       maintenanceTaskId: task.id,
       name: task.name,
       suitableForHelpers: task.suitableForHelpers,
-      chosen: task.machines.some((machine) => machine.machineId === machineId),
+      chosen: maintenanceTaskAppliesTo(task, machineId),
     });
     groups.set(task.intervalMonths, tasks);
   }

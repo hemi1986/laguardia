@@ -96,7 +96,8 @@ export const maintenanceTexts = {
       `„${name}“ an ${count === 1 ? "1 Gerät" : `${count} Geräten`} eingetragen.`,
     notRecorded: (museumNumber: string, reason: string) => `${museumNumber} nicht eingetragen: ${reason}`,
     /** A machine left out that Maintenance would accept now – a command failed on the way, or the rules changed. */
-    notRecordedWithoutReason: (museumNumber: string) => `${museumNumber} nicht eingetragen – bitte noch einmal erfassen.`,
+    notRecordedWithoutReason: (museumNumber: string) =>
+      `${museumNumber} nicht eingetragen – bitte noch einmal erfassen.`,
     /** A rejected machine no longer on the page (retired meanwhile). */
     aMachine: "Ein Gerät",
     unknown: "Diese Wartungsaufgabe gibt es nicht.",
@@ -163,6 +164,8 @@ export const maintenanceErrors = {
   "maintenance-task-unknown": "Diese Wartungsaufgabe gibt es nicht mehr.",
   /** Changing the maintenance tasks of a machine (ST-096): a task was removed from the maintenance plan meanwhile. */
   "maintenance-task-removed": "Eine Wartungsaufgabe ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.",
+  /** Only a forged change can choose one twice (architecture review 2026-10-28). */
+  "maintenance-task-chosen-twice": "Eine Wartungsaufgabe wurde mehrfach gewählt. Es wurde nichts gespeichert.",
   "maintenance-task-does-not-apply": "Diese Wartungsaufgabe gilt nicht für dieses Gerät.",
   "maintenance-not-suitable-for-helpers": "Diese Wartungsaufgabe ist nicht für Helfer:innen geeignet.",
   "outcome-required": "Bitte ein Ergebnis auswählen.",
