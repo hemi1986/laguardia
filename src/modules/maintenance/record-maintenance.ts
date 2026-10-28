@@ -2,7 +2,7 @@ import type { ActorOf, Decision, DecisionContext, Role, TeamMemberId } from "@/p
 import { addDays, isCalendarDate, today, type CalendarDate } from "@/platform/time";
 import type { MaintenanceOutcome } from "./maintenance-outcome";
 import type { MaintenanceTaskWithMachines } from "./maintenance-plan";
-import { maintenanceTaskAppliesTo } from "./maintenance-plans";
+import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 
 /**
  * CMD-RecordMaintenance (AGG-MaintenanceRecord, ST-044): a team member records that they carried out a maintenance task

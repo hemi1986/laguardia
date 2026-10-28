@@ -8,6 +8,7 @@ import {
   type MaintenanceTask,
   type MaintenanceTaskWithMachines,
 } from "./maintenance-plan";
+import { withMachines } from "./machines-of-maintenance-task";
 import { maintenancePlan as maintenancePlanTable, maintenanceTask, maintenanceTaskMachine } from "./schema";
 
 /** The maintenance tasks of the plan (ST-040) – changed in place, never deleted. */
@@ -111,7 +112,10 @@ export async function maintenanceTaskName(db: Database, maintenanceTaskId: strin
  * The names of the maintenance tasks among the given IDs that were removed from the plan, in the order they were added –
  * what a rejected change names when a task was removed meanwhile (ST-096). An ID that is no maintenance task is left out.
  */
-export async function removedMaintenanceTaskNames(db: Database, maintenanceTaskIds: readonly string[]): Promise<string[]> {
+export async function removedMaintenanceTaskNames(
+  db: Database,
+  maintenanceTaskIds: readonly string[],
+): Promise<string[]> {
   const ids = [...new Set(maintenanceTaskIds.filter(isId))];
   if (ids.length === 0) return [];
   const rows = await db
@@ -131,23 +135,4 @@ export async function activeMaintenanceTasks(db: Database): Promise<MaintenanceT
   return withMachines(tasks.get(MAINTENANCE_PLAN_ID) ?? [], machines.get(MAINTENANCE_PLAN_ID) ?? []).filter(
     (task) => !task.removedAt,
   );
-}
-
-/** The tasks with the machines each applies to now – a machine removed from a task (ST-095) is not one of them. */
-export function withMachines(tasks: MaintenanceTask[], machines: MachineOfTask[]): MaintenanceTaskWithMachines[] {
-  return tasks.map((task) => ({
-    ...task,
-    machines: machines.filter((each) => each.maintenanceTaskId === task.id && !each.removedAt),
-  }));
-}
-
-/**
- * Whether a maintenance task applies to a machine (CONTEXT.md: Machines of a maintenance task): the machine is one of
- * its machines. A retired machine never counts – the readers of Collection's machines leave it out themselves.
- */
-export function maintenanceTaskAppliesTo(
-  task: Pick<MaintenanceTaskWithMachines, "machines">,
-  machineId: string,
-): boolean {
-  return task.machines.some((machine) => machine.machineId === machineId);
 }

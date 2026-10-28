@@ -4,7 +4,8 @@ import type { Clock } from "@/platform/clock";
 import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
-import { activeMaintenanceTasks, maintenancePlans, withMachines } from "./maintenance-plans";
+import { activeMaintenanceTasks, maintenancePlans } from "./maintenance-plans";
+import { withMachines } from "./machines-of-maintenance-task";
 import {
   LONGEST_BACK_DATING_DAYS,
   recordRefusal,

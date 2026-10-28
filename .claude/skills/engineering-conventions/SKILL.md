@@ -250,7 +250,7 @@ inside the module.
 **The machines of a maintenance task** (ST-094, FLOW-PerMachineMaintenance): the plan's state holds them as a flat list
 `machinesOfTasks` next to `maintenanceTasks` (both `entities`, owned by the one plan; `MaintenanceTaskWithMachines`
 joins them for readers) – a machine of the task has the moment it was added. A task **applies** to a machine that is one
-of its machines and not retired (`maintenanceTaskAppliesTo`, plus the retired machine being left out of Collection's
+of its machines and not retired (`maintenanceTaskAppliesTo` in `machines-of-maintenance-task.ts`, plus the retired machine being left out of Collection's
 published machines); category, technology and machine model corrections play no part. Due on a machine: *last done* is
 the latest done record **recorded since the machine was added** (`lastDoneByRecord` joins the machines of the task and
 compares `recorded_at` with `added_at`, the very moment included); without one the task is due since the day it was
@@ -273,7 +273,10 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
   without a journal entry and the version stays – every other command that journals nothing still throws.
 - A machine removed is marked (`removedAt` on its entry, nothing is deleted); `withMachines` and the due calculation leave
   it out. Added again, the *same* entry starts anew (`addedAt` now, `removedAt` cleared), so only records recorded since
-  count for last done (HS-24); an entry exists once per task and machine (unique).
+  count for last done (HS-24); an entry exists once per task and machine (unique). **One module owns these entries**
+  (`machines-of-maintenance-task.ts`, architecture review 2026-10-28): `appliesNow` on the plan's entries,
+  `withMachines` / `maintenanceTaskAppliesTo` for readers, `withMachinesChanged` for every decision that adds or removes
+  machines (adding a task too) – a reader or decision never filters `removedAt` itself.
 - The command's facts read only the machines the change touches (newly ticked or unticked) (`readChosenMachines`, retirement lock shared, in the order of
   the IDs – taken after the plan row's `FOR UPDATE`, which is safe because no retirement step locks the maintenance plan;
   a future policy on a retirement that touches the plan would have to revisit ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects
@@ -288,13 +291,16 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
   there is nothing to ask the journal (G33).
 
 **Changing the tasks of one machine from its machine record** (ST-096, the same `CMD-ChangeMachinesOfMaintenanceTask` seen from the
-machine): a second command object with the same ID, `changeMaintenanceTasksOfMachineCommand` – input `{ machineId, seen, ticked }`
-over *task* IDs, versionless like the one from a task. Its decision (`changeMaintenanceTasksOfMachine`) applies each touched task
-through `withMachinesChanged`, which both commands share, and emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
-changed**, none for a task whose tick did not. The whole change is rejected, or none of it stored: a retired or unknown machine
-(also when nothing would change), a task La Guardia does not know (`maintenance-task-unknown`) or one removed meanwhile
-(`maintenance-task-removed`, which the Server Action names from the posted IDs with `removedMaintenanceTaskNames` – a code carries no
-text). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
+machine): **one command object, two typed names** as for CMD-ReportProblem – `changeMachinesOfMaintenanceTaskCommand` (input
+`{ maintenanceTaskId, seen, ticked }` over machine IDs) and `changeMaintenanceTasksOfMachineCommand` (`{ machineId, seen, ticked }`
+over *task* IDs) – and **one decision** for both sides (`changeMachinesOfMaintenanceTask`, architecture review 2026-10-28): one side
+is fixed, the other ticked, and the same rules hold either way. The fixed side unknown, retired (machine) or removed (task) rejects
+the change, also when nothing would change; an entry ticked twice (`machine-chosen-twice`, `maintenance-task-chosen-twice` – only a
+forged form) or a newly ticked one unknown, retired or removed rejects it as a whole; one that already applies needs no check. An
+unticked entry that is no longer offered – a machine retired, a task removed meanwhile – is **not unticked**: it is skipped, so a
+retry after a rejection, which keeps `seen`, can succeed. It emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
+changed**, none for a task whose tick did not. The rule table is the decision's test (`change-machines-of-maintenance-task.test.ts`);
+the Server Action names a task removed meanwhile from the posted IDs with `removedMaintenanceTaskNames` – a code carries no text. `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
 `machineMaintenance` also answers `taskCount` and `changeOffered` (Maintenance's own rule for the viewer, G11). The form page is
 `…/machines/[museumNumber]/wartungsaufgaben-aendern/`; its landing `?tasksChanged=1` is a **fourth exception** of *A confirmation
 after an action* – the machine record says how many tasks apply to it *now*, because a change that changes nothing records no

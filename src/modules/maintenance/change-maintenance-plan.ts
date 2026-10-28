@@ -1,6 +1,7 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
 import type { ChosenMachines } from "./chosen-machines";
-import type { MachineOfTask, MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
+import type { MaintenancePlan, MaintenanceTask } from "./maintenance-plan";
+import { withMachinesChanged } from "./machines-of-maintenance-task";
 
 /**
  * CMD-ChangeMaintenancePlan (AGG-MaintenancePlan): a technician changes the museum-wide maintenance plan – adds a
@@ -80,20 +81,25 @@ export function changeMaintenancePlan(
     maintenanceTasks: MaintenanceTask[],
     maintenanceTaskId: string,
     change: MaintenancePlanChange,
-    machines: MachineOfTask[] = [],
+    machineIds: readonly string[] = [],
   ) => ({
     ok: true as const,
-    state: { ...plan, maintenanceTasks, machinesOfTasks: [...plan.machinesOfTasks, ...machines] },
+    state: withMachinesChanged(
+      { ...plan, maintenanceTasks },
+      maintenanceTaskId,
+      { added: machineIds, removed: [] },
+      { now: clock.now(), newId },
+    ),
     events: [
       { type: "EVT-MaintenancePlanChanged" as const, maintenanceTaskId, change, changedBy: actor.teamMemberId },
       // A change that adds nothing records no event for the machines.
-      ...(machines.length === 0
+      ...(machineIds.length === 0
         ? []
         : [
             {
               type: "EVT-MachinesOfMaintenanceTaskChanged" as const,
               maintenanceTaskId,
-              machinesAdded: machines.map((machine) => machine.machineId),
+              machinesAdded: [...machineIds],
               machinesRemoved: [],
               changedBy: actor.teamMemberId,
             },
@@ -112,14 +118,7 @@ export function changeMaintenancePlan(
     if (refusal) return { ok: false, error: refusal };
     const added: MaintenanceTask = { id: newId(), name, ...details.details, removedAt: undefined };
     // The task is due at once on every machine it newly applies to: from the moment it was added (HS-24).
-    const machines = input.task.machineIds.map((machineId) => ({
-      id: newId(),
-      maintenanceTaskId: added.id,
-      machineId,
-      addedAt: clock.now(),
-      removedAt: undefined,
-    }));
-    return changed([...plan.maintenanceTasks, added], added.id, "added", machines);
+    return changed([...plan.maintenanceTasks, added], added.id, "added", input.task.machineIds);
   }
 
   // A removed maintenance task is gone from the plan: it is never changed or removed again (invariant, ST-041).
