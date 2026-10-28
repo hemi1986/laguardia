@@ -3,7 +3,8 @@ import type { MachineCategory, MachineModel, Technology } from "@/modules/collec
 import type { Role } from "@/platform/command";
 
 /**
- * Test-data builders for every aggregate of docs/architecture/data-model.md and for team members of each role.
+ * Test-data builders for aggregates of docs/architecture/data-model.md and for team members of each role – a
+ * maintenance task and its plan are set up through the command instead (`maintenance.ts`).
  * Each builder returns a valid record with neutral defaults; a test overrides only what it is about.
  *
  * The types are local plain records as long as an aggregate has no code yet. The story that introduces an
@@ -187,60 +188,6 @@ export function aDefect(overrides: Partial<Defect> = {}): Defect {
     state: "open",
     workLog: [],
     resolutions: [],
-    ...overrides,
-  };
-}
-
-/** A maintenance task of AGG-MaintenancePlan; all initial intervals are whole months. */
-export type MaintenanceTask = {
-  id: string;
-  name: string;
-  instruction: string;
-  intervalMonths: number;
-  suitableForHelpers: boolean;
-  restriction?: { machineCategory?: MachineCategory; technology?: Technology };
-  startDate: string;
-  removedAt?: Date;
-};
-
-export function aMaintenanceTask(overrides: Partial<MaintenanceTask> = {}): MaintenanceTask {
-  return {
-    id: randomUUID(),
-    name: "Clean the playfield",
-    instruction: "Clean and wax the playfield.",
-    intervalMonths: 1,
-    suitableForHelpers: true,
-    startDate: "2026-09-01",
-    ...overrides,
-  };
-}
-
-/** AGG-MaintenancePlan – the singleton, one per museum. */
-export type MaintenancePlan = { tasks: MaintenanceTask[] };
-
-export function aMaintenancePlan(overrides: Partial<MaintenancePlan> = {}): MaintenancePlan {
-  return { tasks: [aMaintenanceTask()], ...overrides };
-}
-
-/** AGG-MaintenanceRecord */
-export type MaintenanceRecord = {
-  id: string;
-  machineId: string;
-  maintenanceTaskId: string;
-  outcome: "done" | "partially-done";
-  note?: string;
-  recordedBy: string;
-  recordedAt: Date;
-};
-
-export function aMaintenanceRecord(overrides: Partial<MaintenanceRecord> = {}): MaintenanceRecord {
-  return {
-    id: randomUUID(),
-    machineId: randomUUID(),
-    maintenanceTaskId: randomUUID(),
-    outcome: "done",
-    recordedBy: randomUUID(),
-    recordedAt: at(),
     ...overrides,
   };
 }

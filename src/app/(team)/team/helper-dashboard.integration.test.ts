@@ -3,10 +3,11 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { claimDefectCommand, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
-import { changeMaintenancePlanCommand, maintenancePlanVersion, recordMaintenanceCommand } from "@/modules/maintenance";
+import { recordMaintenanceCommand } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -70,18 +71,14 @@ async function aMachine(museumNumber?: string, registeredAt = "2026-01-01T09:00:
 
 /** A maintenance task every 3 months for those machines, added on that day – due at once on each of them (ST-094). */
 async function aMaintenanceTask(name: string, suitableForHelpers: boolean, machineIds: string[], addedOn: string) {
-  const added = await run(
-    executeCommand(
-      changeMaintenancePlanCommand,
-      {
-        version: await maintenancePlanVersion(db),
-        change: "add",
-        task: { name, instruction: `${name} – how to`, intervalMonths: 3, suitableForHelpers, machineIds },
-      },
-      as(`${addedOn}T09:00:00Z`),
-    ),
-  );
-  return added.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name,
+    machineIds,
+    intervalMonths: 3,
+    suitableForHelpers,
+    at: `${addedOn}T09:00:00Z`,
+    by: tom,
+  });
 }
 
 /** The task done on the machine on that day – due again one interval later. */
@@ -160,7 +157,12 @@ describe("the helper dashboard", () => {
     // 2026-03-01 – due since 2026-06-01.
     const [lg042, lg043, lg044] = [await aMachine("LG-042"), await aMachine("LG-043"), await aMachine("LG-044")];
     const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", true, [lg042, lg043, lg044], "2026-02-01");
-    await aMaintenanceTask("Check fuses, connectors, boards for burn marks", false, [lg042, lg043, lg044], "2026-02-01");
+    await aMaintenanceTask(
+      "Check fuses, connectors, boards for burn marks",
+      false,
+      [lg042, lg043, lg044],
+      "2026-02-01",
+    );
     await doneOn(cleanGlass, lg043, "2026-03-01");
     await doneOn(cleanGlass, lg044, "2026-03-01");
 

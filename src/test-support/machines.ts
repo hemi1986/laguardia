@@ -8,8 +8,8 @@ import {
 } from "@/modules/collection";
 import { retireMachineCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf, type Actor, type Database } from "@/platform/command";
-import { anExistingTeamMember } from "./team-members";
+import { executeCommand, journalOf, type Database } from "@/platform/command";
+import { anExistingTeamMember, TEST_TECHNICIAN } from "./team-members";
 
 /**
  * A registered machine for tests that need one to exist (a problem report refers to a registered machine, ST-007).
@@ -31,9 +31,8 @@ export async function machinesOfOneModel(
   count: number,
   machineStatus: MachineStatus = "playable",
 ): Promise<{ machineId: string; museumNumber: string }[]> {
-  const technician: Actor = { kind: "team-member", teamMemberId: TEST_TECHNICIAN, role: "technician" };
-  await anExistingTeamMember(db, technician);
-  const dependencies = { actor: technician, db, newId: randomUUID };
+  await anExistingTeamMember(db, TEST_TECHNICIAN);
+  const dependencies = { actor: TEST_TECHNICIAN, db, newId: randomUUID };
   const model = await executeCommand(
     createMachineModelCommand,
     { title: `Test model ${randomUUID().slice(0, 8)}`, manufacturer: "Williams", machineCategory: "pinball" },
@@ -63,16 +62,19 @@ export async function machinesOfOneModel(
  * A machine retired – through the retirement of Repair, which closes what is open on it (ST-039). Retiring is a
  * technician's command; `retiredAt` is the instant it happened.
  */
-export async function retireMachine(db: Database, machineId: string, retiredAt = "2026-10-15T10:00:00Z"): Promise<void> {
-  const technician: Actor = { kind: "team-member", teamMemberId: TEST_TECHNICIAN, role: "technician" };
-  await anExistingTeamMember(db, technician);
+export async function retireMachine(
+  db: Database,
+  machineId: string,
+  retiredAt = "2026-10-15T10:00:00Z",
+): Promise<void> {
+  await anExistingTeamMember(db, TEST_TECHNICIAN);
   const label = (await machineLabels(db, [machineId])).get(machineId);
   const machine = label && (await machineForTeamForm(db, label.museumNumber));
   if (!machine) throw new Error(`no machine ${machineId}`);
   const retired = await executeCommand(
     retireMachineCommand,
     { machineId, version: machine.version, reason: "Sold to a collector" },
-    { actor: technician, db, clock: fixedClock(retiredAt), newId: randomUUID },
+    { actor: TEST_TECHNICIAN, db, clock: fixedClock(retiredAt), newId: randomUUID },
   );
   if (!retired.ok) throw new Error(retired.error);
 }
@@ -86,5 +88,3 @@ export async function journalSinceRegistration(db: Database, machineId: string) 
   if (registration?.type !== "EVT-MachineRegistered") throw new Error(`${machineId} was not registered first`);
   return since;
 }
-
-const TEST_TECHNICIAN = "00000000-0000-4000-8000-00000000a007";

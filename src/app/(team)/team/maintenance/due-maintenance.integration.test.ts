@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn, removeMaintenanceTaskIn } from "@/test-support/maintenance";
 import {
   changeMachineStatusCommand,
   correctMachineModelCommand,
@@ -17,7 +18,6 @@ import { retireMachineCommand } from "@/modules/repair";
 import {
   changeMaintenancePlanCommand,
   maintenancePlan,
-  maintenancePlanVersion,
   maintenanceRecords,
   recordMaintenanceCommand,
   type MaintenanceOutcome,
@@ -138,18 +138,14 @@ async function aMaintenanceTask(
     addedOn = "2026-04-01",
   }: Partial<{ intervalMonths: number; suitableForHelpers: boolean; addedOn: string }> = {},
 ) {
-  const added = await run(
-    executeCommand(
-      changeMaintenancePlanCommand,
-      {
-        version: await maintenancePlanVersion(db),
-        change: "add",
-        task: { name, instruction: `${name} – how to`, intervalMonths, suitableForHelpers, machineIds },
-      },
-      { actor: tom, db, clock: fixedClock(`${addedOn}T09:00:00Z`), newId: randomUUID },
-    ),
-  );
-  return added.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, {
+    name,
+    machineIds,
+    intervalMonths,
+    suitableForHelpers,
+    at: `${addedOn}T09:00:00Z`,
+    by: tom,
+  });
 }
 
 /** The maintenance task changed by Tom on that day – everything else as the maintenance plan lists it now. */
@@ -173,13 +169,7 @@ async function changed(maintenanceTaskId: string, changes: Partial<MaintenanceTa
 
 /** The maintenance task removed from the maintenance plan by Tom on that day. */
 async function removed(maintenanceTaskId: string, on = "2026-02-01") {
-  return run(
-    executeCommand(
-      changeMaintenancePlanCommand,
-      { version: await maintenancePlanVersion(db), change: "remove", maintenanceTaskId },
-      { actor: tom, db, clock: fixedClock(`${on}T09:00:00Z`), newId: randomUUID },
-    ),
-  );
+  await removeMaintenanceTaskIn(db, maintenanceTaskId, { at: `${on}T09:00:00Z`, by: tom });
 }
 
 /** The machine's status changed by Tom on that day – `version`: the machine's version before the change. */
@@ -782,7 +772,9 @@ describe("a machine model correction (ST-094: it changes nothing in maintenance)
       expect.objectContaining({ museumNumber: "LG-005", lastDone: "2026-05-01", dueSince: "2026-08-01" }),
     ]);
     // And no task starts or stops applying: what is due is exactly what was.
-    expect((await page("2026-08-01")).data.tasks.map(({ name, machineCount }) => [name, machineCount])).toEqual(dueBefore);
+    expect((await page("2026-08-01")).data.tasks.map(({ name, machineCount }) => [name, machineCount])).toEqual(
+      dueBefore,
+    );
     expect(await listedOn("2026-08-01", fuses)).toEqual(["LG-005"]);
   });
 });
@@ -844,7 +836,6 @@ describe("changing and removing a maintenance task (ST-041)", () => {
       expect.objectContaining({ maintenanceTaskId: wax, outcome: "partially-done", note: "Only the lower half" }),
     ]);
   });
-
 });
 
 describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {

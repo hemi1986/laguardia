@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import {
   changeMachineStatusCommand,
   createMachineModelCommand,
@@ -11,7 +12,6 @@ import {
   type MachineStatus,
 } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
-import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import {
   claimDefectCommand,
@@ -86,17 +86,7 @@ async function aMachine(museumNumber: string, machineStatus: MachineStatus = "pl
 
 /** A maintenance task every 3 months, added on 2026-04-01 for those machines – due at once and overdue at NOW on each. */
 async function aMaintenanceTask(name: string, machineIds: string[]) {
-  await run(
-    executeCommand(
-      changeMaintenancePlanCommand,
-      {
-        version: await maintenancePlanVersion(db),
-        change: "add",
-        task: { name, instruction: `${name} – how to`, intervalMonths: 3, suitableForHelpers: false, machineIds },
-      },
-      as("2026-04-01T09:00:00Z"),
-    ),
-  );
+  await aMaintenanceTaskIn(db, { name, machineIds, intervalMonths: 3, at: "2026-04-01T09:00:00Z", by: tom });
 }
 
 /** A visitor's problem report, waiting for triage since that time. */

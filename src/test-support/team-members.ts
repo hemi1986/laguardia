@@ -20,3 +20,10 @@ export async function anExistingTeamMember(
     VALUES (${actor.teamMemberId}, ${name ?? username}, ${`${username}@users.invalid`}, ${username}, ${actor.role})
     ON CONFLICT DO NOTHING`);
 }
+
+/** The technician who sets up what a test needs when the test does not say who did (machines, maintenance tasks). */
+export const TEST_TECHNICIAN: Extract<Actor, { kind: "team-member" }> = {
+  kind: "team-member",
+  teamMemberId: "00000000-0000-4000-8000-00000000a007",
+  role: "technician",
+};

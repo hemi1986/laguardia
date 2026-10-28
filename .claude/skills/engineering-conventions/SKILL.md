@@ -704,7 +704,11 @@ event journal entry when it is a data change, not a step a person took. It is te
   title, suitableForHelpers, machineStatus, priority })` (`defects.ts`, returns machine, defect and problem report IDs),
   `aDefectWithHistory(db, { by, recordedAt, title, priority })` for a defect whose history a test lays out step by step,
   each step at its own instant – `linkedReport`, `logWork`, `prioritize`, `resolve`, `reopen`, `retireMachine` (ST-051),
-  `post(fields, photo?)` for a posted form (`forms.ts`). A test binds its database, acting people and clock once in a
+  `post(fields, photo?)` for a posted form (`forms.ts`), `aMaintenanceTaskIn(db, { name, machineIds, intervalMonths,
+  suitableForHelpers, at, by })`, `removeMaintenanceTaskIn(db, id, { at, by })`
+  (`maintenance.ts`; the plan's journal: `maintenancePlanJournal` in Maintenance's test support, architecture review 2026-10-28; the version is read at the call). A test that changes the one
+  maintenance plan uses a database of its own (`isolatedTestDatabase`) – another file changing it in the shared one
+  meanwhile raises the version it read. A test binds its database, acting people and clock once in a
   one-line helper of its own (`const anOpenDefect = (title) => anOpenDefectIn(db, { title, recordedBy: tom, at })`) – it
   does not copy the command call. A page test in an isolated database that needs "LG-042" of a given machine model
   still registers its machines itself.

@@ -3,12 +3,12 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { aMaintenanceTaskIn } from "@/test-support/maintenance";
 import { formRunner } from "@/app/_actions/form-runner";
 import { createMachineModelCommand, registerMachineCommand, type MachineStatus } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import {
   changeMachinesOfMaintenanceTaskCommand,
-  changeMaintenancePlanCommand,
   dueMaintenance,
   maintenancePlan,
   maintenancePlanVersion,
@@ -82,17 +82,7 @@ async function aMachine(museumNumber: string, machineStatus: MachineStatus = "pl
 
 /** A maintenance task that applies to the given machines. */
 async function aTask(name: string, machineIds: string[]) {
-  const added = await executeCommand(
-    changeMaintenancePlanCommand,
-    {
-      version: await maintenancePlanVersion(db),
-      change: "add",
-      task: { name, instruction: "As usual.", intervalMonths: 12, suitableForHelpers: false, machineIds },
-    },
-    { actor: tom, db, clock: fixedClock("2026-03-01T10:00:00Z"), newId: randomUUID },
-  );
-  if (!added.ok) throw new Error(added.error);
-  return added.result.maintenanceTaskId;
+  return aMaintenanceTaskIn(db, { name, machineIds, by: tom });
 }
 
 /** The form page as the technician gets it: its markup, and the headers of its groups. */
