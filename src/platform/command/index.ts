@@ -126,7 +126,8 @@ export type Command<Input, Result, Error extends string> = {
   removesContent?(result: Result): string | undefined;
   /**
    * The command may end successfully having changed nothing (ST-095: a set delta that is already made) – it then journals
-   * nothing. Every other command that journals no event is a bug and throws.
+   * nothing. Set by `aggregateCommand` for a `setDelta`, kept by `withPolicies`. Every other command that journals no
+   * event is a bug and throws.
    */
   mayChangeNothing?: true;
 };
@@ -155,7 +156,7 @@ export async function executeCommand<Input, Result, Error extends string>(
   try {
     const result = await db.transaction(async (tx) => {
       const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
-      // Every command writes its journal entry (Definition of Done); only a policy may have nothing to do.
+      // Every command writes its journal entry (Definition of Done) – unless it may change nothing (a set delta).
       if (rows.length === 0 && !command.mayChangeNothing)
         throw new Error(`${command.id} succeeded but journals no event`);
       if (rows.length === 0) return result;
