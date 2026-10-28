@@ -3,7 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { aMaintenanceTaskIn, removeMaintenanceTaskIn, maintenancePlanJournal } from "@/test-support/maintenance";
+import { aMaintenanceTaskIn, removeMaintenanceTaskIn } from "@/test-support/maintenance";
 import { formRunner } from "@/app/_actions/form-runner";
 import { GroupedChoice } from "@/components/ui/grouped-choice";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
@@ -14,7 +14,7 @@ import {
   dueMaintenance,
   removedMaintenanceTaskNames,
 } from "@/modules/maintenance";
-import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
+import { maintenancePlanJournal, withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";

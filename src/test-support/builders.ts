@@ -3,7 +3,8 @@ import type { MachineCategory, MachineModel, Technology } from "@/modules/collec
 import type { Role } from "@/platform/command";
 
 /**
- * Test-data builders for every aggregate of docs/architecture/data-model.md and for team members of each role.
+ * Test-data builders for aggregates of docs/architecture/data-model.md and for team members of each role – a
+ * maintenance task and its plan are set up through the command instead (`maintenance.ts`).
  * Each builder returns a valid record with neutral defaults; a test overrides only what it is about.
  *
  * The types are local plain records as long as an aggregate has no code yet. The story that introduces an

@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
 import { changeMaintenancePlanCommand, maintenancePlanVersion } from "@/modules/maintenance";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf, type Actor, type Database } from "@/platform/command";
+import { executeCommand, type Actor, type Database } from "@/platform/command";
 import { anExistingTeamMember, TEST_TECHNICIAN } from "./team-members";
 
 /**
@@ -58,13 +57,6 @@ export async function removeMaintenanceTaskIn(
     { actor, db, clock: fixedClock(at), newId: randomUUID },
   );
   if (!removed.ok) throw new Error(removed.error);
-}
-
-/** The journal of the one maintenance plan – every change of it, the oldest first. */
-export async function maintenancePlanJournal(db: Database) {
-  const { rows } = await db.execute<{ id: string }>(sql`SELECT id FROM maintenance_plan`);
-  if (rows.length !== 1) throw new Error(`expected one maintenance plan, found ${rows.length}`);
-  return journalOf(db, { aggregateId: rows[0].id });
 }
 
 async function aTestTechnician(db: Database): Promise<Actor> {

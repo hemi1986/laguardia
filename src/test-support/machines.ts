@@ -31,9 +31,8 @@ export async function machinesOfOneModel(
   count: number,
   machineStatus: MachineStatus = "playable",
 ): Promise<{ machineId: string; museumNumber: string }[]> {
-  const technician = TEST_TECHNICIAN;
-  await anExistingTeamMember(db, technician);
-  const dependencies = { actor: technician, db, newId: randomUUID };
+  await anExistingTeamMember(db, TEST_TECHNICIAN);
+  const dependencies = { actor: TEST_TECHNICIAN, db, newId: randomUUID };
   const model = await executeCommand(
     createMachineModelCommand,
     { title: `Test model ${randomUUID().slice(0, 8)}`, manufacturer: "Williams", machineCategory: "pinball" },
@@ -68,15 +67,14 @@ export async function retireMachine(
   machineId: string,
   retiredAt = "2026-10-15T10:00:00Z",
 ): Promise<void> {
-  const technician = TEST_TECHNICIAN;
-  await anExistingTeamMember(db, technician);
+  await anExistingTeamMember(db, TEST_TECHNICIAN);
   const label = (await machineLabels(db, [machineId])).get(machineId);
   const machine = label && (await machineForTeamForm(db, label.museumNumber));
   if (!machine) throw new Error(`no machine ${machineId}`);
   const retired = await executeCommand(
     retireMachineCommand,
     { machineId, version: machine.version, reason: "Sold to a collector" },
-    { actor: technician, db, clock: fixedClock(retiredAt), newId: randomUUID },
+    { actor: TEST_TECHNICIAN, db, clock: fixedClock(retiredAt), newId: randomUUID },
   );
   if (!retired.ok) throw new Error(retired.error);
 }

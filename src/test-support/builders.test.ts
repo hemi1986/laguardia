@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  aDefect,
-  aFile,
-  aHelper,
-  aMachine,
-  aMachineModel,
-  aProblemReport,
-  aTechnician,
-} from "./builders";
+import { aDefect, aFile, aHelper, aMachine, aMachineModel, aProblemReport, aTechnician } from "./builders";
 
 describe("test-data builders", () => {
   it("build a machine model with the required attributes and the given overrides", () => {
