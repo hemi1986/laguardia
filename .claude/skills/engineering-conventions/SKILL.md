@@ -258,8 +258,9 @@ added (`dueAtOnce`, overdue `graceDays` of the interval starting that day later)
 applies on top. CMD-ChangeMaintenancePlan adds a task and its machines in one step (`EVT-MaintenancePlanChanged` and
 `EVT-MachinesOfMaintenanceTaskChanged`): its `facts` read each chosen machine through Collection's `machineForMaintenance`
 (retirement lock shared, ADR 0010) **in the order of the machine IDs**, the decision rejects an unknown, a retired or a
-doubled machine as a whole. The page names the machines retired meanwhile from the posted values (`retiredAmong`) – a
-command error is a code, the museum numbers come from the page.
+doubled machine as a whole and names the machines that cause it as the rejection's **subjects** (`machinesRefusal`). The
+page says them by their museum numbers (`withRetiredNamed`, `maintenance-plan/retired-named.ts`) – a rejection names IDs,
+never text; the words and the museum numbers come from the page, which does not decide the rule again.
 
 **Changing the machines of a task: a set delta** (ST-095, `CMD-ChangeMachinesOfMaintenanceTask`). The plan is
 one aggregate that technicians change rarely, but two changes of different machines must both stand – so this command
@@ -284,10 +285,12 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
   the IDs – taken after the plan row's `FOR UPDATE`, which is safe because no retirement step locks the maintenance plan;
   a future policy on a retirement that touches the plan would have to revisit ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects
   everything. A machine that is not listed (retired) is in neither `seen` nor `ticked`, so it stays among the machines.
-- The form (`…/[maintenanceTaskId]/geraete-aendern/`): `seen` is a declared field (a hidden field, the IDs joined by a
-  comma), so a rejection **keeps** it – an action re-renders the page with what is stored now, and a retry must still mean
-  what the technician changed. The command's result names no task when nothing changed, so the Server Action builds its
-  `formAction` per call and takes the task for the landing from the form. `GroupedChoice` gets
+- The form (`…/[maintenanceTaskId]/geraete-aendern/`) posts `seen` in a `SeenField` (`form-parts.tsx`), and the runner's
+  `many` step reads it with `seen: true`: the input gets it, and a rejection **keeps** it (`state.seen`) – an action
+  re-renders the page with what is stored now, and a retry must still mean what the technician changed. The command's
+  result names the task (or the machine, from the machine record) from its input, so the landing comes from the result
+  and the action is a constant. The page's definition (`changeMachinesDefinition`: fields, `many`, input) and its landing
+  live beside the action in a plain module – what the action runs is what its tests post through. `GroupedChoice` gets
   `openWithChoice={!!state}`: closed while the choice is only the current one, open after a rejection.
 - The confirmation is a third exception of *A confirmation after an action*: `?machinesChanged=<task>` is shown for a
   task that is in the plan, with how many machines it applies to now – a change that changes nothing records no event, so
@@ -303,7 +306,8 @@ forged form) or a newly ticked one unknown, retired or removed rejects it as a w
 unticked entry that is no longer offered – a machine retired, a task removed meanwhile – is **not unticked**: it is skipped, so a
 retry after a rejection, which keeps `seen`, can succeed. It emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
 changed**, none for a task whose tick did not. The rule table is the decision's test (`change-machines-of-maintenance-task.test.ts`);
-the Server Action names a task removed meanwhile from the posted IDs with `removedMaintenanceTaskNames` – a code carries no text. `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
+the decision names the tasks removed meanwhile as its subjects, and the Server Action says them by their names
+(`withRemovedNamed`, `change-tasks-outcome.ts`). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
 `machineMaintenance` also answers `taskCount` and `changeOffered` (Maintenance's own rule for the viewer, G11). The form page is
 `…/machines/[museumNumber]/wartungsaufgaben-aendern/`; its landing `?tasksChanged=1` is a **fourth exception** of *A confirmation
 after an action* – the machine record says how many tasks apply to it *now*, because a change that changes nothing records no
@@ -444,7 +448,8 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 // state: null, or { error, values } after a rejection → rejectionText(state.error), defaultValue={state.values.x}
 ```
 
-- **A Server Action that runs a command only calls the runner.** (Login, logout and the ST-005 account actions call Team module functions backed by Better Auth, not commands – they take the acting person from the same `currentPerson()`.) `formAction` (`src/app/_actions/form-action.ts`) takes the acting person from `currentPerson()`; it has no parameter for an actor, a role or a team member ID, and form fields named `actor`/`role`/`teamMemberId` are never read. Lint refuses `executeCommand` and the factory `formRunner` anywhere under `src/app/` outside `_actions/` (tests excepted).
+- **A Server Action that runs a command only calls the runner** – and, for a rejection that names its subjects, a
+  function that says them in words (`withRetiredNamed`, `withRemovedNamed`; architecture review 2026-10-28). (Login, logout and the ST-005 account actions call Team module functions backed by Better Auth, not commands – they take the acting person from the same `currentPerson()`.) `formAction` (`src/app/_actions/form-action.ts`) takes the acting person from `currentPerson()`; it has no parameter for an actor, a role or a team member ID, and form fields named `actor`/`role`/`teamMemberId` are never read. Lint refuses `executeCommand` and the factory `formRunner` anywhere under `src/app/` outside `_actions/` (tests excepted).
 - **`{ error, values }` with `useActionState`**: on a rejection the action returns the error code and the typed values of the declared fields; the form shows the catalogue text and keeps the input. Success goes through `onSuccess` (usually `revalidatePath` + `redirect`), which also empties the form. It works without JavaScript – key the field on the state so React's form reset does not drop the kept value.
 - **One small typed input function per action** (Q19), no schema library: it reads and converts the fields, domain validation stays in the decision. **The empty-field rule:** a missing or empty field becomes "no value given" and the decision decides – a text field an empty string; a field that is not free text `undefined`. Example ST-007: a missing machine model becomes "no machine model given", which CMD-RegisterMachine rejects ("Machine model and location are required"); a missing museum number – optional there – becomes "no museum number given" and the command assigns one. The input function **never fills in a default** and never throws; an unknown enumeration value is "no value given" too. This holds for every form on the runner; the ST-005 account actions predate it (their `role()` helper falls back to helper) and follow it when they move onto a command.
 - **A form on an existing aggregate** (first: ST-012, `…/[museumNumber]/status/`) posts the aggregate's ID and the

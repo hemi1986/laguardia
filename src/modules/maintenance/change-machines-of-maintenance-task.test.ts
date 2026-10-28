@@ -114,11 +114,33 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from a task", () => {
   it.each([
     { title: "a removed task", task: "old", seen: [], ticked: ["d"], error: "maintenance-task-unknown" },
     { title: "an unknown task", task: "ghost", seen: [], ticked: [], error: "maintenance-task-unknown" },
-    { title: "a machine ticked twice", task: "wax", seen: [], ticked: ["a", "a"], error: "machine-chosen-twice" },
-    { title: "an unknown machine ticked", task: "wax", seen: [], ticked: ["d", "ghost"], error: "unknown-machine" },
-    { title: "a retired machine ticked", task: "glass", seen: [], ticked: ["d", "r"], error: "machine-retired" },
-  ])("rejects the whole change for $title", ({ task: maintenanceTaskId, seen, ticked, error }) => {
-    expect(fromTask(maintenanceTaskId, seen, ticked)).toEqual({ ok: false, error });
+    {
+      title: "a machine ticked twice",
+      task: "wax",
+      seen: [],
+      ticked: ["a", "a"],
+      error: "machine-chosen-twice",
+      subjects: ["a"],
+    },
+    {
+      title: "an unknown machine ticked",
+      task: "wax",
+      seen: [],
+      ticked: ["d", "ghost"],
+      error: "unknown-machine",
+      subjects: ["ghost"],
+    },
+    {
+      title: "a retired machine ticked",
+      task: "glass",
+      seen: [],
+      ticked: ["d", "r"],
+      error: "machine-retired",
+      subjects: ["r"],
+    },
+  ])("rejects the whole change for $title", ({ title: _title, task: maintenanceTaskId, seen, ticked, error, ...cause }) => {
+    // The ticked entries that cause it are named; the fixed side needs no naming – the page is about it.
+    expect(fromTask(maintenanceTaskId, seen, ticked)).toEqual({ ok: false, error, ...cause });
   });
 });
 
@@ -168,6 +190,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
       seen: [],
       ticked: ["wax", "wax"],
       error: "maintenance-task-chosen-twice",
+      subjects: ["wax"],
     },
     {
       title: "an unknown task ticked",
@@ -175,6 +198,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
       seen: [],
       ticked: ["wax", "ghost"],
       error: "maintenance-task-unknown",
+      subjects: ["ghost"],
     },
     {
       title: "a removed task ticked",
@@ -182,8 +206,9 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
       seen: [],
       ticked: ["wax", "gone"],
       error: "maintenance-task-removed",
+      subjects: ["gone"],
     },
-  ])("rejects the whole change for $title", ({ machine, seen, ticked, error }) => {
-    expect(fromMachine(machine, seen, ticked)).toEqual({ ok: false, error });
+  ])("rejects the whole change for $title", ({ title: _title, machine, seen, ticked, error, ...cause }) => {
+    expect(fromMachine(machine, seen, ticked)).toEqual({ ok: false, error, ...cause });
   });
 });

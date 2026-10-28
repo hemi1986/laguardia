@@ -16,7 +16,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadAddMaintenanceTask } from "./add-maintenance-task-data";
 import { addMaintenanceTaskFields, addMaintenanceTaskInput, MACHINE_FIELD } from "./add-maintenance-task-input";
 import { machinesRejectionText } from "../machines-rejection-text";
-import { retiredAmong } from "../retired-among";
+import { withRetiredNamed } from "../retired-named";
 
 /**
  * A rejected „Wartungsaufgabe hinzufügen“ from the form's side (ST-094): the runner keeps the ticked machines, the
@@ -113,11 +113,11 @@ describe("a rejected „Wartungsaufgabe hinzufügen“", () => {
 
     const state = await send([lg005, lg044]);
 
-    expect(state).toMatchObject({ error: "machine-retired", chosen: [lg005, lg044] });
-    // What the Server Action adds: the machines retired meanwhile, as the page sees them now.
-    const retired = await retiredAmong(db, state!.chosen);
-    expect(retired).toEqual([museumNumber]);
-    expect(machinesRejectionText({ error: state!.error, retired })).toBe(
+    expect(state).toMatchObject({ error: "machine-retired", chosen: [lg005, lg044], subjects: [lg044] });
+    // What the Server Action adds: the machines the decision named, by their museum numbers.
+    const named = await withRetiredNamed(db, state);
+    expect(named?.retired).toEqual([museumNumber]);
+    expect(machinesRejectionText(named!)).toBe(
       `${museumNumber} ist inzwischen ausgemustert. Es wurde nichts gespeichert.`,
     );
     // Nothing was stored, and the other machine stays ticked in its open group.

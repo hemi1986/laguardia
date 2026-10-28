@@ -65,7 +65,11 @@ beforeAll(async () => {
 describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
   it("ST-094: A technician adds a maintenance task with its machines", async () => {
     const name = `Clean glass (inside & out) ${randomUUID()}`;
-    const [lg005, lg042, lg020] = [await aRegisteredMachine(db), await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const [lg005, lg042, lg020] = [
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+      await aRegisteredMachine(db),
+    ];
 
     const added = await add(
       aTask({
@@ -94,7 +98,10 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
       (candidate) => candidate.data.maintenanceTaskId === task?.id,
     );
     // Both events of the one step; only references and non-personal facts – the name and the instruction are typed text.
-    expect(entries.map((entry) => entry.type)).toEqual(["EVT-MaintenancePlanChanged", "EVT-MachinesOfMaintenanceTaskChanged"]);
+    expect(entries.map((entry) => entry.type)).toEqual([
+      "EVT-MaintenancePlanChanged",
+      "EVT-MachinesOfMaintenanceTaskChanged",
+    ]);
     expect(entries[0]).toMatchObject({ actor: tom, data: { maintenanceTaskId: task?.id, change: "added" } });
     expect(entries[1]).toMatchObject({
       actor: tom,
@@ -112,7 +119,9 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
 
     const task = await listed(name);
     expect(task).toMatchObject({ machineCount: 0 });
-    expect((await dueMaintenance(db, fixedClock("2026-10-15T10:00:00Z"))).find((due) => due.id === task?.id)).toBeUndefined();
+    expect(
+      (await dueMaintenance(db, fixedClock("2026-10-15T10:00:00Z"))).find((due) => due.id === task?.id),
+    ).toBeUndefined();
     const entries = (await journalOf(db, { aggregateId: MAINTENANCE_PLAN_ID })).filter(
       (candidate) => candidate.data.maintenanceTaskId === task?.id,
     );
@@ -140,7 +149,11 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     const { version } = await maintenancePlan(db);
     await retireMachine(db, lg044);
 
-    expect(await add(aTask({ name, machineIds: [lg005, lg044] }))).toEqual({ ok: false, error: "machine-retired" });
+    expect(await add(aTask({ name, machineIds: [lg005, lg044] }))).toEqual({
+      ok: false,
+      error: "machine-retired",
+      subjects: [lg044],
+    });
 
     // Neither the task nor any of its machines is stored, and the plan stays at its version.
     expect(await listed(name)).toBeUndefined();
@@ -152,9 +165,22 @@ describe("CMD-ChangeMaintenancePlan – adding a maintenance task", () => {
     const lg005 = await aRegisteredMachine(db);
     const { version } = await maintenancePlan(db);
 
-    expect(await add(aTask({ name, machineIds: [lg005, randomUUID()] }))).toEqual({ ok: false, error: "unknown-machine" });
-    expect(await add(aTask({ name, machineIds: [lg005, "not-an-id"] }))).toEqual({ ok: false, error: "unknown-machine" });
-    expect(await add(aTask({ name, machineIds: [lg005, lg005] }))).toEqual({ ok: false, error: "machine-chosen-twice" });
+    const ghost = randomUUID();
+    expect(await add(aTask({ name, machineIds: [lg005, ghost] }))).toEqual({
+      ok: false,
+      error: "unknown-machine",
+      subjects: [ghost],
+    });
+    expect(await add(aTask({ name, machineIds: [lg005, "not-an-id"] }))).toEqual({
+      ok: false,
+      error: "unknown-machine",
+      subjects: ["not-an-id"],
+    });
+    expect(await add(aTask({ name, machineIds: [lg005, lg005] }))).toEqual({
+      ok: false,
+      error: "machine-chosen-twice",
+      subjects: [lg005],
+    });
 
     expect(await listed(name)).toBeUndefined();
     expect((await maintenancePlan(db)).version).toBe(version);

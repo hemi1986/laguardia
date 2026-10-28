@@ -16,3 +16,27 @@ export function VersionField({ version, name = "version" }: { version: number; n
 export function keptKey(state: unknown): string {
   return state ? JSON.stringify(state) : "empty";
 }
+
+/** The hidden field with the entries ticked when the page opened (ST-095) – read by the runner's `many` step with `seen`. */
+export const SEEN_FIELD = "seen";
+
+/** The entries seen travel in one hidden field, separated by commas (they are IDs). */
+const SEEN_SEPARATOR = ",";
+
+/**
+ * What a form that posts a set delta (ST-095, ST-096) says was ticked when the page opened – after a rejection what the
+ * first page showed (`state.seen`), not what is stored now, so a retry still means what the person changed.
+ */
+export function SeenField({ seen }: { seen: readonly string[] }) {
+  return <input type="hidden" name={SEEN_FIELD} value={seenValue(seen)} />;
+}
+
+/** The value a `SeenField` posts for these entries. */
+export function seenValue(seen: readonly string[]): string {
+  return seen.join(SEEN_SEPARATOR);
+}
+
+/** The entries a `SeenField` posted – none for a missing or empty field. */
+export function seenOf(posted: FormDataEntryValue | null): string[] {
+  return typeof posted === "string" ? posted.split(SEEN_SEPARATOR).filter((id) => id !== "") : [];
+}

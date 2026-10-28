@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { changeMaintenancePlanCommand, maintenancePlan, maintenancePlanVersion } from "@/modules/maintenance";
+import {
+  changeMachinesOfMaintenanceTaskCommand,
+  changeMaintenancePlanCommand,
+  maintenancePlan,
+  maintenancePlanVersion,
+} from "@/modules/maintenance";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { journalOf, type Actor } from "@/platform/command";
@@ -10,9 +15,10 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import sharp from "sharp";
 import { memoryStorage } from "@/platform/storage";
 import { withPhotoForTest } from "@/photo/photo-stand-in.test-support";
+import { SEEN_FIELD, seenValue } from "./form-parts";
 import { formRunner } from "./form-runner";
 import { reportWithPriorityFields, reportWithPriorityForTest, reportWithPriorityInput } from "./stand-in.test-support";
-import { aRegisteredMachine } from "@/test-support/machines";
+import { aRegisteredMachine, retireMachine } from "@/test-support/machines";
 import { post } from "@/test-support/forms";
 
 /**
@@ -306,7 +312,13 @@ describe("the Server Action runner for a field posted once per ticked checkbox (
       onSuccess: async ({ maintenanceTaskId }) => {
         outcome.added = maintenanceTaskId;
       },
-    })(null, ticked({ version: String(await maintenancePlanVersion(db)), name: `Wax ${randomUUID()}`, intervalMonths: interval }, machineIds));
+    })(
+      null,
+      ticked(
+        { version: String(await maintenancePlanVersion(db)), name: `Wax ${randomUUID()}`, intervalMonths: interval },
+        machineIds,
+      ),
+    );
     return { state, outcome };
   }
 
@@ -340,5 +352,45 @@ describe("the Server Action runner for a field posted once per ticked checkbox (
 
     expect(state).toBeNull();
     expect(outcome.added).toBeDefined();
+  });
+
+  /** CMD-ChangeMachinesOfMaintenanceTask from a form that also posts what was ticked when the page opened (a set delta). */
+  function changeMachinesOf(maintenanceTaskId: string, seen: string[], machineIds: string[]) {
+    const form = ticked({ maintenanceTaskId, [SEEN_FIELD]: seenValue(seen) }, machineIds);
+    return runnerActingAs(technician)(changeMachinesOfMaintenanceTaskCommand, {
+      fields: ["maintenanceTaskId"],
+      many: { field: "machineId", seen: true },
+      input: ({ maintenanceTaskId }, chosen, seenNow) => ({
+        maintenanceTaskId: maintenanceTaskId ?? "",
+        seen: seenNow,
+        ticked: chosen,
+      }),
+      onSuccess: async () => {},
+    })(null, form);
+  }
+
+  it("with `seen`, hands the command what was seen as well – an untick removes the machine", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const { outcome } = await addTaskWith([machineId]);
+
+    expect(await changeMachinesOf(outcome.added!, [machineId], [])).toBeNull();
+
+    const task = (await maintenancePlan(db)).maintenanceTasks.find((each) => each.id === outcome.added);
+    expect(task?.machineCount).toBe(0);
+  });
+
+  it("with `seen`, keeps it after a rejection and names the decision's subjects", async () => {
+    const [kept, retired] = [await aRegisteredMachine(db), await aRegisteredMachine(db)];
+    const { outcome } = await addTaskWith([kept]);
+    await retireMachine(db, retired);
+
+    const state = await changeMachinesOf(outcome.added!, [kept], [kept, retired]);
+
+    expect(state).toMatchObject({
+      error: "machine-retired",
+      chosen: [kept, retired],
+      seen: [kept],
+      subjects: [retired],
+    });
   });
 });

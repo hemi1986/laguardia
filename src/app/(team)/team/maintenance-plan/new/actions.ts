@@ -13,7 +13,7 @@ import {
   MACHINE_FIELD,
   type AddMaintenanceTaskField,
 } from "./add-maintenance-task-input";
-import { retiredAmong } from "../retired-among";
+import { withRetiredNamed } from "../retired-named";
 
 const MAINTENANCE_PLAN = "/team/maintenance-plan";
 
@@ -47,8 +47,6 @@ export async function addMaintenanceTaskAction(
   formData: FormData,
 ): Promise<AddMaintenanceTaskState> {
   await requireTechnician(); // the page's access check; who may run the command is decided by its allowedActors
-  const state = await addMaintenanceTask(previous, formData);
-  // The command's reason is a code; the rejection names the machines retired meanwhile, as the page sees them now.
-  if (state?.error === "machine-retired") return { ...state, retired: await retiredAmong(database(), state.chosen) };
-  return state;
+  // The command names the machines retired meanwhile; the rejection says them by their museum numbers.
+  return withRetiredNamed(database(), await addMaintenanceTask(previous, formData));
 }

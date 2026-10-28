@@ -111,7 +111,8 @@ export type CommandContext = {
 };
 
 export type CommandOutcome<Result, Error extends string> =
-  { ok: true; result: Result; events: JournalEvent[] } | { ok: false; error: Error };
+  | { ok: true; result: Result; events: JournalEvent[] }
+  | { ok: false; error: Error; subjects?: readonly string[] };
 
 export type Command<Input, Result, Error extends string> = {
   id: `CMD-${string}`;
@@ -133,7 +134,13 @@ export type Command<Input, Result, Error extends string> = {
 };
 
 export type CommandResult<Result, Error extends string> =
-  { ok: true; result: Result } | { ok: false; error: Error | "not-authorized" | "not-found" | "version-conflict" };
+  | { ok: true; result: Result }
+  | {
+      ok: false;
+      error: Error | "not-authorized" | "not-found" | "version-conflict";
+      /** The IDs that caused a domain rejection, when its decision names them (`Decision`). */
+      subjects?: readonly string[];
+    };
 
 /** Every error a command can end with: its decision's own codes and those of the command layer. */
 export type CommandError<C> = C extends Command<never, unknown, infer Error> ? CommandFailure<Error> : never;
@@ -168,7 +175,9 @@ export async function executeCommand<Input, Result, Error extends string>(
     });
     return { ok: true, result };
   } catch (error) {
-    if (error instanceof Rejected) return { ok: false, error: error.reason as Error };
+    if (error instanceof Rejected) {
+      return { ok: false, error: error.reason as Error, ...(error.subjects ? { subjects: error.subjects } : {}) };
+    }
     if (error instanceof NotFound) return { ok: false, error: "not-found" };
     if (error instanceof VersionConflict) return { ok: false, error: "version-conflict" };
     throw error;
@@ -208,7 +217,7 @@ async function runInTransaction<Input, Result, Error extends string>(
       return result;
     },
   });
-  if (!outcome.ok) throw new Rejected(outcome.error);
+  if (!outcome.ok) throw new Rejected(outcome.error, outcome.subjects);
   const occurredAt = scope.clock.now();
   return {
     result: outcome.result,

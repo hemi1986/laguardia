@@ -115,7 +115,7 @@ export function changeMaintenancePlan(
     // Only the machines of a sent step that La Guardia knows, once each, and not retired – or the whole step is
     // rejected (HS-22: a task and its machines are stored together or not at all).
     const refusal = machinesRefusal(input.task.machineIds, chosen);
-    if (refusal) return { ok: false, error: refusal };
+    if (refusal) return { ok: false, ...refusal };
     const added: MaintenanceTask = { id: newId(), name, ...details.details, removedAt: undefined };
     // The task is due at once on every machine it newly applies to: from the moment it was added (HS-24).
     return changed([...plan.maintenanceTasks, added], added.id, "added", input.task.machineIds);
@@ -136,17 +136,27 @@ export function changeMaintenancePlan(
 }
 
 /**
- * Why the chosen machines cannot be the machines of a maintenance task – none if they can. Of the `toCheck` among them
- * (all of them unless said otherwise) each must be known and not retired; a machine chosen twice is refused in any case.
+ * Why the chosen machines cannot be the machines of a maintenance task – none if they can – with the machines that
+ * cause it, once each, in the order chosen. Of the `toCheck` among them (all of them unless said otherwise) each must be
+ * known and not retired; a machine chosen twice is refused in any case.
  */
 export function machinesRefusal(
   machineIds: readonly string[],
   chosen: ChosenMachines,
   toCheck: readonly string[] = machineIds,
-): Extract<ChangeMaintenancePlanError, "unknown-machine" | "machine-retired" | "machine-chosen-twice"> | undefined {
-  if (new Set(machineIds).size !== machineIds.length) return "machine-chosen-twice";
-  if (toCheck.some((machineId) => !chosen.has(machineId))) return "unknown-machine";
-  if (toCheck.some((machineId) => chosen.get(machineId)?.retired)) return "machine-retired";
+):
+  | {
+      error: Extract<ChangeMaintenancePlanError, "unknown-machine" | "machine-retired" | "machine-chosen-twice">;
+      subjects: string[];
+    }
+  | undefined {
+  const twice = machineIds.filter((machineId, index) => machineIds.indexOf(machineId) !== index);
+  if (twice.length > 0) return { error: "machine-chosen-twice", subjects: [...new Set(twice)] };
+  const once = [...new Set(toCheck)];
+  const unknown = once.filter((machineId) => !chosen.has(machineId));
+  if (unknown.length > 0) return { error: "unknown-machine", subjects: unknown };
+  const retired = once.filter((machineId) => chosen.get(machineId)?.retired);
+  if (retired.length > 0) return { error: "machine-retired", subjects: retired };
   return undefined;
 }
 

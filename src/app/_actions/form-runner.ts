@@ -11,6 +11,7 @@ import {
 import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
 import { blobStorage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
+import { SEEN_FIELD, seenOf } from "./form-parts";
 
 /**
  * The Server Action runner (ST-073, architecture review 2026-09-27 Q9/Q10/Q19) – the one way from a form to a
@@ -110,16 +111,28 @@ export type EachFormDefinition<Input, Result, Error extends string, Field extend
 /**
  * A form whose checkboxes are values of one command (ST-094: the machines of a new maintenance task) – the field the
  * browser posts once per ticked checkbox, and the input with all of them as posted. Unlike `each` the command runs once
- * for all, and nothing is left out: a value posted twice reaches the command twice, so it can reject it.
+ * for all, and nothing is left out: a value posted twice reaches the command twice, so it can reject it. With `seen`
+ * (a set delta, ST-095) the form also posts what was ticked when the page opened, in a `SeenField`: the input gets it,
+ * and a rejection keeps it.
  */
-export type ManyFormDefinition<Input, Result, Field extends string> = Omit<FormDefinition<Input, Result, Field>, "input"> & {
-  many: { field: string };
-  input: (fields: FormFields<Field>, chosen: readonly string[]) => Input;
+export type ManyFormDefinition<Input, Result, Field extends string> = Omit<
+  FormDefinition<Input, Result, Field>,
+  "input"
+> & {
+  many: { field: string; seen?: true };
+  input: (fields: FormFields<Field>, chosen: readonly string[], seen: readonly string[]) => Input;
 };
 
-/** After a rejection of such a form: the values that were chosen (a ticked checkbox is no field the state can echo). */
+/**
+ * After a rejection of such a form: the values that were chosen (a ticked checkbox is no field the state can echo),
+ * those seen when the page opened (none without `seen`), and the IDs the decision named as the cause, if it did.
+ */
 export type ManyFormState<Error extends string, Field extends string> =
-  | (NonNullable<FormState<Error, Field>> & { chosen: readonly string[] })
+  | (NonNullable<FormState<Error, Field>> & {
+      chosen: readonly string[];
+      seen: readonly string[];
+      subjects?: readonly string[];
+    })
   | null;
 
 /**
@@ -174,7 +187,8 @@ const isPhotoError = (error: string): error is PhotoError => Object.hasOwn(rejec
  * - **`each`** (ST-045) – the command once per chosen item, each in its own transaction: a rejected item does not stop
  *   the others. Nothing chosen is rejected (`nothing-chosen`); when every item is rejected the form stays, with the
  *   one reason they share or each item's own.
- * - **`many`** (ST-094) – one command with all the values ticked in one field, as posted; a rejection keeps them.
+ * - **`many`** (ST-094) – one command with all the values ticked in one field, as posted; a rejection keeps them, and
+ *   what was seen when the page opened (`seen`, a set delta), and names the decision's subjects.
  * Each step is its own function, typed with the state its overload promises; `formAction` only picks the step.
  */
 export function formRunner(dependencies: RunnerDependencies) {
@@ -335,11 +349,15 @@ function manyStep<Input, Result, Error extends string, Field extends string>(
     const fields = fieldsOf(formData, definition.fields);
     // As posted, in the order of the form: a forged post may name one twice, which the command rejects.
     const chosen = formData.getAll(definition.many.field).filter((item): item is string => typeof item === "string");
-    const outcome = await executeCommand(command, definition.input(fields, chosen), {
+    const seen = definition.many.seen ? seenOf(formData.get(SEEN_FIELD)) : [];
+    const outcome = await executeCommand(command, definition.input(fields, chosen, seen), {
       ...dependencies,
       actor: await currentPerson(),
     });
-    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields), chosen };
+    if (!outcome.ok) {
+      const subjects = outcome.subjects ? { subjects: outcome.subjects } : {};
+      return { error: outcome.error, values: valuesOf(fields), chosen, seen, ...subjects };
+    }
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;

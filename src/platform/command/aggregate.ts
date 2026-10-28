@@ -135,8 +135,14 @@ export type DecisionContext<ActingPerson extends Actor = Actor> = {
   newId: () => string;
 };
 
+/**
+ * What a decision decided. A rejection may name its `subjects` – the IDs that caused it, in the order given (e.g. the
+ * machines retired meanwhile) – so a page can say which ones without deciding the rule again (architecture review
+ * 2026-10-28). The page still makes the text: a subject is an ID, never a name.
+ */
 export type Decision<State, Event, Error extends string> =
-  { ok: true; state: State; events: Event[]; created?: Created[] } | { ok: false; error: Error };
+  | { ok: true; state: State; events: Event[]; created?: Created[] }
+  | { ok: false; error: Error; subjects?: readonly string[] };
 
 type Common<
   Input,
@@ -152,8 +158,11 @@ type Common<
   store: AggregateStore<State>;
   /** Maps a domain event onto its journal entry – references and non-personal facts only, never free text. */
   journal: (event: Event, state: State) => JournalEvent;
-  /** What the caller gets back – from the new state, and from the events where the state no longer holds it (ST-020). */
-  result: (state: State, events: Event[]) => Result;
+  /**
+   * What the caller gets back – from the new state, and from the events where the state no longer holds it (ST-020);
+   * from the input when that names what the caller needs and the state cannot (a set delta that changed nothing).
+   */
+  result: (state: State, events: Event[], input: Input) => Result;
   /** The stored content the command removed on purpose, named by its result – deleted after the commit (`Command`). */
   removesContent?: (result: Result) => string | undefined;
   /**
@@ -304,7 +313,7 @@ export function aggregateCommand<
       if (!decision.ok) return decision;
       // No events: nothing happened – nothing is saved and the version stays (e.g. a policy with nothing to do).
       if (decision.events.length === 0)
-        return { ok: true, result: definition.result(decision.state, decision.events), events: [] };
+        return { ok: true, result: definition.result(decision.state, decision.events, input), events: [] };
 
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
       for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
@@ -325,7 +334,7 @@ export function aggregateCommand<
       }
       return {
         ok: true,
-        result: definition.result(decision.state, decision.events),
+        result: definition.result(decision.state, decision.events, input),
         events: decision.events.map((event) => definition.journal(event, decision.state)),
       };
     },

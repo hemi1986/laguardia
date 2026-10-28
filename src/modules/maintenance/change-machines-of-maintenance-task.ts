@@ -115,7 +115,7 @@ function ticksOfTask(
   plan: MaintenancePlan,
   input: ChangeMachinesOfMaintenanceTaskInput,
   chosen: ChosenMachines,
-): { ok: true; ticks: Tick[] } | { ok: false; error: ChangeMachinesOfMaintenanceTaskError } {
+): { ok: true; ticks: Tick[] } | { ok: false; error: ChangeMachinesOfMaintenanceTaskError; subjects?: string[] } {
   // A removed maintenance task is final: its machines never change again (invariant).
   const task = plan.maintenanceTasks.find((each) => each.id === input.maintenanceTaskId && !each.removedAt);
   if (!task) return { ok: false, error: "maintenance-task-unknown" };
@@ -124,7 +124,7 @@ function ticksOfTask(
   // Only the machines to add need a check – one already among the machines needs none.
   const added = newlyTicked.filter((machineId) => !applies(machineId));
   const refusal = machinesRefusal(input.ticked, chosen, added);
-  if (refusal) return { ok: false, error: refusal };
+  if (refusal) return { ok: false, ...refusal };
   // A machine retired meanwhile is no longer offered: it stays among the machines.
   const removed = unticked.filter((machineId) => applies(machineId) && !chosen.get(machineId)?.retired);
   return {
@@ -141,22 +141,22 @@ function ticksOfMachine(
   plan: MaintenancePlan,
   input: ChangeMaintenanceTasksOfMachineInput,
   chosen: ChosenMachines,
-): { ok: true; ticks: Tick[] } | { ok: false; error: ChangeMaintenanceTasksOfMachineError } {
+): { ok: true; ticks: Tick[] } | { ok: false; error: ChangeMaintenanceTasksOfMachineError; subjects?: string[] } {
   const machine = chosen.get(input.machineId);
   if (!machine) return { ok: false, error: "unknown-machine" };
   // A retired machine's maintenance can no longer change – also a change that would change nothing.
   if (machine.retired) return { ok: false, error: "machine-retired" };
-  if (new Set(input.ticked).size !== input.ticked.length) return { ok: false, error: "maintenance-task-chosen-twice" };
+  const twice = input.ticked.filter((maintenanceTaskId, index) => input.ticked.indexOf(maintenanceTaskId) !== index);
+  if (twice.length > 0) return { ok: false, error: "maintenance-task-chosen-twice", subjects: [...new Set(twice)] };
   const applies = (maintenanceTaskId: string) => appliesNow(plan.machinesOfTasks, maintenanceTaskId, input.machineId);
   const taskOf = (maintenanceTaskId: string) => plan.maintenanceTasks.find((each) => each.id === maintenanceTaskId);
   const { newlyTicked, unticked } = touched(input);
   // Only the tasks to add need a check – one that already applies needs none.
   const added = newlyTicked.filter((maintenanceTaskId) => !applies(maintenanceTaskId));
-  if (added.some((maintenanceTaskId) => !taskOf(maintenanceTaskId)))
-    return { ok: false, error: "maintenance-task-unknown" };
-  if (added.some((maintenanceTaskId) => taskOf(maintenanceTaskId)?.removedAt)) {
-    return { ok: false, error: "maintenance-task-removed" };
-  }
+  const unknown = added.filter((maintenanceTaskId) => !taskOf(maintenanceTaskId));
+  if (unknown.length > 0) return { ok: false, error: "maintenance-task-unknown", subjects: unknown };
+  const removedMeanwhile = added.filter((maintenanceTaskId) => taskOf(maintenanceTaskId)?.removedAt);
+  if (removedMeanwhile.length > 0) return { ok: false, error: "maintenance-task-removed", subjects: removedMeanwhile };
   // A task removed meanwhile is no longer offered: unticking it is nothing to do.
   const removed = unticked.filter(
     (maintenanceTaskId) => applies(maintenanceTaskId) && !taskOf(maintenanceTaskId)?.removedAt,

@@ -151,11 +151,12 @@ describe("CMD-ChangeMachinesOfMaintenanceTask from the machine record", () => {
     const waxPlayfield = await aTask([], { name: "Wax playfield" });
     const eventsBefore = (await machineEvents(waxPlayfield)).length;
 
-    const unknown = await change(lg042, { seen: [], ticked: [waxPlayfield, randomUUID()] });
+    const ghost = randomUUID();
+    const unknown = await change(lg042, { seen: [], ticked: [waxPlayfield, ghost] });
     const notAnId = await change(lg042, { seen: [], ticked: [waxPlayfield, "not an id"] });
 
-    expect(unknown).toEqual({ ok: false, error: "maintenance-task-unknown" });
-    expect(notAnId).toEqual({ ok: false, error: "maintenance-task-unknown" });
+    expect(unknown).toEqual({ ok: false, error: "maintenance-task-unknown", subjects: [ghost] });
+    expect(notAnId).toEqual({ ok: false, error: "maintenance-task-unknown", subjects: ["not an id"] });
     // Rejected as a whole: not even the task that is known was ticked.
     expect(await countOf(waxPlayfield)).toBe(0);
     expect(await machineEvents(waxPlayfield)).toHaveLength(eventsBefore);
@@ -180,7 +181,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask from the machine record", () => {
 
     const outcome = await change(lg042, { seen: [cleanGlass], ticked: [waxPlayfield] });
 
-    expect(outcome).toEqual({ ok: false, error: "maintenance-task-removed" });
+    expect(outcome).toEqual({ ok: false, error: "maintenance-task-removed", subjects: [waxPlayfield] });
     // Clean glass still applies: the untick was not stored either.
     expect(await dueThatDay("2026-06-10", cleanGlass, lg042)).toBeDefined();
   });
