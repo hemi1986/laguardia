@@ -486,10 +486,13 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   `rejected` per item only when the reasons differ). The page landed on confirms each record by `lastCommandBy` (G3);
   the items left out are named in the address, but their reason is the owning module's answer now – never the address's.
 - **A form whose checkboxes are values of one command** (first: ST-094, the machines of a new maintenance task) passes
-  `many: { field }` and `input: (fields, chosen) => …`: the command runs **once** with all the values ticked in that
+  `many: { field }` and `input: (fields, chosen, seen) => …`: the command runs **once** with all the values ticked in that
   field, **as posted** – in the order of the form and without removing a value posted twice, so the decision can reject a
   forged step that names one twice. Unlike `each` nothing is left out and one rejection rejects all; the state after a
   rejection holds the ticked values as `chosen` (`ManyFormState`). Nothing ticked is an empty list – the decision decides.
+  A set delta (ST-095) passes `many: { field, seen: true }`: the form posts a `SeenField` (`form-parts.tsx`), the input
+  gets those entries as `seen` (`[]` without the option), and a rejection keeps them as `state.seen`. When the decision
+  names its subjects, the state holds them as `state.subjects` (IDs) – the action says them in words.
 - **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo) => …`: the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
 - **A form with several photos** (ST-032) passes `photos: { field, owner, atMost: { count, error } }` and
   `input: (fields, photos) => …` – the browser posts the file field once per photo (`PhotosField`,

@@ -138,9 +138,9 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from a task", () => {
       error: "machine-retired",
       subjects: ["r"],
     },
-  ])("rejects the whole change for $title", ({ title: _title, task: maintenanceTaskId, seen, ticked, error, ...cause }) => {
+  ])("rejects the whole change for $title", ({ task: maintenanceTaskId, seen, ticked, error, subjects }) => {
     // The ticked entries that cause it are named; the fixed side needs no naming – the page is about it.
-    expect(fromTask(maintenanceTaskId, seen, ticked)).toEqual({ ok: false, error, ...cause });
+    expect(fromTask(maintenanceTaskId, seen, ticked)).toEqual({ ok: false, error, ...(subjects ? { subjects } : {}) });
   });
 });
 
@@ -208,7 +208,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
       error: "maintenance-task-removed",
       subjects: ["gone"],
     },
-  ])("rejects the whole change for $title", ({ title: _title, machine, seen, ticked, error, ...cause }) => {
-    expect(fromMachine(machine, seen, ticked)).toEqual({ ok: false, error, ...cause });
+  ])("rejects the whole change for $title", ({ machine, seen, ticked, error, subjects }) => {
+    expect(fromMachine(machine, seen, ticked)).toEqual({ ok: false, error, ...(subjects ? { subjects } : {}) });
   });
 });

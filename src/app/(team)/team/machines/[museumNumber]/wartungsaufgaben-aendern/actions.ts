@@ -28,9 +28,9 @@ export type ChangeTasksState =
 const changeTasks = formAction(changeMaintenanceTasksOfMachineCommand, {
   ...changeTasksDefinition,
   onSuccess: async (result) => {
-    const landing = await tasksChangedLanding(database(), result);
-    revalidatePath(landing.split("?")[0]);
-    redirect(landing);
+    const { record, address } = await tasksChangedLanding(database(), result);
+    revalidatePath(record);
+    redirect(address);
   },
 });
 

@@ -111,8 +111,7 @@ export type CommandContext = {
 };
 
 export type CommandOutcome<Result, Error extends string> =
-  | { ok: true; result: Result; events: JournalEvent[] }
-  | { ok: false; error: Error; subjects?: readonly string[] };
+  { ok: true; result: Result; events: JournalEvent[] } | { ok: false; error: Error; subjects?: readonly string[] };
 
 export type Command<Input, Result, Error extends string> = {
   id: `CMD-${string}`;

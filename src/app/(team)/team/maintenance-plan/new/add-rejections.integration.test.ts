@@ -14,7 +14,7 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { aRegisteredMachine, retireMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadAddMaintenanceTask } from "./add-maintenance-task-data";
-import { addMaintenanceTaskFields, addMaintenanceTaskInput, MACHINE_FIELD } from "./add-maintenance-task-input";
+import { addMaintenanceTaskDefinition, MACHINE_FIELD } from "./add-maintenance-task-input";
 import { machinesRejectionText } from "../machines-rejection-text";
 import { withRetiredNamed } from "../retired-named";
 
@@ -48,12 +48,7 @@ async function send(machineIds: string[], fields: Record<string, string> = {}) {
     db,
     clock: fixedClock("2026-10-15T10:00:00Z"),
     newId: randomUUID,
-  })(changeMaintenancePlanCommand, {
-    fields: addMaintenanceTaskFields,
-    many: { field: MACHINE_FIELD },
-    input: addMaintenanceTaskInput,
-    onSuccess: async () => {},
-  })(null, form);
+  })(changeMaintenancePlanCommand, { ...addMaintenanceTaskDefinition, onSuccess: async () => {} })(null, form);
 }
 
 /** The choice as the form shows it again after the rejection: the machines in their groups, `chosen` ticked. */

@@ -330,8 +330,14 @@ describe("the form page „Wartungsaufgaben ändern“", () => {
   it("lands on the machine record the command names, by its museum number", async () => {
     const lg042 = await aMachine("LG-042");
 
-    expect(await tasksChangedLanding(db, { machineId: lg042 })).toBe("/team/machines/LG-042?tasksChanged=1");
-    expect(await tasksChangedLanding(db, { machineId: randomUUID() })).toBe("/team/machines");
+    expect(await tasksChangedLanding(db, { machineId: lg042 })).toEqual({
+      record: "/team/machines/LG-042",
+      address: "/team/machines/LG-042?tasksChanged=1",
+    });
+    expect(await tasksChangedLanding(db, { machineId: randomUUID() })).toEqual({
+      record: "/team/machines",
+      address: "/team/machines",
+    });
   });
 
   it("a rejection keeps what was seen when the page opened", async () => {

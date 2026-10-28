@@ -290,7 +290,8 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
 
     const outcome = await change(task, { seen: [lg005, lg042], ticked: [lg005, lg042] });
 
-    expect(outcome).toMatchObject({ ok: true });
+    // The result names the task even though no event does – the page lands there (G33).
+    expect(outcome).toEqual({ ok: true, result: { maintenanceTaskId: task } });
     expect(await machineEvents(task)).toHaveLength(1); // only the one of adding the task with its machines
     expect(await maintenancePlanVersion(db)).toBe(version);
     expect(await dueThatDay("2026-06-10", task, lg005)).toEqual(dueBefore);

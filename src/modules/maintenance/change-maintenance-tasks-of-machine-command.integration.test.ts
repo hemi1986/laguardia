@@ -194,7 +194,8 @@ describe("CMD-ChangeMachinesOfMaintenanceTask from the machine record", () => {
 
     const outcome = await change(lg042, { seen: [cleanGlass], ticked: [cleanGlass] });
 
-    expect(outcome).toMatchObject({ ok: true });
+    // The result names the machine even though no event does – the page lands there (G33).
+    expect(outcome).toEqual({ ok: true, result: { machineId: lg042 } });
     expect(await machineEvents(cleanGlass)).toHaveLength(events);
     expect(await maintenancePlanVersion(db)).toBe(version);
   });

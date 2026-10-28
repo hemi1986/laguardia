@@ -1,3 +1,4 @@
+import "server-only";
 import { machineLabels } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 
