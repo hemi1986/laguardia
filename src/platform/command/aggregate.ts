@@ -216,7 +216,7 @@ type Changing<
    *   instead of one failing with a conflict;
    * - it **may change nothing** – a change already made is nothing to do, and the command ends successfully without an
    *   event (also through `withPolicies`);
-   * - its decision returns the **loaded state itself** when it has no events – anything else throws.
+   * - like every changing command, its decision returns the **loaded state itself** when it has no events.
    */
   setDelta?: true;
   decide: (

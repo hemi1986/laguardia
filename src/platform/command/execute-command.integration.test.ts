@@ -191,6 +191,14 @@ describe("command layer", () => {
       expect(seen.savedAt).toBeUndefined();
     });
 
+    it("still refuses a changing command that journals nothing when it is no set delta", async () => {
+      const { store } = countingStore();
+
+      await expect(executeCommand(delta(store, {}, 0, 3), undefined, deps(technician))).rejects.toThrow(
+        /journals no event/,
+      );
+    });
+
     it("still has nothing to do with policies added – withPolicies keeps the set delta", async () => {
       const { store, seen } = countingStore();
       const nothing = withPolicies(delta(store, { setDelta: true }, 0), []);

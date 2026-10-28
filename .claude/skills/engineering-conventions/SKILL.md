@@ -270,8 +270,8 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
 - `setDelta: true` on the command definition (`aggregate.ts`, one option since the architecture review 2026-10-28): its
   `target` names **no version** (one that does throws) – the plan row is loaded `FOR UPDATE` and two such commands run
   one after the other; it **may change nothing** – when the decision returns no events the command ends successfully
-  without a journal entry and the version stays, also through `withPolicies`; and its decision then returns the loaded
-  state itself. Every other command that journals nothing still throws. Only for a set delta whose decision treats a
+  without a journal entry and the version stays, also through `withPolicies` (like every changing command, its decision
+  then returns the loaded state itself). Every other command that journals nothing still throws. Only for a set delta whose decision treats a
   repeated change as nothing to do.
 - A machine removed is marked (`removedAt` on its entry, nothing is deleted); `withMachines` and the due calculation leave
   it out. Added again, the *same* entry starts anew (`addedAt` now, `removedAt` cleared), so only records recorded since
