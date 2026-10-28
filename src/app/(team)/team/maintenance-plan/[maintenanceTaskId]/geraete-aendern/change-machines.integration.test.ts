@@ -25,10 +25,11 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "../../maintenance-plan";
 import { loadMaintenancePlan } from "../../maintenance-plan-data";
 import { machinesRejectionText } from "../../machines-rejection-text";
-import { retiredAmong } from "../../retired-among";
+import { withRetiredNamed } from "../../retired-named";
 import { loadChangeMachines } from "./change-machines-data";
 import { ChangeMachinesForm } from "./change-machines-form";
-import { changeMachinesFields, changeMachinesInput, MACHINE_FIELD, SEEN_SEPARATOR } from "./change-machines-input";
+import { SEEN_FIELD, seenValue } from "@/app/_actions/form-parts";
+import { changeMachinesDefinition, machinesChangedLanding, MACHINE_FIELD } from "./change-machines-input";
 
 /**
  * „Geräte ändern“ from the page's side (ST-095, G27): the form page opens with the machines of the task ticked and every
@@ -99,19 +100,14 @@ async function formPage(maintenanceTaskId: string) {
 
 /** The form as a technician sends it: what they saw when the page opened, and what is ticked now. */
 async function send(maintenanceTaskId: string, seen: readonly string[], ticked: readonly string[], person = tom) {
-  const form = post({ maintenanceTaskId, seen: seen.join(SEEN_SEPARATOR) });
+  const form = post({ maintenanceTaskId, [SEEN_FIELD]: seenValue(seen) });
   for (const machineId of ticked) form.append(MACHINE_FIELD, machineId);
   return formRunner({
     currentPerson: async () => person,
     db,
     clock: fixedClock("2026-06-10T10:00:00Z"),
     newId: randomUUID,
-  })(changeMachinesOfMaintenanceTaskCommand, {
-    fields: changeMachinesFields,
-    many: { field: MACHINE_FIELD },
-    input: changeMachinesInput,
-    onSuccess: async () => {},
-  })(null, form);
+  })(changeMachinesOfMaintenanceTaskCommand, { ...changeMachinesDefinition, onSuccess: async () => {} })(null, form);
 }
 
 /** The choice as the form shows it again after a rejection: the groups as stored now, `chosen` ticked. */
@@ -176,7 +172,7 @@ describe("the form page „Geräte ändern“", () => {
     for (const [index, machineId] of machines.entries()) expect(groupOf(html, machineId).ticked).toBe(index < 4);
     // What the form posts as seen: the 4, to tell later what the technician changed.
     expect(chosen).toEqual(machines.slice(0, 4));
-    expect(html).toContain(`name="seen" value="${machines.slice(0, 4).join(SEEN_SEPARATOR)}"`);
+    expect(html).toContain(`name="${SEEN_FIELD}" value="${seenValue(machines.slice(0, 4))}"`);
   });
 
   it("ST-095: A form opened before another change does not undo it", async () => {
@@ -205,13 +201,11 @@ describe("the form page „Geräte ändern“", () => {
 
     const state = await send(task, seen, [lg043, lg044]);
 
-    expect(state).toMatchObject({ error: "machine-retired", chosen: [lg043, lg044], values: { seen: "" } });
-    // What the Server Action adds: the machines retired meanwhile, as the page sees them now.
-    const retired = await retiredAmong(db, state!.chosen);
-    expect(retired).toEqual(["LG-044"]);
-    expect(machinesRejectionText({ error: state!.error, retired })).toBe(
-      "LG-044 ist inzwischen ausgemustert. Es wurde nichts gespeichert.",
-    );
+    expect(state).toMatchObject({ error: "machine-retired", chosen: [lg043, lg044], seen: [], subjects: [lg044] });
+    // What the Server Action adds: the machines the decision named, by their museum numbers.
+    const named = await withRetiredNamed(db, state);
+    expect(named?.retired).toEqual(["LG-044"]);
+    expect(machinesRejectionText(named!)).toBe("LG-044 ist inzwischen ausgemustert. Es wurde nichts gespeichert.");
     // Nothing is stored; LG-044 is no longer offered, while LG-043 stays ticked and its group is open. (The static
     // render of the whole form has no action state, so the open group is checked on the choice the form renders with
     // `openWithChoice` after a rejection; the browser tests cover the form itself.)
@@ -219,6 +213,14 @@ describe("the form page „Geräte ändern“", () => {
     const choice = await choiceAfter(task, state!.chosen);
     expect(choice).not.toContain("LG-044");
     expect(groupOf(choice, lg043)).toEqual({ open: true, ticked: true });
+  });
+
+  it("lands on the maintenance plan, which confirms the task the command names", async () => {
+    const task = await aTask("Wax playfield", []);
+    const sent = await send(task, [], []);
+
+    expect(sent).toBeNull();
+    expect(machinesChangedLanding({ maintenanceTaskId: task })).toBe(`/team/maintenance-plan?machinesChanged=${task}`);
   });
 
   it("ST-095: No machine registered yet", async () => {

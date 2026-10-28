@@ -7,13 +7,8 @@ import { formAction, type ManyFormState } from "@/app/_actions/form-action";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../team-session";
-import {
-  addMaintenanceTaskFields,
-  addMaintenanceTaskInput,
-  MACHINE_FIELD,
-  type AddMaintenanceTaskField,
-} from "./add-maintenance-task-input";
-import { retiredAmong } from "../retired-among";
+import { addMaintenanceTaskDefinition, type AddMaintenanceTaskField } from "./add-maintenance-task-input";
+import { withRetiredNamed } from "../retired-named";
 
 const MAINTENANCE_PLAN = "/team/maintenance-plan";
 
@@ -33,9 +28,7 @@ export type AddMaintenanceTaskState =
  * (G2a, G3).
  */
 const addMaintenanceTask = formAction(changeMaintenancePlanCommand, {
-  fields: addMaintenanceTaskFields,
-  many: { field: MACHINE_FIELD },
-  input: addMaintenanceTaskInput,
+  ...addMaintenanceTaskDefinition,
   onSuccess: async ({ maintenanceTaskId }) => {
     revalidatePath(MAINTENANCE_PLAN);
     redirect(`${MAINTENANCE_PLAN}?added=${maintenanceTaskId}`);
@@ -47,8 +40,6 @@ export async function addMaintenanceTaskAction(
   formData: FormData,
 ): Promise<AddMaintenanceTaskState> {
   await requireTechnician(); // the page's access check; who may run the command is decided by its allowedActors
-  const state = await addMaintenanceTask(previous, formData);
-  // The command's reason is a code; the rejection names the machines retired meanwhile, as the page sees them now.
-  if (state?.error === "machine-retired") return { ...state, retired: await retiredAmong(database(), state.chosen) };
-  return state;
+  // The command names the machines retired meanwhile; the rejection says them by their museum numbers.
+  return withRetiredNamed(database(), await addMaintenanceTask(previous, formData));
 }

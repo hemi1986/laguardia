@@ -27,9 +27,15 @@ const cleanGlass: NewMaintenanceTask = {
 };
 
 const machines = (...retired: (string | [string, boolean])[]): ChosenMachines =>
-  new Map(retired.map((each) => (typeof each === "string" ? [each, { retired: false }] : [each[0], { retired: each[1] }])));
+  new Map(
+    retired.map((each) => (typeof each === "string" ? [each, { retired: false }] : [each[0], { retired: each[1] }])),
+  );
 
-const add = (task: Partial<NewMaintenanceTask>, chosen: ChosenMachines = machines(), newId = ids("task-1", "m-1", "m-2")) =>
+const add = (
+  task: Partial<NewMaintenanceTask>,
+  chosen: ChosenMachines = machines(),
+  newId = ids("task-1", "m-1", "m-2"),
+) =>
   changeMaintenancePlan(
     emptyPlan,
     { version: 0, change: "add", task: { ...cleanGlass, ...task } },
@@ -113,11 +119,16 @@ describe("CMD-ChangeMaintenancePlan – the decision on adding a maintenance tas
   });
 
   it.each([
-    { title: "a machine La Guardia does not know", machineIds: ["a", "ghost"], error: "unknown-machine" },
-    { title: "a machine retired meanwhile", machineIds: ["a", "gone"], error: "machine-retired" },
-    { title: "the same machine twice", machineIds: ["a", "a"], error: "machine-chosen-twice" },
-  ])("rejects the whole step for $title", ({ machineIds, error }) => {
-    expect(add({ machineIds }, machines("a", ["gone", true]))).toEqual({ ok: false, error });
+    {
+      title: "a machine La Guardia does not know",
+      machineIds: ["a", "ghost"],
+      error: "unknown-machine",
+      subjects: ["ghost"],
+    },
+    { title: "a machine retired meanwhile", machineIds: ["a", "gone"], error: "machine-retired", subjects: ["gone"] },
+    { title: "the same machine twice", machineIds: ["a", "a"], error: "machine-chosen-twice", subjects: ["a"] },
+  ])("rejects the whole step for $title – naming the machines that cause it", ({ machineIds, error, subjects }) => {
+    expect(add({ machineIds }, machines("a", ["gone", true]))).toEqual({ ok: false, error, subjects });
   });
 
   it("rejects the interval first when the machines are wrong too – nothing is decided on a half-valid step", () => {

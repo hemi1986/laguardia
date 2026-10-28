@@ -12,7 +12,6 @@ import {
   changeMachinesOfMaintenanceTaskCommand,
   changeMaintenanceTasksOfMachineCommand,
   dueMaintenance,
-  removedMaintenanceTaskNames,
 } from "@/modules/maintenance";
 import { maintenancePlanJournal, withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
@@ -28,7 +27,9 @@ import { MachineRecordView } from "../machine-record";
 import { loadMachineRecord } from "../machine-record-data";
 import { loadChangeTasks } from "./change-tasks-data";
 import { ChangeTasksForm } from "./change-tasks-form";
-import { changeTasksFields, changeTasksInput, SEEN_SEPARATOR, TASK_FIELD } from "./change-tasks-input";
+import { SEEN_FIELD, seenValue } from "@/app/_actions/form-parts";
+import { changeTasksDefinition, TASK_FIELD } from "./change-tasks-input";
+import { tasksChangedLanding, withRemovedNamed } from "./change-tasks-outcome";
 import { tasksRejectionText } from "./tasks-rejection-text";
 
 /**
@@ -100,11 +101,11 @@ async function formPage(museumNumber: string) {
 
 /** The form as a technician sends it: the tasks they saw when the page opened, and those ticked now. */
 async function send(machineId: string, seen: readonly string[], ticked: readonly string[], person: Person = tom) {
-  const form = post({ machineId, seen: seen.join(SEEN_SEPARATOR) });
+  const form = post({ machineId, [SEEN_FIELD]: seenValue(seen) });
   for (const taskId of ticked) form.append(TASK_FIELD, taskId);
   return formRunner({ currentPerson: async () => person, db, clock: tenthOfJune, newId: randomUUID })(
     changeMaintenanceTasksOfMachineCommand,
-    { fields: changeTasksFields, many: { field: TASK_FIELD }, input: changeTasksInput, onSuccess: async () => {} },
+    { ...changeTasksDefinition, onSuccess: async () => {} },
   )(null, form);
 }
 
@@ -230,13 +231,15 @@ describe("the form page „Wartungsaufgaben ändern“", () => {
 
     const state = await send(lg042, seen, [waxPlayfield, switchTest]);
 
-    expect(state).toMatchObject({ error: "maintenance-task-removed", chosen: [waxPlayfield, switchTest] });
-    const removed = await removedMaintenanceTaskNames(
-      db,
-      state!.chosen.filter((maintenanceTaskId) => !seen.includes(maintenanceTaskId)),
-    );
-    expect(removed).toEqual(["Wax playfield"]);
-    expect(tasksRejectionText({ error: state!.error, removed })).toBe(
+    expect(state).toMatchObject({
+      error: "maintenance-task-removed",
+      chosen: [waxPlayfield, switchTest],
+      subjects: [waxPlayfield],
+    });
+    // What the Server Action adds: the tasks the decision named, by their names.
+    const named = await withRemovedNamed(db, state);
+    expect(named?.removed).toEqual(["Wax playfield"]);
+    expect(tasksRejectionText(named!)).toBe(
       "„Wax playfield“ ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.",
     );
     // Clean glass still applies; Wax playfield is no longer offered, the other tick is kept and its group open.
@@ -324,13 +327,26 @@ describe("the form page „Wartungsaufgaben ändern“", () => {
     expect((await loadChangeTasks(db, "LG-042")).chosen).toEqual([cleanGlass]);
   });
 
+  it("lands on the machine record the command names, by its museum number", async () => {
+    const lg042 = await aMachine("LG-042");
+
+    expect(await tasksChangedLanding(db, { machineId: lg042 })).toEqual({
+      record: "/team/machines/LG-042",
+      address: "/team/machines/LG-042?tasksChanged=1",
+    });
+    expect(await tasksChangedLanding(db, { machineId: randomUUID() })).toEqual({
+      record: "/team/machines",
+      address: "/team/machines",
+    });
+  });
+
   it("a rejection keeps what was seen when the page opened", async () => {
     const lg042 = await aMachine("LG-042");
     const waxPlayfield = await aTask("Wax playfield", [lg042]);
 
     const state = await send(lg042, [waxPlayfield], [randomUUID()]);
 
-    expect(state).toMatchObject({ error: "maintenance-task-unknown", values: { seen: waxPlayfield } });
+    expect(state).toMatchObject({ error: "maintenance-task-unknown", seen: [waxPlayfield] });
     expect(tasksRejectionText({ error: state!.error })).toBe(
       "Diese Wartungsaufgabe gibt es nicht. Es wurde nichts gespeichert.",
     );

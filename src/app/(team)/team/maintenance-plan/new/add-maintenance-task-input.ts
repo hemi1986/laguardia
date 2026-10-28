@@ -25,3 +25,10 @@ export function addMaintenanceTaskInput(
     task: { name: fields.name ?? "", ...maintenanceTaskChangesOf(fields), machineIds },
   };
 }
+
+/** How the form „Wartungsaufgabe hinzufügen“ is read (ST-040, ST-094) – what its Server Action runs and its tests post through. */
+export const addMaintenanceTaskDefinition = {
+  fields: addMaintenanceTaskFields,
+  many: { field: MACHINE_FIELD },
+  input: addMaintenanceTaskInput,
+} as const;

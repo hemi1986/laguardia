@@ -21,7 +21,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { MaintenancePlanView } from "../maintenance-plan";
 import { AddMaintenanceTaskForm } from "./add-maintenance-task-form";
 import { loadAddMaintenanceTask } from "./add-maintenance-task-data";
-import { retiredAmong } from "../retired-among";
+import { withRetiredNamed } from "../retired-named";
 
 /**
  * The machines „Wartungsaufgabe hinzufügen“ offers (RM-MachineChoiceForMaintenanceTask, ST-094, G27): in groups by
@@ -180,7 +180,7 @@ describe("the machines to choose for a new maintenance task", () => {
     );
   });
 
-  it("names the machines retired meanwhile by their museum numbers, in the order ticked", async () => {
+  it("names the machines retired meanwhile by their museum numbers, in the order the decision named them", async () => {
     const [lg005, lg044, lg045] = [
       await aMachine("LG-005", "Fireball", "pinball", "em"),
       await aMachine("LG-044", "Fireball", "pinball", "em"),
@@ -189,7 +189,11 @@ describe("the machines to choose for a new maintenance task", () => {
     await retireMachine(db, lg045);
     await retireMachine(db, lg044);
 
-    expect(await retiredAmong(db, [lg005, lg045, lg044, lg045])).toEqual(["LG-045", "LG-044"]);
-    expect(await retiredAmong(db, [lg005, randomUUID(), "not-an-id"])).toEqual([]);
+    const retired = { error: "machine-retired", subjects: [lg045, lg044] };
+    expect((await withRetiredNamed(db, retired))?.retired).toEqual(["LG-045", "LG-044"]);
+    // Any other rejection, and no rejection, stay as they are.
+    const unknown = { error: "unknown-machine", subjects: [lg005, "not-an-id"] };
+    expect(await withRetiredNamed(db, unknown)).toBe(unknown);
+    expect(await withRetiredNamed(db, null)).toBeNull();
   });
 });

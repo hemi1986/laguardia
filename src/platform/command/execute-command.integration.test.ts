@@ -208,6 +208,30 @@ describe("command layer", () => {
     });
   });
 
+  it("hands a rejection's subjects to the caller – the IDs its decision names as the cause", async () => {
+    const store: AggregateStore<{ id: string }> = {
+      type: "AGG-Test",
+      load: async (_tx, id) => ({ state: { id }, version: 1 }),
+      insert: async () => {},
+      update: async () => true,
+    };
+    const rejecting = aggregateCommand({
+      id: "CMD-TestRejecting",
+      allowedActors: ["technician"],
+      store,
+      target: () => ({ id: "x", version: 1 }),
+      decide: () => ({ ok: false as const, error: "machine-retired" as const, subjects: ["lg-044"] }),
+      journal: () => ({ type: "EVT-Never", aggregate: { type: "AGG-Test", id: "x" }, machineId: null, data: {} }),
+      result: () => undefined,
+    });
+
+    expect(await executeCommand(rejecting, undefined, deps(technician))).toEqual({
+      ok: false,
+      error: "machine-retired",
+      subjects: ["lg-044"],
+    });
+  });
+
   it("keeps the journal append-only: changing or deleting entries is refused by the database", async () => {
     const machineId = await aRegisteredMachine(db);
     await executeCommand(reportProblemCommand, { machineId, description: "Ball stuck" }, deps(visitor));

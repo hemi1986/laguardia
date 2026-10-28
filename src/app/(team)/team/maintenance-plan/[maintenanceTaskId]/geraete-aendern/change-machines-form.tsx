@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useActionState, useId } from "react";
-import { keptKey } from "@/app/_actions/form-parts";
+import { keptKey, SeenField } from "@/app/_actions/form-parts";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
 import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { machinesRejectionText } from "../../machines-rejection-text";
 import { changeMachinesAction } from "./actions";
-import { MACHINE_FIELD, SEEN_SEPARATOR } from "./change-machines-input";
+import { MACHINE_FIELD } from "./change-machines-input";
 
 const { maintenancePlan: texts } = teamMessages;
 
@@ -52,7 +52,7 @@ export function ChangeMachinesForm({
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="maintenanceTaskId" value={maintenanceTaskId} />
       {/* What was ticked when the page opened: after a rejection what the first page showed, not what is stored now. */}
-      <input type="hidden" name="seen" value={state?.values.seen ?? chosen.join(SEEN_SEPARATOR)} />
+      <SeenField seen={state?.seen ?? chosen} />
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">{texts.machines.title}</legend>
         <GroupedChoice

@@ -39,19 +39,21 @@ const changeMachinesOfMaintenanceTasksCommand = aggregateCommand({
   facts: (tx, input) => machinesOfChange(tx, input),
   decide: changeMachinesOfMaintenanceTask,
   journal: maintenanceEvents.journal,
-  result: () => ({}),
+  // What the change was about – the page lands there, also when nothing changed and no event names it.
+  result: (_plan, _events, input) =>
+    "machineId" in input ? { machineId: input.machineId } : { maintenanceTaskId: input.maintenanceTaskId },
 });
 
 /** The command as the form of a task sends it (ST-095) – typed by what that form can give and get back. */
 export const changeMachinesOfMaintenanceTaskCommand = changeMachinesOfMaintenanceTasksCommand as Command<
   ChangeMachinesOfMaintenanceTaskInput,
-  Record<string, never>,
+  { maintenanceTaskId: string },
   ChangeMachinesOfMaintenanceTaskError
 >;
 
 /** The same command as the form on the machine record sends it (ST-096). */
 export const changeMaintenanceTasksOfMachineCommand = changeMachinesOfMaintenanceTasksCommand as Command<
   ChangeMaintenanceTasksOfMachineInput,
-  Record<string, never>,
+  { machineId: string },
   ChangeMaintenanceTasksOfMachineError
 >;

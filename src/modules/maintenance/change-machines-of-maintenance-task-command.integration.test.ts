@@ -259,7 +259,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
 
     const outcome = await change(task, { seen: [], ticked: [lg043, lg044] });
 
-    expect(outcome).toEqual({ ok: false, error: "machine-retired" });
+    expect(outcome).toEqual({ ok: false, error: "machine-retired", subjects: [lg044] });
     expect(await countOf(task)).toBe(0);
     expect(await machineEvents(task)).toHaveLength(0);
   });
@@ -269,13 +269,14 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
     const task = await aTask([lg005]);
     const eventsBefore = (await machineEvents(task)).length;
 
-    const unknown = await change(task, { seen: [lg005], ticked: [lg005, lg042, randomUUID()] });
+    const ghost = randomUUID();
+    const unknown = await change(task, { seen: [lg005], ticked: [lg005, lg042, ghost] });
     const notAnId = await change(task, { seen: [lg005], ticked: [lg005, "not-an-id"] });
     const twice = await change(task, { seen: [lg005], ticked: [lg005, lg042, lg042] });
 
-    expect(unknown).toEqual({ ok: false, error: "unknown-machine" });
-    expect(notAnId).toEqual({ ok: false, error: "unknown-machine" });
-    expect(twice).toEqual({ ok: false, error: "machine-chosen-twice" });
+    expect(unknown).toEqual({ ok: false, error: "unknown-machine", subjects: [ghost] });
+    expect(notAnId).toEqual({ ok: false, error: "unknown-machine", subjects: ["not-an-id"] });
+    expect(twice).toEqual({ ok: false, error: "machine-chosen-twice", subjects: [lg042] });
     // Rejected as a whole: not even the machine that is known was added.
     expect(await countOf(task)).toBe(1);
     expect(await machineEvents(task)).toHaveLength(eventsBefore);
@@ -289,7 +290,8 @@ describe("CMD-ChangeMachinesOfMaintenanceTask", () => {
 
     const outcome = await change(task, { seen: [lg005, lg042], ticked: [lg005, lg042] });
 
-    expect(outcome).toMatchObject({ ok: true });
+    // The result names the task even though no event does – the page lands there (G33).
+    expect(outcome).toEqual({ ok: true, result: { maintenanceTaskId: task } });
     expect(await machineEvents(task)).toHaveLength(1); // only the one of adding the task with its machines
     expect(await maintenancePlanVersion(db)).toBe(version);
     expect(await dueThatDay("2026-06-10", task, lg005)).toEqual(dueBefore);
