@@ -31,6 +31,7 @@ export function withPolicies<Input, Result, Error extends string, PolicyError ex
     id: command.id,
     allowedActors: command.allowedActors,
     removesContent: command.removesContent,
+    mayChangeNothing: command.mayChangeNothing,
     run: async (input, context) => {
       const outcome = await command.run(input, context);
       if (!outcome.ok || outcome.events.length === 0) return outcome;

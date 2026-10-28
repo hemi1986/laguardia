@@ -261,16 +261,18 @@ applies on top. CMD-ChangeMaintenancePlan adds a task and its machines in one st
 doubled machine as a whole. The page names the machines retired meanwhile from the posted values (`retiredAmong`) – a
 command error is a code, the museum numbers come from the page.
 
-**Changing the machines of a task: a versionless set delta** (ST-095, `CMD-ChangeMachinesOfMaintenanceTask`). The plan is
+**Changing the machines of a task: a set delta** (ST-095, `CMD-ChangeMachinesOfMaintenanceTask`). The plan is
 one aggregate that technicians change rarely, but two changes of different machines must both stand – so this command
 carries what the technician *changed*, not the state they saw: the form posts the machines as they were ticked when the
 page opened (`seen`) and the machines ticked now, the decision adds the machines newly ticked and removes the machines
 unticked, and every machine the technician did not touch stays as it is *now*. A change that is already made – a machine
 added by someone else meanwhile, one already removed – is **nothing to do, not a conflict**. The pieces:
-- `versionless: true` on the command definition: a person's command needs no version, the plan row is loaded `FOR UPDATE`
-  and two such commands run one after the other (`aggregate.ts`; only for a set delta whose decision treats a repeated
-  change as nothing to do). `mayChangeNothing: true`: when the decision returns no events, the command ends successfully
-  without a journal entry and the version stays – every other command that journals nothing still throws.
+- `setDelta: true` on the command definition (`aggregate.ts`, one option since the architecture review 2026-10-28): its
+  `target` names **no version** (one that does throws) – the plan row is loaded `FOR UPDATE` and two such commands run
+  one after the other; it **may change nothing** – when the decision returns no events the command ends successfully
+  without a journal entry and the version stays, also through `withPolicies`; and its decision then returns the loaded
+  state itself. Every other command that journals nothing still throws. Only for a set delta whose decision treats a
+  repeated change as nothing to do.
 - A machine removed is marked (`removedAt` on its entry, nothing is deleted); `withMachines` and the due calculation leave
   it out. Added again, the *same* entry starts anew (`addedAt` now, `removedAt` cleared), so only records recorded since
   count for last done (HS-24); an entry exists once per task and machine (unique). **One module owns these entries**
@@ -585,7 +587,7 @@ Every aggregate table has `version integer not null default 0`; `aggregateStore`
 2. lets the decision run on it – a **domain rejection comes first** ("already triaged by Eva", ST-018), because it explains more than a conflict;
 3. saves at the **version the acting person saw** and increments it – `version-conflict` when someone changed the aggregate in between and nothing domain-specific explains it. **When the save fails the version check, the layer loads what is stored now and runs the decision again** (ST-018): a domain rejection there wins – the second of two technicians triaging at the same moment gets "already triaged", not a conflict (`src/modules/repair/record-defect-concurrency.integration.test.ts`, two real transactions). The facts are read again for that second decision. It relies on PostgreSQL's default isolation, READ COMMITTED: after the failed `UPDATE` waited for the other transaction, the next read sees what it committed – a stricter isolation level would need a retry instead.
 
-Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise (the one exception is a `versionless` set delta, see *Changing the machines of a task*). Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
+Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise (the one exception is a `setDelta`, see *Changing the machines of a task*). Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
 
 ## Automatic policies
 

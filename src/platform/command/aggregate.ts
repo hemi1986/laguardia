@@ -156,8 +156,6 @@ type Common<
   result: (state: State, events: Event[]) => Result;
   /** The stored content the command removed on purpose, named by its result – deleted after the commit (`Command`). */
   removesContent?: (result: Result) => string | undefined;
-  /** The decision may find nothing to do: the command then ends successfully with no event (see `Command`). */
-  mayChangeNothing?: true;
   /**
    * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
    * A rejection of one rejects the whole command; its errors are part of this command's result type.
@@ -193,8 +191,8 @@ type Creating<
 
 /**
  * A command on an existing aggregate: `target` names it and the version the acting person saw. Only a command run
- * by the system (a policy) may leave the version out – the row is then loaded with a lock – and so may a command that
- * declares itself `versionless` (a set delta).
+ * by the system (a policy) may leave the version out – the row is then loaded with a lock – and so must a command that
+ * declares itself a `setDelta`.
  * `facts` reads what the decision must know beyond its own aggregate – e.g. another module's machine status through
  * that module's public interface (ST-018) – in the command's transaction, after the aggregate is loaded.
  */
@@ -212,11 +210,15 @@ type Changing<
   creates?: false;
   target: (input: Input) => { id: string; version?: number };
   /**
-   * A command of a person that applies what the person changed, not the state they saw (ST-095, a set delta): it names
-   * no version, so the row is loaded with a lock and two such commands run one after the other instead of one failing
-   * with a conflict. The decision must treat a change that is already made as nothing to do.
+   * A set delta (ST-095, architecture review 2026-10-28): a command of a person that applies what the person changed,
+   * not the state they saw. Everything that follows from it, in one place:
+   * - its `target` names **no version** – the row is loaded with a lock, so two such commands run one after the other
+   *   instead of one failing with a conflict;
+   * - it **may change nothing** – a change already made is nothing to do, and the command ends successfully without an
+   *   event (also through `withPolicies`);
+   * - its decision returns the **loaded state itself** when it has no events – anything else throws.
    */
-  versionless?: true;
+  setDelta?: true;
   decide: (
     state: State,
     input: Input,
@@ -250,7 +252,7 @@ export function aggregateCommand<
     id: definition.id,
     allowedActors: definition.allowedActors,
     removesContent: definition.removesContent,
-    mayChangeNothing: definition.mayChangeNothing,
+    mayChangeNothing: !definition.creates && definition.setDelta ? true : undefined,
     run: async (input: Input, context: CommandContext) => {
       const { tx, actor, clock, newId } = context;
       // executeCommand runs a command only for an actor in its allowedActors (policies: only as the system).
@@ -266,7 +268,10 @@ export function aggregateCommand<
         decision = definition.decide(facts, input, decisionContext);
       } else {
         const target = definition.target(input);
-        if (target.version === undefined && actor.kind !== "system" && !definition.versionless) {
+        if (definition.setDelta && target.version !== undefined) {
+          throw new Error(`${definition.id}: a set delta names no version (target.version)`);
+        }
+        if (target.version === undefined && actor.kind !== "system" && !definition.setDelta) {
           // A decision on a screen the person saw earlier must not silently overwrite a newer change (HS-16).
           throw new Error(
             `${definition.id}: a command of a person needs the version the acting person saw (target.version)`,
