@@ -39,7 +39,8 @@ export function maintenanceTaskAppliesTo(
 /**
  * The plan after machines were added to and removed from one maintenance task: a machine removed is marked, never
  * deleted; one added again after a removal starts its entry anew (HS-24); a new one gets a new entry. Adding one that
- * already applies, or removing one that does not, is the caller's to skip.
+ * already applies changes nothing – its entry keeps when it was added, so last done is never reset – and removing one
+ * that does not applies changes nothing either.
  */
 export function withMachinesChanged(
   plan: MaintenancePlan,
@@ -48,7 +49,8 @@ export function withMachinesChanged(
   { now, newId }: { now: Date; newId: () => string },
 ): MaintenancePlan {
   const entries = plan.machinesOfTasks.filter((each) => each.maintenanceTaskId === maintenanceTaskId);
-  const addedMachines = added.map((machineId) => {
+  const toAdd = added.filter((machineId) => !appliesNow(entries, maintenanceTaskId, machineId));
+  const addedMachines = toAdd.map((machineId) => {
     const earlier = entries.find((each) => each.machineId === machineId);
     return earlier
       ? { ...earlier, addedAt: now, removedAt: undefined }

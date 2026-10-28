@@ -276,7 +276,8 @@ added by someone else meanwhile, one already removed – is **nothing to do, not
   count for last done (HS-24); an entry exists once per task and machine (unique). **One module owns these entries**
   (`machines-of-maintenance-task.ts`, architecture review 2026-10-28): `appliesNow` on the plan's entries,
   `withMachines` / `maintenanceTaskAppliesTo` for readers, `withMachinesChanged` for every decision that adds or removes
-  machines (adding a task too) – a reader or decision never filters `removedAt` itself.
+  machines (adding a task too; adding one that already applies keeps its entry) – a reader or decision never filters
+  `removedAt` itself, except the SQL of `lastDoneByRecord`, which asks the same as `appliesNow`.
 - The command's facts read only the machines the change touches (newly ticked or unticked) (`readChosenMachines`, retirement lock shared, in the order of
   the IDs – taken after the plan row's `FOR UPDATE`, which is safe because no retirement step locks the maintenance plan;
   a future policy on a retirement that touches the plan would have to revisit ADR 0010) and check them as a whole: unknown, retired or ticked twice rejects

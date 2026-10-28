@@ -247,7 +247,10 @@ describe("the form page „Wartungsaufgaben ändern“", () => {
     const state = await send(lg042, seen, [waxPlayfield, switchTest]);
 
     expect(state).toMatchObject({ error: "maintenance-task-removed", chosen: [waxPlayfield, switchTest] });
-    const removed = await removedMaintenanceTaskNames(db, [...state!.chosen, ...seen]);
+    const removed = await removedMaintenanceTaskNames(
+      db,
+      state!.chosen.filter((maintenanceTaskId) => !seen.includes(maintenanceTaskId)),
+    );
     expect(removed).toEqual(["Wax playfield"]);
     expect(tasksRejectionText({ error: state!.error, removed })).toBe(
       "„Wax playfield“ ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.",

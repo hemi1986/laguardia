@@ -1,16 +1,28 @@
-import { aggregateCommand, type Command } from "@/platform/command";
+import { aggregateCommand, type Command, type Database } from "@/platform/command";
 import {
   changeMachinesActors,
   changeMachinesOfMaintenanceTask,
-  machinesOfChange,
+  touched,
+  type ChangeInput,
   type ChangeMachinesOfMaintenanceTaskError,
   type ChangeMachinesOfMaintenanceTaskInput,
   type ChangeMaintenanceTasksOfMachineError,
   type ChangeMaintenanceTasksOfMachineInput,
 } from "./change-machines-of-maintenance-task";
+import { readChosenMachines, type ChosenMachines } from "./chosen-machines";
 import { maintenanceEvents } from "./events";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { maintenancePlans } from "./maintenance-plans";
+
+/**
+ * The facts the decision needs, read in the command's transaction: the machines the change touches as Collection knows
+ * them – from a task those newly ticked and unticked, from the machine record the one machine.
+ */
+async function machinesOfChange(tx: Database, input: ChangeInput): Promise<ChosenMachines> {
+  if ("machineId" in input) return readChosenMachines(tx, [input.machineId]);
+  const { newlyTicked, unticked } = touched(input);
+  return readChosenMachines(tx, [...newlyTicked, ...unticked]);
+}
 
 /**
  * CMD-ChangeMachinesOfMaintenanceTask through the command layer – from a task (ST-095) or from the machine record

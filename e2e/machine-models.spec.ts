@@ -39,19 +39,20 @@ test("a technician creates a machine model on a 360 px phone", async ({ page }) 
 test("a technology that does not fit the machine category is rejected and the input is kept", async ({ page }) => {
   await logIn(page);
   await page.goto("/team/machine-models/new");
+  const title = unique("Galaxian");
 
-  await page.getByLabel("Titel").fill("Galaxian");
+  await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Namco");
   await page.getByLabel("Kategorie").selectOption("arcade");
   await page.getByLabel("Technik").selectOption("dmd");
   await page.getByRole("button", { name: "Modell anlegen" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Diese Technik passt nicht zu dieser Kategorie.");
-  await expect(page.getByLabel("Titel")).toHaveValue("Galaxian");
+  await expect(page.getByLabel("Titel")).toHaveValue(title);
   await expect(page.getByLabel("Hersteller")).toHaveValue("Namco");
   await expect(page.getByLabel("Technik")).toHaveAttribute("aria-invalid", "true");
   await page.goto("/team/machine-models");
-  await expect(page.getByRole("article").filter({ hasText: "Galaxian" })).toHaveCount(0);
+  await expect(page.getByRole("article").filter({ hasText: title })).toHaveCount(0);
 });
 
 test.describe("without JavaScript", () => {

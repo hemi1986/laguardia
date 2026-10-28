@@ -30,13 +30,17 @@ const entry = (maintenanceTaskId: string, machineId: string, removed = false): M
   removedAt: removed ? earlier : undefined,
 });
 
-/** Wax applies to a and b, glass to a; old was removed from the plan while it still applied to a; c is a removed entry. */
+/**
+ * Wax applies to a, b and the retired r, glass to a, oil to none; old was removed from the plan while it still applied to
+ * a; c is a removed entry of wax.
+ */
 const plan: MaintenancePlan = {
   id: "plan",
-  maintenanceTasks: [task("wax"), task("glass"), task("old", true), task("gone", true)],
+  maintenanceTasks: [task("wax"), task("glass"), task("oil"), task("old", true), task("gone", true)],
   machinesOfTasks: [
     entry("wax", "a"),
     entry("wax", "b"),
+    entry("wax", "r"),
     entry("glass", "a"),
     entry("old", "a"),
     entry("wax", "c", true),
@@ -98,8 +102,13 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from a task", () => {
     { title: "nothing changed", seen: ["a", "b"], ticked: ["a", "b"] },
     { title: "unticking a machine retired meanwhile – not offered is not unticked", seen: ["a", "r"], ticked: ["a"] },
     { title: "unticking a machine La Guardia does not know", seen: ["ghost"], ticked: [] },
+    { title: "ticking a retired machine that still applies – it needs no check", seen: [], ticked: ["r"] },
   ])("is nothing to do: $title", ({ seen, ticked }) => {
-    expect(fromTask("wax", seen, ticked)).toEqual({ ok: true, state: plan, events: [] });
+    const decision = fromTask("wax", seen, ticked);
+
+    expect(decision).toEqual({ ok: true, state: plan, events: [] });
+    // The loaded plan itself – the command layer journals nothing only for that one.
+    expect(decision.ok && decision.state).toBe(plan);
   });
 
   it.each([
@@ -107,7 +116,7 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from a task", () => {
     { title: "an unknown task", task: "ghost", seen: [], ticked: [], error: "maintenance-task-unknown" },
     { title: "a machine ticked twice", task: "wax", seen: [], ticked: ["a", "a"], error: "machine-chosen-twice" },
     { title: "an unknown machine ticked", task: "wax", seen: [], ticked: ["d", "ghost"], error: "unknown-machine" },
-    { title: "a retired machine ticked", task: "wax", seen: [], ticked: ["d", "r"], error: "machine-retired" },
+    { title: "a retired machine ticked", task: "glass", seen: [], ticked: ["d", "r"], error: "machine-retired" },
   ])("rejects the whole change for $title", ({ task: maintenanceTaskId, seen, ticked, error }) => {
     expect(fromTask(maintenanceTaskId, seen, ticked)).toEqual({ ok: false, error });
   });
@@ -118,6 +127,19 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
     const decision = fromMachine("b", ["wax"], ["glass"]);
 
     expect(decision).toMatchObject({ ok: true, events: [event("glass", ["b"], []), event("wax", [], ["b"])] });
+    expect(decision.ok && decision.state.machinesOfTasks).toEqual(
+      expect.arrayContaining([
+        { ...entry("wax", "b"), removedAt: clock.now() },
+        { id: "new-1", maintenanceTaskId: "glass", machineId: "b", addedAt: clock.now(), removedAt: undefined },
+      ]),
+    );
+  });
+
+  it("skips a task removed meanwhile that was only unticked, and stores the rest of the change", () => {
+    const decision = fromMachine("a", ["wax", "old"], ["wax", "oil"]);
+
+    expect(decision).toMatchObject({ ok: true, events: [event("oil", ["a"], [])] });
+    expect(decision.ok && decision.state.machinesOfTasks).toContainEqual(entry("old", "a"));
   });
 
   it.each([
@@ -131,7 +153,10 @@ describe("CMD-ChangeMachinesOfMaintenanceTask – from the machine record", () =
     { title: "ticking a removed task that still applies", seen: [], ticked: ["old"] },
     { title: "unticking a task La Guardia does not know", seen: ["ghost"], ticked: [] },
   ])("is nothing to do: $title", ({ seen, ticked }) => {
-    expect(fromMachine("a", seen, ticked)).toEqual({ ok: true, state: plan, events: [] });
+    const decision = fromMachine("a", seen, ticked);
+
+    expect(decision).toEqual({ ok: true, state: plan, events: [] });
+    expect(decision.ok && decision.state).toBe(plan);
   });
 
   it.each([

@@ -1,10 +1,10 @@
-import type { ActorOf, Database, Decision, DecisionContext, Role } from "@/platform/command";
+import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
 import {
   machinesRefusal,
   type ChangeMaintenancePlanError,
   type MachinesOfMaintenanceTaskChanged,
 } from "./change-maintenance-plan";
-import { readChosenMachines, type ChosenMachines } from "./chosen-machines";
+import type { ChosenMachines } from "./chosen-machines";
 import type { MaintenancePlan } from "./maintenance-plan";
 import { appliesNow, withMachinesChanged } from "./machines-of-maintenance-task";
 
@@ -62,11 +62,14 @@ export type ChangeMaintenanceTasksOfMachineError =
   | "maintenance-task-removed"
   | "maintenance-task-chosen-twice";
 
-type Input = ChangeMachinesOfMaintenanceTaskInput | ChangeMaintenanceTasksOfMachineInput;
-type Error = ChangeMachinesOfMaintenanceTaskError | ChangeMaintenanceTasksOfMachineError;
+export type ChangeInput = ChangeMachinesOfMaintenanceTaskInput | ChangeMaintenanceTasksOfMachineInput;
+type ChangeError = ChangeMachinesOfMaintenanceTaskError | ChangeMaintenanceTasksOfMachineError;
 
 /** The entries the change touches: newly ticked and unticked, once each, in the order of the form. */
-function touched({ seen, ticked }: Pick<Input, "seen" | "ticked">): { newlyTicked: string[]; unticked: string[] } {
+export function touched({ seen, ticked }: Pick<ChangeInput, "seen" | "ticked">): {
+  newlyTicked: string[];
+  unticked: string[];
+} {
   const wasSeen = new Set(seen);
   const isTicked = new Set(ticked);
   return {
@@ -75,18 +78,8 @@ function touched({ seen, ticked }: Pick<Input, "seen" | "ticked">): { newlyTicke
   };
 }
 
-/**
- * The facts the decision needs, read in the command's transaction: the machines it touches as Collection knows them –
- * from a task those newly ticked and unticked, from the machine record the one machine.
- */
-export async function machinesOfChange(tx: Database, input: Input): Promise<ChosenMachines> {
-  if ("machineId" in input) return readChosenMachines(tx, [input.machineId]);
-  const { newlyTicked, unticked } = touched(input);
-  return readChosenMachines(tx, [...newlyTicked, ...unticked]);
-}
-
-/** One pair of the change: a task and a machine, and whether the technician wants the task to apply to it. */
-type Tick = { maintenanceTaskId: string; machineId: string; wanted: boolean };
+/** One pair of the change: a task and a machine, and whether the task is to apply to it (add) or no longer (remove). */
+type Tick = { maintenanceTaskId: string; machineId: string; kind: "add" | "remove" };
 
 export function changeMachinesOfMaintenanceTask(
   plan: MaintenancePlan,
@@ -102,16 +95,16 @@ export function changeMachinesOfMaintenanceTask(
 ): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, ChangeMaintenanceTasksOfMachineError>;
 export function changeMachinesOfMaintenanceTask(
   plan: MaintenancePlan,
-  input: Input,
+  input: ChangeInput,
   context: DecisionContext<ChangingPerson>,
   chosen: ChosenMachines,
-): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, Error>;
+): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, ChangeError>;
 export function changeMachinesOfMaintenanceTask(
   plan: MaintenancePlan,
-  input: Input,
+  input: ChangeInput,
   context: DecisionContext<ChangingPerson>,
   chosen: ChosenMachines,
-): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, Error> {
+): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, ChangeError> {
   const ticks = "machineId" in input ? ticksOfMachine(plan, input, chosen) : ticksOfTask(plan, input, chosen);
   if (!ticks.ok) return ticks;
   return applied(plan, ticks.ticks, context);
@@ -137,8 +130,8 @@ function ticksOfTask(
   return {
     ok: true,
     ticks: [
-      ...added.map((machineId) => ({ maintenanceTaskId: task.id, machineId, wanted: true })),
-      ...removed.map((machineId) => ({ maintenanceTaskId: task.id, machineId, wanted: false })),
+      ...added.map((machineId) => ({ maintenanceTaskId: task.id, machineId, kind: "add" as const })),
+      ...removed.map((machineId) => ({ maintenanceTaskId: task.id, machineId, kind: "remove" as const })),
     ],
   };
 }
@@ -173,7 +166,7 @@ function ticksOfMachine(
     ticks: [...added, ...removed].map((maintenanceTaskId) => ({
       maintenanceTaskId,
       machineId: input.machineId,
-      wanted: added.includes(maintenanceTaskId),
+      kind: added.includes(maintenanceTaskId) ? ("add" as const) : ("remove" as const),
     })),
   };
 }
@@ -186,9 +179,9 @@ function applied(
 ): Decision<MaintenancePlan, MachinesOfMaintenanceTaskChanged, never> {
   if (ticks.length === 0) return { ok: true, state: plan, events: [] };
   const byTask = new Map<string, { added: string[]; removed: string[] }>();
-  for (const { maintenanceTaskId, machineId, wanted } of ticks) {
+  for (const { maintenanceTaskId, machineId, kind } of ticks) {
     const machines = byTask.get(maintenanceTaskId) ?? { added: [], removed: [] };
-    (wanted ? machines.added : machines.removed).push(machineId);
+    (kind === "add" ? machines.added : machines.removed).push(machineId);
     byTask.set(maintenanceTaskId, machines);
   }
   const now = clock.now();
