@@ -176,14 +176,20 @@ export async function untickMaintenanceTasks(page: Page) {
 
 /**
  * A machine with a machine model of its own, registered by the logged-in technician – Playable unless a machine status
- * is given. Returns its museum number and the model's title.
+ * is given, a pinball machine without technology unless a kind is given. Returns its museum number and the model's title.
  */
-export async function aMachine(page: Page, machineStatus?: MachineStatus, location = "Hall 2") {
+export async function aMachine(
+  page: Page,
+  machineStatus?: MachineStatus,
+  location = "Hall 2",
+  { machineCategory = "pinball", technology }: { machineCategory?: "pinball" | "arcade"; technology?: string } = {},
+) {
   const title = unique("Medieval Madness");
   await page.goto("/team/machine-models/new");
   await page.getByLabel("Titel").fill(title);
   await page.getByLabel("Hersteller").fill("Williams");
-  await page.getByLabel("Kategorie").selectOption("pinball");
+  await page.getByLabel("Kategorie").selectOption(machineCategory);
+  if (technology) await page.getByLabel("Technik").selectOption(technology);
   await page.getByRole("button", { name: "Modell anlegen" }).click();
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
