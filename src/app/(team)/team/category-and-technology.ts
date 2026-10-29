@@ -1,4 +1,5 @@
-import type { MachineCategory, Technology } from "@/modules/collection";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import type { MachineCategory, MachineGroup, Technology } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 
 const { machineModels } = teamMessages;
@@ -14,4 +15,20 @@ export function categoryAndTechnologyLabel(
   return [machineModels.categories[machineCategory], technology && machineModels.technologies[technology]]
     .filter(Boolean)
     .join(" · ");
+}
+
+/**
+ * Collection's machine groups as a grouped choice shows them (G27): each named by its machine category and technology,
+ * its entries as `entryOf` says – the machines of a maintenance task (ST-094, ST-095), the sticker selection and the
+ * further machines of recording for several (ST-098).
+ */
+export function machineChoiceGroups<Machine>(
+  groups: MachineGroup<Machine>[],
+  entryOf: (machine: Machine) => ChoiceGroup["entries"][number],
+): ChoiceGroup[] {
+  return groups.map((group) => ({
+    key: `${group.machineCategory}/${group.technology ?? ""}`,
+    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
+    entries: group.machines.map(entryOf),
+  }));
 }

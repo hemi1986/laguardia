@@ -1,7 +1,7 @@
 import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import { groupMachines, machineOverview, type MachineOverviewQuery } from "@/modules/collection";
 import type { Database } from "@/platform/command";
-import { categoryAndTechnologyLabel } from "../../category-and-technology";
+import { machineChoiceGroups } from "../../category-and-technology";
 import { qrCodeImage } from "./qr-sticker";
 import type { Sticker } from "./sticker-sheet";
 
@@ -22,14 +22,13 @@ export async function stickerChoiceFor(
   db: Database,
   query: Pick<MachineOverviewQuery, "search">,
 ): Promise<ChoiceGroup[]> {
-  return groupMachines(await machinesToPrintFor(db, query)).map((group) => ({
-    key: `${group.machineCategory}/${group.technology ?? ""}`,
-    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
-    entries: group.machines.map(({ museumNumber, machineModelTitle }) => ({
+  return machineChoiceGroups(
+    groupMachines(await machinesToPrintFor(db, query)),
+    ({ museumNumber, machineModelTitle }) => ({
       value: museumNumber,
       label: `${museumNumber} · ${machineModelTitle}`,
-    })),
-  }));
+    }),
+  );
 }
 
 /**

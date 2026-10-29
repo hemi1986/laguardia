@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MaintenanceRecorded]
 depends_on: [ST-094]
 labels: [ui, feature:per-machine-maintenance]
-status: in-progress
+status: done
 ---
 
 ## Story

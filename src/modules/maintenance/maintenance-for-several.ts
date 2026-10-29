@@ -18,7 +18,8 @@ export type FurtherMachineToChoose = MachineToChoose & {
 
 /**
  * A maintenance task as the selection page „Für mehrere Geräte erfassen“ needs it (ST-045, decision D8): the machines
- * it is due on – preselected, in the due maintenance list's order – and every other machine it applies to, by location;
+ * it is due on – preselected, in the due maintenance list's order – and every other machine it applies to, by location
+ * (the page groups them by machine category and technology, ST-098);
  * only those on which CMD-RecordMaintenance would accept the team member who asks (G11). `whyNot` is the command's
  * reason when it would accept them on none of them, and the dates are the ones it accepts (D6).
  */

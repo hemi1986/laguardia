@@ -176,7 +176,7 @@ export async function untickMaintenanceTasks(page: Page) {
 
 /**
  * A machine with a machine model of its own, registered by the logged-in technician – Playable unless a machine status
- * is given, a pinball machine without technology unless a kind is given. Returns its museum number and the model's title.
+ * is given, a pinball machine without technology unless a machine category or technology is given. Returns its museum number and the model's title.
  */
 export async function aMachine(
   page: Page,

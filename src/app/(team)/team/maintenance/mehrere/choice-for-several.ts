@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import { groupMachines } from "@/modules/collection";
 import type { MachineToChoose, MaintenanceForSeveral } from "@/modules/maintenance";
 import { teamMessages } from "@/platform/messages";
-import { categoryAndTechnologyLabel } from "../../category-and-technology";
+import { machineChoiceGroups } from "../../category-and-technology";
 
 const { recordForSeveral: texts } = teamMessages;
 
@@ -17,11 +17,7 @@ export type ChoiceOfSeveral = { due: ChoiceGroup | undefined; others: ChoiceGrou
 export function choiceForSeveral({ due, others }: Pick<MaintenanceForSeveral, "due" | "others">): ChoiceOfSeveral {
   return {
     due: due.length > 0 ? { key: "due", label: texts.due, entries: due.map(entryOf) } : undefined,
-    others: groupMachines(others).map((group) => ({
-      key: `${group.machineCategory}/${group.technology ?? ""}`,
-      label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
-      entries: group.machines.map(entryOf),
-    })),
+    others: machineChoiceGroups(groupMachines(others), entryOf),
   };
 }
 
