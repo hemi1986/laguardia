@@ -18,10 +18,20 @@ type AccountAction = (previous: AccountActionState, formData: FormData) => Promi
 
 /**
  * An action on an account behind one button – deactivating, activating again. It has nothing to keep; a rejection
- * says why under the button.
+ * says why under the button. It stays mounted when the account no longer offers it (`offered`): the action re-renders
+ * the page, and a deactivation another technician made a moment earlier must be said, not swallowed.
  */
-export function AccountButtonForm({ action: act, label }: { action: AccountAction; label: string }) {
+export function AccountButtonForm({
+  action: act,
+  label,
+  offered,
+}: {
+  action: AccountAction;
+  label: string;
+  offered: boolean;
+}) {
   const [state, action, pending] = useActionState(act, null);
+  if (!offered) return state ? <Rejection>{accountErrors[state.error]}</Rejection> : null;
   return (
     <form action={action} className="flex flex-col gap-2">
       <Button type="submit" variant="outline" disabled={pending} className="self-start">

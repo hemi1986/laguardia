@@ -36,21 +36,23 @@ export function AccountView({
       <p className="text-sm">
         {texts.state}: {account.active ? texts.active : texts.deactivated}
       </p>
-      {(actions.edit || actions.deactivate) && (
-        <div className="flex flex-wrap items-start gap-2">
-          {actions.edit && (
-            <Link href={`/team/members/${account.id}/bearbeiten`} className={buttonVariants({ variant: "outline" })}>
-              {texts.edit}
-            </Link>
-          )}
-          {actions.deactivate && (
-            <AccountButtonForm action={deactivateAccountAction.bind(null, account.id)} label={texts.deactivate} />
-          )}
-        </div>
-      )}
-      {actions.activate && (
-        <AccountButtonForm action={activateAccountAction.bind(null, account.id)} label={texts.activate} />
-      )}
+      <div className="flex flex-wrap items-start gap-2 empty:hidden">
+        {actions.edit && (
+          <Link href={`/team/members/${account.id}/bearbeiten`} className={buttonVariants({ variant: "outline" })}>
+            {texts.edit}
+          </Link>
+        )}
+        <AccountButtonForm
+          action={deactivateAccountAction.bind(null, account.id)}
+          label={texts.deactivate}
+          offered={actions.deactivate}
+        />
+        <AccountButtonForm
+          action={activateAccountAction.bind(null, account.id)}
+          label={texts.activate}
+          offered={actions.activate}
+        />
+      </div>
       <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
         {teamMessages.accounts.backToList}
       </Link>
