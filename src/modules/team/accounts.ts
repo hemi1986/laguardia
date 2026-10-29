@@ -2,14 +2,20 @@ import "server-only";
 import { APIError } from "better-auth/api";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import type { Actor, Database, Role } from "@/platform/command";
-import { newAccountRejection, normalizedUsername, passwordRejection, type AccountRuleError } from "./account-rules";
+import {
+  editedAccountRejection,
+  newAccountRejection,
+  normalizedUsername,
+  passwordRejection,
+  type AccountRuleError,
+} from "./account-rules";
 import { authFor } from "./auth";
 import { loggedInTeamMember } from "./login";
-import { session, teamMember } from "./schema";
+import { account, session, teamMember } from "./schema";
 
 /**
- * Managing team member accounts (ST-005, ADR 0004): technicians create accounts, set the role, reset passwords and
- * deactivate accounts. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
+ * Managing team member accounts (ST-005, ADR 0004): technicians create accounts, edit them – name, username, role, a
+ * new password (ST-088) – and deactivate and activate them. BC-Team is generic and has no aggregates or events (`docs/domain/events.yaml`), so these are
  * module functions rather than commands – which is why each one checks the acting person's role itself.
  */
 export type AccountError =
@@ -17,8 +23,7 @@ export type AccountError =
   | "not-authorized"
   | "username-taken"
   | "not-found"
-  | "last-technician"
-  | "account-deactivated"
+  | AccountRefusal
   | "current-password-wrong";
 
 export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; error: AccountError };
@@ -26,12 +31,12 @@ export type AccountOutcome = { ok: true; teamMemberId: string } | { ok: false; e
 type Dependencies = { db: Database; actor: Actor };
 
 /**
- * Setting a password goes through Better Auth, which checks the session behind the request itself – so those
- * functions need the request headers, and the type demands them where they are used.
+ * Changing one's own password goes through Better Auth, which checks the session behind the request itself – so it
+ * needs the request headers, and the type demands them where it is used.
  */
 type WithSession = { headers: Headers; inNext?: boolean };
 
-function isTechnician(actor: Actor): boolean {
+function isTechnician(actor: Actor): actor is Actor & { kind: "team-member" } {
   return actor.kind === "team-member" && actor.role === "technician";
 }
 
@@ -86,46 +91,25 @@ function isAlreadyTaken(error: unknown): boolean {
   );
 }
 
-/** Sets a team member's role. The role is read again on every request (ST-004), so it applies to the next action. */
-export async function changeRole(
-  input: { teamMemberId: string; role: Role },
+/**
+ * What a technician changes on the account edit page (ST-088): name, username, role and – when not empty – a new
+ * password, in one change. `role` left out keeps it (one's own edit page posts none).
+ */
+export type AccountEdit = { name: string; username: string; role?: Role; newPassword: string };
+
+/**
+ * Edits an account (ST-088): every rejection is decided before anything is written, and the change is stored in one
+ * transaction – a valid new password is not set when the username of the same change is rejected. Only a new
+ * password ends the team member's sessions; a new name, username or role keeps them (sessions belong to the team
+ * member, not to the username).
+ */
+export async function editAccount(
+  input: AccountEdit & { teamMemberId: string },
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
-  return applyChange(db, input.teamMemberId, { role: input.role });
-}
-
-/**
- * Sets a new password for a team member's account – a technician resets it on site, no e-mail (ADR 0004).
- * The account's open sessions end with it: a reset is the remedy for a lost phone or a password someone else
- * learned, and sessions live for 90 days (ST-004), so leaving them open would leave the old holder logged in.
- */
-export async function resetPassword(
-  input: { teamMemberId: string; password: string },
-  { db, actor, headers, inNext }: Dependencies & WithSession,
-): Promise<AccountOutcome> {
-  if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
-  const rejection = passwordRejection(input.password);
-  if (rejection) return { ok: false, error: rejection };
-  const target = await accountState(db, input.teamMemberId);
-  if (!target) return { ok: false, error: "not-found" };
-  // A reset never takes an active technician away, so it needs no count and no lock.
-  const refusal = changeRefusal(target, { resetPassword: true });
-  if (refusal) return { ok: false, error: refusal };
-  // The sessions go first: if setting the password then fails, the old holder is logged out and the old
-  // password still works – the safe way round. Better Auth writes on its own connection, so the two cannot
-  // share one transaction.
-  await db.delete(session).where(eq(session.userId, input.teamMemberId));
-  try {
-    await authFor(db, inNext).api.setUserPassword({
-      body: { userId: input.teamMemberId, newPassword: input.password },
-      headers,
-    });
-  } catch (error) {
-    if (error instanceof APIError && error.status === "NOT_FOUND") return { ok: false, error: "not-found" };
-    throw error;
-  }
-  return { ok: true, teamMemberId: input.teamMemberId };
+  const { teamMemberId, ...edit } = input;
+  return applyChange(db, actor, teamMemberId, { edit });
 }
 
 /**
@@ -159,13 +143,14 @@ export async function changeOwnPassword(
 /**
  * Deactivates an account: it can no longer log in and its open sessions end at once. The team member's name stays on
  * everything they did – accounts are never deleted (ST-005, Out of Scope). It can be activated again (ST-081, G10a).
+ * One's own account is not deactivated (ST-088): it would log the technician out with nobody to undo it.
  */
 export async function deactivateAccount(
   input: { teamMemberId: string },
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
-  return applyChange(db, input.teamMemberId, { deactivate: true });
+  return applyChange(db, actor, input.teamMemberId, { deactivate: true });
 }
 
 /** Activates a deactivated account again (ST-081, G10a): its team member logs in again with their password. */
@@ -174,74 +159,119 @@ export async function activateAccount(
   { db, actor }: Dependencies,
 ): Promise<AccountOutcome> {
   if (!isTechnician(actor)) return { ok: false, error: "not-authorized" };
-  return applyChange(db, input.teamMemberId, { activate: true });
+  return applyChange(db, actor, input.teamMemberId, { activate: true });
 }
 
-/** What a change does to an account. A new role and deactivation can take an active technician away. */
-type Change = StoredChange | { resetPassword: true };
+/** What a change does to an account. An edit's new role and deactivation can take an active technician away. */
+type Change = { edit: AccountEdit } | { deactivate: true } | { activate: true };
 
-/** What `applyChange` writes onto the account row – a reset sets the password through Better Auth instead. */
-type StoredChange = { role: Role } | { deactivate: true } | { activate: true };
+type AccountState = { id: string; name: string; username: string | null; role: string | null; banned: boolean | null };
 
-type AccountState = { role: string | null; banned: boolean | null };
+type AccountRefusal = "account-deactivated" | "own-role" | "own-password" | "own-deactivation" | "last-technician";
 
 /**
- * The one rule of what may be done to an account (ST-005, ST-081) – asked by every change and by the account's page,
- * so the page offers exactly what the change would accept (G11). A deactivated account can only be activated again;
- * the invariant of BC-Team: at least one active technician always remains, so the team can never lock itself out.
+ * The one rule of what may be done to an account (ST-005, ST-081, ST-088) – asked by every change and by the account's
+ * pages, so they offer exactly what the change would accept (G11). A deactivated account can only be activated again.
+ * One's own role and password are not changed here and one's own account is not deactivated – „Passwort ändern“
+ * proves the current password, and only another technician can undo the rest. The invariant of BC-Team: at least one
+ * active technician always remains, so the team can never lock itself out.
  */
-function changeRefusal(target: AccountState, change: { resetPassword: true }): "account-deactivated" | undefined;
 function changeRefusal(
   target: AccountState,
   change: Change,
-  activeTechnicians: number,
-): "account-deactivated" | "last-technician" | undefined;
-function changeRefusal(
-  target: AccountState,
-  change: Change,
-  activeTechnicians?: number,
-): "account-deactivated" | "last-technician" | undefined {
+  { actingTeamMemberId, activeTechnicians }: { actingTeamMemberId: string; activeTechnicians: number },
+): AccountRefusal | undefined {
   if (target.banned && !("activate" in change)) return "account-deactivated";
-  if (takesAnActiveTechnicianAway(target, change) && activeTechnicians! <= 1) return "last-technician";
+  if (target.id === actingTeamMemberId) {
+    if ("deactivate" in change) return "own-deactivation";
+    if ("edit" in change && change.edit.role && change.edit.role !== target.role) return "own-role";
+    if ("edit" in change && change.edit.newPassword) return "own-password";
+  }
+  if (takesAnActiveTechnicianAway(target, change) && activeTechnicians <= 1) return "last-technician";
   return undefined;
 }
 
 /**
  * Every change that could take an active technician away is serialized on one advisory lock, so two technicians
- * demoting each other at the same time wait for each other and the second one sees the first one's result – exactly
- * one gets through.
+ * demoting or deactivating each other at the same time wait for each other and the second one sees the first one's
+ * result – exactly one gets through.
  */
 const ACTIVE_TECHNICIANS_LOCK = "team:active-technicians";
 
-async function applyChange(db: Database, teamMemberId: string, change: StoredChange): Promise<AccountOutcome> {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ACTIVE_TECHNICIANS_LOCK}))`);
-    const target = await accountState(tx, teamMemberId);
-    if (!target) return { ok: false, error: "not-found" };
-    const refusal = changeRefusal(target, change, await activeTechnicianCount(tx));
-    if (refusal) return { ok: false, error: refusal };
+async function applyChange(
+  db: Database,
+  actor: Actor & { kind: "team-member" },
+  teamMemberId: string,
+  change: Change,
+): Promise<AccountOutcome> {
+  const rejection = "edit" in change ? editedAccountRejection(change.edit) : undefined;
+  // Hashed before the transaction (it takes a while) and written inside it, so the password is stored with the rest
+  // of the change or not at all – Better Auth's own endpoint would write it on a connection of its own.
+  const newPassword = "edit" in change && change.edit.newPassword && !rejection;
+  const passwordHash = newPassword ? await (await authFor(db).$context).password.hash(change.edit.newPassword) : null;
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${ACTIVE_TECHNICIANS_LOCK}))`);
+      const target = await accountState(tx, teamMemberId);
+      if (!target) return { ok: false, error: "not-found" };
+      const refusal = changeRefusal(target, change, {
+        actingTeamMemberId: actor.teamMemberId,
+        activeTechnicians: await activeTechnicianCount(tx),
+      });
+      if (refusal) return { ok: false, error: refusal };
+      if (rejection) return { ok: false, error: rejection };
 
-    await tx
-      .update(teamMember)
-      .set("role" in change ? { role: change.role } : { banned: "deactivate" in change })
-      .where(eq(teamMember.id, teamMemberId));
-    // A deactivated account acts as nobody from now on – its open sessions end with it (ST-004).
-    if ("deactivate" in change) await tx.delete(session).where(eq(session.userId, teamMemberId));
-    return { ok: true, teamMemberId };
-  });
+      if ("edit" in change) {
+        const username = normalizedUsername(change.edit.username);
+        if (username !== target.username && (await usernameTaken(tx, username)))
+          return { ok: false, error: "username-taken" };
+        await tx
+          .update(teamMember)
+          .set({
+            name: change.edit.name.trim(),
+            username,
+            displayUsername: username,
+            email: `${username}@users.invalid`, // kept in step with the username, as when it was created (ADR 0006)
+            role: change.edit.role ?? target.role,
+          })
+          .where(eq(teamMember.id, teamMemberId));
+        if (passwordHash) await setPassword(tx, teamMemberId, passwordHash);
+      } else {
+        await tx
+          .update(teamMember)
+          .set({ banned: "deactivate" in change })
+          .where(eq(teamMember.id, teamMemberId));
+      }
+      // A deactivated account acts as nobody from now on, and a new password is the remedy for a lost phone or a
+      // password someone else learned – either way the open sessions end with it (ST-004, ST-088).
+      if ("deactivate" in change || passwordHash) await tx.delete(session).where(eq(session.userId, teamMemberId));
+      return { ok: true, teamMemberId };
+    });
+  } catch (error) {
+    // Two technicians giving the same username at the same time: the unique index decides, the loser is told.
+    if (isUniqueViolation(error)) return { ok: false, error: "username-taken" };
+    throw error;
+  }
+}
+
+async function setPassword(db: Database, teamMemberId: string, passwordHash: string) {
+  const updated = await db
+    .update(account)
+    .set({ password: passwordHash })
+    .where(and(eq(account.userId, teamMemberId), eq(account.providerId, "credential")))
+    .returning({ id: account.id });
+  if (updated.length !== 1) throw new Error(`team_member ${teamMemberId}: no password login to set`);
 }
 
 async function accountState(db: Database, teamMemberId: string): Promise<AccountState | undefined> {
-  const [found] = await db
-    .select({ role: teamMember.role, banned: teamMember.banned })
-    .from(teamMember)
-    .where(eq(teamMember.id, teamMemberId));
+  const [found] = await db.select(accountColumns).from(teamMember).where(eq(teamMember.id, teamMemberId));
   return found;
 }
 
 function takesAnActiveTechnicianAway(target: AccountState, change: Change): boolean {
   const isActiveTechnician = target.role === "technician" && !target.banned;
-  return isActiveTechnician && ("deactivate" in change || ("role" in change && change.role !== "technician"));
+  const demoted = "edit" in change && change.edit.role !== undefined && change.edit.role !== "technician";
+  return isActiveTechnician && ("deactivate" in change || demoted);
 }
 
 const notBanned = sql`coalesce(${teamMember.banned}, false) = false`;
@@ -281,13 +311,7 @@ export async function teamMemberAccounts(
   return rows.map(accountOf);
 }
 
-function accountOf(row: {
-  id: string;
-  name: string;
-  username: string | null;
-  role: string | null;
-  banned: boolean | null;
-}): TeamMemberAccount {
+function accountOf(row: AccountState): TeamMemberAccount {
   return {
     id: row.id,
     name: row.name,
@@ -307,44 +331,45 @@ function missing(column: string, id: string): never {
 }
 
 /**
- * What a technician may do to one account (ST-081), each answered by the rule the change itself applies: the role it
- * would change to, resetting the password, deactivating, activating again – and `limitedBy` when the last active
- * technician account cannot be deactivated or made a helper.
+ * What a technician may do to one account (ST-081, ST-088), each answered by the rule the change itself applies:
+ * editing it – and on the edit page whether the role can be chosen and a new password set –, deactivating, activating
+ * it again.
  */
 export type AccountActions = {
-  changeRoleTo?: Role;
-  resetPassword: boolean;
+  edit?: { chooseRole: boolean; newPassword: boolean };
   deactivate: boolean;
   activate: boolean;
-  limitedBy?: "last-technician";
 };
 
 export type TeamMemberAccountWithActions = TeamMemberAccount & { actions: AccountActions };
 
-/** Read model: one team member's account with the actions it offers, for their own page (ST-081). */
+/**
+ * Read model: one team member's account with the actions it offers to the technician looking at it, for the team
+ * member's page and the account edit page (ST-081, ST-088).
+ */
 export async function teamMemberAccount(
   db: Database,
   teamMemberId: string,
+  viewerId: string,
 ): Promise<TeamMemberAccountWithActions | undefined> {
-  const [row] = await db
-    .select(accountColumns)
-    .from(teamMember)
-    .where(eq(teamMember.id, teamMemberId));
+  const row = await accountState(db, teamMemberId);
   if (!row) return undefined;
   const account = accountOf(row);
-  const activeTechnicians = await activeTechnicianCount(db);
-  const refusal = (change: Change) => changeRefusal(row, change, activeTechnicians);
+  const facts = { actingTeamMemberId: viewerId, activeTechnicians: await activeTechnicianCount(db) };
+  const offered = (change: Change) => !changeRefusal(row, change, facts);
+  const unchanged: AccountEdit = { name: account.name, username: account.username, role: account.role, newPassword: "" };
   const otherRole: Role = account.role === "technician" ? "helper" : "technician";
-  const roleRefusal = refusal({ role: otherRole });
-  const deactivateRefusal = refusal({ deactivate: true });
   return {
     ...account,
     actions: {
-      changeRoleTo: roleRefusal ? undefined : otherRole,
-      resetPassword: !refusal({ resetPassword: true }),
-      deactivate: !deactivateRefusal,
-      activate: !account.active && !refusal({ activate: true }),
-      limitedBy: [roleRefusal, deactivateRefusal].includes("last-technician") ? "last-technician" : undefined,
+      edit: offered({ edit: unchanged })
+        ? {
+            chooseRole: offered({ edit: { ...unchanged, role: otherRole } }),
+            newPassword: offered({ edit: { ...unchanged, newPassword: "a new password" } }),
+          }
+        : undefined,
+      deactivate: offered({ deactivate: true }),
+      activate: !account.active && offered({ activate: true }),
     },
   };
 }

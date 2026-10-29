@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMachineModelCommand, machineModelsToChooseFrom } from "@/modules/collection";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
-import { changeRole, createAccount, logIn, logOut } from "@/modules/team";
+import { createAccount, editAccount, logIn, logOut } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -32,7 +32,12 @@ async function signedIn(role: "helper" | "technician") {
   const outcome = await logIn({ username, password: PASSWORD }, { db });
   if (!outcome.ok) throw new Error(outcome.error);
   expect(outcome.cookies).toHaveLength(1); // the session cookie only – the tests below change exactly that one
-  return { id: created.teamMemberId, headers: new Headers({ cookie: outcome.cookies[0].split(";")[0] }) };
+  return {
+    id: created.teamMemberId,
+    name: `Test ${role}`,
+    username,
+    headers: new Headers({ cookie: outcome.cookies[0].split(";")[0] }),
+  };
 }
 
 function runnerWith(headers: Headers) {
@@ -139,7 +144,8 @@ describe("the acting person of a Server Action", () => {
   it("acts with the new role on the next command after a technician changed it, without logging in again", async () => {
     const helper = await signedIn("helper");
 
-    expect(await changeRole({ teamMemberId: helper.id, role: "technician" }, { db, actor: accountManager })).toEqual({
+    const edit = { teamMemberId: helper.id, name: helper.name, username: helper.username, newPassword: "" };
+    expect(await editAccount({ ...edit, role: "technician" }, { db, actor: accountManager })).toEqual({
       ok: true,
       teamMemberId: helper.id,
     });

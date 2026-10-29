@@ -4,15 +4,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
 import type { TeamMemberAccountWithActions } from "@/modules/team";
 import { teamMessages } from "@/platform/messages";
-import { AccountButtonForm, ResetPasswordForm } from "./account-forms";
-import { activateAccountAction, changeRoleAction, resetPasswordAction } from "./actions";
+import { AccountButtonForm } from "./account-forms";
+import { activateAccountAction, deactivateAccountAction } from "./actions";
 
 const { account: texts, terms } = teamMessages;
 
 /**
- * One team member's page (ST-081): who they are, whether their account is active, and the actions the Team module
- * offers on it – changing the role, resetting the password, deactivating; on a deactivated account only activating
- * it again. Deactivating leads to its question page first (G10, G10b). The page carries no rule of its own (G11).
+ * One team member's page (ST-081, ST-088): who they are, whether their account is active, and the buttons the Team
+ * module offers on it – „Konto bearbeiten“ to the edit page and „Konto deaktivieren“ in one tap, without a question
+ * (G28, G10a) and not red (G30); on a deactivated account only „Konto wieder aktivieren“. The page carries no rule of
+ * its own (G11).
  */
 export function AccountView({
   account,
@@ -35,26 +36,23 @@ export function AccountView({
       <p className="text-sm">
         {texts.state}: {account.active ? texts.active : texts.deactivated}
       </p>
-      {actions.limitedBy === "last-technician" && <p className="text-sm">{texts.lastTechnician}</p>}
-      {actions.changeRoleTo && (
+      <div className="flex flex-wrap items-start gap-2 empty:hidden">
+        {actions.edit && (
+          <Link href={`/team/members/${account.id}/bearbeiten`} className={buttonVariants({ variant: "outline" })}>
+            {texts.edit}
+          </Link>
+        )}
         <AccountButtonForm
-          action={changeRoleAction.bind(null, account.id)}
-          role={actions.changeRoleTo}
-          label={actions.changeRoleTo === "technician" ? texts.makeTechnician : texts.makeHelper}
+          action={deactivateAccountAction.bind(null, account.id)}
+          label={texts.deactivate}
+          offered={actions.deactivate}
         />
-      )}
-      {actions.resetPassword && <ResetPasswordForm action={resetPasswordAction.bind(null, account.id)} />}
-      {actions.deactivate && (
-        <Link
-          href={`/team/members/${account.id}/deaktivieren`}
-          className={`${buttonVariants({ variant: "destructive" })} self-start`}
-        >
-          {texts.deactivate}
-        </Link>
-      )}
-      {actions.activate && (
-        <AccountButtonForm action={activateAccountAction.bind(null, account.id)} label={texts.activate} />
-      )}
+        <AccountButtonForm
+          action={activateAccountAction.bind(null, account.id)}
+          label={texts.activate}
+          offered={actions.activate}
+        />
+      </div>
       <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
         {teamMessages.accounts.backToList}
       </Link>

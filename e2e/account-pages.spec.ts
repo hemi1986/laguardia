@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, pageWidth, test, uniqueId as unique } from "./fixtures";
 
 /**
- * The account pages rebuilt from the shared UI components (ST-077), on the pages of ST-081: the accessibility contract of ST-005 and the
+ * The account pages rebuilt from the shared UI components (ST-077), on the pages of ST-081 and ST-088: the accessibility contract of ST-005 and the
  * 360 px rules hold for the new markup. Needs a technician account: locally the e2e technician each local run creates
  * (ST-083) (E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD) – the preview database has none
  * before ST-068.
@@ -46,7 +46,11 @@ test("every label on the account pages resolves to exactly one field", async ({ 
   const accountUsername = unique("e2e_f");
   await createAccount(page, `E2E ${accountUsername}`, accountUsername);
   await openAccount(page, `E2E ${accountUsername}`);
-  await expect(page.getByLabel("Neues Passwort")).toHaveCount(1);
+  await page.getByRole("link", { name: "Konto bearbeiten" }).click();
+  for (const label of ["Benutzername", "Rolle", "Neues Passwort"]) {
+    await expect(page.getByLabel(label)).toHaveCount(1);
+  }
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(1);
   await expect(page.getByLabel("Neues Passwort")).toHaveAccessibleDescription("Mindestens 10 Zeichen.");
 
   await page.goto("/team/password");
@@ -73,7 +77,6 @@ test("a deactivated account's page offers one control only", async ({ page }) =>
   const accountUsername = unique("e2e_d");
   await createAccount(page, `E2E ${accountUsername}`, accountUsername);
   await openAccount(page, `E2E ${accountUsername}`);
-  await page.getByRole("link", { name: "Konto deaktivieren" }).click();
   await page.getByRole("button", { name: "Konto deaktivieren" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`Konto von E2E ${accountUsername} deaktiviert.`);
 

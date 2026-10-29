@@ -13,6 +13,7 @@ const { ownPassword, accountErrors, accounts } = teamMessages;
 const fieldOf: Partial<Record<keyof typeof accountErrors, "currentPassword" | "newPassword">> = {
   "current-password-wrong": "currentPassword",
   "password-too-short": "newPassword",
+  "password-too-long": "newPassword",
 };
 
 /**

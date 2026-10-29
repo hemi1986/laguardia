@@ -358,9 +358,17 @@ and no other module answers about its commands. The triage outcomes share one mo
 **The two exceptions:** the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
 is nobody to bind the confirmation to – it says only that a report was sent, nothing stored. And the team members'
 accounts (ST-081, user 2026-10-25): the Team module's account functions are no commands and journal nothing, so the
-address names the action (`?done=role|password|deactivated|activated`, `?created=<id>`) and the page confirms it only
-when the account's state agrees – a deactivation only on a deactivated account, a creation only for an account the
-list has.
+address names the action (`?done=saved|deactivated|activated` since ST-088, `?created=<id>`) and the page confirms it
+only when the account's state agrees – a deactivation only on a deactivated account, a saved edit only on an active one
+with the name as it is now, a creation only for an account the list has.
+**Editing an account** (ST-088): `editAccount` decides every rejection before it writes and stores name, username
+(with Better Auth's `displayUsername` and placeholder e-mail) and role in one transaction under the active-technicians
+lock; a new password is hashed with Better Auth's own hasher (`$context.password.hash`) and written in the same
+transaction, so it is never set when another part of the change is rejected. What the pages offer – `actions.edit`
+(`chooseRole`, `newPassword`), `deactivate`, `activate` – is the Team module's `changeRefusal` asked for the technician
+looking (`teamMemberAccount(db, id, viewerId)`): one's own account has no role choice, no new password and no
+deactivation. A one-tap account button stays mounted when it is no longer offered (`AccountButtonForm`'s `offered`), so
+a rejection after a change made meanwhile is said, not swallowed.
 
 **Where an action sits on the defect's page** (G22, first: ST-026): the work – `claim`, `release`, `log-work`,
 `resolve` – as buttons under the header; what manages the defect behind the fold „Verwalten“ (`manage-defect.tsx`, a

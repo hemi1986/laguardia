@@ -20,5 +20,15 @@
     "Maintenance task becomes due": "ST-094",
     "Machine registered after the start date": "ST-094",
     "Restriction decides which machines are listed": "ST-094"
+  },
+  "ST-081": {
+    "The actions of an account live on its own page": "ST-088",
+    "A technician changes the role from the account page": "ST-088",
+    "A technician resets a password from the account page": "ST-088",
+    "A rejected password reset names the reason at the form": "ST-088",
+    "Deactivating asks once and names the person": "ST-088",
+    "Deactivating one's own account says so": "ST-088",
+    "Going back from the question changes nothing": "ST-088",
+    "The last active technician account offers neither deactivating nor the change to helper": "ST-088"
   }
 }

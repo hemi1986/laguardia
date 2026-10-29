@@ -19,6 +19,7 @@ const fieldOf: Partial<Record<AccountError, "name" | "username" | "password">> =
   "username-invalid": "username",
   "username-taken": "username",
   "password-too-short": "password",
+  "password-too-long": "password",
 };
 
 /**
