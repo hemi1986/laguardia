@@ -21,6 +21,13 @@ import {
  */
 test.use({ colorScheme: "light" });
 
+const username = process.env.E2E_TEAM_USERNAME;
+const password = process.env.E2E_TEAM_PASSWORD;
+
+test.beforeEach(() => {
+  test.skip(!username || !password, "needs the e2e technician account");
+});
+
 /** The colour scheme `<html>` is drawn in – the page's design. */
 const schemeOfPage = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
 
