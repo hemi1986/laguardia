@@ -1,4 +1,4 @@
-import { machinesForMaintenance } from "@/modules/collection";
+import { machinesForMaintenance, type MachineCategory, type Technology } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
@@ -10,6 +10,12 @@ import { LONGEST_BACK_DATING_DAYS, recordRefusal, type RecordMaintenanceError } 
 /** A machine the selection offers – what the team member recognises it by. */
 export type MachineToChoose = { machineId: string; museumNumber: string; machineModelTitle: string; location: string };
 
+/** A further machine the selection offers – with its machine category and technology, which the page groups it by (G27). */
+export type FurtherMachineToChoose = MachineToChoose & {
+  machineCategory: MachineCategory;
+  technology: Technology | undefined;
+};
+
 /**
  * A maintenance task as the selection page „Für mehrere Geräte erfassen“ needs it (ST-045, decision D8): the machines
  * it is due on – preselected, in the due maintenance list's order – and every other machine it applies to, by location;
@@ -19,7 +25,7 @@ export type MachineToChoose = { machineId: string; museumNumber: string; machine
 export type MaintenanceForSeveral = {
   maintenanceTask: { id: string; name: string; instruction: string };
   due: MachineToChoose[];
-  others: MachineToChoose[];
+  others: FurtherMachineToChoose[];
   whyNot: RecordMaintenanceError | undefined;
   today: CalendarDate;
   earliest: CalendarDate;
@@ -49,7 +55,11 @@ export async function maintenanceForSeveral(
     due: (dueHere?.machines ?? []).filter((machine) => machine.recordOffered).map(toChoose),
     others: offered
       .filter((machine) => !dueIds.has(machine.id))
-      .map((machine) => toChoose({ ...machine, machineId: machine.id }))
+      .map((machine) => ({
+        ...toChoose({ ...machine, machineId: machine.id }),
+        machineCategory: machine.machineCategory,
+        technology: machine.technology,
+      }))
       .sort(byLocation),
     whyNot: offered.length === 0 ? refusals.find((refusal) => refusal !== undefined) : undefined,
     today: now,

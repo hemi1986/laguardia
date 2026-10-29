@@ -43,7 +43,12 @@ export {
   type NamedMaintenanceRecord,
 } from "./maintenance-records";
 export { maintenancePlanChangedBy, maintenanceRecordedIn } from "./in-command";
-export { maintenanceForSeveral, type MachineToChoose, type MaintenanceForSeveral } from "./maintenance-for-several";
+export {
+  maintenanceForSeveral,
+  type FurtherMachineToChoose,
+  type MachineToChoose,
+  type MaintenanceForSeveral,
+} from "./maintenance-for-several";
 export { machineChoiceForMaintenanceTask, type ChoosableMachine } from "./machine-choice";
 export {
   maintenanceTaskChoiceForMachine,

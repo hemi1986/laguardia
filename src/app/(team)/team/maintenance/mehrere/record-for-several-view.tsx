@@ -3,6 +3,7 @@ import type { MaintenanceForSeveral } from "@/modules/maintenance";
 import { teamMessages } from "@/platform/messages";
 import { dueMaintenanceAddress } from "../due-maintenance-data";
 import type { RecordForSeveralState } from "./actions";
+import { choiceForSeveral } from "./choice-for-several";
 import { RecordForSeveralForm } from "./record-for-several-form";
 
 const { recordMaintenance: texts } = teamMessages;
@@ -31,6 +32,7 @@ export function RecordForSeveralPage({
         maintenanceTaskId={maintenanceTask.id}
         due={data.due}
         others={data.others}
+        choice={choiceForSeveral(data)}
         today={data.today}
         earliest={data.earliest}
         whyNot={data.whyNot}
