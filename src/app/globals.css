@@ -143,3 +143,27 @@
     break-after: page;
   }
 }
+
+/*
+ * Every fold looks the same (ST-090, UX guideline G31): „Mehr“, „Verwalten“ and the groups of G27 are native
+ * `<details>` whose `<summary class="fold">` carries one marker – closed ▸, open ▾ – in the text colour of the design
+ * around it. The browser's own marker is hidden: it differs between browsers and designs.
+ */
+@layer components {
+  summary.fold {
+    cursor: pointer;
+    list-style: none;
+  }
+  summary.fold::-webkit-details-marker {
+    display: none;
+  }
+  summary.fold::before {
+    content: "▸" / "";
+    display: inline-block;
+    width: 1em;
+    color: currentColor;
+  }
+  details[open] > summary.fold::before {
+    content: "▾" / "";
+  }
+}

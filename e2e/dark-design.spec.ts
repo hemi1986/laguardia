@@ -2,10 +2,12 @@ import type { Browser, Locator, Page } from "@playwright/test";
 import {
   aHelper,
   aMachine,
+  anOpenDefect,
   aTeamMember,
   allowPreview,
   expect,
   logIn,
+  openDefect,
   openMore,
   test,
   tickMachines,
@@ -77,7 +79,9 @@ test("ST-090: A team member switches the device to light", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/team/machines/${museumNumber}$`));
   await expect(page.getByRole("heading", { level: 1 })).toContainText(museumNumber);
   await expect.poll(() => designOf(page)).toBe("light");
-  expect(await entriesOfMore(page)).toEqual(before.map((entry) => (entry === "Helles Design" ? "Dunkles Design" : entry)));
+  expect(await entriesOfMore(page)).toEqual(
+    before.map((entry) => (entry === "Helles Design" ? "Dunkles Design" : entry)),
+  );
 });
 
 test("ST-090: Switching on a filtered list keeps the filter", async ({ page }) => {
@@ -260,4 +264,40 @@ test("ST-090: Native controls follow the design", async ({ page }) => {
   const light = await nativeControls(page, machine.museumNumber, maintenanceTaskId);
   for (const [control, design] of Object.entries(light.designs)) expect(design, control).toBe("light");
   expect(light.listMatchesPage, "the opened list on the page's background").toBe(true);
+});
+
+/** How a fold shows that it is open or closed: the marker drawn before its header, and no marker of the browser. */
+const markerOf = (fold: Locator) =>
+  fold.locator("> summary").evaluate((summary) => {
+    const marker = getComputedStyle(summary, "::before");
+    return {
+      marker: marker.content,
+      colour: marker.color === getComputedStyle(summary).color,
+      list: getComputedStyle(summary).listStyleType,
+    };
+  });
+
+test("ST-090: Every fold looks the same", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page);
+  const more = page.getByRole("navigation").locator("details");
+  const manage = page.getByRole("main").locator("details").filter({ hasText: "Verwalten" });
+
+  for (const design of ["dark", "light"] as const) {
+    await openDefect(page, museumNumber, title);
+    expect(await designOf(page)).toBe(design);
+    const closed = await markerOf(more);
+    expect(closed.marker).not.toBe("none");
+    expect(closed.list).toBe("none");
+    expect(await markerOf(manage), design).toEqual(closed);
+
+    await more.locator("> summary").click();
+    await manage.locator("> summary").click();
+    const open = await markerOf(more);
+    expect(open.marker).not.toBe(closed.marker);
+    expect(await markerOf(manage), design).toEqual(open);
+
+    if (design === "dark") await page.getByRole("button", { name: "Helles Design" }).click();
+    await expect.poll(() => designOf(page)).toBe("light");
+  }
 });
