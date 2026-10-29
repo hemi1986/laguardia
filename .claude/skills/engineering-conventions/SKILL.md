@@ -307,7 +307,14 @@ unticked entry that is no longer offered – a machine retired, a task removed m
 retry after a rejection, which keeps `seen`, can succeed. It emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
 changed**, none for a task whose tick did not. The rule table is the decision's test (`change-machines-of-maintenance-task.test.ts`);
 the decision names the tasks removed meanwhile as its subjects, and the Server Action says them by their names
-(`withRemovedNamed`, `change-tasks-outcome.ts`). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name);
+(`withRemovedNamed`, `change-tasks-outcome.ts`). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name) – and,
+for a machine being registered (ST-097), `maintenanceTaskChoiceForNewMachine(db, machineModels)`: every task unticked plus
+*Proposed for a new machine* per machine model (`proposedFor`), the rule of the same machine category and technology kept
+inside Maintenance; the page passes Collection's `machineModelsToChooseFrom` and names the kind with `machineKindLabel`.
+`GroupedChoice` takes `proposed` (with JavaScript only): entries the person has not touched follow it, so the proposals
+follow a change of the machine model; the form passes none after a rejection. Browser tests that register a machine for
+another purpose call `untickMaintenanceTasks(page)` after choosing the model (`e2e/fixtures.ts`), so they change neither the
+plan nor what is due;
 `machineMaintenance` also answers `taskCount` and `changeOffered` (Maintenance's own rule for the viewer, G11). The form page is
 `…/machines/[museumNumber]/wartungsaufgaben-aendern/`; its landing `?tasksChanged=1` is a **fourth exception** of *A confirmation
 after an action* – the machine record says how many tasks apply to it *now*, because a change that changes nothing records no
@@ -622,6 +629,22 @@ with Repair's two policies: `src/modules/repair/retirement-policies.ts`). A poli
 them `FOR UPDATE`, filtered by the state it acts on, so one changed a moment earlier is skipped instead of rejecting the
 command; each is then changed by its own command, run as the system without a version. When a second module reacts
 to the same command, the composition moves to a neutral element (ADR 0010, option 4).
+
+**The actor of a command another module runs in the same step** (ST-097, user approves with the pull request): a policy's
+calls are `trigger(…)` – run **as the system**, for what nobody in particular does (closing defects on retirement) – or
+`run(…)` – run **as the person who ran the triggering command**, after that command's own authorization check, journaled
+with them. Use `run` whenever the policy's command records *who* did it: POL-RegistrationAppliesChosenMaintenanceTasks runs
+CMD-ChangeMachinesOfMaintenanceTask from the new machine's side as the registering technician, so *Changed by* is that
+technician (the journal's actor), and a person the inner command does not allow makes the whole step `not-authorized`. No
+actor is passed to a policy by hand – the command layer gives the one it already checked. **A policy bound to input of the
+step** – the technician's choice on the triggering form that is no data of the upstream command (HS-22: the maintenance
+tasks ticked when registering) – uses `withPolicyInput(command, (policyInput) => [policy(…)])`: the step's input is
+`{ command, policies }`, the upstream command gets only its own part, and the policies are built from theirs when the step
+is sent (`src/modules/maintenance/registration-applies-chosen-maintenance-tasks.ts`; the page imports
+`registerMachineWithMaintenanceTasksCommand` from Maintenance, its form definition builds `{ command, policies }`).
+Collection's own tests keep using Collection's `registerMachineCommand`. A rejection of the policy's command – with its
+subjects – rejects the whole step, so the form says it as it would on the policy's own page (`withRemovedNamed`,
+`tasksRejectionText` in `src/app/(team)/team/machines/`).
 
 ## Read models
 
