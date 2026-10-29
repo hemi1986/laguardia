@@ -84,6 +84,15 @@ export const maintenanceTexts = {
       `${names.map((name) => `„${name}“`).join(", ")} ${names.length === 1 ? "ist" : "sind"} nicht mehr im Wartungsplan. Es wurde nichts gespeichert.`,
     unknown: "Diese Wartungsaufgabe gibt es nicht. Es wurde nichts gespeichert.",
   },
+  /** The section „Wartungsaufgaben“ of the registration form (ST-097, G27): the tasks of a new machine. */
+  registration: {
+    legend: "Wartungsaufgaben",
+    /** Why the ticked tasks are ticked – the machine category and technology named as in G27 („Flipper · EM“, G6a). */
+    proposed: (count: number, group: string) =>
+      count === 1
+        ? `Vorgeschlagen: 1 Wartungsaufgabe, die schon für Geräte mit ${group} gilt.`
+        : `Vorgeschlagen: ${count} Wartungsaufgaben, die schon für Geräte mit ${group} gelten.`,
+  },
   /** Recording one maintenance task for several machines at once (ST-045): a selection page of its own (G4a). */
   recordForSeveral: {
     start: "Für mehrere Geräte erfassen",

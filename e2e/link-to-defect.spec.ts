@@ -8,6 +8,7 @@ import {
   reportAsVisitor,
   test,
   uniqueId as unique,
+  untickMaintenanceTasks,
 } from "./fixtures";
 
 /**
@@ -42,6 +43,7 @@ async function anOpenDefectAndAProblemReport(page: Page) {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];

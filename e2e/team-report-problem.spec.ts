@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aHelper, expect, logIn, test, uniqueId as unique } from "./fixtures";
+import { aHelper, expect, logIn, test, uniqueId as unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * A team member reports a problem from the machine record on a phone (ST-015). Needs the e2e technician each local run
@@ -23,6 +23,7 @@ async function aMachineNotOnDisplay(page: Page): Promise<string> {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Workshop");
   await page.getByLabel("Status").selectOption("not-on-display");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

@@ -10,6 +10,7 @@ import {
   test,
   tickMachines,
   unique,
+  untickMaintenanceTasks,
 } from "./fixtures";
 
 /**
@@ -46,6 +47,7 @@ async function anArcadeMachine(page: Page) {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Namco)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 3");
   await page.getByLabel("Status").selectOption("not-on-display");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
@@ -309,7 +311,8 @@ const taskGroupOf = (page: Page, name: string) => page.locator("details").filter
 
 async function openedTask(page: Page, name: string) {
   const group = taskGroupOf(page, name);
-  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
+  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open)))
+    await group.locator("summary").click();
   return page.getByRole("checkbox", { name: new RegExp(name.replace(/[()&]/g, ".")) });
 }
 
@@ -380,7 +383,10 @@ test.describe("without JavaScript", () => {
   });
 });
 
-test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({ page, context }) => {
+test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({
+  page,
+  context,
+}) => {
   await logIn(page);
   const machine = await aMachine(page, "not-on-display");
   const [removed, kept] = [unique("Wax playfield"), unique("Clean glass (inside & out)")];

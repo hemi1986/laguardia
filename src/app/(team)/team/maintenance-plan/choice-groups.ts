@@ -2,8 +2,9 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import type { ChoosableMachine } from "@/modules/maintenance";
 import type { MachineGroup } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
+import { categoryAndTechnologyLabel } from "../category-and-technology";
 
-const { machineModels, maintenancePlan: texts } = teamMessages;
+const { maintenancePlan: texts } = teamMessages;
 
 /**
  * The machines to choose from as the forms show them (RM-MachineChoiceForMaintenanceTask, G27): a group named by its
@@ -14,12 +15,7 @@ const { machineModels, maintenancePlan: texts } = teamMessages;
 export function choiceGroups(groups: MachineGroup<ChoosableMachine>[]): ChoiceGroup[] {
   return groups.map((group) => ({
     key: `${group.machineCategory}/${group.technology ?? ""}`,
-    label: [
-      machineModels.categories[group.machineCategory],
-      group.technology && machineModels.technologies[group.technology],
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
     entries: group.machines.map((machine) => ({
       value: machine.machineId,
       label: [

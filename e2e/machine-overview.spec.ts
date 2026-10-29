@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, test } from "./fixtures";
+import { expect, logIn, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The machine overview on a phone (ST-008). Visitors are sent to the login – that needs no account and runs on the
@@ -20,6 +20,7 @@ async function aRegisteredMachine(page: Page) {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 1, row 1");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   await expect(page).toHaveURL(/\/team\/machines\?registered=/);

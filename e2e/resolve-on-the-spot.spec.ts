@@ -1,5 +1,15 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, logIn, openMore, pageWidth, reportAsVisitor, test, uniqueId as unique, aTeamMember } from "./fixtures";
+import {
+  expect,
+  logIn,
+  openMore,
+  pageWidth,
+  reportAsVisitor,
+  test,
+  uniqueId as unique,
+  aTeamMember,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Resolving a problem on the spot on a phone (ST-019): a helper goes from the triage list to the problem report's page,
@@ -43,6 +53,7 @@ async function aProblemReportAndAHelper(page: Page) {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];

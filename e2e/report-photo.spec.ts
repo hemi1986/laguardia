@@ -1,6 +1,6 @@
 import type { Browser, Page } from "@playwright/test";
 import sharp from "sharp";
-import { aHelper, allowPreview, expect, logIn, openMore, test } from "./fixtures";
+import { aHelper, allowPreview, expect, logIn, openMore, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The photo on a problem report on a phone (ST-016): a visitor takes or chooses a photo on the report form, the browser
@@ -26,6 +26,7 @@ async function aPlayableMachine(page: Page): Promise<string> {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await page.getByLabel("Status").selectOption("playable");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

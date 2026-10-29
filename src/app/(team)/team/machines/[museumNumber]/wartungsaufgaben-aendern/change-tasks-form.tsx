@@ -9,7 +9,7 @@ import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { changeTasksAction } from "./actions";
 import { TASK_FIELD } from "./change-tasks-input";
-import { tasksRejectionText } from "./tasks-rejection-text";
+import { tasksRejectionText } from "../../tasks-rejection-text";
 
 const { changeTasks: texts, maintenancePlan } = teamMessages;
 

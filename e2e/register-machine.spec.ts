@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, test, unique, aHelper } from "./fixtures";
+import { expect, logIn, pageWidth, test, unique, aHelper, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Registering a machine on a phone (ST-007) and the Server Action runner in the browser (ST-073, proof moved here by
@@ -36,6 +36,7 @@ async function openRegistration(page: Page) {
 /** Fills the registration with a museum number in another format and submits it. */
 async function registerWithMuseumNumber42(page: Page, model: string) {
   await page.getByLabel("Modell").selectOption({ label: `${model} (Williams, 1997)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Museumsnummer").fill("42");
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await page.getByLabel("Status").selectOption("limited");
@@ -76,6 +77,8 @@ test("ST-007: After registering, the technician is back on the machine overview"
   await openRegistration(page);
 
   await page.getByLabel("Modell").selectOption({ label: `${model} (Williams, 1997)` });
+
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await expect(page.getByLabel("Status")).toHaveValue("playable"); // preselected (user, 2026-10-01)
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

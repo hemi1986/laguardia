@@ -1,27 +1,26 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { GroupedChoice } from "@/components/ui/grouped-choice";
 import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
-import type { MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import { rejectionText } from "@/app/_actions/rejection-text";
 import { registerMachineAction, type RegisterMachineState } from "./actions";
+import type { RegistrationChoices } from "./register-machine-data";
 import type { RegisterMachineField } from "./register-machine-input";
+import { TASK_FIELD } from "./task-field";
 import { keptKey } from "@/app/_actions/form-parts";
+import { tasksRejectionText } from "../tasks-rejection-text";
 
-const { machines: texts, terms } = teamMessages;
-
-/** What the two selects offer – built by the page, so the client imports no module code (only erased types). */
-export type Choices = {
-  machineModels: { value: string; label: string }[];
-  machineStatuses: { value: MachineStatus; label: string }[];
-};
+const { machines: texts, terms, registration, maintenancePlan } = teamMessages;
 
 type ErrorCode = NonNullable<RegisterMachineState>["error"];
+
+/** No machine model chosen proposes nothing – one value, so the choice does not follow a new empty list each time. */
+const NOTHING_PROPOSED = { tasks: [], line: "" };
 
 /** The field that caused a rejection – marked at the form (G8). The others have no field of their own. */
 const fieldOf: Partial<Record<ErrorCode, RegisterMachineField>> = {
@@ -36,9 +35,22 @@ const fieldOf: Partial<Record<ErrorCode, RegisterMachineField>> = {
 /**
  * The registration form (ST-007), the first form on shadcn's Field (G8, G9): a rejection keeps every value, names the
  * reason above the submit button and marks the field that caused it – with and without JavaScript (ST-073).
+ *
+ * The section „Wartungsaufgaben“ (ST-097, G27) offers every task of the maintenance plan, in groups that fold. With
+ * JavaScript, choosing a machine model ticks the tasks it proposes and says why above them; the ticks the technician has
+ * not touched follow a change of the model. Without JavaScript, and after a rejection – which keeps the ticks as they
+ * were sent and opens the groups with a choice in them –, nothing is proposed.
  */
-export function RegisterMachineForm({ machineModels, machineStatuses }: Choices) {
+export function RegisterMachineForm({ machineModels, machineStatuses, tasks, proposals }: RegistrationChoices) {
   const [state, action, pending] = useActionState(registerMachineAction, null);
+  // The machine model chosen since the page opened – only with JavaScript, which is what proposes.
+  const [machineModel, setMachineModel] = useState<string>();
+  // A model chosen before the page hydrated, or restored by the browser on going back, proposes once it has.
+  const modelSelect = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (modelSelect.current?.value) setMachineModel(modelSelect.current.value);
+  }, []);
+  const proposal = !state && machineModel !== undefined ? (proposals[machineModel] ?? NOTHING_PROPOSED) : undefined;
   const rejectionId = useId();
   const kept = keptKey(state);
   const invalid = state ? fieldOf[state.error] : undefined;
@@ -57,6 +69,8 @@ export function RegisterMachineForm({ machineModels, machineStatuses }: Choices)
           name="machineModelId"
           defaultValue={state?.values.machineModelId ?? ""}
           key={`machineModelId-${kept}`}
+          ref={modelSelect}
+          onChange={(event) => setMachineModel(event.currentTarget.value)}
           required
           {...marked("machineModelId")}
         >
@@ -119,9 +133,28 @@ export function RegisterMachineForm({ machineModels, machineStatuses }: Choices)
           ))}
         </NativeSelect>
       </Field>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium">{registration.legend}</legend>
+        {tasks.length === 0 ? (
+          <p className="text-sm">{maintenancePlan.empty}</p>
+        ) : (
+          <>
+            {proposal && proposal.tasks.length > 0 && <p className="text-sm">{proposal.line}</p>}
+            <GroupedChoice
+              name={TASK_FIELD}
+              groups={tasks}
+              chosen={state?.chosen ?? []}
+              key={`tasks-${kept}`}
+              header={maintenancePlan.machines.groupHeader}
+              selectAll={maintenancePlan.machines.selectAll}
+              proposed={proposal?.tasks}
+            />
+          </>
+        )}
+      </fieldset>
       {state && (
         <div id={rejectionId}>
-          <Rejection>{rejectionText(state.error)}</Rejection>
+          <Rejection>{tasksRejectionText(state)}</Rejection>
         </div>
       )}
       <Button type="submit" disabled={pending}>

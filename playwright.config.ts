@@ -29,6 +29,7 @@ const changesTheMaintenancePlan = [
   "maintenance-plan.spec.ts",
   "maintenance-plan-machines.spec.ts",
   "due-maintenance.spec.ts",
+  "register-machine-maintenance.spec.ts",
 ];
 
 export default defineConfig({
