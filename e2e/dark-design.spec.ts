@@ -126,3 +126,45 @@ test("ST-090: The choice belongs to the device", async ({ page, browser }) => {
   await logIn(page, anna);
   expect(await designOf(page)).toBe("light");
 });
+
+/** The logged-in team member switches this device to light and logs out. */
+async function switchedToLightAndLoggedOut(page: Page) {
+  await page.goto("/team");
+  await choose(page, "Helles Design");
+  await expect.poll(() => designOf(page)).toBe("light");
+  await logOut(page);
+}
+
+test("ST-090: The login and the team not-found page follow the device's choice", async ({ page, browser }) => {
+  await logIn(page);
+  await switchedToLightAndLoggedOut(page);
+
+  expect(await designOf(page)).toBe("light");
+  // From the start page (always dark) to the login by its link – with JavaScript the page is not loaded anew.
+  await page.goto("/");
+  expect(await designOf(page)).toBe("dark");
+  await page.getByRole("link", { name: "Team login" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect.poll(() => designOf(page)).toBe("light");
+  const missing = await page.goto("/team/gibt-es-nicht");
+  expect(missing?.status()).toBe(404);
+  expect(await designOf(page)).toBe("light");
+
+  const withoutChoice = await anotherDevice(browser);
+  await withoutChoice.goto("/login");
+  expect(await designOf(withoutChoice)).toBe("dark");
+  await withoutChoice.goto("/team/gibt-es-nicht");
+  expect(await designOf(withoutChoice)).toBe("dark");
+});
+
+test("ST-090: Visitor and legal pages are always dark and offer no switch", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber } = await aMachine(page);
+  await switchedToLightAndLoggedOut(page);
+
+  for (const address of [`/m/${museumNumber}`, "/datenschutz", "/m/gibt-es-nicht/melden", "/gibt-es-nicht"]) {
+    await page.goto(address);
+    expect(await designOf(page), address).toBe("dark");
+    await expect(page.getByRole("button", { name: /Design/ }), address).toHaveCount(0);
+  }
+});
