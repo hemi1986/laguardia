@@ -1,7 +1,9 @@
+import { cn } from "cn";
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { connection } from "next/server";
-import { DESIGN_COOKIE, PAGE_PATH_HEADER, designOf, deviceDesign } from "./design";
+import { currentDeviceDesign } from "./current-design";
+import { PAGE_PATH_HEADER, designOf } from "./design";
 import { DesignFollowsPage } from "./design-follows-page";
 import "./globals.css";
 
@@ -19,11 +21,10 @@ export const metadata: Metadata = {
  */
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   await connection();
-  const [requestHeaders, requestCookies] = await Promise.all([headers(), cookies()]);
-  const device = deviceDesign(requestCookies.get(DESIGN_COOKIE)?.value);
+  const [requestHeaders, device] = await Promise.all([headers(), currentDeviceDesign()]);
   const design = designOf(requestHeaders.get(PAGE_PATH_HEADER) ?? "/", device);
   return (
-    <html lang="de" className={`h-full antialiased${design === "dark" ? " dark" : ""}`}>
+    <html lang="de" className={cn("h-full antialiased", design === "dark" && "dark")}>
       <body className="flex min-h-full flex-col">
         {children}
         <DesignFollowsPage device={device} />

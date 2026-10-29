@@ -72,11 +72,7 @@ export function TeamNavigation({ role, design }: { role: Role; design: Design })
               </Link>
             </li>
             <li>
-              <DesignSwitch
-                to={design === "dark" ? "light" : "dark"}
-                label={team.switchTo[design === "dark" ? "light" : "dark"]}
-                className={link}
-              />
+              <DesignSwitch current={design} labels={team.switchTo} className={link} />
             </li>
             <li>
               <form action={logOutAction}>

@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { RedirectType, redirect } from "next/navigation";
 import { DESIGN_COOKIE, deviceDesign } from "../design";
 import { sameSitePath } from "../same-site-path";
 
@@ -17,7 +17,13 @@ const FOUR_HUNDRED_DAYS = 400 * 24 * 60 * 60;
 export async function switchDesign(formData: FormData): Promise<void> {
   const design = deviceDesign(String(formData.get("design")));
   if (design) {
-    (await cookies()).set(DESIGN_COOKIE, design, { maxAge: FOUR_HUNDRED_DAYS, sameSite: "lax", path: "/", httpOnly: true });
+    (await cookies()).set(DESIGN_COOKIE, design, {
+      maxAge: FOUR_HUNDRED_DAYS,
+      sameSite: "lax",
+      path: "/",
+      httpOnly: true,
+    });
   }
-  redirect(sameSitePath(String(formData.get("back") ?? "/team")));
+  // Replace, not push: the same page again must not cost the team member a step back.
+  redirect(sameSitePath(String(formData.get("back") ?? "/team")), RedirectType.replace);
 }

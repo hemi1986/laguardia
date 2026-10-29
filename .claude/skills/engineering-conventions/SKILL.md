@@ -624,7 +624,9 @@ rule `decideVisit(stored, now)` – one visit lasts while the dashboard is opene
   (no mark line passed). A module query takes that instant (`changesOnClaimedDefects(db, since, …)`), never a window of
   its own. A mark is after the Last visit and not the viewer's own doing, by actor. The mark is `NewMark` („· neu seit
   deinem letzten Besuch“, G6a). Tested at the data function with an open = render first, then `recordVisit` (`technician-dashboard-new.integration.test.ts`).
-- Not every Server Action goes through `formAction`: this one runs no command. Every other write still does.
+- Not every Server Action goes through `formAction`: this one runs no command. Every other write to the database still
+  does; the two switches that only set a cookie of the browser – the visitor's language (`switchVisitorLanguage`) and the
+  design (`switchDesign`, ST-090) – change no data and run no command.
 
 ## Version check (HS-16)
 

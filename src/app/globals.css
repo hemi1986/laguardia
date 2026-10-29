@@ -45,7 +45,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-
 :root {
   /* The browser draws its own controls – checkboxes, choice lists, date fields, file choosers – in the page's design (ST-090, D1). */
   color-scheme: light;
@@ -158,12 +157,14 @@
     display: none;
   }
   summary.fold::before {
+    content: "▸"; /* for a browser without alternative text in `content` */
     content: "▸" / "";
     display: inline-block;
     width: 1em;
     color: currentColor;
   }
   details[open] > summary.fold::before {
+    content: "▾";
     content: "▾" / "";
   }
 }

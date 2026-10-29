@@ -9,7 +9,16 @@ import { switchDesign } from "./design-action";
  * JavaScript. It posts the address of the page it is on, search included, so the switch lands on the same page with the
  * same filter. Text typed into a form on the page but not sent is lost, as with any other way off the page.
  */
-export function DesignSwitch({ to, label, className }: { to: Design; label: string; className: string }) {
+export function DesignSwitch({
+  current,
+  labels,
+  className,
+}: {
+  current: Design;
+  labels: Record<Design, string>;
+  className: string;
+}) {
+  const to = current === "dark" ? "light" : "dark";
   const pathname = usePathname();
   const search = useSearchParams().toString();
   return (
@@ -17,7 +26,7 @@ export function DesignSwitch({ to, label, className }: { to: Design; label: stri
       <input type="hidden" name="design" value={to} />
       <input type="hidden" name="back" value={search ? `${pathname}?${search}` : pathname} />
       <button type="submit" className={`cursor-pointer ${className}`}>
-        {label}
+        {labels[to]}
       </button>
     </form>
   );

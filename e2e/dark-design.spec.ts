@@ -21,10 +21,11 @@ import {
  */
 test.use({ colorScheme: "light" });
 
-const designOf = (target: Page | Locator) =>
-  "evaluate" in target && "goto" in target
-    ? target.evaluate(() => getComputedStyle(document.documentElement).colorScheme)
-    : (target as Locator).evaluate((element) => getComputedStyle(element).colorScheme);
+/** The colour scheme `<html>` is drawn in – the page's design. */
+const schemeOfPage = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+
+/** The colour scheme one element is drawn in. */
+const schemeOf = (element: Locator) => element.evaluate((node) => getComputedStyle(node).colorScheme);
 
 /** A phone of its own beside the test's page – no session, no design chosen, set to a light system design. */
 async function anotherDevice(browser: Browser): Promise<Page> {
@@ -64,25 +65,25 @@ test("ST-090: Pages open dark although the device is set to light", async ({ pag
   const { museumNumber } = await aMachine(page);
 
   await page.goto("/team/machines");
-  expect(await designOf(page)).toBe("dark");
+  expect(await schemeOfPage(page)).toBe("dark");
 
   const visitor = await anotherDevice(browser);
   await visitor.goto(`/m/${museumNumber}`);
-  expect(await designOf(visitor)).toBe("dark");
+  expect(await schemeOfPage(visitor)).toBe("dark");
 });
 
 test("ST-090: A team member switches the device to light", async ({ page }) => {
   await logIn(page);
   const { museumNumber } = await aMachine(page);
   await page.goto(`/team/machines/${museumNumber}`);
-  expect(await designOf(page)).toBe("dark");
+  expect(await schemeOfPage(page)).toBe("dark");
   const before = await entriesOfMore(page);
 
   await choose(page, "Helles Design");
 
   await expect(page).toHaveURL(new RegExp(`/team/machines/${museumNumber}$`));
   await expect(page.getByRole("heading", { level: 1 })).toContainText(museumNumber);
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
   expect(await entriesOfMore(page)).toEqual(
     before.map((entry) => (entry === "Helles Design" ? "Dunkles Design" : entry)),
   );
@@ -99,7 +100,7 @@ test("ST-090: Switching on a filtered list keeps the filter", async ({ page }) =
 
   await choose(page, "Helles Design");
 
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
   expect(page.url()).toBe(filtered);
   await expect(page.getByLabel("Suche")).toHaveValue(title);
   await expect(page.getByRole("main").getByText(museumNumber)).toBeVisible();
@@ -120,12 +121,12 @@ test.describe("without JavaScript", () => {
   test("ST-090: Switching works without JavaScript", async ({ page }) => {
     await logIn(page);
     await page.goto("/team/defects");
-    expect(await designOf(page)).toBe("dark");
+    expect(await schemeOfPage(page)).toBe("dark");
 
     await choose(page, "Helles Design");
 
     await expect(page).toHaveURL(/\/team\/defects$/);
-    expect(await designOf(page)).toBe("light");
+    expect(await schemeOfPage(page)).toBe("light");
   });
 });
 
@@ -135,22 +136,22 @@ test("ST-090: The choice belongs to the device", async ({ page, browser }) => {
   await logOut(page);
   await logIn(page, anna);
   await choose(page, "Helles Design");
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
 
   const phone = await anotherDevice(browser);
   await logIn(phone, anna);
-  expect(await designOf(phone)).toBe("dark");
+  expect(await schemeOfPage(phone)).toBe("dark");
 
   await logOut(page);
   await logIn(page, anna);
-  expect(await designOf(page)).toBe("light");
+  expect(await schemeOfPage(page)).toBe("light");
 });
 
 /** The logged-in team member switches this device to light and logs out. */
 async function switchedToLightAndLoggedOut(page: Page) {
   await page.goto("/team");
   await choose(page, "Helles Design");
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
   await logOut(page);
 }
 
@@ -158,22 +159,22 @@ test("ST-090: The login and the team not-found page follow the device's choice",
   await logIn(page);
   await switchedToLightAndLoggedOut(page);
 
-  expect(await designOf(page)).toBe("light");
+  expect(await schemeOfPage(page)).toBe("light");
   // From the start page (always dark) to the login by its link – with JavaScript the page is not loaded anew.
   await page.goto("/");
-  expect(await designOf(page)).toBe("dark");
+  expect(await schemeOfPage(page)).toBe("dark");
   await page.getByRole("link", { name: "Team login" }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
   const missing = await page.goto("/team/gibt-es-nicht");
   expect(missing?.status()).toBe(404);
-  expect(await designOf(page)).toBe("light");
+  expect(await schemeOfPage(page)).toBe("light");
 
   const withoutChoice = await anotherDevice(browser);
   await withoutChoice.goto("/login");
-  expect(await designOf(withoutChoice)).toBe("dark");
+  expect(await schemeOfPage(withoutChoice)).toBe("dark");
   await withoutChoice.goto("/team/gibt-es-nicht");
-  expect(await designOf(withoutChoice)).toBe("dark");
+  expect(await schemeOfPage(withoutChoice)).toBe("dark");
 });
 
 test("ST-090: Visitor and legal pages are always dark and offer no switch", async ({ page }) => {
@@ -183,7 +184,7 @@ test("ST-090: Visitor and legal pages are always dark and offer no switch", asyn
 
   for (const address of [`/m/${museumNumber}`, "/datenschutz", "/m/gibt-es-nicht/melden", "/gibt-es-nicht"]) {
     await page.goto(address);
-    expect(await designOf(page), address).toBe("dark");
+    expect(await schemeOfPage(page), address).toBe("dark");
     await expect(page.getByRole("button", { name: /Design/ }), address).toHaveCount(0);
   }
 });
@@ -202,15 +203,15 @@ test("ST-090: The sticker print page stays light", async ({ page }) => {
   await logIn(page);
   const { museumNumber } = await aMachine(page);
   await page.goto("/team/machines");
-  expect(await designOf(page)).toBe("dark");
+  expect(await schemeOfPage(page)).toBe("dark");
 
   await page.goto(`/team/machines/stickers/print?m=${museumNumber}`);
 
-  expect(await designOf(page)).toBe("light");
+  expect(await schemeOfPage(page)).toBe("light");
   const print = page.getByRole("button", { name: "Drucken" });
   const back = page.getByRole("link", { name: "Zurück zur Auswahl" });
   const count = page.getByText("1 Gerät ausgewählt");
-  for (const control of [print, back, count]) expect(await designOf(control)).toBe("light");
+  for (const control of [print, back, count]) expect(await schemeOf(control)).toBe("light");
   expect(await colourOf(page.locator("body"), "backgroundColor")).toBe("rgb(255, 255, 255)");
 
   await page.emulateMedia({ media: "print" });
@@ -222,7 +223,7 @@ test("ST-090: The sticker print page stays light", async ({ page }) => {
   // Back to the selection – a team page again, in the device's design, also when JavaScript does not load it anew.
   await back.click();
   await expect(page).toHaveURL(/\/team\/machines\/stickers/);
-  await expect.poll(() => designOf(page)).toBe("dark");
+  await expect.poll(() => schemeOfPage(page)).toBe("dark");
 });
 
 /**
@@ -234,15 +235,15 @@ async function nativeControls(page: Page, museumNumber: string, maintenanceTaskI
   const designs: Record<string, string> = {};
   await page.goto("/team/machines/new");
   const model = page.getByLabel("Modell");
-  designs["choice of the machine model"] = await designOf(model);
-  designs["its opened list"] = await designOf(model.locator("option").nth(1));
-  designs["checkbox"] = await designOf(page.locator('input[type="checkbox"][name="maintenanceTaskId"]').first());
+  designs["choice of the machine model"] = await schemeOf(model);
+  designs["its opened list"] = await schemeOf(model.locator("option").nth(1));
+  designs["checkbox"] = await schemeOf(page.locator('input[type="checkbox"][name="maintenanceTaskId"]').first());
   const page_ = await colourOf(page.locator("body"), "backgroundColor");
   const list = await colourOf(model.locator("option").nth(1), "backgroundColor");
   await page.goto(`/team/maintenance/erfassen?task=${maintenanceTaskId}&machine=${encodeURIComponent(museumNumber)}`);
-  designs["date field"] = await designOf(page.locator('input[type="date"]'));
+  designs["date field"] = await schemeOf(page.locator('input[type="date"]'));
   await page.goto(`/team/machines/${museumNumber}/datei-anhaengen`);
-  designs["file chooser"] = await designOf(page.locator('input[type="file"]'));
+  designs["file chooser"] = await schemeOf(page.locator('input[type="file"]'));
   return { designs, listMatchesPage: list === page_ };
 }
 
@@ -263,7 +264,7 @@ test("ST-090: Native controls follow the design", async ({ page }) => {
   expect(dark.listMatchesPage, "the opened list on the page's background").toBe(true);
 
   await choose(page, "Helles Design");
-  await expect.poll(() => designOf(page)).toBe("light");
+  await expect.poll(() => schemeOfPage(page)).toBe("light");
 
   const light = await nativeControls(page, machine.museumNumber, maintenanceTaskId);
   for (const [control, design] of Object.entries(light.designs)) expect(design, control).toBe("light");
@@ -289,7 +290,7 @@ test("ST-090: Every fold looks the same", async ({ page }) => {
 
   for (const design of ["dark", "light"] as const) {
     await openDefect(page, museumNumber, title);
-    expect(await designOf(page)).toBe(design);
+    expect(await schemeOfPage(page)).toBe(design);
     const closed = await markerOf(more);
     expect(closed.marker).not.toBe("none");
     expect(closed.list).toBe("none");
@@ -301,7 +302,14 @@ test("ST-090: Every fold looks the same", async ({ page }) => {
     expect(open.marker).not.toBe(closed.marker);
     expect(await markerOf(manage), design).toEqual(open);
 
+    // A group of G27 (ST-094) – the machines of a new maintenance task fold by machine category.
+    await page.goto("/team/maintenance-plan/new");
+    const group = page.getByRole("main").locator("details").first();
+    expect(await markerOf(group), design).toEqual(closed);
+    await group.locator("> summary > span").click();
+    expect(await markerOf(group), design).toEqual(open);
+
     if (design === "dark") await choose(page, "Helles Design");
-    await expect.poll(() => designOf(page)).toBe("light");
+    await expect.poll(() => schemeOfPage(page)).toBe("light");
   }
 });
