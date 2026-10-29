@@ -20,9 +20,25 @@ export function newAccountRejection(input: {
   username: string;
   password: string;
 }): AccountRuleError | undefined {
+  return nameAndUsernameRejection(input) ?? passwordRejection(input.password);
+}
+
+/**
+ * The reason an edited account is rejected (ST-088), or undefined when it is fine – the rules of a new account, with an
+ * empty new password meaning "keep the password".
+ */
+export function editedAccountRejection(input: {
+  name: string;
+  username: string;
+  newPassword: string;
+}): AccountRuleError | undefined {
+  return nameAndUsernameRejection(input) ?? (input.newPassword ? passwordRejection(input.newPassword) : undefined);
+}
+
+function nameAndUsernameRejection(input: { name: string; username: string }): AccountRuleError | undefined {
   if (!input.name.trim()) return "name-required";
   if (!VALID_USERNAME.test(normalizedUsername(input.username))) return "username-invalid";
-  return passwordRejection(input.password);
+  return undefined;
 }
 
 /** The reason a password is rejected, or undefined when it is long enough. */

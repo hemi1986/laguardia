@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/platform/command";
 import { testDatabaseUrl } from "@/test-support/database";
-import { changeRole, deactivateAccount, teamMemberAccounts } from ".";
+import { deactivateAccount, editAccount, teamMemberAccounts } from ".";
 import { aTeamMemberAccount } from "./accounts.test-support";
 import { account, session, teamMember } from "./schema";
 
@@ -52,6 +52,12 @@ function idOf(actor: Actor): string {
   return actor.teamMemberId;
 }
 
+/** The team member's account as its edit page fills it in – no new password. */
+async function asStored(actor: Actor) {
+  const stored = (await teamMemberAccounts(db)).find((a) => a.id === idOf(actor))!;
+  return { teamMemberId: stored.id, name: stored.name, username: stored.username, role: stored.role, newPassword: "" };
+}
+
 async function activeTechnicians(): Promise<string[]> {
   const accounts = await teamMemberAccounts(db);
   return accounts.filter((a) => a.role === "technician" && a.active).map((a) => a.name);
@@ -63,11 +69,13 @@ describe("the team can never lock itself out", () => {
     await aTeamMemberAccount(db, { name: "Anna", username: "anna", role: "helper", password: "anna-secret-10" });
     expect(await activeTechnicians()).toEqual(["Tom"]);
 
-    const demoted = await changeRole({ teamMemberId: idOf(tom), role: "helper" }, { db, actor: tom });
+    const demoted = await editAccount({ ...(await asStored(tom)), role: "helper" }, { db, actor: tom });
     const deactivated = await deactivateAccount({ teamMemberId: idOf(tom) }, { db, actor: tom });
 
-    expect(demoted).toEqual({ ok: false, error: "last-technician" });
-    expect(deactivated).toEqual({ ok: false, error: "last-technician" });
+    // Since ST-088 nobody changes their own role or deactivates their own account – and every other technician is one
+    // more active technician, so the last one can only ever act on their own account.
+    expect(demoted).toEqual({ ok: false, error: "own-role" });
+    expect(deactivated).toEqual({ ok: false, error: "own-deactivation" });
     expect(await activeTechnicians()).toEqual(["Tom"]);
   });
 
@@ -77,8 +85,38 @@ describe("the team can never lock itself out", () => {
     expect(await activeTechnicians()).toEqual(["Eva", "Tom"]);
 
     const outcomes = await Promise.all([
-      changeRole({ teamMemberId: idOf(eva), role: "helper" }, { db, actor: tom }),
-      changeRole({ teamMemberId: idOf(tom), role: "helper" }, { db, actor: eva }),
+      editAccount({ ...(await asStored(eva)), role: "helper" }, { db, actor: tom }),
+      editAccount({ ...(await asStored(tom)), role: "helper" }, { db, actor: eva }),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
+    expect(outcomes.filter((outcome) => !outcome.ok)).toEqual([{ ok: false, error: "last-technician" }]);
+    expect(await activeTechnicians()).toHaveLength(1);
+  });
+
+  it("ST-088: The last active technician changes their own name", async () => {
+    const tom = await aTechnician("Tom");
+    await aTeamMemberAccount(db, { name: "Anna", username: "anna", role: "helper", password: "anna-secret-10" });
+    expect(await activeTechnicians()).toEqual(["Tom"]);
+
+    const outcome = await editAccount({ ...(await asStored(tom)), name: "Tom Keller-Roth" }, { db, actor: tom });
+
+    expect(outcome).toEqual({ ok: true, teamMemberId: idOf(tom) });
+    expect((await teamMemberAccounts(db)).find((a) => a.id === idOf(tom))).toMatchObject({
+      name: "Tom Keller-Roth",
+      role: "technician",
+      active: true,
+    });
+  });
+
+  it("ST-088: Two technicians demote or deactivate each other at the same time", async () => {
+    const tom = await aTechnician("Tom");
+    const eva = await aTechnician("Eva");
+    expect(await activeTechnicians()).toEqual(["Eva", "Tom"]);
+
+    const outcomes = await Promise.all([
+      editAccount({ ...(await asStored(eva)), role: "helper" }, { db, actor: tom }),
+      deactivateAccount({ teamMemberId: idOf(tom) }, { db, actor: eva }),
     ]);
 
     expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);

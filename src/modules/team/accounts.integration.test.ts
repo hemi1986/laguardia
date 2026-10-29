@@ -5,12 +5,11 @@ import { executeCommand, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import {
   activateAccount,
-  changeRole,
   createAccount,
   currentPerson,
   deactivateAccount,
+  editAccount,
   logIn,
-  resetPassword,
   teamMemberAccounts,
 } from ".";
 import { aTeamMemberAccount, cookieHeader } from "./accounts.test-support";
@@ -24,7 +23,7 @@ function aUsername(prefix: string): string {
 
 /**
  * A logged-in technician who manages the accounts of a test – other tests' technicians do not disturb it.
- * Spread into the dependencies (`{ db, ...technician }`): Better Auth checks the session behind a password reset.
+ * Spread into the dependencies (`{ db, ...technician }`).
  */
 async function aTechnician(): Promise<{ actor: Actor; headers: Headers }> {
   const username = aUsername("tom");
@@ -56,6 +55,17 @@ async function anna(technician: { actor: Actor; headers: Headers }) {
   );
   if (!created.ok) throw new Error(created.error);
   return { id: created.teamMemberId, username, password };
+}
+
+/**
+ * Since ST-088 a role change and a password reset are an edit of the account, the rest of it sent as it is: Anna's
+ * account as its edit page fills it in, with the given change.
+ */
+function annasEdit(
+  { id, username }: { id: string; username: string },
+  change: { role?: "helper" | "technician"; newPassword?: string },
+) {
+  return { teamMemberId: id, name: "Anna Berger", username, role: "helper", newPassword: "", ...change } as const;
 }
 
 describe("managing team member accounts", () => {
@@ -99,7 +109,7 @@ describe("managing team member accounts", () => {
     const herPhone = await sessionOf(username, password);
     expect(await currentPerson({ db, headers: herPhone })).toMatchObject({ role: "helper" });
 
-    const outcome = await changeRole({ teamMemberId: id, role: "technician" }, { db, ...technician });
+    const outcome = await editAccount(annasEdit({ id, username }, { role: "technician" }), { db, ...technician });
 
     expect(outcome).toEqual({ ok: true, teamMemberId: id });
     expect(await currentPerson({ db, headers: herPhone })).toEqual({
@@ -114,7 +124,7 @@ describe("managing team member accounts", () => {
     const { id, username, password } = await anna(technician);
     const herOldPhone = await sessionOf(username, password);
 
-    const outcome = await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, ...technician });
+    const outcome = await editAccount(annasEdit({ id, username }, { newPassword: "anna-forgot-10" }), { db, ...technician });
 
     expect(outcome).toEqual({ ok: true, teamMemberId: id });
     // A reset is the remedy for a lost phone: whoever held the old session is logged out with the old password.
@@ -167,8 +177,8 @@ describe("managing team member accounts", () => {
     await deactivateAccount({ teamMemberId: id }, { db, ...technician });
 
     const attempts = [
-      await changeRole({ teamMemberId: id, role: "technician" }, { db, ...technician }),
-      await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, ...technician }),
+      await editAccount(annasEdit({ id, username }, { role: "technician" }), { db, ...technician }),
+      await editAccount(annasEdit({ id, username }, { newPassword: "anna-forgot-10" }), { db, ...technician }),
       await deactivateAccount({ teamMemberId: id }, { db, ...technician }),
     ];
 
@@ -192,9 +202,8 @@ describe("managing team member accounts", () => {
 
   it("ST-005: Helpers cannot manage accounts", async () => {
     const technician = await aTechnician();
-    const { id, username, password } = await anna(technician);
+    const { id, username } = await anna(technician);
     const helper = { actor: { kind: "team-member", teamMemberId: id, role: "helper" } as Actor };
-    const herPhone = await sessionOf(username, password);
     const newUsername = aUsername("berta");
 
     const attempts = [
@@ -202,8 +211,8 @@ describe("managing team member accounts", () => {
         { name: "Berta", username: newUsername, password: "berta-secret-10", role: "helper" },
         { db, ...helper },
       ),
-      await changeRole({ teamMemberId: id, role: "technician" }, { db, ...helper }),
-      await resetPassword({ teamMemberId: id, password: "anna-forgot-10" }, { db, ...helper, headers: herPhone }),
+      await editAccount(annasEdit({ id, username }, { role: "technician" }), { db, ...helper }),
+      await editAccount(annasEdit({ id, username }, { newPassword: "anna-forgot-10" }), { db, ...helper }),
       await deactivateAccount({ teamMemberId: id }, { db, ...helper }),
     ];
 
@@ -215,7 +224,7 @@ describe("managing team member accounts", () => {
 
   it("ST-005: Passwords need at least 10 characters", async () => {
     const technician = await aTechnician();
-    const { id } = await anna(technician);
+    const her = await anna(technician);
     const nineCharacters = "short-one";
     expect(nineCharacters).toHaveLength(9);
     const username = aUsername("berta");
@@ -224,7 +233,7 @@ describe("managing team member accounts", () => {
       { name: "Berta", username, password: nineCharacters, role: "helper" },
       { db, ...technician },
     );
-    const reset = await resetPassword({ teamMemberId: id, password: nineCharacters }, { db, ...technician });
+    const reset = await editAccount(annasEdit(her, { newPassword: nineCharacters }), { db, ...technician });
 
     expect(created).toEqual({ ok: false, error: "password-too-short" });
     expect(reset).toEqual({ ok: false, error: "password-too-short" });
@@ -237,11 +246,10 @@ describe("rejections no scenario names", () => {
     const technician = await aTechnician();
     const unknown = randomUUID();
 
-    expect(await changeRole({ teamMemberId: unknown, role: "helper" }, { db, ...technician })).toEqual({
-      ok: false,
-      error: "not-found",
-    });
-    expect(await resetPassword({ teamMemberId: unknown, password: "long-enough-10" }, { db, ...technician })).toEqual({
+    const edit = annasEdit({ id: unknown, username: aUsername("anna") }, { newPassword: "long-enough-10" });
+
+    expect(await editAccount(edit, { db, ...technician })).toEqual({ ok: false, error: "not-found" });
+    expect(await deactivateAccount({ teamMemberId: unknown }, { db, ...technician })).toEqual({
       ok: false,
       error: "not-found",
     });
