@@ -79,7 +79,7 @@ export const collectionTexts = {
     printNow: "Drucken",
     back: "Zurück zur Auswahl",
     choose: "Geräte auswählen",
-    chosen: (count: number) => (count === 1 ? "1 Gerät gewählt" : `${count} Geräte gewählt`),
+    chosen: (count: number) => (count === 1 ? "1 Gerät ausgewählt" : `${count} Geräte ausgewählt`),
     chosenWithoutScript: "Die angehakten Geräte werden gedruckt.",
     noneChosen: "Bitte mindestens ein Gerät auswählen.",
     sheet: "Etikettenbogen: Avery Zweckform L7160 (A4, 21 Etiketten 63,5 × 38,1 mm)",

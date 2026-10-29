@@ -32,6 +32,9 @@ function useHydrated(): boolean {
  * every entry the person has not touched follows it – ticked when proposed, unticked when not; one they ticked or unticked
  * themselves (or ticked with „Alle auswählen“) stays as they left it.
  *
+ * A form may pass `open` (ST-098, a search's matches): every group opens with the page. And `onChosenChange` hears of every
+ * change of the choice – a tick, „Alle auswählen“, a proposal followed – to count it elsewhere on the page.
+ *
  * No domain logic and no texts of its own: the texts come as props. Key it on the form's rejection, so a rejection
  * starts it again from `chosen`.
  */
@@ -42,7 +45,9 @@ export function GroupedChoice({
   header,
   selectAll,
   openWithChoice = true,
+  open = false,
   proposed,
+  onChosenChange,
 }: {
   /** The name each ticked entry is posted under. */
   name: string;
@@ -55,8 +60,12 @@ export function GroupedChoice({
   selectAll: string;
   /** Whether a group with a choice in it opens with the page – false while the choice is only the current one. */
   openWithChoice?: boolean;
+  /** Every group opens with the page – the matches of a search. */
+  open?: boolean;
   /** The entries proposed now – followed by every entry the person has not touched. None: nothing is proposed. */
   proposed?: readonly string[];
+  /** Hears the choice whenever it changes, and once the page is interactive. */
+  onChosenChange?: (chosen: ReadonlySet<string>) => void;
 }) {
   const hydrated = useHydrated();
   const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(initiallyChosen));
@@ -75,14 +84,15 @@ export function GroupedChoice({
   // The checkboxes are the source of truth, not React's state: they are uncontrolled, so a tick made before the page
   // hydrated is not reset to the initial choice. The state only mirrors them for the headers' counts.
   const root = useRef<HTMLDivElement>(null);
-  const sync = () =>
-    setChosen(
-      new Set(
-        Array.from(root.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked') ?? []).map(
-          (input) => input.value,
-        ),
+  const sync = () => {
+    const now = new Set(
+      Array.from(root.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked') ?? []).map(
+        (input) => input.value,
       ),
     );
+    setChosen(now);
+    onChosenChange?.(now);
+  };
   useEffect(sync, []);
   // The entries the person ticked or unticked themselves – a proposal no longer changes them.
   const touched = useRef(new Set<string>());
@@ -112,7 +122,7 @@ export function GroupedChoice({
       {groups.map((group) => (
         <details
           key={group.key}
-          open={openWithPage.has(group.key) || undefined}
+          open={open || openWithPage.has(group.key) || undefined}
           className="rounded-md border px-3 py-2"
         >
           <summary className="cursor-pointer text-sm font-medium">

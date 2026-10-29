@@ -1,48 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Rejection } from "@/components/ui/message";
 import { Button } from "@/components/ui/button";
-import type { MachineOverviewEntry } from "@/modules/collection";
+import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
 import { teamMessages } from "@/platform/messages";
 
-const { stickers: texts } = teamMessages;
+const { stickers: texts, groupedChoice } = teamMessages;
 
 /**
  * Choosing the machines to print QR stickers for (ST-011): a plain GET form to the print page, so it works without
- * JavaScript; with JavaScript the number of chosen machines is shown next to the way to print.
+ * JavaScript; with JavaScript the number of chosen machines is shown next to the way to print. The machines sit in
+ * groups that fold (ST-098, G27) – closed when the page opens, opened when they hold the matches of a search.
  */
 export function StickerChoice({
-  machines,
+  groups,
   search,
   noneChosen,
 }: {
-  machines: Pick<MachineOverviewEntry, "id" | "museumNumber" | "machineModelTitle">[];
+  groups: ChoiceGroup[];
   search: string | undefined;
   /** The last print asked for no machine – said right above the button (G8). */
   noneChosen: boolean;
 }) {
+  // Undefined until the page is interactive – the browser may restore ticked boxes (back button), counted then.
   const [chosen, setChosen] = useState<number | undefined>(undefined);
-  const form = useRef<HTMLFormElement>(null);
-  // The browser may restore ticked boxes (back button) – count them once the page is interactive.
-  useEffect(() => setChosen(form.current?.querySelectorAll("input[name=m]:checked").length ?? 0), []);
 
   return (
-    <form
-      ref={form}
-      action="/team/machines/stickers/print"
-      method="get"
-      className="flex flex-col gap-4"
-      onChange={(event) => setChosen(event.currentTarget.querySelectorAll("input[name=m]:checked").length)}
-    >
+    <form action="/team/machines/stickers/print" method="get" className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-medium">{texts.choose}</legend>
-        {machines.map((machine) => (
-          <label key={machine.id} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="m" value={machine.museumNumber} className="size-5" />
-            {machine.museumNumber} · {machine.machineModelTitle}
-          </label>
-        ))}
+        <GroupedChoice
+          name="m"
+          groups={groups}
+          chosen={[]}
+          header={groupedChoice.header}
+          selectAll={groupedChoice.selectAll}
+          open={!!search}
+          onChosenChange={(now) => setChosen(now.size)}
+        />
       </fieldset>
       {search && <input type="hidden" name="search" value={search} />}
       {noneChosen && <Rejection>{texts.noneChosen}</Rejection>}

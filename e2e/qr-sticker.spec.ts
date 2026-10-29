@@ -29,7 +29,7 @@ test("ST-011: Technician prints a QR sticker", async ({ page }) => {
   await page.getByLabel("Suche").fill(title);
   await page.getByRole("button", { name: "Suchen" }).click();
   await page.getByLabel(`${museumNumber} · ${title}`).check();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("1 Gerät gewählt");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("1 Gerät ausgewählt");
   await page.getByRole("button", { name: "QR-Sticker drucken" }).click();
 
   await expect(page).toHaveURL(new RegExp(`/team/machines/stickers/print\\?m=${museumNumber}&search=`));
@@ -105,7 +105,7 @@ test("ST-011: Finding the machines to print for", async ({ page }) => {
   await expect(page.getByLabel(`${first.museumNumber} · ${first.title}`)).toBeVisible();
   await expect(page.getByLabel(`${second.museumNumber} · ${second.title}`)).toHaveCount(0);
   await page.getByLabel(`${first.museumNumber} · ${first.title}`).check();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText("1 Gerät gewählt");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("1 Gerät ausgewählt");
   await page.goto("/team/machines/stickers");
   await page.getByLabel("Suche").fill(first.museumNumber.slice(3));
   await page.getByRole("button", { name: "Suchen" }).click();

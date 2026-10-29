@@ -1,5 +1,7 @@
-import { machineOverview, type MachineOverviewQuery } from "@/modules/collection";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import { groupMachines, machineOverview, type MachineOverviewQuery } from "@/modules/collection";
 import type { Database } from "@/platform/command";
+import { categoryAndTechnologyLabel } from "../../category-and-technology";
 import { qrCodeImage } from "./qr-sticker";
 import type { Sticker } from "./sticker-sheet";
 
@@ -9,6 +11,25 @@ import type { Sticker } from "./sticker-sheet";
  */
 export function machinesToPrintFor(db: Database, query: Pick<MachineOverviewQuery, "search">) {
   return machineOverview(db, query);
+}
+
+/**
+ * The sticker selection in groups that fold (ST-098, G27): the machines to print for, grouped by machine category and
+ * technology, each „LG-042 · Medieval Madness“ and posted as its museum number. A search leaves only the groups with a
+ * match, holding only the matches.
+ */
+export async function stickerChoiceFor(
+  db: Database,
+  query: Pick<MachineOverviewQuery, "search">,
+): Promise<ChoiceGroup[]> {
+  return groupMachines(await machinesToPrintFor(db, query)).map((group) => ({
+    key: `${group.machineCategory}/${group.technology ?? ""}`,
+    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
+    entries: group.machines.map(({ museumNumber, machineModelTitle }) => ({
+      value: museumNumber,
+      label: `${museumNumber} · ${machineModelTitle}`,
+    })),
+  }));
 }
 
 /**
