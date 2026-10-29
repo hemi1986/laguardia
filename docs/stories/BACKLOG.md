@@ -4,15 +4,20 @@
 
 **Progress: 60 of 67 domain stories done** · scenarios 557 of 637
 
-**95 stories** · In Progress: 0 · Ready: 7 · In Review: 0 · Draft: 0 · Done: 77 · Superseded: 11
+**95 stories** · In Progress: 1 · Ready: 6 · In Review: 0 · Draft: 0 · Done: 77 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-098](ST-098-sticker-selection-and-recording-for-several-in-groups.md) | The sticker selection and recording for several machines choose in folding groups | story | Collection | must | S | low | ST-094 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-098](ST-098-sticker-selection-and-recording-for-several-in-groups.md) | The sticker selection and recording for several machines choose in folding groups | story | Collection | must | S | low | ST-094 |
 | [ST-088](ST-088-edit-account-on-one-page-and-deactivate-in-one-tap.md) | Edit an account on one page, and deactivate or activate it with one tap | story | Team | should | M | medium | – |
 | [ST-089](ST-089-one-page-width-for-every-page.md) | One page width for every page, with fields and submit buttons across the column | story | Collection | should | S | low | – |
 | [ST-090](ST-090-dark-design-with-a-switch-per-device.md) | Dark design on every page, with a switch to light per device | story | Collection | should | M | medium | – |
