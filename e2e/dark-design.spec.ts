@@ -47,6 +47,10 @@ async function entriesOfMore(page: Page): Promise<string[]> {
 async function choose(page: Page, entry: "Helles Design" | "Dunkles Design") {
   await openMore(page);
   await page.getByRole("button", { name: entry }).click();
+  // The switch has landed when „Mehr“ offers the other design.
+  const other = entry === "Helles Design" ? "Dunkles Design" : "Helles Design";
+  await expect(page.getByRole("button", { name: other, includeHidden: true })).toBeAttached();
+  await page.waitForLoadState();
 }
 
 async function logOut(page: Page) {
@@ -297,7 +301,7 @@ test("ST-090: Every fold looks the same", async ({ page }) => {
     expect(open.marker).not.toBe(closed.marker);
     expect(await markerOf(manage), design).toEqual(open);
 
-    if (design === "dark") await page.getByRole("button", { name: "Helles Design" }).click();
+    if (design === "dark") await choose(page, "Helles Design");
     await expect.poll(() => designOf(page)).toBe("light");
   }
 });
