@@ -27,7 +27,7 @@ export default async function TeamMembersPage({ searchParams }: PageProps<"/team
   const created = accounts.find((account) => account.id === only(query.created));
 
   return (
-    <Page title={texts.title} wide>
+    <Page title={texts.title}>
       <Link href="/team/members/new" className={`${buttonVariants()} self-start`}>
         {texts.newTeamMember}
       </Link>

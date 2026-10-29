@@ -144,7 +144,7 @@ export function EditAccountForm({
           <Rejection>{accountErrors[state.error]}</Rejection>
         </div>
       )}
-      <Button type="submit" disabled={pending} className="self-start">
+      <Button type="submit" disabled={pending}>
         {texts.save}
       </Button>
     </form>

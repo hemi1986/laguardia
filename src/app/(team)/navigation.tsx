@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { widePageWidth } from "@/components/page";
+import { pageWidth } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
@@ -22,7 +22,7 @@ export function TeamNavigation({ role }: { role: Role }) {
   const technician = role === "technician";
   return (
     <nav aria-label={team.menu} className="border-b">
-      <div className={`${widePageWidth} flex flex-wrap items-center gap-x-4 gap-y-2`}>
+      <div className={`${pageWidth} flex flex-wrap items-center gap-x-4 gap-y-2`}>
         <Link href="/team" className={link}>
           {team.dashboard}
         </Link>

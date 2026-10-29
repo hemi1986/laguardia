@@ -12,7 +12,7 @@ export default async function RepairTimesPage({ searchParams }: PageProps<"/team
   const data = await loadRepairTimes(database(), systemClock, await searchParams);
 
   return (
-    <Page title={teamMessages.terms["Repair times"]} wide>
+    <Page title={teamMessages.terms["Repair times"]}>
       <RepairTimesView {...data} />
     </Page>
   );

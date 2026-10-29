@@ -13,7 +13,7 @@ export default async function DueMaintenancePage({ searchParams }: PageProps<"/t
   const data = await loadDueMaintenance(database(), systemClock, dueMaintenanceFilterOf(await searchParams), member);
 
   return (
-    <Page title={teamMessages.dueMaintenance.title} wide>
+    <Page title={teamMessages.dueMaintenance.title}>
       <DueMaintenanceView data={data} />
     </Page>
   );

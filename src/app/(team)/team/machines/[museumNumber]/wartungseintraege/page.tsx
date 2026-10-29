@@ -14,7 +14,7 @@ export default async function MaintenanceRecordsPage({
   const data = await loadAllMaintenanceRecords(database(), museumNumber);
 
   return (
-    <Page title={data ? data.title : teamMessages.terms.Machine} wide>
+    <Page title={data ? data.title : teamMessages.terms.Machine}>
       <MaintenanceRecordsView data={data} museumNumber={museumNumber} />
     </Page>
   );

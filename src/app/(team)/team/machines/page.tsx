@@ -29,7 +29,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
   const registered = registering && machineRegisteredIn(registering, registeredId) ? registeredId : undefined;
 
   return (
-    <Page title={teamMessages.machines.title} wide>
+    <Page title={teamMessages.machines.title}>
       <MachineOverview
         machines={machines}
         counts={counts}
