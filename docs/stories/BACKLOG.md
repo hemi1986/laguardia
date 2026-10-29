@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 61 of 67 domain stories done** · scenarios 567 of 637
+**Progress: 62 of 67 domain stories done** · scenarios 585 of 637
 
-**95 stories** · In Progress: 1 · Ready: 5 · In Review: 0 · Draft: 0 · Done: 78 · Superseded: 11
+**95 stories** · In Progress: 0 · Ready: 5 · In Review: 0 · Draft: 0 · Done: 79 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-088](ST-088-edit-account-on-one-page-and-deactivate-in-one-tap.md) | Edit an account on one page, and deactivate or activate it with one tap | story | Team | should | M | medium | – |
 
 ## Ready
 
@@ -98,6 +92,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-053](ST-053-link-reopens-resolved-defect.md) | Linking a problem report to a recently resolved defect reopens it | story | Repair | should | S | medium | ST-022, ST-030, ST-052 |
 | [ST-081](ST-081-find-team-member-and-act-on-one-account.md) | Act on one account on its own page, and deactivate with one question and a way back | story | Team | should | M | medium | ST-005 |
 | [ST-083](ST-083-own-database-for-local-browser-tests.md) | Local browser tests run against a database of their own | tech-task | Repair | should | M | medium | – |
+| [ST-088](ST-088-edit-account-on-one-page-and-deactivate-in-one-tap.md) | Edit an account on one page, and deactivate or activate it with one tap | story | Team | should | M | medium | – |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |

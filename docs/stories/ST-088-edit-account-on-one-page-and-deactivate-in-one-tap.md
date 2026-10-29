@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: []
 labels: [ui, feature:member-pages]
-status: in-progress
+status: done
 ---
 
 ## Story
