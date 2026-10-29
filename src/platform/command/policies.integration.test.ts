@@ -1,11 +1,26 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
-import { policyForTest } from "@/modules/repair/command-probes.test-support";
+import {
+  changeDescriptionForTest,
+  policyForTest,
+  reportWithIdlePolicyForTest,
+} from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine, journalSinceRegistration } from "@/test-support/machines";
-import { executeCommand, policy, trigger, withPolicies, type Actor, type Command, type JournalEvent } from ".";
+import { anExistingTeamMember } from "@/test-support/team-members";
+import {
+  executeCommand,
+  policy,
+  run,
+  trigger,
+  withPolicies,
+  withPolicyInput,
+  type Actor,
+  type Command,
+  type JournalEvent,
+} from ".";
 
 /**
  * `withPolicies` (ADR 0010, ST-039): another module adds its automatic policies to a command. They see the command's
@@ -71,5 +86,78 @@ describe("withPolicies", () => {
 
     expect(await report(command, machineId, "  ")).toEqual({ ok: false, error: "description-required" });
     expect(seen).toEqual([]);
+  });
+});
+
+/** A policy that changes the reported problem report as the person who reported it – to the given description. */
+const changesAsReporter = (description: string) =>
+  policy({
+    id: "POL-TestChangesAsReporter",
+    calls: async (_tx, { events }) =>
+      events
+        .filter((event) => event.type === "EVT-ProblemReported")
+        .map((event) => run(changeDescriptionForTest, { problemReportId: event.aggregate.id, version: 0, description })),
+  });
+
+describe("a policy that runs a command as the acting person", () => {
+  const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+
+  it("runs it as the person who ran the triggering command, journaled with them", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    // A technician reporting without triage: the probe of Repair (its own policy does nothing here).
+    const command = withPolicies(reportWithIdlePolicyForTest, [changesAsReporter("Ball stuck in the trough")]);
+
+    const outcome = await executeCommand(
+      command,
+      { machineId, description: "Ball stuck" },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+
+    expect(outcome).toMatchObject({ ok: true });
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual([
+      "Ball stuck in the trough",
+    ]);
+    expect(
+      (await journalSinceRegistration(db, machineId)).map((entry) => [
+        entry.type,
+        entry.actor.kind === "team-member" && entry.actor.teamMemberId,
+      ]),
+    ).toEqual([
+      ["EVT-ProblemReported", tom.teamMemberId],
+      ["EVT-TestDescriptionChanged", tom.teamMemberId],
+    ]);
+  });
+
+  it("a person the command of the policy does not allow rejects the whole command", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const command = withPolicies(reportProblemCommand, [changesAsReporter("Ball stuck in the trough")]);
+
+    expect(await report(command, machineId)).toEqual({ ok: false, error: "not-authorized" });
+    expect(await problemReportsOfMachine(db, machineId)).toEqual([]);
+  });
+});
+
+describe("withPolicyInput", () => {
+  const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+
+  it("binds the policies to the step's own input; the command gets only its part", async () => {
+    await anExistingTeamMember(db, eva, "Eva");
+    const machineId = await aRegisteredMachine(db);
+    const command = withPolicyInput(reportWithIdlePolicyForTest, (input: { description: string }) => [
+      changesAsReporter(input.description),
+    ]);
+
+    expect(command.id).toBe("CMD-TestReportWithIdlePolicy");
+    const outcome = await executeCommand(
+      command,
+      { command: { machineId, description: "Ball stuck" }, policies: { description: "Flipper weak" } },
+      { actor: eva, db, clock, newId: randomUUID },
+    );
+
+    expect(outcome).toMatchObject({ ok: true });
+    expect((await problemReportsOfMachine(db, machineId)).map((report) => report.description)).toEqual([
+      "Flipper weak",
+    ]);
   });
 });

@@ -35,7 +35,7 @@ export { history, type History } from "./history";
  * constraint answered by the module that owns it (the museum number register, ST-035). Rolls everything back.
  */
 export { Rejected } from "./errors";
-export { policy, withPolicies, type Policy } from "./policies";
+export { policy, withPolicies, withPolicyInput, type Policy } from "./policies";
 export { lastCommandBy } from "./last-command";
 export { entities, type Entities } from "./entities";
 export {
