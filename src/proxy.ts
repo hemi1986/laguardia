@@ -3,6 +3,7 @@ import { renewedSessionCookie } from "@/modules/team";
 import { blobStoreHost, contentSecurityPolicy, newNonce } from "@/platform/content-security-policy";
 import { database } from "@/platform/database";
 import { isSameOrigin } from "@/platform/same-origin";
+import { PAGE_PATH_HEADER } from "@/app/design";
 
 /**
  * CSRF protection for commands (ST-003). Every command is a Server Action: a POST to a page route.
@@ -13,6 +14,9 @@ import { isSameOrigin } from "@/platform/same-origin";
  *
  * Every page gets its Content Security Policy here, with a fresh nonce (ST-070): on the request, so Next.js puts the
  * nonce on its own scripts, and on the response.
+ *
+ * The page's path goes to the root layout too (ST-090): its design depends on the address, and a layout learns it no
+ * other way. Always set here, so a header sent by the browser never reaches the page.
  */
 export async function proxy(request: NextRequest) {
   if (request.method === "POST" && !isSameOrigin(request.headers)) {
@@ -25,6 +29,7 @@ export async function proxy(request: NextRequest) {
   });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("Content-Security-Policy", policy);
+  requestHeaders.set(PAGE_PATH_HEADER, request.nextUrl.pathname);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", policy);
   return withRenewedSessionCookie(request, response);
