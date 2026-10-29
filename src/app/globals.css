@@ -125,6 +125,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* The list a choice opens is drawn on the options' own background – the select's is transparent (ST-090, D1). */
+  option {
+    @apply bg-background text-foreground;
+  }
 }
 /* QR sticker pages (ST-011): A4 without browser margins, so the label positions are exact. */
 @page stickers {

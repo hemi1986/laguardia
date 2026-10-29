@@ -1,5 +1,16 @@
 import type { Browser, Locator, Page } from "@playwright/test";
-import { aHelper, aMachine, aTeamMember, allowPreview, expect, logIn, openMore, test } from "./fixtures";
+import {
+  aHelper,
+  aMachine,
+  aTeamMember,
+  allowPreview,
+  expect,
+  logIn,
+  openMore,
+  test,
+  tickMachines,
+  unique,
+} from "./fixtures";
 
 /**
  * The dark design and the switch to light per device (ST-090, UX guideline G26). A page or a control "is in the dark
@@ -204,4 +215,49 @@ test("ST-090: The sticker print page stays light", async ({ page }) => {
   await back.click();
   await expect(page).toHaveURL(/\/team\/machines\/stickers/);
   await expect.poll(() => designOf(page)).toBe("dark");
+});
+
+/**
+ * The native controls of three forms, each with the design it is drawn in: the choice of the machine model – its list
+ * too, the options the browser shows when it is opened –, the maintenance tasks' checkboxes, the date field and the file
+ * chooser. With the page's own background beside them, which the opened list must share.
+ */
+async function nativeControls(page: Page, museumNumber: string, maintenanceTaskId: string) {
+  const designs: Record<string, string> = {};
+  await page.goto("/team/machines/new");
+  const model = page.getByLabel("Modell");
+  designs["choice of the machine model"] = await designOf(model);
+  designs["its opened list"] = await designOf(model.locator("option").nth(1));
+  designs["checkbox"] = await designOf(page.locator('input[type="checkbox"][name="maintenanceTaskId"]').first());
+  const page_ = await colourOf(page.locator("body"), "backgroundColor");
+  const list = await colourOf(model.locator("option").nth(1), "backgroundColor");
+  await page.goto(`/team/maintenance/erfassen?task=${maintenanceTaskId}&machine=${encodeURIComponent(museumNumber)}`);
+  designs["date field"] = await designOf(page.locator('input[type="date"]'));
+  await page.goto(`/team/machines/${museumNumber}/datei-anhaengen`);
+  designs["file chooser"] = await designOf(page.locator('input[type="file"]'));
+  return { designs, listMatchesPage: list === page_ };
+}
+
+test("ST-090: Native controls follow the design", async ({ page }) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  await page.goto("/team/maintenance-plan/new");
+  await page.getByLabel("Name").fill(unique("Clean playfield"));
+  await page.getByLabel("Anleitung").fill("Wipe the playfield.");
+  await page.getByLabel("Intervall in Monaten").fill("3");
+  await tickMachines(page, machine);
+  await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+  const change = page.getByRole("main").getByRole("listitem").last().getByRole("link");
+  const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
+
+  const dark = await nativeControls(page, machine.museumNumber, maintenanceTaskId);
+  for (const [control, design] of Object.entries(dark.designs)) expect(design, control).toBe("dark");
+  expect(dark.listMatchesPage, "the opened list on the page's background").toBe(true);
+
+  await choose(page, "Helles Design");
+  await expect.poll(() => designOf(page)).toBe("light");
+
+  const light = await nativeControls(page, machine.museumNumber, maintenanceTaskId);
+  for (const [control, design] of Object.entries(light.designs)) expect(design, control).toBe("light");
+  expect(light.listMatchesPage, "the opened list on the page's background").toBe(true);
 });
