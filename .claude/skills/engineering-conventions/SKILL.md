@@ -71,8 +71,12 @@ copied in, not a dependency that is upgraded – so a copied file may be edited 
   `globals.css` imports `shadcn/tailwind.css`. So there *are* two UI packages to keep an eye on; what the ADR
   buys is that the markup and the classes are ours to change.
 - **The 360 px rules live in `Page`** (single column, padding, maximum width, word wrapping). A page sets no
-  padding, width or column layout of its own. A list page passes `wide` (about 672 px, UX guideline G16 – O2
-  settled in ST-008); a form page does not. The team navigation uses the wide width, so it lines up with every page.
+  padding, width or column layout of its own. **Every page has the one width** (UX guideline G16, ST-089): a content
+  column of at most 672 px inside the page padding – list, form, record, dashboard, login, visitor, legal and
+  not-found pages alike; only the pages made for printing (`src/app/(print)/`) follow the paper. The team navigation
+  uses the same `pageWidth`, so it lines up with every page. On a form page the fields and the submit button span the
+  column (a form's `flex flex-col` stretches them – no `self-start` on its submit button); a filter form on a list, a
+  one-tap button and the buttons on a record or a list stay as wide as their words.
 - **The team navigation** (`src/app/(team)/navigation.tsx`) follows the table under UX guideline G19: a new
   destination goes to its decided place – the line or "Mehr" –, never somewhere a story picks. Browser tests open
   "Mehr" with `openMore(page)` from `e2e/fixtures.ts` before they click or miss a managing destination.
