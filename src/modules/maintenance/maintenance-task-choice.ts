@@ -55,6 +55,10 @@ export async function maintenanceTaskChoiceForMachine(db: Database, machineId: s
 /** A machine model as the choice for a new machine needs it: what kind of machine it is. */
 export type ModelOfNewMachine = { id: string; machineCategory: MachineCategory; technology?: Technology };
 
+/** One machine category and technology as a key – the technology none for a category without one. */
+const groupKey = ({ machineCategory, technology }: { machineCategory: MachineCategory; technology?: Technology }) =>
+  `${machineCategory}/${technology ?? ""}`;
+
 /** What the registration form offers (ST-097): every task, none ticked, and which tasks each machine model proposes. */
 export type ChoiceForNewMachine = {
   groups: TaskGroup[];
@@ -76,17 +80,20 @@ export async function maintenanceTaskChoiceForNewMachine(
   const [tasks, machines] = await Promise.all([activeMaintenanceTasks(db), machinesForMaintenance(db)]);
   const groups = grouped(tasks, () => false);
   const ordered = groups.flatMap((group) => group.tasks.map((task) => task.maintenanceTaskId));
+  // Once over the machines the tasks apply to: the tasks proposed per machine category and technology.
+  const machineGroup = new Map(machines.map((machine) => [machine.id, groupKey(machine)]));
+  const proposedByGroup = new Map<string, Set<string>>();
+  for (const task of tasks) {
+    for (const { machineId } of task.machines) {
+      const key = machineGroup.get(machineId);
+      if (key === undefined) continue; // retired – Collection does not publish it for maintenance
+      proposedByGroup.set(key, (proposedByGroup.get(key) ?? new Set()).add(task.id));
+    }
+  }
   const proposedFor: Record<string, string[]> = {};
   for (const model of models) {
-    const sameKind = machines.filter(
-      (machine) => machine.machineCategory === model.machineCategory && machine.technology === model.technology,
-    );
-    const proposed = new Set(
-      tasks
-        .filter((task) => sameKind.some((machine) => maintenanceTaskAppliesTo(task, machine.id)))
-        .map((task) => task.id),
-    );
-    if (proposed.size > 0) proposedFor[model.id] = ordered.filter((id) => proposed.has(id));
+    const proposed = proposedByGroup.get(groupKey(model));
+    if (proposed) proposedFor[model.id] = ordered.filter((id) => proposed.has(id));
   }
   return { groups, proposedFor };
 }

@@ -4,7 +4,7 @@ import { machineModelsToChooseFrom, machineStatuses, type MachineStatus } from "
 import { maintenanceTaskChoiceForNewMachine } from "@/modules/maintenance";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
-import { machineKindLabel } from "../../maintenance-plan/choice-groups";
+import { categoryAndTechnologyLabel } from "../../category-and-technology";
 import { taskChoiceGroups } from "../task-choice";
 
 const { machines: texts, registration } = teamMessages;
@@ -35,7 +35,7 @@ export async function loadRegistration(db: Database): Promise<RegistrationChoice
     if (tasks)
       proposals[model.id] = {
         tasks,
-        line: registration.proposed(tasks.length, machineKindLabel(model.machineCategory, model.technology)),
+        line: registration.proposed(tasks.length, categoryAndTechnologyLabel(model.machineCategory, model.technology)),
       };
   }
   return {

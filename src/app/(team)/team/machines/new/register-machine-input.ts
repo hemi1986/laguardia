@@ -14,7 +14,6 @@ export const registerMachineFields = [
 
 export type RegisterMachineField = (typeof registerMachineFields)[number];
 
-
 /**
  * Reads and converts the fields of the registration form (ST-073, Q19): no validation, no default. The empty-field
  * rule: an empty museum number is "no museum number given" – CMD-RegisterMachine assigns one; a missing machine model

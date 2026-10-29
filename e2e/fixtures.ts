@@ -242,7 +242,8 @@ export const groupOf = (page: Page, museumNumber: string) => page.locator("detai
 /** Opens the fold that holds that machine – they are closed when the page opens – and returns it. */
 export async function openedGroup(page: Page, museumNumber: string) {
   const group = groupOf(page, museumNumber);
-  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
+  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open)))
+    await group.locator("summary").click();
   return group;
 }
 

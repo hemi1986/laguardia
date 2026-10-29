@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { GroupedChoice } from "@/components/ui/grouped-choice";
@@ -45,6 +45,11 @@ export function RegisterMachineForm({ machineModels, machineStatuses, tasks, pro
   const [state, action, pending] = useActionState(registerMachineAction, null);
   // The machine model chosen since the page opened – only with JavaScript, which is what proposes.
   const [machineModel, setMachineModel] = useState<string>();
+  // A model chosen before the page hydrated, or restored by the browser on going back, proposes once it has.
+  const modelSelect = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (modelSelect.current?.value) setMachineModel(modelSelect.current.value);
+  }, []);
   const proposal = !state && machineModel !== undefined ? (proposals[machineModel] ?? NOTHING_PROPOSED) : undefined;
   const rejectionId = useId();
   const kept = keptKey(state);
@@ -64,6 +69,7 @@ export function RegisterMachineForm({ machineModels, machineStatuses, tasks, pro
           name="machineModelId"
           defaultValue={state?.values.machineModelId ?? ""}
           key={`machineModelId-${kept}`}
+          ref={modelSelect}
           onChange={(event) => setMachineModel(event.currentTarget.value)}
           required
           {...marked("machineModelId")}

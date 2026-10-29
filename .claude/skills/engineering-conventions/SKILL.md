@@ -307,10 +307,10 @@ unticked entry that is no longer offered – a machine retired, a task removed m
 retry after a rejection, which keeps `seen`, can succeed. It emits **one `EVT-MachinesOfMaintenanceTaskChanged` per task that
 changed**, none for a task whose tick did not. The rule table is the decision's test (`change-machines-of-maintenance-task.test.ts`);
 the decision names the tasks removed meanwhile as its subjects, and the Server Action says them by their names
-(`withRemovedNamed`, `change-tasks-outcome.ts`). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name) – and,
+(`withRemovedNamed`, `src/app/(team)/team/machines/task-choice.ts`). `RM-MaintenanceTaskChoiceForMachine` is `maintenanceTaskChoiceForMachine` (groups by interval, the shortest first, by name) – and,
 for a machine being registered (ST-097), `maintenanceTaskChoiceForNewMachine(db, machineModels)`: every task unticked plus
 *Proposed for a new machine* per machine model (`proposedFor`), the rule of the same machine category and technology kept
-inside Maintenance; the page passes Collection's `machineModelsToChooseFrom` and names the kind with `machineKindLabel`.
+inside Maintenance; the page passes Collection's `machineModelsToChooseFrom` and names the group with `categoryAndTechnologyLabel` (`src/app/(team)/team/category-and-technology.ts`).
 `GroupedChoice` takes `proposed` (with JavaScript only): entries the person has not touched follow it, so the proposals
 follow a change of the machine model; the form passes none after a rejection. Browser tests that register a machine for
 another purpose call `untickMaintenanceTasks(page)` after choosing the model (`e2e/fixtures.ts`), so they change neither the

@@ -1,16 +1,10 @@
 import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import type { ChoosableMachine } from "@/modules/maintenance";
-import type { MachineCategory, MachineGroup, Technology } from "@/modules/collection";
+import type { MachineGroup } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
+import { categoryAndTechnologyLabel } from "../category-and-technology";
 
-const { machineModels, maintenancePlan: texts } = teamMessages;
-
-/** A kind of machine as G27 names its group: „Flipper · EM“ – by the machine category alone without a technology. */
-export function machineKindLabel(machineCategory: MachineCategory, technology: Technology | undefined): string {
-  return [machineModels.categories[machineCategory], technology && machineModels.technologies[technology]]
-    .filter(Boolean)
-    .join(" · ");
-}
+const { maintenancePlan: texts } = teamMessages;
 
 /**
  * The machines to choose from as the forms show them (RM-MachineChoiceForMaintenanceTask, G27): a group named by its
@@ -21,7 +15,7 @@ export function machineKindLabel(machineCategory: MachineCategory, technology: T
 export function choiceGroups(groups: MachineGroup<ChoosableMachine>[]): ChoiceGroup[] {
   return groups.map((group) => ({
     key: `${group.machineCategory}/${group.technology ?? ""}`,
-    label: machineKindLabel(group.machineCategory, group.technology),
+    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
     entries: group.machines.map((machine) => ({
       value: machine.machineId,
       label: [

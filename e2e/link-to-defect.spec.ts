@@ -1,5 +1,15 @@
 import type { Page } from "@playwright/test";
-import { anOpenDefect, expect, logIn, openDefect, pageWidth, reportAsVisitor, test, uniqueId as unique, untickMaintenanceTasks } from "./fixtures";
+import {
+  anOpenDefect,
+  expect,
+  logIn,
+  openDefect,
+  pageWidth,
+  reportAsVisitor,
+  test,
+  uniqueId as unique,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Linking a problem report to an open defect on a phone (ST-022): a technician goes from the triage list to the problem

@@ -96,7 +96,9 @@ const changesAsReporter = (description: string) =>
     calls: async (_tx, { events }) =>
       events
         .filter((event) => event.type === "EVT-ProblemReported")
-        .map((event) => run(changeDescriptionForTest, { problemReportId: event.aggregate.id, version: 0, description })),
+        .map((event) =>
+          run(changeDescriptionForTest, { problemReportId: event.aggregate.id, version: 0, description }),
+        ),
   });
 
 describe("a policy that runs a command as the acting person", () => {

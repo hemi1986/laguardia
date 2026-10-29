@@ -278,6 +278,8 @@ describe("the registration form's maintenance tasks", () => {
   it("ST-097: A task that applies only to retired machines is not proposed", async () => {
     const lg007 = await aMachine("LG-007", models.fireball);
     const adjustSteppers = await aTask("Adjust stepper units", [lg007]);
+    // Proposed while LG-007 is on the floor …
+    expect((await loadRegistration(db)).proposals[models.fireball]?.tasks).toEqual([adjustSteppers]);
     await retireMachine(db, lg007);
 
     const { tasks, proposals } = await loadRegistration(db);

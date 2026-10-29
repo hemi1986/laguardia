@@ -15,4 +15,3 @@ export async function tasksChangedLanding(
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   return { record, address: `${record}?tasksChanged=1` };
 }
-

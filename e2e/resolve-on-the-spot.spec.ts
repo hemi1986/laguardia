@@ -1,5 +1,15 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, logIn, openMore, pageWidth, reportAsVisitor, test, uniqueId as unique, aTeamMember, untickMaintenanceTasks } from "./fixtures";
+import {
+  expect,
+  logIn,
+  openMore,
+  pageWidth,
+  reportAsVisitor,
+  test,
+  uniqueId as unique,
+  aTeamMember,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Resolving a problem on the spot on a phone (ST-019): a helper goes from the triage list to the problem report's page,

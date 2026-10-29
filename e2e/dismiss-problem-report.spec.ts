@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique, untickMaintenanceTasks } from "./fixtures";
+import {
+  expect,
+  logIn,
+  pageWidth,
+  reportAsVisitor,
+  test,
+  uniqueId as unique,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Dismissing a problem report on a phone (ST-020): a technician goes from the triage list to the problem report's page,

@@ -1,5 +1,17 @@
 import type { Page } from "@playwright/test";
-import { aHelper, aMachine, expect, groupOf, logIn, openedGroup, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
+import {
+  aHelper,
+  aMachine,
+  expect,
+  groupOf,
+  logIn,
+  openedGroup,
+  pageWidth,
+  test,
+  tickMachines,
+  unique,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Choosing the machines of a new maintenance task on a phone (ST-094, G27): „Geräte der Wartungsaufgabe“ in groups
@@ -299,7 +311,8 @@ const taskGroupOf = (page: Page, name: string) => page.locator("details").filter
 
 async function openedTask(page: Page, name: string) {
   const group = taskGroupOf(page, name);
-  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open))) await group.locator("summary").click();
+  if (!(await group.evaluate((element) => (element as HTMLDetailsElement).open)))
+    await group.locator("summary").click();
   return page.getByRole("checkbox", { name: new RegExp(name.replace(/[()&]/g, ".")) });
 }
 
@@ -370,7 +383,10 @@ test.describe("without JavaScript", () => {
   });
 });
 
-test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({ page, context }) => {
+test("a task removed meanwhile rejects the change and is no longer offered in the browser", async ({
+  page,
+  context,
+}) => {
   await logIn(page);
   const machine = await aMachine(page, "not-on-display");
   const [removed, kept] = [unique("Wax playfield"), unique("Clean glass (inside & out)")];
