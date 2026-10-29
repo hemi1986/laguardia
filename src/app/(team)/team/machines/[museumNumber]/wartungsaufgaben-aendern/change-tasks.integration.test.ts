@@ -118,8 +118,8 @@ async function choiceAfter(museumNumber: string, chosen: readonly string[]) {
       name: TASK_FIELD,
       groups,
       chosen,
-      header: planTexts.machines.groupHeader,
-      selectAll: planTexts.machines.selectAll,
+      header: teamMessages.groupedChoice.header,
+      selectAll: teamMessages.groupedChoice.selectAll,
     }),
   );
 }

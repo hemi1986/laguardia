@@ -135,8 +135,8 @@ async function choiceAfter(chosen: readonly string[]) {
       name: TASK_FIELD,
       groups: tasks,
       chosen,
-      header: planTexts.machines.groupHeader,
-      selectAll: planTexts.machines.selectAll,
+      header: teamMessages.groupedChoice.header,
+      selectAll: teamMessages.groupedChoice.selectAll,
     }),
   );
 }

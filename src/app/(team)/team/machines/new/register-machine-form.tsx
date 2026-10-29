@@ -145,8 +145,8 @@ export function RegisterMachineForm({ machineModels, machineStatuses, tasks, pro
               groups={tasks}
               chosen={state?.chosen ?? []}
               key={`tasks-${kept}`}
-              header={maintenancePlan.machines.groupHeader}
-              selectAll={maintenancePlan.machines.selectAll}
+              header={teamMessages.groupedChoice.header}
+              selectAll={teamMessages.groupedChoice.selectAll}
               proposed={proposal?.tasks}
             />
           </>

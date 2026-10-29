@@ -54,6 +54,15 @@ export const sharedTexts = {
     /** A team member whose account is gone. */
     unknownTeamMember: "unbekannt",
   },
+  /**
+   * Choosing many out of a long list in groups that fold (G27): the machines of a maintenance task, the maintenance tasks
+   * of a machine (ST-094 to ST-097), the sticker selection and recording for several machines (ST-098).
+   */
+  groupedChoice: {
+    /** „Flipper · EM – 4 von 6 ausgewählt“; a group without a technology is named by its category alone. */
+    header: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
+    selectAll: "Alle auswählen",
+  },
   /** Texts every form on the form runner shares (architecture review 2026-10-17). */
   forms: {
     /**

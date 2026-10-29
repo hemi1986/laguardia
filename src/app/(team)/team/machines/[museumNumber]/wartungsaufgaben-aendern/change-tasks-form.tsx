@@ -56,8 +56,8 @@ export function ChangeTasksForm({
           groups={groups}
           chosen={state?.chosen ?? chosen}
           key={`tasks-${kept}`}
-          header={maintenancePlan.machines.groupHeader}
-          selectAll={maintenancePlan.machines.selectAll}
+          header={teamMessages.groupedChoice.header}
+          selectAll={teamMessages.groupedChoice.selectAll}
           openWithChoice={!!state}
         />
       </fieldset>
