@@ -9,7 +9,7 @@ risk: medium
 events: []
 depends_on: []
 labels: [ui, feature:consistent-layout-dark-mode]
-status: in-progress
+status: done
 ---
 
 ## Story
