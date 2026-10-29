@@ -30,25 +30,20 @@ export const accountsTexts = {
     state: "Konto",
     active: "aktiv",
     deactivated: "deaktiviert",
-    makeTechnician: "Zu Techniker:in machen",
-    makeHelper: "Zu Helfer:in machen",
-    newPassword: "Neues Passwort",
-    resetPassword: "Passwort zurücksetzen",
+    edit: "Konto bearbeiten",
     deactivate: "Konto deaktivieren",
     activate: "Konto wieder aktivieren",
-    lastTechnician:
-      "Mindestens ein aktives Konto einer Techniker:in muss bleiben – deshalb lässt sich dieses Konto weder deaktivieren noch zu Helfer:in machen.",
-    roleChanged: (name: string) => `Rolle von ${name} geändert.`,
-    passwordReset: (name: string) => `Passwort von ${name} neu gesetzt.`,
+    accountSaved: (name: string) => `Konto von ${name} gespeichert.`,
     accountDeactivated: (name: string) => `Konto von ${name} deaktiviert.`,
     accountActivated: (name: string) => `Konto von ${name} wieder aktiviert.`,
   },
-  deactivateAccount: {
-    question: (name: string, firstName: string) =>
-      `Konto von ${name} deaktivieren? ${firstName} wird sofort abgemeldet.`,
-    ownQuestion: "Dein Konto deaktivieren? Du wirst sofort abgemeldet.",
-    confirm: "Konto deaktivieren",
-    back: "Zurück",
+  editAccount: {
+    title: (name: string) => `Konto bearbeiten · ${name}`,
+    newPassword: "Neues Passwort",
+    ownRole: "Die eigene Rolle kann nur eine andere Techniker:in ändern.",
+    changeOwnPassword: "Passwort ändern",
+    save: "Konto speichern",
+    backToTeamMember: "Zurück zum Teammitglied",
   },
   ownPassword: {
     title: "Passwort ändern",
@@ -68,5 +63,8 @@ export const accountsTexts = {
     "last-technician": "Die letzte aktive Techniker:in muss bleiben – sonst kommt niemand mehr an die Verwaltung.",
     "current-password-wrong": "Das aktuelle Passwort stimmt nicht.",
     "account-deactivated": "Dieses Konto ist deaktiviert.",
+    "own-role": "Die eigene Rolle kann nur eine andere Techniker:in ändern.",
+    "own-password": "Das eigene Passwort wird unter „Passwort ändern“ geändert.",
+    "own-deactivation": "Das eigene Konto kann nur eine andere Techniker:in deaktivieren.",
   },
 } as const;

@@ -13,12 +13,11 @@ const { account: texts, accounts } = teamMessages;
 /**
  * What the page confirms after an action (G3). The account functions keep no journal (BC-Team has no events, and
  * the audit trail was dropped – ST-081, Out of Scope), so the address names the action and the page confirms it only
- * when the account's state agrees: a deactivation only on a deactivated account; an activation, a role change and a
- * password reset only on an active one.
+ * when the account's state agrees: a deactivation only on a deactivated account; an activation and a saved edit only
+ * on an active one, with the name as it is now (ST-088).
  */
 const confirmations: Record<DoneOnAccount, (account: TeamMemberAccount) => string | undefined> = {
-  role: (account) => (account.active ? texts.roleChanged(account.name) : undefined),
-  password: (account) => (account.active ? texts.passwordReset(account.name) : undefined),
+  saved: (account) => (account.active ? texts.accountSaved(account.name) : undefined),
   deactivated: (account) => (account.active ? undefined : texts.accountDeactivated(account.name)),
   activated: (account) => (account.active ? texts.accountActivated(account.name) : undefined),
 };
@@ -28,11 +27,11 @@ function confirmationOf(done: unknown, account: TeamMemberAccount): string | und
   return confirmations[done as DoneOnAccount](account);
 }
 
-/** One team member's page (ST-081): their account and what a technician may do to it. Technicians only. */
+/** One team member's page (ST-081, ST-088): their account and what a technician may do to it. Technicians only. */
 export default async function AccountPage({ params, searchParams }: PageProps<"/team/members/[teamMemberId]">) {
-  await requireTechnician();
+  const viewer = await requireTechnician();
   const { teamMemberId } = await params;
-  const account = isId(teamMemberId) ? await teamMemberAccount(database(), teamMemberId) : undefined;
+  const account = isId(teamMemberId) ? await teamMemberAccount(database(), teamMemberId, viewer.id) : undefined;
   if (!account) {
     return (
       <Page title={accounts.title}>

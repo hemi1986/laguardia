@@ -1,59 +1,58 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { activateAccount, changeRole, deactivateAccount, resetPassword, type AccountError } from "@/modules/team";
+import { activateAccount, deactivateAccount, editAccount, type AccountError } from "@/modules/team";
+import type { Role } from "@/platform/command";
 import { database } from "@/platform/database";
 import { currentPerson } from "@/app/_actions/current-person";
-import { postedRole } from "../role-field";
 
 /**
- * The actions on one account (ST-005, ST-081). They call the Team module's account functions, not commands (BC-Team
- * has no events), so they mirror the runner's contract by hand: a rejection comes back as the action's state, a
+ * The actions on one account (ST-005, ST-081, ST-088). They call the Team module's account functions, not commands
+ * (BC-Team has no events), so they mirror the runner's contract by hand: a rejection comes back as the action's state, a
  * success lands on the team member's page with `?done=` naming what to confirm. The acting person comes from the
  * login session, never from the form – the Team module checks the role itself. A password is never kept.
  */
 export type AccountActionState = { error: AccountError } | null;
 
+/** What the edit page keeps after a rejection (G8) – everything but the new password. */
+export type EditAccountState = { error: AccountError; values: { name: string; username: string; role?: Role } } | null;
+
 /** What the team member's page confirms after an action (G3). */
-export type DoneOnAccount = "role" | "password" | "deactivated" | "activated";
+export type DoneOnAccount = "saved" | "deactivated" | "activated";
 
 async function dependencies() {
-  return { db: database(), actor: await currentPerson(), headers: await headers(), inNext: true };
+  return { db: database(), actor: await currentPerson() };
 }
 
 function landing(teamMemberId: string, done: DoneOnAccount): never {
   redirect(`/team/members/${encodeURIComponent(teamMemberId)}?done=${done}`);
 }
 
-export async function changeRoleAction(
-  teamMemberId: string,
-  _previous: AccountActionState,
-  formData: FormData,
-): Promise<AccountActionState> {
-  const outcome = await changeRole({ teamMemberId, role: postedRole(formData) }, await dependencies());
-  if (!outcome.ok) return { error: outcome.error };
-  landing(teamMemberId, "role");
+/** The role a form posts – none when it posts none or an unknown one: the account keeps its role. */
+function postedRole(formData: FormData): Role | undefined {
+  const role = formData.get("role");
+  return role === "helper" || role === "technician" ? role : undefined;
 }
 
-export async function resetPasswordAction(
+export async function editAccountAction(
   teamMemberId: string,
-  _previous: AccountActionState,
+  _previous: EditAccountState,
   formData: FormData,
-): Promise<AccountActionState> {
-  const password = String(formData.get("password") ?? "");
-  const outcome = await resetPassword({ teamMemberId, password }, await dependencies());
-  if (!outcome.ok) return { error: outcome.error };
-  landing(teamMemberId, "password");
+): Promise<EditAccountState> {
+  const values = {
+    name: String(formData.get("name") ?? ""),
+    username: String(formData.get("username") ?? ""),
+    role: postedRole(formData),
+  };
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const outcome = await editAccount({ teamMemberId, ...values, newPassword }, await dependencies());
+  if (!outcome.ok) return { error: outcome.error, values };
+  landing(teamMemberId, "saved");
 }
 
 export async function deactivateAccountAction(teamMemberId: string): Promise<AccountActionState> {
-  const acting = await dependencies();
-  const outcome = await deactivateAccount({ teamMemberId }, acting);
+  const outcome = await deactivateAccount({ teamMemberId }, await dependencies());
   if (!outcome.ok) return { error: outcome.error };
-  // One's own account: its sessions ended with it, so the technician is logged out (ST-081).
-  const own = acting.actor.kind === "team-member" && acting.actor.teamMemberId === teamMemberId;
-  if (own) redirect("/login");
   landing(teamMemberId, "deactivated");
 }
 
