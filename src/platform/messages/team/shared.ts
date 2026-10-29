@@ -48,6 +48,8 @@ export const sharedTexts = {
     triage: "Sichtung",
     defects: "Defekte",
     ownPassword: "Passwort ändern",
+    /** The design switch names the design it switches to (G26, G14). */
+    switchTo: { light: "Helles Design", dark: "Dunkles Design" },
   },
   /** How a page names who did something (architecture review 2026-10-25). */
   names: {

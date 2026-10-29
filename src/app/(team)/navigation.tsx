@@ -3,6 +3,8 @@ import { pageWidth } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import type { Design } from "../design";
+import { DesignSwitch } from "./design-switch";
 import { MoreMenu } from "./more-menu";
 import { logOutAction } from "./team/actions";
 
@@ -14,11 +16,11 @@ const link = "text-sm font-medium underline-offset-4 hover:underline";
  * The one navigation of the team area (ST-076), decided for the whole MVP in ST-008 (UX guideline G19, user
  * 2026-10-02): the daily destinations in one line – Übersicht, Geräte, Sichtung (everyone since 2026-10-03), Defekte, Wartung –,
  * everything that manages behind "Mehr" – Wartungsplan, Reparaturzeiten, Modelle, Teammitglieder (technicians), Passwort ändern,
- * Abmelden. A destination appears with the story that builds it (Sichtung ST-017, Defekte ST-021, Wartung ST-043,
+ * the design switch (ST-090, „Helles Design“ / „Dunkles Design“ – the design it switches to), Abmelden. A destination appears with the story that builds it (Sichtung ST-017, Defekte ST-021, Wartung ST-043,
  * Wartungsplan ST-040, Reparaturzeiten ST-051), at its place in this order. "Mehr" is a native `<details>`, so it opens without JavaScript.
  * Technician-only destinations are hidden from helpers; the pages and the modules check the role again (G11).
  */
-export function TeamNavigation({ role }: { role: Role }) {
+export function TeamNavigation({ role, design }: { role: Role; design: Design }) {
   const technician = role === "technician";
   return (
     <nav aria-label={team.menu} className="border-b">
@@ -68,6 +70,13 @@ export function TeamNavigation({ role }: { role: Role }) {
               <Link href="/team/password" className={link}>
                 {team.ownPassword}
               </Link>
+            </li>
+            <li>
+              <DesignSwitch
+                to={design === "dark" ? "light" : "dark"}
+                label={team.switchTo[design === "dark" ? "light" : "dark"]}
+                className={link}
+              />
             </li>
             <li>
               <form action={logOutAction}>
