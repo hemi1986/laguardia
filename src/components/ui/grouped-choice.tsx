@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /** One group of the choice: a name for the header and its entries (checkboxes). */
 export type ChoiceGroup = {
@@ -28,6 +28,10 @@ function useHydrated(): boolean {
  * group and how many of it are chosen; with JavaScript the count follows every tick and „Alle auswählen“ ticks the
  * whole group – without it the count says what was chosen when the page opened and the entries are ticked one by one.
  *
+ * With JavaScript a form may pass `proposed` (ST-097): the entries it proposes are ticked, and when the proposal changes,
+ * every entry the person has not touched follows it – ticked when proposed, unticked when not; one they ticked or unticked
+ * themselves (or ticked with „Alle auswählen“) stays as they left it.
+ *
  * No domain logic and no texts of its own: the texts come as props. Key it on the form's rejection, so a rejection
  * starts it again from `chosen`.
  */
@@ -38,6 +42,7 @@ export function GroupedChoice({
   header,
   selectAll,
   openWithChoice = true,
+  proposed,
 }: {
   /** The name each ticked entry is posted under. */
   name: string;
@@ -50,6 +55,8 @@ export function GroupedChoice({
   selectAll: string;
   /** Whether a group with a choice in it opens with the page – false while the choice is only the current one. */
   openWithChoice?: boolean;
+  /** The entries proposed now – followed by every entry the person has not touched. None: nothing is proposed. */
+  proposed?: readonly string[];
 }) {
   const hydrated = useHydrated();
   const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set(initiallyChosen));
@@ -77,11 +84,26 @@ export function GroupedChoice({
       ),
     );
   useEffect(sync, []);
+  // The entries the person ticked or unticked themselves – a proposal no longer changes them.
+  const touched = useRef(new Set<string>());
+  const touch = (input: HTMLInputElement) => {
+    touched.current.add(input.value);
+    sync();
+  };
+  // A layout effect: the ticks follow in the same commit as the change that proposed them, before anyone reads them.
+  useLayoutEffect(() => {
+    if (!proposed) return;
+    for (const input of root.current?.querySelectorAll<HTMLInputElement>('input[type="checkbox"]') ?? [])
+      if (!touched.current.has(input.value)) input.checked = proposed.includes(input.value);
+    sync();
+  }, [proposed]);
   const tickAll = (group: ChoiceGroup) => {
     for (const input of root.current?.querySelectorAll<HTMLInputElement>(
       `input[data-group="${CSS.escape(group.key)}"]`,
-    ) ?? [])
+    ) ?? []) {
       input.checked = true;
+      touched.current.add(input.value);
+    }
     sync();
   };
 
@@ -121,7 +143,7 @@ export function GroupedChoice({
                     value={entry.value}
                     data-group={group.key}
                     defaultChecked={initiallyChosen.includes(entry.value)}
-                    onChange={sync}
+                    onChange={(event) => touch(event.currentTarget)}
                     className="mt-0.5 size-4 shrink-0"
                   />
                   <span className="min-w-0">{entry.label}</span>

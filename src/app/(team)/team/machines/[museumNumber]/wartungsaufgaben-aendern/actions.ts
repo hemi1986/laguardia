@@ -8,7 +8,8 @@ import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../../team-session";
 import { changeTasksDefinition, type ChangeTasksField } from "./change-tasks-input";
-import { tasksChangedLanding, withRemovedNamed } from "./change-tasks-outcome";
+import { withRemovedNamed } from "../../task-choice";
+import { tasksChangedLanding } from "./change-tasks-outcome";
 
 /**
  * The form's state: a rejection with what was kept, the tasks ticked and seen – and, when a maintenance task was removed

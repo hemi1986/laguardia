@@ -1,6 +1,5 @@
 import "server-only";
 import { machineLabels } from "@/modules/collection";
-import { removedMaintenanceTaskNames } from "@/modules/maintenance";
 import type { Database } from "@/platform/command";
 
 /**
@@ -17,14 +16,3 @@ export async function tasksChangedLanding(
   return { record, address: `${record}?tasksChanged=1` };
 }
 
-/**
- * A rejected change that names the maintenance tasks removed meanwhile (ST-096): their names, as the decision named them
- * as its subjects. Any other state comes back as it is.
- */
-export async function withRemovedNamed<State extends { error: string; subjects?: readonly string[] }>(
-  db: Database,
-  state: State | null,
-): Promise<(State & { removed?: readonly string[] }) | null> {
-  if (state?.error !== "maintenance-task-removed" || !state.subjects) return state;
-  return { ...state, removed: await removedMaintenanceTaskNames(db, state.subjects) };
-}

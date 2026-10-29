@@ -29,8 +29,9 @@ import { loadChangeTasks } from "./change-tasks-data";
 import { ChangeTasksForm } from "./change-tasks-form";
 import { SEEN_FIELD, seenValue } from "@/app/_actions/form-parts";
 import { changeTasksDefinition, TASK_FIELD } from "./change-tasks-input";
-import { tasksChangedLanding, withRemovedNamed } from "./change-tasks-outcome";
-import { tasksRejectionText } from "./tasks-rejection-text";
+import { withRemovedNamed } from "../../task-choice";
+import { tasksRejectionText } from "../../tasks-rejection-text";
+import { tasksChangedLanding } from "./change-tasks-outcome";
 
 /**
  * „Wartungsaufgaben ändern“ from the page's side (ST-096, G27): the form page of one machine opens with the tasks that
