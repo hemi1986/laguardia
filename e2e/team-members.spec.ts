@@ -56,6 +56,9 @@ async function openFromTheList(page: Page, name: string, { deactivated = false }
   if (deactivated) {
     await page.getByLabel("Auch deaktivierte Konten anzeigen").check();
     await page.getByRole("button", { name: "Anzeigen" }).click();
+    // Measured once the filtered list has loaded – not mid-navigation, before its styles apply.
+    await expect(page).toHaveURL(/\/team\/members\?deaktivierte=1$/);
+    await expect(page.getByLabel("Auch deaktivierte Konten anzeigen")).toBeChecked();
     expect(await pageWidth(page)).toBeLessThanOrEqual(360);
   }
   await page.getByRole("link", { name, exact: true }).click();

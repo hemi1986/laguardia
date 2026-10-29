@@ -9,7 +9,7 @@ import { logWorkCommand } from "@/modules/repair";
 import { editAccount, teamMemberAccounts } from "@/modules/team";
 import { aTeamMemberAccount } from "@/modules/team/accounts.test-support";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand } from "@/platform/command";
+import { executeCommand, type Role } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
 import { anOpenDefectIn } from "@/test-support/defects";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -48,7 +48,7 @@ async function done(outcome: Promise<{ ok: true } | { ok: false; error: string }
 }
 
 /** What the three pages show, as Tom sees them. */
-async function shown(tom: { teamMemberId: string; role: "technician" }, defectId: string, museumNumber: string) {
+async function shown(tom: { teamMemberId: string; role: Role }, defectId: string, museumNumber: string) {
   const clock = fixedClock(NOW);
   const viewer = { id: tom.teamMemberId, role: tom.role };
   const details = await loadDefectDetails(db, clock, defectId, { storage: memoryStorage(), viewer });
