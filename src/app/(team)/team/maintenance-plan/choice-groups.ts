@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import type { ChoosableMachine } from "@/modules/maintenance";
 import type { MachineGroup } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import { categoryAndTechnologyLabel } from "../category-and-technology";
+import { machineChoiceGroups } from "../category-and-technology";
 
 const { maintenancePlan: texts } = teamMessages;
 
@@ -13,17 +13,13 @@ const { maintenancePlan: texts } = teamMessages;
  * (ST-094) and changing its machines (ST-095).
  */
 export function choiceGroups(groups: MachineGroup<ChoosableMachine>[]): ChoiceGroup[] {
-  return groups.map((group) => ({
-    key: `${group.machineCategory}/${group.technology ?? ""}`,
-    label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
-    entries: group.machines.map((machine) => ({
-      value: machine.machineId,
-      label: [
-        texts.machines.entry(machine.museumNumber, machine.machineModelTitle),
-        machine.notOnDisplay && texts.machines.notOnDisplay,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    })),
+  return machineChoiceGroups(groups, (machine) => ({
+    value: machine.machineId,
+    label: [
+      texts.machines.entry(machine.museumNumber, machine.machineModelTitle),
+      machine.notOnDisplay && texts.machines.notOnDisplay,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   }));
 }

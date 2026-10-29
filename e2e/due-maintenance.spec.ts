@@ -43,7 +43,7 @@ test.describe("without JavaScript", () => {
 
 /**
  * „Für mehrere Geräte erfassen“ (ST-045) without JavaScript: native checkboxes and fields, so a phone without scripts
- * records too. Nothing is due here (see above), so the machines are ticked under „Weitere Geräte“ – the page is opened
+ * records too. Nothing is due here (see above), so the machines are ticked under „Weitere Geräte“, in their folds – the page is opened
  * at its address, as the list offers it only on a due task.
  */
 test.describe("recording for several machines without JavaScript", () => {
@@ -71,8 +71,8 @@ test.describe("recording for several machines without JavaScript", () => {
 
     // The rejection kept the outcome.
     await expect(page.getByLabel("Ergebnis")).toHaveValue("done");
-    await page.getByRole("checkbox", { name: new RegExp(first.museumNumber) }).check();
-    await page.getByRole("checkbox", { name: new RegExp(second.museumNumber) }).check();
+    // Under „Weitere Geräte“ they sit in closed native folds (ST-098), opened without JavaScript.
+    await tickMachines(page, first, second);
     expect(await pageWidth(page)).toBeLessThanOrEqual(360);
     await page.getByRole("button", { name: "Wartung eintragen" }).click();
 

@@ -128,7 +128,11 @@ opened. It carries no domain logic and no texts: the page maps its domain groups
 labels, and the client form passes the header function and the button text. Key it on `keptKey(state)` so a rejection
 starts it again from the values the state kept. A form that starts with the current choice ticked (ST-095, changing the
 machines of a task) passes `openWithChoice={!!state}`: the groups stay closed until a rejection opens those with a
-choice. Group order and grouping are Collection's (`groupMachines`).
+choice. A search's matches pass `open`: every group opens with the page (ST-098, the sticker selection); a count elsewhere
+on the page (the sticker selection's „2 Geräte ausgewählt“) hears every change through `onChosenChange` – „Alle auswählen“
+fires no change event. The header text and „Alle auswählen“ are `teamMessages.groupedChoice`. Group order and grouping are
+Collection's (`groupMachines`); `machineChoiceGroups` (`src/app/(team)/team/category-and-technology.ts`) turns its groups
+into `ChoiceGroup`s, the page saying only how an entry reads.
 **No-JavaScript test passed:** native checkboxes in a native fold (`e2e/maintenance-plan-machines.spec.ts`).
 
 **A new component is a decision, not a convenience.** "Callouts use `Alert`", "Empty states use `Empty`", "Use

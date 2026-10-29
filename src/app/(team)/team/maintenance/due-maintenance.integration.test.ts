@@ -38,6 +38,8 @@ import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data"
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
 import { loadRecordForSeveral } from "./mehrere/record-for-several-data";
 import { RecordForSeveralPage } from "./mehrere/record-for-several-view";
+import { choiceForSeveral } from "./mehrere/choice-for-several";
+import { ChoiceForSeveral } from "./mehrere/record-for-several-form";
 import { recordMaintenanceFields, recordMaintenanceInput } from "./erfassen/record-maintenance-input";
 import {
   recordedForSeveralAddress,
@@ -1030,6 +1032,92 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     expect(form.address).toBeUndefined();
     expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
     expect(rejectionText(state!.error)).toBe("Bitte mindestens ein Gerät auswählen.");
+  });
+
+  /** Each fold of a rendered selection: its header, whether it is open, and the machines ticked in it. */
+  function foldsOf(html: string) {
+    return html
+      .split("<details")
+      .slice(1)
+      .map((fold) => ({
+        header: fold.match(/<summary[^>]*><span>([^<]*)<\/span>/)![1],
+        open: /^[^>]* open/.test(fold),
+        ticked: [...fold.matchAll(/<input[^>]*value="([^"]+)"[^>]*>/g)]
+          .filter(([box]) => box.includes("checked"))
+          .map(([, machineId]) => machineId),
+      }));
+  }
+
+  it("ST-098: Recording for several keeps the due machines open and ticked", async () => {
+    const [lg042, lg043] = [await aMachine("LG-042"), await aMachine("LG-043")];
+    const lg005 = await aMachine("LG-005", { technology: "em" });
+    const lg020 = await aMachine("LG-020", { machineCategory: "arcade", technology: "crt" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg043, lg005, lg020], {
+      suitableForHelpers: true,
+      addedOn: "2026-01-01",
+    });
+    await recorded(cleanGlass, lg005, "2026-03-30");
+    await recorded(cleanGlass, lg020, "2026-03-30");
+    expect(await listedOn("2026-04-02", cleanGlass)).toEqual(["LG-042", "LG-043"]);
+
+    const { html } = await selection("2026-04-02", cleanGlass, anna);
+
+    expect(foldsOf(html)).toEqual([
+      { header: "Fällig – 2 von 2 ausgewählt", open: true, ticked: [lg042, lg043] },
+      { header: "Flipper · EM – 0 von 1 ausgewählt", open: false, ticked: [] },
+      { header: "Arcade · CRT – 0 von 1 ausgewählt", open: false, ticked: [] },
+    ]);
+    // „Weitere Geräte“ names the folds after „Fällig“.
+    expect(html.indexOf("Fällig –")).toBeLessThan(html.indexOf("Weitere Geräte"));
+    expect(html.indexOf("Weitere Geräte")).toBeLessThan(html.indexOf("Flipper · EM"));
+  });
+
+  it("ST-098: A machine from a further group is recorded too", async () => {
+    const lg042 = await aMachine("LG-042");
+    const lg005 = await aMachine("LG-005", { technology: "em" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg005], { intervalMonths: 1 });
+    await recorded(cleanGlass, lg005, "2026-06-01");
+    expect(await listedOn("2026-06-10", cleanGlass)).toEqual(["LG-042"]);
+    const { html } = await selection("2026-06-10", cleanGlass, tom);
+    expect(foldsOf(html)[1]).toEqual({ header: "Flipper · EM – 0 von 1 ausgewählt", open: false, ticked: [] });
+    expect(checkboxOf(html, lg005)).toBeDefined();
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-10", note: "" };
+    expect(await severalFormOf(tom, "2026-06-10").action(null, ticked(fields, [lg042, lg005]))).toBeNull();
+
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([
+      expect.objectContaining({ maintenanceTaskId: cleanGlass, date: "2026-06-10" }),
+    ]);
+    expect(await maintenanceRecords(db, { machineId: lg005 })).toContainEqual(
+      expect.objectContaining({ maintenanceTaskId: cleanGlass, date: "2026-06-10" }),
+    );
+  });
+
+  it("ST-098: A rejected recording keeps the ticks and opens their groups", async () => {
+    const lg042 = await aMachine("LG-042");
+    const lg005 = await aMachine("LG-005", { technology: "em" });
+    const lg020 = await aMachine("LG-020", { machineCategory: "arcade", technology: "crt" });
+    const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg005, lg020], {
+      intervalMonths: 1,
+    });
+    await recorded(cleanGlass, lg005, "2026-06-01");
+    await recorded(cleanGlass, lg020, "2026-06-01");
+    const { data } = await selection("2026-06-10", cleanGlass, tom);
+
+    const fields = { maintenanceTaskId: cleanGlass, outcome: "done", date: "2026-06-02", note: "" };
+    const state = await severalFormOf(tom, "2026-06-10").action(null, ticked(fields, [lg042, lg005]));
+
+    expect(state?.error).toBe("date-too-early");
+    expect(await maintenanceRecords(db, { machineId: lg042 })).toEqual([]);
+    expect(await maintenanceRecords(db, { machineId: lg005 })).toHaveLength(1);
+    const again = renderToStaticMarkup(
+      createElement(ChoiceForSeveral, { ...choiceForSeveral(data!), chosen: state!.chosen, kept: "1" }),
+    );
+    expect(foldsOf(again)).toEqual([
+      { header: "Fällig – 1 von 1 ausgewählt", open: true, ticked: [lg042] },
+      { header: "Flipper · EM – 1 von 1 ausgewählt", open: true, ticked: [lg005] },
+      { header: "Arcade · CRT – 0 von 1 ausgewählt", open: false, ticked: [] },
+    ]);
   });
 
   it("ST-045: Helpers cannot record several machines for a task not suitable for helpers", async () => {

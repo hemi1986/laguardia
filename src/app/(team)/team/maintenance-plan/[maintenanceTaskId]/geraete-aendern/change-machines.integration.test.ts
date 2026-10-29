@@ -118,8 +118,8 @@ async function choiceAfter(maintenanceTaskId: string, chosen: readonly string[])
       name: MACHINE_FIELD,
       groups,
       chosen,
-      header: texts.machines.groupHeader,
-      selectAll: texts.machines.selectAll,
+      header: teamMessages.groupedChoice.header,
+      selectAll: teamMessages.groupedChoice.selectAll,
     }),
   );
 }

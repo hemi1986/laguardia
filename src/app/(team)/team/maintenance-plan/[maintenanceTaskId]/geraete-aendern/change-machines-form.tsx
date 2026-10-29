@@ -60,8 +60,8 @@ export function ChangeMachinesForm({
           groups={groups}
           chosen={state?.chosen ?? chosen}
           key={`machines-${kept}`}
-          header={texts.machines.groupHeader}
-          selectAll={texts.machines.selectAll}
+          header={teamMessages.groupedChoice.header}
+          selectAll={teamMessages.groupedChoice.selectAll}
           openWithChoice={!!state}
         />
       </fieldset>

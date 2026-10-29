@@ -53,8 +53,8 @@ export function AddMaintenanceTaskForm({ version, groups }: { version: number; g
             groups={groups}
             chosen={state?.chosen ?? []}
             key={`machines-${kept}`}
-            header={texts.machines.groupHeader}
-            selectAll={texts.machines.selectAll}
+            header={teamMessages.groupedChoice.header}
+            selectAll={teamMessages.groupedChoice.selectAll}
           />
         )}
       </fieldset>

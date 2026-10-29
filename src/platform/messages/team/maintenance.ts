@@ -99,6 +99,8 @@ export const maintenanceTexts = {
     title: "Für mehrere Geräte erfassen",
     due: "Fällig",
     others: "Weitere Geräte",
+    /** A machine to tick (ST-098): „LG-042 · Medieval Madness · Halle 1“. */
+    entry: (museumNumber: string, title: string, location: string) => `${museumNumber} · ${title} · ${location}`,
     none: "Für diese Wartungsaufgabe gibt es kein Gerät.",
     submit: "Wartung eintragen",
     recorded: (name: string, count: number) =>
@@ -151,9 +153,6 @@ export const maintenanceTexts = {
       title: "Geräte der Wartungsaufgabe",
       noMachineYet:
         "Noch kein Gerät erfasst. Die Wartungsaufgabe lässt sich trotzdem hinzufügen und gilt dann für kein Gerät.",
-      selectAll: "Alle auswählen",
-      /** „Flipper · EM – 4 von 6 ausgewählt“; a group without a technology is named by its category alone. */
-      groupHeader: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
       /** After the museum number and the title: a machine that cannot become due while it is away (G27). */
       notOnDisplay: "Nicht ausgestellt",
       entry: (museumNumber: string, title: string) => `${museumNumber} · ${title}`,
