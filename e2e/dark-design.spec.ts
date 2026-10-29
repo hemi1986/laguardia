@@ -168,3 +168,40 @@ test("ST-090: Visitor and legal pages are always dark and offer no switch", asyn
     await expect(page.getByRole("button", { name: /Design/ }), address).toHaveCount(0);
   }
 });
+
+/** A computed colour as `rgb(r, g, b)` – the browser keeps the theme's `oklch` colours in other notations. */
+const colourOf = (locator: Locator, property: "color" | "backgroundColor") =>
+  locator.evaluate((element, name) => {
+    const context = document.createElement("canvas").getContext("2d")!;
+    context.fillStyle = getComputedStyle(element)[name];
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    return `rgb(${r}, ${g}, ${b})`;
+  }, property);
+
+test("ST-090: The sticker print page stays light", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber } = await aMachine(page);
+  await page.goto("/team/machines");
+  expect(await designOf(page)).toBe("dark");
+
+  await page.goto(`/team/machines/stickers/print?m=${museumNumber}`);
+
+  expect(await designOf(page)).toBe("light");
+  const print = page.getByRole("button", { name: "Drucken" });
+  const back = page.getByRole("link", { name: "Zurück zur Auswahl" });
+  const count = page.getByText("1 Gerät ausgewählt");
+  for (const control of [print, back, count]) expect(await designOf(control)).toBe("light");
+  expect(await colourOf(page.locator("body"), "backgroundColor")).toBe("rgb(255, 255, 255)");
+
+  await page.emulateMedia({ media: "print" });
+  const label = page.locator(".sticker-page").getByText(museumNumber);
+  expect(await colourOf(label, "color")).toBe("rgb(0, 0, 0)");
+  expect(await colourOf(page.locator("body"), "backgroundColor")).toBe("rgb(255, 255, 255)");
+  await page.emulateMedia({ media: "screen" });
+
+  // Back to the selection – a team page again, in the device's design, also when JavaScript does not load it anew.
+  await back.click();
+  await expect(page).toHaveURL(/\/team\/machines\/stickers/);
+  await expect.poll(() => designOf(page)).toBe("dark");
+});
