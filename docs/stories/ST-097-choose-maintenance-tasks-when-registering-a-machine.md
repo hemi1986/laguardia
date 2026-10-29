@@ -9,7 +9,7 @@ risk: high
 events: [EVT-MachineRegistered, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue]
 depends_on: [ST-096]
 labels: [ui, maintenance, feature:per-machine-maintenance]
-status: in-progress
+status: done
 ---
 
 ## Story
