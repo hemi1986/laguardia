@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, reportAsVisitor, test, unique } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The open defects list and a defect's own page on a phone (ST-021), without JavaScript – the filter is a plain GET
@@ -25,6 +25,7 @@ async function aRecordedDefect(page: Page, modelTitle: string, defectTitle: stri
   await expect(page.getByRole("heading", { name: modelTitle, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${modelTitle} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByLabel("Status").selectOption("playable");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

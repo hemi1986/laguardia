@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, openMore, pageWidth, test, unique } from "./fixtures";
+import { expect, logIn, openMore, pageWidth, test, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The machine model page on a phone (ST-006) and the Server Action runner in the browser (ST-073): a rejected
@@ -91,6 +91,7 @@ async function aMachineModel(page: Page, title = unique("Medieval Madness"), yea
 async function aMachineOf(page: Page, title: string, year: string) {
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams, ${year})` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toBeVisible();

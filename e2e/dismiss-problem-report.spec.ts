@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, uniqueId as unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Dismissing a problem report on a phone (ST-020): a technician goes from the triage list to the problem report's page,
@@ -25,6 +25,7 @@ async function aProblemReport(page: Page, description = "Way too hard to score")
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];

@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, pageWidth, test } from "./fixtures";
+import { allowPreview, expect, openMore, pageWidth, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * A visitor reports a problem on a phone (ST-013): from the visitor machine page to the report form page
@@ -32,6 +32,7 @@ async function aPlayableMachine(
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

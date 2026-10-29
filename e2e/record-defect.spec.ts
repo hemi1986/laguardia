@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, pageWidth, reportAsVisitor, test, unique } from "./fixtures";
+import { expect, logIn, pageWidth, reportAsVisitor, test, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Recording a defect on a phone (ST-018): from the triage list to the problem report's page, to the form „Defekt
@@ -27,6 +27,7 @@ async function openRecordDefect(page: Page, machineStatus: "playable" | "limited
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2");
   await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

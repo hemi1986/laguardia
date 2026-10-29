@@ -1,16 +1,5 @@
 import type { Page } from "@playwright/test";
-import {
-  aHelper,
-  aMachine,
-  expect,
-  groupOf,
-  logIn,
-  openedGroup,
-  pageWidth,
-  test,
-  tickMachines,
-  unique,
-} from "./fixtures";
+import { aHelper, aMachine, expect, groupOf, logIn, openedGroup, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Choosing the machines of a new maintenance task on a phone (ST-094, G27): „Geräte der Wartungsaufgabe“ in groups
@@ -46,6 +35,7 @@ async function anArcadeMachine(page: Page) {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Namco)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 3");
   await page.getByLabel("Status").selectOption("not-on-display");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

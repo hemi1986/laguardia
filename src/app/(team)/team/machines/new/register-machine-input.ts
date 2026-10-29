@@ -1,6 +1,7 @@
 import { machineStatuses, type RegisterMachineInput } from "@/modules/collection";
 import type { ChosenMaintenanceTasks } from "@/modules/maintenance";
 import type { FormFields } from "@/app/_actions/form-action";
+import { TASK_FIELD } from "./task-field";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
 export const registerMachineFields = [
@@ -13,8 +14,6 @@ export const registerMachineFields = [
 
 export type RegisterMachineField = (typeof registerMachineFields)[number];
 
-/** The field the browser posts once per ticked maintenance task (ST-097) – the runner reads them all, as posted. */
-export const TASK_FIELD = "maintenanceTaskId";
 
 /**
  * Reads and converts the fields of the registration form (ST-073, Q19): no validation, no default. The empty-field

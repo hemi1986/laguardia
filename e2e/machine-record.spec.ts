@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, logIn, test } from "./fixtures";
+import { expect, logIn, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The machine record on a phone (ST-009), opened from the machine overview. Needs a technician account: locally the
@@ -26,6 +26,7 @@ async function aRegisteredMachine(page: Page, location = "Hall 2, row 3") {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams, 1997)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Seriennummer").fill("MM-12345");
   await page.getByLabel("Standort").fill(location);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

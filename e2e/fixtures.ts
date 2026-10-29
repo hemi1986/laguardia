@@ -163,6 +163,18 @@ export async function aHelper(page: Page): Promise<Account> {
 export type MachineStatus = "playable" | "limited" | "out-of-order" | "not-on-display";
 
 /**
+ * Unticks the maintenance tasks the registration form proposes for the machine model just chosen (ST-097): a machine a
+ * test registers without being about its maintenance tasks gets none, so it changes neither the one maintenance plan
+ * beside the specs that do nor what is due. With JavaScript the ticks follow the choice in the same task, so they are
+ * there to untick when the choice returns.
+ */
+export async function untickMaintenanceTasks(page: Page) {
+  await page
+    .locator('input[name="maintenanceTaskId"]:checked')
+    .evaluateAll((boxes) => boxes.forEach((box) => ((box as HTMLInputElement).checked = false)));
+}
+
+/**
  * A machine with a machine model of its own, registered by the logged-in technician – Playable unless a machine status
  * is given. Returns its museum number and the model's title.
  */
@@ -176,6 +188,7 @@ export async function aMachine(page: Page, machineStatus?: MachineStatus, locati
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill(location);
   if (machineStatus) await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, openMore, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The legal pages of the visitor pages on a phone (ST-064): the privacy notice at /datenschutz and – only if the museum
@@ -28,6 +28,7 @@ async function aPlayableMachine(page: Page): Promise<string> {
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await page.getByLabel("Status").selectOption("playable");
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

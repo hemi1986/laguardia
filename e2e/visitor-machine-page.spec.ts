@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { allowPreview, expect, openMore, test } from "./fixtures";
+import { allowPreview, expect, openMore, test, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * The visitor machine page on a phone (ST-010), at the QR address /m/<museum number>, without login. The machines are
@@ -30,6 +30,7 @@ async function aRegisteredMachine(page: Page, machineStatus: "playable" | "not-o
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await page.goto("/team/machines/new");
   await page.getByLabel("Modell").selectOption({ label: `${title} (Williams, 1997)` });
+  await untickMaintenanceTasks(page);
   await page.getByLabel("Standort").fill("Hall 2, row 3");
   await page.getByLabel("Status").selectOption(machineStatus);
   await page.getByRole("button", { name: "Gerät erfassen" }).click();

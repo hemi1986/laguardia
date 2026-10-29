@@ -10,7 +10,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { teamMessages } from "@/platform/messages";
 import { registerMachineAction, type RegisterMachineState } from "./actions";
 import type { RegistrationChoices } from "./register-machine-data";
-import { TASK_FIELD, type RegisterMachineField } from "./register-machine-input";
+import type { RegisterMachineField } from "./register-machine-input";
+import { TASK_FIELD } from "./task-field";
 import { keptKey } from "@/app/_actions/form-parts";
 import { tasksRejectionText } from "../tasks-rejection-text";
 

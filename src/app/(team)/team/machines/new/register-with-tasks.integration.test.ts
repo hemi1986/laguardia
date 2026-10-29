@@ -31,7 +31,8 @@ import { withRemovedNamed } from "../task-choice";
 import { tasksRejectionText } from "../tasks-rejection-text";
 import { loadRegistration } from "./register-machine-data";
 import { RegisterMachineForm } from "./register-machine-form";
-import { registerMachineDefinition, TASK_FIELD } from "./register-machine-input";
+import { registerMachineDefinition } from "./register-machine-input";
+import { TASK_FIELD } from "./task-field";
 
 /**
  * Registering a machine with its maintenance tasks from the page's side (ST-097, HS-22): what the form posts goes through
