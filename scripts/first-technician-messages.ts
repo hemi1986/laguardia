@@ -8,6 +8,7 @@ export function firstTechnicianRefusal(error: Rejection): string {
     "name-required": "The name must not be empty – nothing was created.",
     "username-invalid": "The username needs 3–30 characters: letters a–z, digits, _ and . – nothing was created.",
     "password-too-short": "The password must have at least 10 characters – nothing was created.",
+    "password-too-long": "The password must have at most 128 characters – nothing was created.",
     "accounts-exist": "Team member accounts exist already – nothing was created or changed.",
   }[error];
 }

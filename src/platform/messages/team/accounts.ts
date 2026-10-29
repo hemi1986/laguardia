@@ -40,7 +40,6 @@ export const accountsTexts = {
   editAccount: {
     title: (name: string) => `Konto bearbeiten · ${name}`,
     newPassword: "Neues Passwort",
-    ownRole: "Die eigene Rolle kann nur eine andere Techniker:in ändern.",
     changeOwnPassword: "Passwort ändern",
     save: "Konto speichern",
     backToTeamMember: "Zurück zum Teammitglied",
@@ -60,6 +59,7 @@ export const accountsTexts = {
     "username-invalid": "Benutzername: 3–30 Zeichen, nur Buchstaben, Ziffern, _ und .",
     "username-taken": "Dieser Benutzername ist schon vergeben.",
     "password-too-short": "Das Passwort braucht mindestens 10 Zeichen.",
+    "password-too-long": "Das Passwort darf höchstens 128 Zeichen haben.",
     "last-technician": "Die letzte aktive Techniker:in muss bleiben – sonst kommt niemand mehr an die Verwaltung.",
     "current-password-wrong": "Das aktuelle Passwort stimmt nicht.",
     "account-deactivated": "Dieses Konto ist deaktiviert.",

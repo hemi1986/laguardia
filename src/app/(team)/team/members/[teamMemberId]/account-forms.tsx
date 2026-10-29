@@ -50,6 +50,7 @@ const fieldOf: Partial<Record<AccountError, EditedField>> = {
   "username-invalid": "username",
   "username-taken": "username",
   "password-too-short": "newPassword",
+  "password-too-long": "newPassword",
   "own-password": "newPassword",
   "own-role": "role",
   "last-technician": "role",
@@ -116,7 +117,7 @@ export function EditAccountForm({
             <span className="text-muted-foreground">{accounts.role}:</span>{" "}
             {account.role === "technician" ? terms.Technician : terms.Helper}
           </p>
-          <p>{texts.ownRole}</p>
+          <p>{accountErrors["own-role"]}</p>
         </div>
       )}
       {offer.newPassword ? (

@@ -4,10 +4,13 @@
  */
 export const MIN_PASSWORD_LENGTH = 10;
 
+/** Better Auth refuses a longer password at login (its default) – one stored longer could never be used (ST-088 review). */
+export const MAX_PASSWORD_LENGTH = 128;
+
 /** What Better Auth's username plugin accepts at login (3–30 of a-z, 0-9, _ and .) – its createUser skips the check. */
 const VALID_USERNAME = /^[a-zA-Z0-9_.]{3,30}$/;
 
-export type AccountRuleError = "name-required" | "username-invalid" | "password-too-short";
+export type AccountRuleError = "name-required" | "username-invalid" | "password-too-short" | "password-too-long";
 
 /** What makes two spellings the same username – used wherever one is created, checked or logged in with. */
 export function normalizedUsername(raw: string): string {
@@ -41,7 +44,8 @@ function nameAndUsernameRejection(input: { name: string; username: string }): Ac
   return undefined;
 }
 
-/** The reason a password is rejected, or undefined when it is long enough. */
-export function passwordRejection(password: string): "password-too-short" | undefined {
-  return password.length < MIN_PASSWORD_LENGTH ? "password-too-short" : undefined;
+/** The reason a password is rejected, or undefined when its length is within the bounds. */
+export function passwordRejection(password: string): "password-too-short" | "password-too-long" | undefined {
+  if (password.length < MIN_PASSWORD_LENGTH) return "password-too-short";
+  return password.length > MAX_PASSWORD_LENGTH ? "password-too-long" : undefined;
 }

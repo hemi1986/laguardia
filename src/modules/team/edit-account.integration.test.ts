@@ -130,6 +130,21 @@ describe("rejections of an edit, each decided before anything is written", () =>
     expect(await currentPerson({ db, headers: herPhone })).toMatchObject({ teamMemberId: id });
   });
 
+  it("rejects a new password longer than login accepts, so nobody is locked out of their account", async () => {
+    const tom = await aTechnician();
+    const { id, username, password } = await anna(tom);
+    const herPhone = await sessionOf(username, password);
+
+    const outcome = await editAccount(
+      { teamMemberId: id, name: "Anna Berger", username, role: "helper", newPassword: "x".repeat(129) },
+      { db, actor: tom },
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "password-too-long" });
+    expect(await canLogIn(username, password)).toBe(true);
+    expect(await currentPerson({ db, headers: herPhone })).toMatchObject({ teamMemberId: id });
+  });
+
   it("rejects an empty name and an invalid username, and keeps the account", async () => {
     const tom = await aTechnician();
     const { id, username } = await anna(tom);

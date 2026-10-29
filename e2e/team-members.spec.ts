@@ -302,4 +302,5 @@ test("a deactivation another technician made meanwhile is said at the button, no
   await page.getByRole("button", { name: "Konto deaktivieren" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Dieses Konto ist deaktiviert.");
+  await expect(page.getByRole("button", { name: "Konto deaktivieren" })).toHaveCount(0);
 });

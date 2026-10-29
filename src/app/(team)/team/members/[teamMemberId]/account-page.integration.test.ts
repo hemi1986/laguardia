@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { deactivateAccount, editAccount, teamMemberAccount, teamMemberAccounts } from "@/modules/team";
+import { deactivateAccount, editAccount, logIn, teamMemberAccount, teamMemberAccounts } from "@/modules/team";
 import { aTeamMemberAccount } from "@/modules/team/accounts.test-support";
 import { testDatabase } from "@/test-support/database";
 import { AccountView } from "./account-view";
@@ -85,6 +85,7 @@ describe("one team member's page and their edit page", () => {
       error: "own-password",
     });
     expect((await teamMemberAccounts(db)).find((account) => account.id === own.id)).toEqual(own);
+    expect((await logIn({ username: own.username, password: "secret-password-10" }, { db })).ok).toBe(true);
   });
 
   it("ST-088: One's own page offers no deactivation", async () => {

@@ -29,7 +29,7 @@ function landing(teamMemberId: string, done: DoneOnAccount): never {
 }
 
 /** The role a form posts – none when it posts none or an unknown one: the account keeps its role. */
-function postedRole(formData: FormData): Role | undefined {
+function chosenRole(formData: FormData): Role | undefined {
   const role = formData.get("role");
   return role === "helper" || role === "technician" ? role : undefined;
 }
@@ -42,7 +42,7 @@ export async function editAccountAction(
   const values = {
     name: String(formData.get("name") ?? ""),
     username: String(formData.get("username") ?? ""),
-    role: postedRole(formData),
+    role: chosenRole(formData),
   };
   const newPassword = String(formData.get("newPassword") ?? "");
   const outcome = await editAccount({ teamMemberId, ...values, newPassword }, await dependencies());
