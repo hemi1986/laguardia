@@ -15,7 +15,7 @@ export default async function MaintenancePlanPage({ searchParams }: PageProps<"/
   const data = await loadMaintenancePlan(database(), member.id, await searchParams);
 
   return (
-    <Page title={teamMessages.terms["Maintenance plan"]} wide>
+    <Page title={teamMessages.terms["Maintenance plan"]}>
       <MaintenancePlanView {...data} />
     </Page>
   );

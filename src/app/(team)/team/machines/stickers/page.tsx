@@ -22,7 +22,7 @@ export default async function StickersPage({ searchParams }: { searchParams: Sea
   const groups = await stickerChoiceFor(database(), { search });
 
   return (
-    <Page title={texts.title} wide>
+    <Page title={texts.title}>
       <p className="text-muted-foreground text-sm">{texts.sheet}</p>
       <form action="/team/machines/stickers" className="flex gap-2" role="search">
         <label htmlFor="search" className="sr-only">

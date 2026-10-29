@@ -12,7 +12,7 @@ export default async function OpenDefectsPage({ searchParams }: PageProps<"/team
   const data = await loadOpenDefects(database(), systemClock, openDefectsFilterOf(await searchParams), member);
 
   return (
-    <Page title={teamMessages.defects.title} wide>
+    <Page title={teamMessages.defects.title}>
       <OpenDefectsView data={data} />
     </Page>
   );

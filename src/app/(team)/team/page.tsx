@@ -19,7 +19,7 @@ const { team } = teamMessages;
 export default async function DashboardPage() {
   const member = await requireTeamMember();
   return (
-    <Page title={team.dashboard} wide>
+    <Page title={team.dashboard}>
       {member.role === "technician" ? (
         <TechnicianDashboard data={await loadTechnicianDashboard(database(), systemClock, member)} />
       ) : (

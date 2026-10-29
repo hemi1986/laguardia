@@ -20,7 +20,7 @@ export default async function TriageListPage({ searchParams }: PageProps<"/team/
   ]);
 
   return (
-    <Page title={teamMessages.triage.title} wide>
+    <Page title={teamMessages.triage.title}>
       <TriageListView data={data} confirmation={confirmation} />
     </Page>
   );
