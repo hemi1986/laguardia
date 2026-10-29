@@ -23,9 +23,7 @@ export function MoreMenu({ label, children }: { label: string; children: ReactNo
         menu.current.querySelector("summary")?.focus();
       }}
     >
-      <summary className="cursor-pointer list-none text-sm font-medium underline-offset-4 hover:underline">
-        {label} <span aria-hidden="true">▾</span>
-      </summary>
+      <summary className="fold text-sm font-medium underline-offset-4 hover:underline">{label}</summary>
       {children}
     </details>
   );

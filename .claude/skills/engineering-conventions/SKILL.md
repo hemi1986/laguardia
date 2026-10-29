@@ -80,6 +80,21 @@ copied in, not a dependency that is upgraded – so a copied file may be edited 
 - **The team navigation** (`src/app/(team)/navigation.tsx`) follows the table under UX guideline G19: a new
   destination goes to its decided place – the line or "Mehr" –, never somewhere a story picks. Browser tests open
   "Mehr" with `openMore(page)` from `e2e/fixtures.ts` before they click or miss a managing destination.
+- **The design of a page** (ST-090, UX guideline G26) is one pure rule of the address, `designOf(path, device)` in
+  `src/app/design.ts`: the team pages, the login and a team address that leads nowhere follow the device's choice
+  (cookie `design`, set only by the switch under „Mehr“, `switchDesign`) and are dark without one; the QR sticker print
+  page is light; every other page – visitor, start, legal, the visitor not-found page – is dark. `prefers-color-scheme`
+  is never followed. The proxy passes the page's path to the root layout (`PAGE_PATH_HEADER`), which puts `dark` on
+  `<html>` – no inline script (ST-070); `DesignFollowsPage` applies the same rule when JavaScript moves between pages,
+  because the root layout stays mounted. A new route group decides its design **in `designOf`**, with a row in its table
+  test – never a class of its own on a page. Pages use only the theme tokens (`bg-background`, `text-foreground`, …;
+  `dark:` variants as the shadcn components have them) – no colour of their own, except what is printed (the sticker
+  text). `color-scheme` follows the class, so the browser draws checkboxes, choice lists (their options on
+  `bg-background`), date fields and file choosers in the page's design. Browser tests check a design by the computed
+  `color-scheme`, never by pixels (`e2e/dark-design.spec.ts`).
+- **Every fold is a native `<details>` whose `<summary>` has the class `fold`** (ST-090, G31, `globals.css`): one
+  marker – ▸ closed, ▾ open – in the text colour, the browser's own marker hidden. „Mehr“, „Verwalten“ and the groups of
+  `GroupedChoice` use it; a new fold does too, never a marker of its own.
 - **Select: use the native `NativeSelect`, not shadcn's `select`.** shadcn's select (Base UI) renders a
   `<button>` trigger and a JavaScript-driven listbox with no native form control, so with JavaScript disabled no
   value can be chosen or submitted – checked on the copied component in ST-076, which is why it was removed
@@ -609,7 +624,9 @@ rule `decideVisit(stored, now)` – one visit lasts while the dashboard is opene
   (no mark line passed). A module query takes that instant (`changesOnClaimedDefects(db, since, …)`), never a window of
   its own. A mark is after the Last visit and not the viewer's own doing, by actor. The mark is `NewMark` („· neu seit
   deinem letzten Besuch“, G6a). Tested at the data function with an open = render first, then `recordVisit` (`technician-dashboard-new.integration.test.ts`).
-- Not every Server Action goes through `formAction`: this one runs no command. Every other write still does.
+- Not every Server Action goes through `formAction`: this one runs no command. Every other write to the database still
+  does; the two switches that only set a cookie of the browser – the visitor's language (`switchVisitorLanguage`) and the
+  design (`switchDesign`, ST-090) – change no data and run no command.
 
 ## Version check (HS-16)
 

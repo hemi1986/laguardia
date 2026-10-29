@@ -125,7 +125,7 @@ export function GroupedChoice({
           open={open || openWithPage.has(group.key) || undefined}
           className="rounded-md border px-3 py-2"
         >
-          <summary className="cursor-pointer text-sm font-medium">
+          <summary className="fold text-sm font-medium">
             <span>
               {header(
                 group.label,

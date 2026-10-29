@@ -79,6 +79,7 @@ _UI (de)_: Technik
 One physical exhibit the team maintains – a pinball machine, an arcade machine or another machine – with its own museum number, status, files and history.
 _Avoid_: Pinball (for machines in general), game, device, unit, exhibit
 _UI (de)_: Gerät
+_Note_: in code and docs "device" means only the browser on a team member's phone or PC whose design choice is kept (ST-090, G26) – never a machine.
 
 **Museum number**:
 The museum's short identifier of a machine (e.g. LG-042), printed on its QR sticker; unique among all machines ever registered, retired ones included, so it is never reused.
