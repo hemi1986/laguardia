@@ -120,3 +120,14 @@ test("ST-092: The history pages and the repair times are built from framed secti
   await expectFramedLikeTheMachineRecord(page, example);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
+
+test("ST-092: An empty section says so in its frame", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page);
+
+  await openDefect(page, museumNumber, title);
+
+  const workLog = page.getByRole("main").locator("section").filter({ hasText: "Arbeitsschritte" });
+  await expect(workLog.getByRole("heading", { level: 2 })).toHaveText("Arbeitsschritte");
+  await expect(workLog.locator("[data-slot=card]")).toContainText("Noch kein Arbeitsschritt eingetragen.");
+});
