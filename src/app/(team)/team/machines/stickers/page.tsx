@@ -1,4 +1,5 @@
 import { Page } from "@/components/page";
+import { BackLink } from "@/components/ui/back-link";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -29,6 +30,7 @@ export default async function StickersPage({ searchParams }: { searchParams: Sea
       ) : (
         <StickerChoice groups={groups} search={search} noneChosen={params.error === "none"} />
       )}
+      <BackLink href="/team/machines">{machineTexts.back}</BackLink>
     </Page>
   );
 }

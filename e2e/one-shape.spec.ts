@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aMachine, anOpenDefect, aRetiredMachine, aTeamMember, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
+import { aMachine, allowPreview, anOpenDefect, aRetiredMachine, aTeamMember, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -266,4 +266,24 @@ test("ST-092: The confirmation after adding a maintenance task sits under the he
   const confirmation = (await main.getByRole("status").boundingBox())!;
   const add = (await main.getByRole("link", { name: "Wartungsaufgabe hinzufügen" }).boundingBox())!;
   expect(confirmation.y).toBeLessThan(add.y);
+});
+
+test("ST-092: Pages without a way on get one", async ({ page, browser }) => {
+  await logIn(page);
+  const retired = await aRetiredMachine(page);
+
+  await page.goto("/team/machines/stickers");
+  await expect(page.getByRole("main").getByRole("link", { name: "Zurück zu den Geräten" })).toHaveAttribute(
+    "href",
+    "/team/machines",
+  );
+
+  const visitor = await (await browser.newContext({ locale: "de-DE" })).newPage();
+  await allowPreview(visitor, test.info().project.use.baseURL);
+  for (const address of ["/login", "/datenschutz", `/m/${retired.museumNumber}`]) {
+    await visitor.goto(address);
+    await expect(visitor.getByRole("main").getByRole("link", { name: "Zur Startseite" })).toHaveAttribute("href", "/");
+    expect(await pageWidth(visitor)).toBeLessThanOrEqual(360);
+  }
+  await visitor.context().close();
 });

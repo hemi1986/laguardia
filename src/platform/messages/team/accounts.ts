@@ -9,6 +9,8 @@ export const accountsTexts = {
     submit: "Anmelden",
     failed: "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.",
     locked: "Zu viele fehlgeschlagene Versuche. Bitte in 15 Minuten erneut versuchen.",
+    /** The way on from the login (G17, ST-092) – as on the visitor pages. */
+    toStart: "Zur Startseite",
   },
   accounts: {
     title: "Teammitglieder",

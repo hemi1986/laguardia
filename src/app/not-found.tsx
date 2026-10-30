@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { VisitorPage } from "./visitor-page";
 import { currentVisitorMessages } from "./visitor-locale";
 
@@ -12,9 +12,7 @@ export default async function NotFound() {
   return (
     <VisitorPage title={messages.home.museum} locale={locale} messages={messages} back="/">
       <p>{messages.home.notFound}</p>
-      <Link href="/" className="self-start underline underline-offset-4">
-        {messages.machinePage.toStart}
-      </Link>
+      <BackLink href="/">{messages.machinePage.toStart}</BackLink>
     </VisitorPage>
   );
 }

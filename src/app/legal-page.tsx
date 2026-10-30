@@ -1,4 +1,5 @@
 import type { LegalText, VisitorLocale, VisitorMessages } from "@/platform/messages";
+import { BackLink } from "@/components/ui/back-link";
 import { VisitorPage } from "./visitor-page";
 
 /**
@@ -27,6 +28,7 @@ export function LegalPage({
           ))}
         </section>
       ))}
+      <BackLink href="/">{messages.machinePage.toStart}</BackLink>
     </VisitorPage>
   );
 }
