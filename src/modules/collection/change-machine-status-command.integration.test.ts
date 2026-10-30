@@ -10,6 +10,7 @@ import {
   changeMachineStatusCommand,
   createMachineModelCommand,
   machineRecord,
+  statusHistoryOfMachine,
   registerMachineCommand,
   type MachineStatus,
 } from ".";
@@ -68,7 +69,7 @@ describe("CMD-ChangeMachineStatus", () => {
     expect(outcome).toEqual({ ok: true, result: { museumNumber: "LG-042", machineStatus: "limited" } });
     const record = await machineRecord(db, "LG-042");
     expect(record?.machineStatus).toBe("limited");
-    expect(record?.statusHistory[0]).toMatchObject({
+    expect((await statusHistoryOfMachine(db, record!.id))[0]).toMatchObject({
       previousStatus: "playable",
       newStatus: "limited",
       reason: "left flipper weak",
@@ -113,7 +114,7 @@ describe("CMD-ChangeMachineStatus", () => {
 
       expect(outcome).toEqual({ ok: false, error: "reason-required" });
     }
-    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+    expect(await statusHistoryOfMachine(db, (await machineRecord(db, "LG-042"))!.id)).toHaveLength(1);
   });
 
   it("ST-012: Retired machines cannot change status", async () => {
@@ -132,7 +133,7 @@ describe("CMD-ChangeMachineStatus", () => {
     );
 
     expect(outcome).toEqual({ ok: false, error: "machine-retired" });
-    expect((await machineRecord(db, "LG-013"))?.statusHistory).toHaveLength(1);
+    expect(await statusHistoryOfMachine(db, (await machineRecord(db, "LG-013"))!.id)).toHaveLength(1);
   });
 
   it("rejects a change without a chosen machine status, and one to the machine status the machine already has", async () => {
@@ -150,7 +151,7 @@ describe("CMD-ChangeMachineStatus", () => {
 
       expect(outcome).toEqual({ ok: false, error });
     }
-    expect((await machineRecord(db, "LG-042"))?.statusHistory).toHaveLength(1);
+    expect(await statusHistoryOfMachine(db, (await machineRecord(db, "LG-042"))!.id)).toHaveLength(1);
   });
 
   it("saves the status history insert-only: two changes leave two entries, the first unchanged, nothing updated", async () => {
@@ -171,10 +172,10 @@ describe("CMD-ChangeMachineStatus", () => {
       );
 
     expect((await change(0, "limited", "left flipper weak", "2026-03-02T14:00:00Z")).ok).toBe(true);
-    const [first] = (await machineRecord(db, "LG-042"))!.statusHistory;
+    const [first] = await statusHistoryOfMachine(db, (await machineRecord(db, "LG-042"))!.id);
     expect((await change(1, "out-of-order", "coil burnt", "2026-03-03T09:00:00Z")).ok).toBe(true);
 
-    const history = (await machineRecord(db, "LG-042"))!.statusHistory;
+    const history = await statusHistoryOfMachine(db, (await machineRecord(db, "LG-042"))!.id);
     expect(history.map((entry) => entry.reason)).toEqual(["coil burnt", "left flipper weak", "registration"]);
     expect(history[1]).toEqual(first);
   });

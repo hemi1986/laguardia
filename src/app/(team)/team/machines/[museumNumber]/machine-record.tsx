@@ -12,6 +12,8 @@ import { triageConfirmationText } from "../../triage-confirmation";
 import type { MachineRecordConfirmation } from "./machine-confirmation";
 import { MachineMaintenanceSection } from "./machine-maintenance";
 import { StatusChangeList } from "./status-changes";
+import { LatestWithAll } from "./latest-with-all";
+import { teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
@@ -139,39 +141,33 @@ export function MachineRecordView({
       <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
       {/* Section 6 (ST-093): the latest status changes; the whole status history is a page of its own (G24). */}
       <Section title={terms["Status history"]}>
-        <StatusChangeList changes={record.latestStatusChanges} />
-        {record.statusHistoryCount > record.latestStatusChanges.length && (
-          <Link
-            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status-historie`}
-            className="self-start text-sm underline underline-offset-4"
-          >
-            {texts.allStatusChanges(record.statusHistoryCount)}
-          </Link>
-        )}
+        <LatestWithAll
+          history={record.statusHistory}
+          allAt={teamMachinePage("status-historie")(record.museumNumber)}
+          allText={texts.allStatusChanges}
+        >
+          {(changes) => <StatusChangeList changes={changes} />}
+        </LatestWithAll>
       </Section>
       {/* Section 7 (ST-033): the most recently ended entries of the repair history; the whole repair history is a page of its own (G4a). */}
       <Section title={terms["Repair history"]}>
-        {record.repairHistoryCount === 0 ? (
-          <p className="text-sm">{texts.nothingRepaired}</p>
-        ) : (
-          <>
-            {record.recentRepairHistory.length > 0 && (
-              <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-                {record.recentRepairHistory.map((repair) => (
-                  <li key={repair.id}>
-                    <EndedEntry entry={repair} />
-                  </li>
-                ))}
-              </ol>
-            )}
-            <Link
-              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/reparaturhistorie`}
-              className="self-start text-sm underline underline-offset-4"
-            >
-              {texts.wholeRepairHistory(record.repairHistoryCount)}
-            </Link>
-          </>
-        )}
+        <LatestWithAll
+          history={record.repairHistory}
+          emptyText={texts.nothingRepaired}
+          allAt={teamMachinePage("reparaturhistorie")(record.museumNumber)}
+          allText={texts.wholeRepairHistory}
+          linkWhenAny
+        >
+          {(repairs) => (
+            <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
+              {repairs.map((repair) => (
+                <li key={repair.id}>
+                  <EndedEntry entry={repair} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </LatestWithAll>
       </Section>
       {/* Section 8 (ST-037): the files of the machine and its machine model, by file category in glossary order. */}
       <Section title={texts.files}>

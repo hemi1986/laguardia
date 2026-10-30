@@ -5,7 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { anOpenDefectIn } from "@/test-support/defects";
-import { changeMachineStatusCommand, machineRecord } from "@/modules/collection";
+import { changeMachineStatusCommand, machineRecord, statusHistoryOfMachine } from "@/modules/collection";
 import { retireMachineCommand } from "./retirement-policies";
 import {
   claimDefectCommand,
@@ -107,7 +107,7 @@ describe("CMD-ReopenDefect", () => {
     expect((await defectDetails(db, defectId))?.state).toBe("open");
     const record = await machineRecord(db, await museumNumberOf(machineId));
     expect(record?.machineStatus).toBe("limited");
-    expect(record?.statusHistory[0]).toMatchObject({
+    expect((await statusHistoryOfMachine(db, record!.id))[0]).toMatchObject({
       previousStatus: "playable",
       newStatus: "limited",
       reason: "Left flipper weak",

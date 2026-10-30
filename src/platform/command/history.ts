@@ -1,4 +1,5 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import type { Database } from "../database";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { StoredList } from "./stored-list";
 
@@ -17,10 +18,18 @@ import type { StoredList } from "./stored-list";
 /** A history table: its own `id` (the entry's ID, no database default) and a `position bigserial` for the order. */
 type HistoryTable = PgTable & { id: PgColumn; position: PgColumn };
 
+/**
+ * The latest entries of a list, the newest first, and how many it has in all – what a record shows of a history before
+ * „Alle … (n)“ leads to the rest (G24, architecture review 2026-10-30).
+ */
+export type Latest<Entry> = { latest: Entry[]; total: number };
+
 /** How one history of an aggregate is stored. */
 export type History<Entry extends { id: string }> = StoredList<Entry> & {
   /** Inserts the entries not stored yet; a stored entry is never updated or deleted. */
   readonly kind: "history";
+  /** The aggregate's `count` newest entries, the newest first, and how many it has – only those are read. */
+  latest(db: Database, aggregateId: string, count: number): Promise<Latest<Entry>>;
 };
 
 export function history<
@@ -52,6 +61,21 @@ export function history<
         byAggregate.set(aggregateId, [...(byAggregate.get(aggregateId) ?? []), toEntry(row)]);
       }
       return byAggregate;
+    },
+    async latest(db, aggregateId, newest) {
+      const [rows, [{ total }]] = await Promise.all([
+        db
+          .select()
+          .from(table as PgTable)
+          .where(eq(ownerColumn, aggregateId))
+          .orderBy(desc(table.position))
+          .limit(newest),
+        db
+          .select({ total: count() })
+          .from(table as PgTable)
+          .where(eq(ownerColumn, aggregateId)),
+      ]);
+      return { latest: (rows as T["$inferSelect"][]).map(toEntry), total };
     },
     async save(tx, aggregateId, entries) {
       if (entries.length === 0) return;

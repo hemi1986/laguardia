@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, isId, history, type AggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, isId, history, type AggregateStore, type Database, type Latest } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
 import { filesOfMachine, type FileOfMachine } from "./files";
 import {
@@ -78,7 +78,8 @@ export const machines: AggregateStore<Machine> = {
       return true;
     });
   },
-  update: (tx, state, expectedVersion) => withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
+  update: (tx, state, expectedVersion) =>
+    withMuseumNumber(tx, state, () => machineRows.update(tx, state, expectedVersion)),
 };
 
 async function statusHistoryOf(db: Database, machineId: string): Promise<StatusChange[]> {
@@ -235,8 +236,6 @@ export type MachineRecord = {
   };
   location: string;
   machineStatus: MachineStatus;
-  /** Newest first. "… by" are TeamMemberIds – the page names them through the Team module (ST-009). */
-  statusHistory: StatusChange[];
   retirement?: Retirement;
   /** Its files and its machine model's, by file category (ST-037). */
   files: FileOfMachine[];
@@ -264,7 +263,6 @@ export async function machineRecord(db: Database, museumNumber: string): Promise
     },
     location: m.location,
     machineStatus: m.machineStatus,
-    statusHistory: await statusHistoryOfMachine(db, m.id),
     retirement: retirementOf(m),
     files: await filesOfMachine(db, { machineId: m.id, machineModelId: m.machineModelId }),
   };
@@ -309,6 +307,14 @@ export function holdAgainstRetirement(tx: Database, machineId: string): Promise<
  */
 export async function statusHistoryOfMachine(db: Database, machineId: string): Promise<StatusChange[]> {
   return (await statusHistoryOf(db, machineId)).reverse();
+}
+
+/**
+ * The latest status changes of a machine, the newest first, and how many entries its status history has – the
+ * registration included (RM-MachineRecord, section 6 – ST-093, G24). Only those are read, never the whole history.
+ */
+export function latestStatusChanges(db: Database, machineId: string, count: number): Promise<Latest<StatusChange>> {
+  return statusHistory.latest(db, machineId, count);
 }
 
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */
@@ -428,10 +434,7 @@ export type MachineLabel = { museumNumber: string; machineModelTitle: string };
  * What another module's page shows to name machines – the museum number and the machine model's title, by machine ID
  * (e.g. the triage list, ST-017; the page composes, ST-009). Retired machines included: their history stays readable.
  */
-export async function machineLabels(
-  db: Database,
-  machineIds: readonly string[],
-): Promise<Map<string, MachineLabel>> {
+export async function machineLabels(db: Database, machineIds: readonly string[]): Promise<Map<string, MachineLabel>> {
   const unique = [...new Set(machineIds)];
   if (unique.length === 0) return new Map();
   const rows = await db

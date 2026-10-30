@@ -441,7 +441,8 @@ hand for a history. A history table has its own `id` (the entry's ID, no databas
   each entry naming the entry it belongs to – the store has no nested lists.
 - **Read models load a history through its description** – `workLog.load(db, defectIds)` gives the entries of many
   aggregates in one query, by aggregate ID (the repair history of a machine, ST-033) – and never map the rows a second
-  time.
+  time. What a record shows of a history before „Alle … (n)“ is `history.latest(db, id, n)` – the newest `n` entries and
+  how many there are, a `Latest<Entry>` (`{ latest, total }`, architecture review 2026-10-30), never the whole history sliced.
 - **A list of entities that are changed** (the maintenance tasks of the maintenance plan, built in ST-040) is not a
   history: `entities({ table, owner, toEntity, toRow })` (`src/platform/command/entities.ts`), named in the store under
   `entities: { maintenanceTasks }`. It is loaded like a history; saving inserts the entities not stored yet and updates
@@ -714,7 +715,11 @@ chosen in the address and uses only the frame and the grouping. A list of entrie
 both show lives in a file of its own beside the record (`status-changes.tsx`, `maintenance-record-list.tsx`), never
 imported from the record's view. A new history page uses all three; it never groups by year itself. **Every page of a
 machine** leads back to its record with `BackToMachine` (`machine-history.tsx`, `teamMessages.machinePages`) – no page
-builds that link or has its own „Zurück zum Gerät“.
+builds that link or has its own „Zurück zum Gerät“. **A history on the machine record** comes from its module as a `Latest<Entry>` – Collection's
+`latestStatusChanges`, Maintenance's `machineMaintenance(…).records`, Repair's `recentRepairHistory` – and is shown with
+`LatestWithAll` (`latest-with-all.tsx`): the entries, `emptyText` for none, and „Alle … (n)“ when the page has more than
+the record shows (`linkWhenAny` for the repair history, whose page shows more of each entry). The count `n` is the
+record's constant in `machine-record-data.ts`.
 
 ## Time and time-based rules
 

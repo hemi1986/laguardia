@@ -4,6 +4,7 @@ import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
 import { recordMaintenanceAddress } from "../../maintenance/erfassen/record-maintenance-address";
+import { LatestWithAll } from "./latest-with-all";
 import { MaintenanceRecordList } from "./maintenance-record-list";
 import type { ShownMachineMaintenance } from "./machine-record-data";
 
@@ -55,18 +56,14 @@ export function MachineMaintenanceSection({
         </ol>
       )}
       <h3 className="text-sm font-medium">{texts.records}</h3>
-      {maintenance.recordCount === 0 ? (
-        <p className="text-sm">{texts.nothingRecorded}</p>
-      ) : (
-        <>
-          <MaintenanceRecordList records={maintenance.latestRecords} />
-          {maintenance.recordCount > maintenance.latestRecords.length && (
-            <Link href={`${machine}/wartungseintraege`} className="self-start text-sm underline underline-offset-4">
-              {texts.allRecords(maintenance.recordCount)}
-            </Link>
-          )}
-        </>
-      )}
+      <LatestWithAll
+        history={maintenance.records}
+        emptyText={texts.nothingRecorded}
+        allAt={`${machine}/wartungseintraege`}
+        allText={texts.allRecords}
+      >
+        {(records) => <MaintenanceRecordList records={records} />}
+      </LatestWithAll>
       <p className="text-sm">{texts.tasksApply(maintenance.taskCount)}</p>
       {maintenance.changeOffered && (
         <Link
