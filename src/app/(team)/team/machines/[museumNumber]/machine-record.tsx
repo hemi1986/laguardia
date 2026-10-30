@@ -7,10 +7,11 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { fileCategories } from "@/modules/collection";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
-import type { MachineRecordData, NamedStatusChange, ShownEndedRepairHistoryEntry } from "./machine-record-data";
+import type { MachineRecordData, ShownEndedRepairHistoryEntry } from "./machine-record-data";
 import { triageConfirmationText } from "../../triage-confirmation";
 import type { MachineRecordConfirmation } from "./machine-confirmation";
 import { MachineMaintenanceSection } from "./machine-maintenance";
+import { StatusChangeList } from "./status-changes";
 
 const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
@@ -289,44 +290,6 @@ function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) 
       <p className="whitespace-pre-line">{repair.note}</p>
       <p className="text-muted-foreground">{texts.whoAndWhen(repair.resolvedBy, formatDateTime(repair.resolvedAt))}</p>
     </article>
-  );
-}
-
-/** Status changes, as the machine record and the status history page list them (ST-093). */
-export function StatusChangeList({ changes }: { changes: NamedStatusChange[] }) {
-  return (
-    <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
-      {changes.map((change) => (
-        <li key={change.id} className="flex flex-col gap-0.5 text-sm">
-          <StatusChangeEntry change={change} />
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function StatusChangeEntry({ change }: { change: NamedStatusChange }) {
-  const who = change.changedBy;
-  const when = formatDateTime(change.changedAt);
-  if (!change.previousStatus) {
-    return (
-      <>
-        <span className="font-medium">{texts.registeredAs(machines.statuses[change.newStatus])}</span>
-        <span className="text-muted-foreground">
-          {who} · {when}
-        </span>
-      </>
-    );
-  }
-  return (
-    <>
-      <span className="font-medium">
-        {machines.statuses[change.previousStatus]} → {machines.statuses[change.newStatus]}
-      </span>
-      <span className="text-muted-foreground">
-        {change.reason} · {who} · {when}
-      </span>
-    </>
   );
 }
 

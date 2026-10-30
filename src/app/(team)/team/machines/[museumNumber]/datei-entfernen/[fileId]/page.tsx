@@ -51,7 +51,7 @@ export default async function RemoveFilePage({
           />
         </>
       )}
-      {(!machine || !file) && <BackLink href={back}>{texts.backToMachine}</BackLink>}
+      {(!machine || !file) && <BackLink href={back}>{teamMessages.machineHistory.backToMachine}</BackLink>}
     </Page>
   );
 }

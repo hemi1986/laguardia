@@ -199,7 +199,6 @@ export const collectionTexts = {
     confirm: "Endgültig entfernen",
     back: "Zurück",
     unknown: (museumNumber: string) => `Diese Datei gehört nicht zu ${museumNumber}.`,
-    backToMachine: "Zurück zum Gerät",
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status ändern · ${museumNumber}`,
@@ -233,13 +232,10 @@ export const collectionTexts = {
     back: "Zurück",
     reasonRequired: "Bitte einen Grund angeben.",
     retired: "Dieses Gerät ist schon ausgemustert.",
-    backToMachine: "Zurück zum Gerät",
   },
   /** The whole status history of one machine (ST-093, G24) – its own page, reached from section 6 of the machine record. */
   statusHistory: {
     title: (museumNumber: string) => `Status-Historie · ${museumNumber}`,
-    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
-    backToMachine: "Zurück zum Gerät",
   },
   /** Correcting a machine's museum number or serial number (ST-035) – its own page, reached from the machine record. */
   machineCorrection: {

@@ -3,13 +3,14 @@ import { maintenanceRecords } from "@/modules/maintenance";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { named } from "../../../named";
+import { byYear, type HistoryYear } from "../history-by-year";
 import type { ShownMaintenanceRecord } from "../machine-record-data";
 
 export type AllMaintenanceRecordsData = {
   title: string;
   machineModelTitle: string;
-  /** The years with maintenance records, the newest first, each with its records, the newest first (G4a). */
-  years: { year: string; records: ShownMaintenanceRecord[] }[];
+  /** The years with maintenance records, the newest first, each with its records, the newest first (G24). */
+  years: HistoryYear<ShownMaintenanceRecord>[];
 };
 
 /**
@@ -27,13 +28,10 @@ export async function loadAllMaintenanceRecords(
   const records = await maintenanceRecords(db, { machineId });
   const shownBy = await named(db, { machines: [machineId], teamMembers: records.map((record) => record.recordedBy) });
   const label = shownBy.label(machineId);
-  const years: AllMaintenanceRecordsData["years"] = [];
-  for (const record of records) {
-    const year = record.date.slice(0, 4);
-    const shown = { ...record, recordedBy: shownBy.name(record.recordedBy) };
-    if (years.at(-1)?.year === year) years.at(-1)!.records.push(shown);
-    else years.push({ year, records: [shown] });
-  }
+  const years = byYear(
+    records.map((record) => ({ ...record, recordedBy: shownBy.name(record.recordedBy) })),
+    (record) => record.date,
+  );
   return {
     title: teamMessages.machineMaintenance.recordsTitle(label.museumNumber),
     machineModelTitle: label.machineModelTitle,

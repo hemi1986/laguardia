@@ -37,7 +37,9 @@ export default async function RetireMachinePage({
           retired={machine.retired}
         />
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.backToMachine}</BackLink>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>
+        {teamMessages.machineHistory.backToMachine}
+      </BackLink>
     </Page>
   );
 }

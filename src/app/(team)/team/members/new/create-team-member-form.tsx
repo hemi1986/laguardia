@@ -75,7 +75,12 @@ export function CreateTeamMemberForm() {
       </Field>
       <Field>
         <FieldLabel htmlFor="role">{texts.role}</FieldLabel>
-        <NativeSelect key={`role-${keptKey(state)}`} id="role" name="role" defaultValue={state?.values.role ?? "helper"}>
+        <NativeSelect
+          key={`role-${keptKey(state)}`}
+          id="role"
+          name="role"
+          defaultValue={state?.values.role ?? "helper"}
+        >
           <option value="helper">{terms.Helper}</option>
           <option value="technician">{terms.Technician}</option>
         </NativeSelect>

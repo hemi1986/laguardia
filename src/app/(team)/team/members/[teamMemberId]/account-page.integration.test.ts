@@ -79,7 +79,10 @@ describe("one team member's page and their edit page", () => {
     expect(editPage).not.toContain('name="newPassword"');
     expect(editPage).toMatch(/<a [^>]*href="\/team\/password"[^>]*>Passwort ändern<\/a>/);
     const edit = { teamMemberId: own.id, name: own.name, username: own.username, newPassword: "" };
-    expect(await editAccount({ ...edit, role: "helper" }, { db, actor: tom })).toEqual({ ok: false, error: "own-role" });
+    expect(await editAccount({ ...edit, role: "helper" }, { db, actor: tom })).toEqual({
+      ok: false,
+      error: "own-role",
+    });
     expect(await editAccount({ ...edit, newPassword: "a-new-password-1" }, { db, actor: tom })).toEqual({
       ok: false,
       error: "own-password",

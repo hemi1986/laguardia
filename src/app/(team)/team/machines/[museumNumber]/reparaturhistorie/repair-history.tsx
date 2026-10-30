@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { BackLink } from "@/components/ui/back-link";
+import { MachineHistoryFrame } from "../machine-history";
 import { Section } from "@/components/ui/section";
 import { WorkLogPhotos } from "../../../team-photos";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { RepairHistoryData, ShownRepairHistoryEntry } from "./repair-history-data";
 
-const { repairHistory: texts, machineRecord, defects, terms } = teamMessages;
+const { repairHistory: texts, machineHistory, machineRecord, defects, terms } = teamMessages;
 
 /**
  * The repair history's own page (ST-033, G4a): the years with how many entries each has, the newest first; a chosen
@@ -24,24 +25,25 @@ export function RepairHistoryView({
   const machine = `/team/machines/${encodeURIComponent(museumNumber)}`;
   if (!data) return <p>{machineRecord.unknown(museumNumber)}</p>;
   return (
-    <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
-      <p className="text-muted-foreground text-sm">{data.machineModelTitle}</p>
-      {data.years.length === 0 ? (
-        <p>{machineRecord.nothingRepaired}</p>
-      ) : !data.year ? (
+    <MachineHistoryFrame
+      museumNumber={museumNumber}
+      machineModelTitle={data.machineModelTitle}
+      nothing={data.years.length === 0 ? machineRecord.nothingRepaired : undefined}
+    >
+      {!data.year ? (
         <Section title={texts.chooseYear}>
           <ul className="flex flex-col gap-3 text-sm">
             {data.years.map(({ year, count }) => (
               <li key={year}>
                 <Link href={`${machine}/reparaturhistorie?jahr=${year}`} className="underline underline-offset-4">
-                  {texts.year(year, count)}
+                  {machineHistory.year(year, count)}
                 </Link>
               </li>
             ))}
           </ul>
         </Section>
       ) : (
-        <Section title={texts.year(data.year, data.years.find(({ year }) => year === data.year)?.count ?? 0)}>
+        <Section title={machineHistory.year(data.year, data.years.find(({ year }) => year === data.year)?.count ?? 0)}>
           <ol className="flex flex-col gap-6">
             {data.entries.map((entry) => (
               <li key={entry.id}>
@@ -52,8 +54,7 @@ export function RepairHistoryView({
           <BackLink href={`${machine}/reparaturhistorie`}>{texts.allYears}</BackLink>
         </Section>
       )}
-      <BackLink href={machine}>{texts.backToMachine}</BackLink>
-    </div>
+    </MachineHistoryFrame>
   );
 }
 

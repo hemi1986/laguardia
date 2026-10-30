@@ -65,6 +65,14 @@ export const sharedTexts = {
     header: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
     selectAll: "Alle auswählen",
   },
+  /**
+   * A machine's history on a page of its own – the status history, the maintenance records, the repair history (G24,
+   * architecture review 2026-10-30) – and the way back to the machine record from any page of a machine.
+   */
+  machineHistory: {
+    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
+    backToMachine: "Zurück zum Gerät",
+  },
   /** A list's filter form (G32, ST-092): one shape and one word on every list. */
   filters: {
     apply: "Filtern",

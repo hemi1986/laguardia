@@ -76,11 +76,7 @@ export function RecordForSeveralForm({
   return (
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="maintenanceTaskId" value={maintenanceTaskId} />
-      <ChoiceForSeveral
-        {...choice}
-        chosen={state?.chosen ?? due.map((machine) => machine.machineId)}
-        kept={kept}
-      />
+      <ChoiceForSeveral {...choice} chosen={state?.chosen ?? due.map((machine) => machine.machineId)} kept={kept} />
       <MaintenanceRecordFields
         values={state?.values}
         invalid={state ? recordFieldOf[state.error] : undefined}

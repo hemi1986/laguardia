@@ -9,8 +9,8 @@ import { photoViewAddresses } from "@/photo";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { blobStorage } from "@/platform/storage";
-import { calendarDate } from "@/platform/time";
 import { named } from "../../../named";
+import { byYear } from "../history-by-year";
 import { photoAt, type PhotoSource } from "../../../team-photos";
 
 /** A team member's ID replaced by their name – „unbekannt“ for an account that is gone (`named`). */
@@ -59,10 +59,10 @@ export async function loadRepairHistory(
   const machineId = await machineIdOf(db, museumNumber, { retiredToo: true });
   if (!machineId) return undefined;
   const history = await repairHistory(db, machineId);
-  const counts = new Map<string, number>();
-  for (const entry of history) counts.set(yearOf(entry), (counts.get(yearOf(entry)) ?? 0) + 1);
-  const year = chosenYear && counts.has(chosenYear) ? chosenYear : undefined;
-  const chosen = year ? history.filter((entry) => yearOf(entry) === year) : [];
+  // The year in which an entry began – the defect recorded, the problem reported.
+  const years = byYear(history, (entry) => (entry.kind === "defect" ? entry.recordedAt : entry.reportedAt));
+  const chosen = years.find(({ year }) => year === chosenYear)?.entries ?? [];
+  const year = chosen.length > 0 ? chosenYear : undefined;
   const [photos, shown] = await Promise.all([
     photoViewAddresses(
       storage,
@@ -84,8 +84,7 @@ export async function loadRepairHistory(
   ]);
   return {
     machineModelTitle: shown.label(machineId).machineModelTitle,
-    // The years are written alike, so their order as text is their order in time.
-    years: [...counts].map(([year, count]) => ({ year, count })).sort((a, b) => b.year.localeCompare(a.year)),
+    years: years.map(({ year: each, entries }) => ({ year: each, count: entries.length })),
     year,
     entries: chosen.map((entry) =>
       entry.kind === "defect"
@@ -105,9 +104,4 @@ export async function loadRepairHistory(
         : { ...entry, resolvedBy: shown.name(entry.resolvedBy) },
     ),
   };
-}
-
-/** The Berlin calendar year in which an entry began – the defect recorded, the problem reported. */
-function yearOf(entry: RepairHistoryEntry): string {
-  return calendarDate(entry.kind === "defect" ? entry.recordedAt : entry.reportedAt).slice(0, 4);
 }

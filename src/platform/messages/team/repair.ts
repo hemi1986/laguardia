@@ -8,13 +8,11 @@ export const repairTexts = {
   /** The repair history's own page (ST-033): the years first, each with its number of entries (G4a). */
   repairHistory: {
     title: (museumNumber: string) => `Reparaturhistorie · ${museumNumber}`,
-    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     chooseYear: "Welches Jahr?",
     defectOpen: "Offen",
     /** A defect its machine's retirement closed (ST-039) – not resolved, so no closing note. */
     closedOnRetirement: (at: string) => `${sharedTexts.terms["Closed on retirement"]} am ${at}`,
     allYears: "Alle Jahre",
-    backToMachine: "Zurück zum Gerät",
   },
   /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
   problemReportPhoto: {
