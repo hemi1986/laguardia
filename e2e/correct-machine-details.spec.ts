@@ -71,15 +71,15 @@ test("a reserved museum number leads every page of the machine to the same page 
   browser,
 }) => {
   await logIn(page);
-  const { museumNumber: old } = await aMachine(page);
-  const corrected = await correctToAFreeNumber(page, old);
+  const { museumNumber: reserved } = await aMachine(page);
+  const corrected = await correctToAFreeNumber(page, reserved);
 
   for (const sub of ["/standort", "/wartungseintraege", "/reparaturhistorie?jahr=2026", "/melden"]) {
-    await page.goto(`/team/machines/${old}${sub}`);
+    await page.goto(`/team/machines/${reserved}${sub}`);
     await expect(page).toHaveURL(`/team/machines/${corrected}${sub}`);
   }
   const phone = await visitorPhone(browser);
-  await phone.goto(`/m/${old}/melden`);
+  await phone.goto(`/m/${reserved}/melden`);
   await expect(phone).toHaveURL(new RegExp(`/m/${corrected}/melden$`));
   await phone.context().close();
 });

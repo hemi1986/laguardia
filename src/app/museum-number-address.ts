@@ -25,12 +25,12 @@ type Query = Record<string, string | readonly string[] | undefined>;
  * unknown one; the page says what it says about an unknown machine. Call it once per page, after its access check.
  */
 export async function museumNumberOfPage(
-  { params, searchParams }: { params: Promise<{ museumNumber: string }>; searchParams?: Promise<Query> },
+  { params, searchParams }: { params: Promise<{ museumNumber: string }>; searchParams: Promise<Query> },
   page: MachinePage,
 ): Promise<string> {
   // Next.js answers 400 for a malformed percent-encoding before a page is reached.
   const museumNumber = decodeURIComponent((await params).museumNumber);
-  const current = await pageUnderCurrentMuseumNumber(database(), museumNumber, page, (await searchParams) ?? {});
+  const current = await pageUnderCurrentMuseumNumber(database(), museumNumber, page, await searchParams);
   if (current) redirect(current);
   return museumNumber;
 }

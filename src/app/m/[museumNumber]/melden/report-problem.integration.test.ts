@@ -73,10 +73,7 @@ describe("the visitor report form with a photo", () => {
   it("stores only the one photo the form has, however many files are posted in its field", async () => {
     const machineId = await aRegisteredMachine(db);
     const storage = memoryStorage();
-    const form = post(
-      "Ball stuck behind the left ramp",
-      new File([await aJpeg()], "first.jpg", { type: "image/jpeg" }),
-    );
+    const form = post("Ball stuck behind the left ramp", new File([await aJpeg()], "first.jpg", { type: "image/jpeg" }));
     form.append("photo", new File([await aJpeg()], "second.jpg", { type: "image/jpeg" }));
 
     expect(await reportForm(machineId, storage)(null, form)).toBeNull();

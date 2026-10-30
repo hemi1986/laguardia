@@ -24,7 +24,8 @@ export default async function RemoveFilePage({
   const { fileId } = await params;
   const museumNumber = await museumNumberOfPage(
     { params, searchParams },
-    teamMachinePage(`datei-entfernen/${encodeURIComponent(fileId)}`),
+    // The file ID comes from the address as it was – encoded already.
+    teamMachinePage(`datei-entfernen/${fileId}`),
   );
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
