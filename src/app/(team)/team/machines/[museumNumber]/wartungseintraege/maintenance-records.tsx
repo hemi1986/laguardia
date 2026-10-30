@@ -21,7 +21,7 @@ export function MaintenanceRecordsView({
     <MachineHistoryFrame
       museumNumber={museumNumber}
       machineModelTitle={data.machineModelTitle}
-      nothing={data.years.length === 0 ? texts.nothingRecorded : undefined}
+      emptyText={data.years.length === 0 ? texts.nothingRecorded : undefined}
     >
       <YearSections years={data.years}>{(records) => <MaintenanceRecordList records={records} />}</YearSections>
     </MachineHistoryFrame>

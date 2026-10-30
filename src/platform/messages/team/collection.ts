@@ -164,7 +164,6 @@ export const collectionTexts = {
       tooLarge: "Dateien dürfen höchstens 100 MB groß sein.",
       notUploaded: "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal auswählen.",
     },
-    back: "Zurück zum Gerät",
   },
   /** Attaching a camera photo as a file (ST-054) – its own page beside attaching a file; the file category is Photo. */
   attachPhoto: {
@@ -187,7 +186,6 @@ export const collectionTexts = {
       /** Sent without a photo – the page has no file to choose, only a photo to take (ST-054 code review). */
       photoRequired: "Bitte ein Foto aufnehmen oder auswählen.",
     },
-    back: "Zurück zum Gerät",
   },
   /** Removing a file (ST-038): the question once, on a page of its own (G10, G10b). */
   removeFile: {
@@ -209,7 +207,6 @@ export const collectionTexts = {
     retired: "Dieses Gerät ist ausgemustert – sein Status lässt sich nicht mehr ändern.",
     nothingToChange: (status: string) =>
       `Das Gerät ist bereits ${status}. Einen anderen Status können nur Techniker:innen setzen.`,
-    back: "Zurück zum Gerät",
   },
   /** Retiring a machine (ST-039): the reason, then the question once (G10, G10b). */
   machineRetire: {
@@ -249,7 +246,6 @@ export const collectionTexts = {
     museumNumberFormat: "Bitte die Museumsnummer als „LG-“ mit drei Ziffern angeben, zum Beispiel LG-042.",
     museumNumberTaken: (museumNumber: string) =>
       `${museumNumber} ist schon vergeben oder reserviert. Bitte eine andere Museumsnummer angeben.`,
-    back: "Zurück zum Gerät",
   },
   /** Moving a machine (ST-034) – its own page, reached from the machine record. */
   machineMove: {
@@ -257,7 +253,6 @@ export const collectionTexts = {
     submit: "Standort ändern",
     unchanged: (museumNumber: string, location: string) => `${museumNumber} steht schon in „${location}“.`,
     retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",
-    back: "Zurück zum Gerät",
   },
 } as const;
 

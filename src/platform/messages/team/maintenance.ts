@@ -66,7 +66,6 @@ export const maintenanceTexts = {
     open: "Wartungsaufgaben ändern",
     legend: "Wartungsaufgaben des Geräts",
     submit: "Wartungsaufgaben ändern",
-    back: "Zurück zum Gerät",
     toPlan: "Zum Wartungsplan",
     retired: "Dieses Gerät ist ausgemustert – seine Wartungsaufgaben lassen sich nicht mehr ändern.",
     /** After the name of a task: it can be done by helpers (G27). */

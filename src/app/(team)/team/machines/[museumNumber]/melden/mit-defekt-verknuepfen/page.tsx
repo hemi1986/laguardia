@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
@@ -11,8 +10,9 @@ import { requireTeamMember } from "../../../../../../team-session";
 import { reportAndLinkAction } from "./actions";
 import { ReportAndLinkForm } from "./report-and-link-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../../machine-history";
 
-const { machineRecord, reportAndLink: texts, reportProblem } = teamMessages;
+const { machineRecord, reportAndLink: texts } = teamMessages;
 
 /**
  * „Problem melden und mit Defekt verknüpfen“ (ST-052, G21a) – the form page of the triage outcome *linked* a
@@ -59,7 +59,7 @@ export default async function ReportAndLinkPage({
           />
         </>
       )}
-      <BackLink href={record}>{reportProblem.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

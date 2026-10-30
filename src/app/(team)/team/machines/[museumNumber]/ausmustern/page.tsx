@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -7,6 +6,7 @@ import { requireTechnician } from "../../../../../team-session";
 import { retireMachineAction } from "./actions";
 import { RetireMachineForm } from "./retire-machine-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machineRecord, machineRetire: texts } = teamMessages;
 
@@ -37,9 +37,7 @@ export default async function RetireMachinePage({
           retired={machine.retired}
         />
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>
-        {teamMessages.machineHistory.backToMachine}
-      </BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

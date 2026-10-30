@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { anythingToLinkTo } from "../../../defect-to-link-to-input";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
@@ -12,6 +11,7 @@ import { teamReportProblemAction } from "./actions";
 import { TeamReportProblemForm } from "./report-problem-form";
 import { TriageChoice } from "./triage-choice";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machineRecord, reportProblem: texts } = teamMessages;
 
@@ -61,7 +61,7 @@ export default async function TeamReportProblemPage({
           resolveOnTheSpot={`/team/machines/${encodeURIComponent(museumNumber)}/melden/direkt-behoben`}
         />
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

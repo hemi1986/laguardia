@@ -67,10 +67,13 @@ export const sharedTexts = {
   },
   /**
    * A machine's history on a page of its own – the status history, the maintenance records, the repair history (G24,
-   * architecture review 2026-10-30) – and the way back to the machine record from any page of a machine.
+   * architecture review 2026-10-30).
    */
   machineHistory: {
     year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
+  },
+  /** Every page of a machine (architecture review 2026-10-30): the way back to its machine record (`BackToMachine`). */
+  machinePages: {
     backToMachine: "Zurück zum Gerät",
   },
   /** A list's filter form (G32, ST-092): one shape and one word on every list. */

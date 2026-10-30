@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { correctDetailsRefusal, machineForTeamForm } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -6,6 +5,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { CorrectDetailsForm } from "./correct-details-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machineRecord, machineCorrection: texts } = teamMessages;
 
@@ -39,7 +39,7 @@ export default async function CorrectDetailsPage({
           serialNumber={machine.serialNumber ?? ""}
         />
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

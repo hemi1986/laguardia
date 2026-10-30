@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BackLink } from "@/components/ui/back-link";
+import { teamMachinePage } from "@/app/museum-number-address";
 import { MachineHistoryFrame } from "../machine-history";
 import { Section } from "@/components/ui/section";
 import { WorkLogPhotos } from "../../../team-photos";
@@ -22,13 +23,13 @@ export function RepairHistoryView({
   data: RepairHistoryData | undefined;
   museumNumber: string;
 }) {
-  const machine = `/team/machines/${encodeURIComponent(museumNumber)}`;
+  const machine = teamMachinePage()(museumNumber);
   if (!data) return <p>{machineRecord.unknown(museumNumber)}</p>;
   return (
     <MachineHistoryFrame
       museumNumber={museumNumber}
       machineModelTitle={data.machineModelTitle}
-      nothing={data.years.length === 0 ? machineRecord.nothingRepaired : undefined}
+      emptyText={data.years.length === 0 ? machineRecord.nothingRepaired : undefined}
     >
       {!data.year ? (
         <Section title={texts.chooseYear}>

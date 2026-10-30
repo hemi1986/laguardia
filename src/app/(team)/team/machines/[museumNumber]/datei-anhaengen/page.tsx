@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { attachTargets, fileCategories, machineRecord } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -7,6 +6,7 @@ import { requireTeamMember } from "../../../../../team-session";
 import { attachFileAction } from "./actions";
 import { AttachFileForm } from "./attach-file-form-view";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machineRecord: recordTexts, attachFile: texts } = teamMessages;
 
@@ -37,7 +37,7 @@ export default async function AttachFilePage({
       ) : (
         <p>{recordTexts.unknown(museumNumber)}</p>
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

@@ -314,7 +314,6 @@ export const repairTexts = {
     descriptionHint: "Was ist kaputt, wo am Gerät? Eine Techniker:in sichtet die Meldung.",
     submit: "Meldung erfassen",
     retired: "Dieses Gerät ist ausgemustert – dafür gibt es keine Meldungen mehr.",
-    back: "Zurück zum Gerät",
     /** The optional photo (ST-016) – the browser's own rejections use the photo errors' texts below. */
     photo: {
       label: "Foto (freiwillig)",

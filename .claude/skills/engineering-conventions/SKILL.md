@@ -708,11 +708,13 @@ not a bug (`due-maintenance-data.ts`, `record-maintenance-data.ts`, `address-aft
 **A machine's history on a page of its own** (G24, architecture review 2026-10-30) – the status history, the maintenance
 records, the repair history – groups its entries with `byYear(entries, when)` (`…/machines/[museumNumber]/history-by-year.ts`:
 the Berlin calendar year of an instant or of a `YYYY-MM-DD` date, the newest year first, each year's entries in the order
-the read model gave them) and is shown in `MachineHistoryFrame` (machine model title, the text for an empty history, „Zurück
+the read model gave them) and is shown in `MachineHistoryFrame` (machine model title, `emptyText` for an empty history, „Zurück
 zum Gerät“) with `YearSections` („2026 · 5 Einträge“, `teamMessages.machineHistory`) – the repair history keeps its year
 chosen in the address and uses only the frame and the grouping. A list of entries that the machine record and its page
 both show lives in a file of its own beside the record (`status-changes.tsx`, `maintenance-record-list.tsx`), never
-imported from the record's view. A new history page uses all three; it never groups by year itself.
+imported from the record's view. A new history page uses all three; it never groups by year itself. **Every page of a
+machine** leads back to its record with `BackToMachine` (`machine-history.tsx`, `teamMessages.machinePages`) – no page
+builds that link or has its own „Zurück zum Gerät“.
 
 ## Time and time-based rules
 

@@ -5,7 +5,7 @@ import { teamMessages } from "@/platform/messages";
 import { teamMachinePage } from "@/app/museum-number-address";
 import type { HistoryYear } from "./history-by-year";
 
-const { machineHistory: texts } = teamMessages;
+const { machineHistory: texts, machinePages } = teamMessages;
 
 /**
  * A machine's history on a page of its own (G24, architecture review 2026-10-30): the machine model's title, the
@@ -15,20 +15,20 @@ const { machineHistory: texts } = teamMessages;
 export function MachineHistoryFrame({
   museumNumber,
   machineModelTitle,
-  nothing,
+  emptyText,
   children,
 }: {
   museumNumber: string;
   machineModelTitle: string;
   /** Shown in place of the history when there is none – a history that always has an entry passes none. */
-  nothing?: string;
+  emptyText?: string;
   children: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
       <p className="text-muted-foreground text-sm">{machineModelTitle}</p>
-      {nothing ? <p>{nothing}</p> : children}
-      <BackLink href={teamMachinePage()(museumNumber)}>{texts.backToMachine}</BackLink>
+      {emptyText ? <p>{emptyText}</p> : children}
+      <BackToMachine museumNumber={museumNumber} />
     </div>
   );
 }
@@ -46,4 +46,9 @@ export function YearSections<Entry>({
       {children(entries)}
     </Section>
   ));
+}
+
+/** „Zurück zum Gerät“ – from any page of a machine back to its machine record. */
+export function BackToMachine({ museumNumber }: { museumNumber: string }) {
+  return <BackLink href={teamMachinePage()(museumNumber)}>{machinePages.backToMachine}</BackLink>;
 }

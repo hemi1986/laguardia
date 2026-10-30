@@ -48,11 +48,7 @@ export function StickerSheet({ sheet, stickers }: { sheet: LabelSheet; stickers:
   return (
     <>
       {pages.map((page, pageIndex) => (
-        <section
-          key={pageIndex}
-          className="sticker-page"
-          style={{ position: "relative", width: "210mm", height: "297mm" }}
-        >
+        <section key={pageIndex} className="sticker-page" style={{ position: "relative", width: "210mm", height: "297mm" }}>
           {page.map((sticker, index) => (
             <div
               key={sticker.museumNumber}
@@ -66,11 +62,7 @@ export function StickerSheet({ sheet, stickers }: { sheet: LabelSheet; stickers:
               className="flex items-center gap-[2mm] overflow-hidden p-[2mm]"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- a data URL generated on the server, printed as is */}
-              <img
-                src={sticker.qrCode}
-                alt={texts.qrCodeOf(sticker.museumNumber)}
-                style={{ width: "32mm", height: "32mm" }}
-              />
+              <img src={sticker.qrCode} alt={texts.qrCodeOf(sticker.museumNumber)} style={{ width: "32mm", height: "32mm" }} />
               <div className="flex flex-col gap-[1mm] text-black">
                 <span className="text-[14pt] font-bold">{sticker.museumNumber}</span>
                 <span lang="de" className="text-[8pt]">

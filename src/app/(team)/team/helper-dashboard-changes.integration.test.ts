@@ -134,7 +134,8 @@ async function aDefect(title: string) {
     claim: (by: Person, when: Date) => step(claimDefectCommand, {}, by, when),
     assign: (to: Person, when: Date) => step(claimDefectCommand, { assignTo: to.teamMemberId }, tom, when),
     release: (by: Person, when: Date) => step(releaseClaimCommand, {}, by, when),
-    resolve: (by: Person, when: Date) => step(resolveDefectCommand, { closingNote: `${title} – fixed` }, by, when),
+    resolve: (by: Person, when: Date) =>
+      step(resolveDefectCommand, { closingNote: `${title} – fixed` }, by, when),
     logWork: (by: Person, when: Date) =>
       step(logWorkCommand, { whatWasDone: `Worked on ${title}`, partsUsed: "" }, by, when),
     prioritize: (when: Date) => step(prioritizeDefectCommand, { priority: "high" as const }, tom, when),
@@ -312,9 +313,7 @@ describe("what changed on the helper's claimed defects", () => {
 
     const section = sectionOne((await dashboard()).html);
 
-    expect(section).toContain(
-      "<li>Titel geändert · vor 2 Tagen</li><li>Neuer Arbeitsschritt von Tom · vor 4 Tagen</li>",
-    );
+    expect(section).toContain("<li>Titel geändert · vor 2 Tagen</li><li>Neuer Arbeitsschritt von Tom · vor 4 Tagen</li>");
   });
 
   it("ST-086: Changes before her claim are not listed", async () => {
@@ -338,9 +337,7 @@ describe("what changed on the helper's claimed defects", () => {
       { title: "Slingshot switch loose", changes: [] },
     ]);
     // As ST-049 lists it: title and machine, nothing under them.
-    expect(sectionOne(html)).toMatch(
-      /Slingshot switch loose<\/a><p class="text-muted-foreground">LG-\d+ · Medieval Madness<\/p><\/article>/,
-    );
+    expect(sectionOne(html)).toMatch(/Slingshot switch loose<\/a><p class="text-muted-foreground">LG-\d+ · Medieval Madness<\/p><\/article>/);
   });
 
   it("ST-086: Her own actions are never listed as changes", async () => {
@@ -371,10 +368,7 @@ describe("what changed on the helper's claimed defects", () => {
 
     // Once, as her claim – not a second time as a defect that left her, and without the old takeover.
     expect(data.claimedByYou.map(({ title, changes }) => ({ title, changes }))).toEqual([
-      {
-        title: "Rubber cracked",
-        changes: [{ kind: "work-logged", by: "Tom", hoursAgo: 24, newSinceLastVisit: false }],
-      },
+      { title: "Rubber cracked", changes: [{ kind: "work-logged", by: "Tom", hoursAgo: 24, newSinceLastVisit: false }] },
     ]);
   });
 
