@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useActionState, useId } from "react";
 import { keptKey, SeenField } from "@/app/_actions/form-parts";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../../team-grouped-choice";
 import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { changeTasksAction } from "./actions";
@@ -51,13 +52,11 @@ export function ChangeTasksForm({
       <SeenField seen={state?.seen ?? chosen} />
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">{texts.legend}</legend>
-        <GroupedChoice
+        <TeamGroupedChoice
           name={TASK_FIELD}
           groups={groups}
           chosen={state?.chosen ?? chosen}
           key={`tasks-${kept}`}
-          header={teamMessages.groupedChoice.header}
-          selectAll={teamMessages.groupedChoice.selectAll}
           openWithChoice={!!state}
         />
       </fieldset>

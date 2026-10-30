@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { GroupedChoice } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../team-grouped-choice";
 import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -140,13 +140,11 @@ export function RegisterMachineForm({ machineModels, machineStatuses, tasks, pro
         ) : (
           <>
             {proposal && proposal.tasks.length > 0 && <p className="text-sm">{proposal.line}</p>}
-            <GroupedChoice
+            <TeamGroupedChoice
               name={TASK_FIELD}
               groups={tasks}
               chosen={state?.chosen ?? []}
               key={`tasks-${kept}`}
-              header={teamMessages.groupedChoice.header}
-              selectAll={teamMessages.groupedChoice.selectAll}
               proposed={proposal?.tasks}
             />
           </>

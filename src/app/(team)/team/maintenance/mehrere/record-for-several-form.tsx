@@ -4,7 +4,7 @@ import { useActionState, useId } from "react";
 import { keptKey } from "@/app/_actions/form-parts";
 import { rejectionText } from "@/app/_actions/rejection-text";
 import { Button } from "@/components/ui/button";
-import { GroupedChoice } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../team-grouped-choice";
 import { Rejection } from "@/components/ui/message";
 import type { MachineToChoose } from "@/modules/maintenance";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
@@ -12,7 +12,7 @@ import { MaintenanceRecordFields, recordFieldOf } from "../erfassen/maintenance-
 import type { RecordForSeveralState } from "./actions";
 import type { ChoiceOfSeveral } from "./choice-for-several";
 
-const { recordForSeveral: texts, groupedChoice } = teamMessages;
+const { recordForSeveral: texts } = teamMessages;
 
 /**
  * The machines to tick (ST-098, G27): the group „Fällig“, ticked and so open when the page opens; then under „Weitere
@@ -25,15 +25,15 @@ export function ChoiceForSeveral({
   chosen,
   kept,
 }: ChoiceOfSeveral & { chosen: readonly string[]; kept: string }) {
-  const choice = { name: "machineId", chosen, header: groupedChoice.header, selectAll: groupedChoice.selectAll };
+  const choice = { name: "machineId", chosen };
   return (
     <fieldset className="flex flex-col gap-4 [overflow-wrap:anywhere]">
       <legend className="sr-only">{texts.start}</legend>
-      {due && <GroupedChoice {...choice} key={`due-${kept}`} groups={[due]} />}
+      {due && <TeamGroupedChoice {...choice} key={`due-${kept}`} groups={[due]} />}
       {others.length > 0 && (
         <div className="flex flex-col gap-2">
           <h3 className="font-medium">{texts.others}</h3>
-          <GroupedChoice {...choice} key={`others-${kept}`} groups={others} />
+          <TeamGroupedChoice {...choice} key={`others-${kept}`} groups={others} />
         </div>
       )}
     </fieldset>
@@ -76,11 +76,7 @@ export function RecordForSeveralForm({
   return (
     <form action={action} className="flex flex-col gap-5">
       <input type="hidden" name="maintenanceTaskId" value={maintenanceTaskId} />
-      <ChoiceForSeveral
-        {...choice}
-        chosen={state?.chosen ?? due.map((machine) => machine.machineId)}
-        kept={kept}
-      />
+      <ChoiceForSeveral {...choice} chosen={state?.chosen ?? due.map((machine) => machine.machineId)} kept={kept} />
       <MaintenanceRecordFields
         values={state?.values}
         invalid={state ? recordFieldOf[state.error] : undefined}

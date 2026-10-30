@@ -22,6 +22,7 @@ import {
   recordMaintenanceCommand,
   type MaintenanceOutcome,
   type MaintenanceTaskDetails,
+  maintenanceForSeveral,
 } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
@@ -36,7 +37,6 @@ import { dueMaintenanceFilterOf, loadDueMaintenance, type DueMaintenanceFilter }
 import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
-import { loadRecordForSeveral } from "./mehrere/record-for-several-data";
 import { RecordForSeveralPage } from "./mehrere/record-for-several-view";
 import { choiceForSeveral } from "./mehrere/choice-for-several";
 import { ChoiceForSeveral } from "./mehrere/record-for-several-form";
@@ -431,10 +431,7 @@ describe("the due maintenance list", () => {
     expect(await countOf()).toBe(1);
     expect((await planPage()).html).toContain("Gilt für 1 Gerät");
     expect(await listedOn("2026-04-02", wax)).toEqual(["LG-005"]);
-    const several = await loadRecordForSeveral(db, fixedClock("2026-04-02T10:00:00Z"), wax, {
-      id: tom.teamMemberId,
-      role: tom.role,
-    });
+    const several = await maintenanceForSeveral(db, fixedClock("2026-04-02T10:00:00Z"), wax, { role: tom.role });
     expect([...(several?.due ?? []), ...(several?.others ?? [])].map((machine) => machine.museumNumber)).toEqual([
       "LG-005",
     ]);
@@ -900,8 +897,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
   });
   /** The selection page „Für mehrere Geräte erfassen“ of that task on that day, as that team member sees it. */
   async function selection(on: string, maintenanceTaskId: string, viewer: typeof tom | typeof anna) {
-    const data = await loadRecordForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
-      id: viewer.teamMemberId,
+    const data = await maintenanceForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
       role: viewer.role,
     });
     return { data, html: data ? renderToStaticMarkup(createElement(RecordForSeveralPage, { data })) : "" };

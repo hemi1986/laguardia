@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useActionState, useId } from "react";
 import { keptKey, SeenField } from "@/app/_actions/form-parts";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../../team-grouped-choice";
 import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { machinesRejectionText } from "../../machines-rejection-text";
@@ -55,13 +56,11 @@ export function ChangeMachinesForm({
       <SeenField seen={state?.seen ?? chosen} />
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">{texts.machines.title}</legend>
-        <GroupedChoice
+        <TeamGroupedChoice
           name={MACHINE_FIELD}
           groups={groups}
           chosen={state?.chosen ?? chosen}
           key={`machines-${kept}`}
-          header={teamMessages.groupedChoice.header}
-          selectAll={teamMessages.groupedChoice.selectAll}
           openWithChoice={!!state}
         />
       </fieldset>

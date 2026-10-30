@@ -4,7 +4,8 @@ import { useActionState, useId } from "react";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../team-grouped-choice";
 import { Input } from "@/components/ui/input";
 import { Rejection } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
@@ -48,13 +49,11 @@ export function AddMaintenanceTaskForm({ version, groups }: { version: number; g
         {groups.length === 0 ? (
           <p className="text-sm">{texts.machines.noMachineYet}</p>
         ) : (
-          <GroupedChoice
+          <TeamGroupedChoice
             name={MACHINE_FIELD}
             groups={groups}
             chosen={state?.chosen ?? []}
             key={`machines-${kept}`}
-            header={teamMessages.groupedChoice.header}
-            selectAll={teamMessages.groupedChoice.selectAll}
           />
         )}
       </fieldset>
