@@ -57,7 +57,7 @@ export const repairTexts = {
       days === 0 ? "heute behoben" : `behoben vor ${days} ${days === 1 ? "Tag" : "Tagen"}`,
     /** Beside the status choice: it applies only when a resolved defect is reopened (ST-053, user 2026-10-25). */
     statusOnlyWhenReopening:
-      "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
+      "Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.",
     /** After the confirmation of a link that reopened the defect (ST-053). */
     reopened: " Der Defekt ist wieder offen.",
     /** A defect offered as recently resolved that someone reopened meanwhile (ST-053 code review #2). */
@@ -348,7 +348,7 @@ export const repairErrors = {
   "defect-resolved-too-long-ago":
     "Dieser Defekt wurde vor mehr als 30 Tagen behoben. Bitte stattdessen einen neuen Defekt erfassen.",
   "machine-status-without-reopening":
-    "Den Status kannst du hier nur ändern, wenn ein behobener Defekt wieder geöffnet wird. Bitte „Status nicht ändern“ wählen.",
+    "Der Status lässt sich hier nur ändern, wenn ein behobener Defekt wieder geöffnet wird. Bitte „Status nicht ändern“ wählen.",
   "not-suitable-for-helpers": "Dieser Defekt ist nicht für Helfer:innen geeignet.",
   "already-claimed-by-you": "Du hast diesen Defekt schon übernommen.",
   /** Assigning a defect (ST-026). */
