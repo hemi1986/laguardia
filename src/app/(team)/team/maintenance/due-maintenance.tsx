@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { formatCalendarDate } from "@/platform/time";
 import { commandErrorText, teamMessages } from "@/platform/messages";
@@ -87,21 +89,12 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   return (
     <>
       {confirmation}
-      <form method="get" action="/team/maintenance" className="flex flex-wrap items-center gap-3">
+      <FilterForm action="/team/maintenance" apply={teamMessages.filters.apply}>
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="helpers"
-            value="1"
-            defaultChecked={filter.suitableForHelpers ?? false}
-            className="size-4"
-          />
+          <Checkbox name="helpers" value="1" defaultChecked={filter.suitableForHelpers ?? false} />
           {texts.onlySuitableForHelpers}
         </label>
-        <Button type="submit" variant="outline" size="sm">
-          {texts.filter}
-        </Button>
-      </form>
+      </FilterForm>
       {data.tasks.length === 0 ? (
         <p>{filter.suitableForHelpers ? texts.nothingDueForHelpers : texts.nothingDue}</p>
       ) : (

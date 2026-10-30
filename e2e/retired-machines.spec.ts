@@ -22,7 +22,7 @@ test("the filter form lists retired machines with the checkbox, marked „Ausgem
   await expect(entry).toHaveCount(0);
 
   await page.getByLabel("Auch ausgemusterte Geräte anzeigen").check();
-  await page.getByRole("button", { name: "Suchen" }).click();
+  await page.getByRole("button", { name: "Filtern" }).click();
 
   await expect(page).toHaveURL(/retired=1/);
   await expect(entry).toContainText("Ausgemustert");

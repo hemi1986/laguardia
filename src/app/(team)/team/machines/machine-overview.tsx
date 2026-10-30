@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import { Input } from "@/components/ui/input";
 import { Confirmation } from "@/components/ui/message";
 import { machineStatuses, type MachineStatus } from "@/modules/collection";
@@ -67,6 +70,7 @@ export function MachineOverview({
         <p>{texts.empty}</p>
       ) : (
         <>
+          {/* The search and the filter are applied each with its own button and keep each other (G32, ST-092). */}
           <form action="/team/machines" className="flex flex-col gap-2" role="search">
             <label htmlFor="search" className="text-sm font-medium">
               {texts.search}
@@ -74,6 +78,7 @@ export function MachineOverview({
             <div className="flex gap-2">
               <Input id="search" name="search" type="search" defaultValue={search} aria-describedby="search-hint" />
               {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
+              {retired && <input type="hidden" name="retired" value="1" />}
               <button type="submit" className={buttonVariants({ variant: "outline" })}>
                 {texts.searchSubmit}
               </button>
@@ -81,11 +86,15 @@ export function MachineOverview({
             <p id="search-hint" className="text-muted-foreground text-sm">
               {texts.searchHint}
             </p>
+          </form>
+          <FilterForm action="/team/machines" label={texts.retiredFilter} apply={teamMessages.filters.apply}>
+            {search && <input type="hidden" name="search" value={search} />}
+            {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="retired" value="1" defaultChecked={retired} className="size-4" />
+              <Checkbox name="retired" value="1" defaultChecked={retired} />
               {texts.showRetired}
             </label>
-          </form>
+          </FilterForm>
           <nav aria-label={texts.filter}>
             <ul className="flex flex-wrap gap-2">
               <FilterLink href={overviewHref({ search, retired })} current={!query.machineStatus}>
@@ -144,9 +153,7 @@ function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
   return (
     <div className="flex flex-col gap-2">
       <p>{texts.noMatch(search)}</p>
-      <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
-        {texts.clearSearch}
-      </Link>
+      <BackLink href={overviewHref({ machineStatus, retired })}>{texts.clearSearch}</BackLink>
     </div>
   );
 }

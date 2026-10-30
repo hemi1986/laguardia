@@ -62,6 +62,8 @@ export const collectionTexts = {
     noneWithStatus: (status: string) => `Kein Gerät ist ${status}.`,
     /** The filter for retired machines (ST-055) – off by default; with it on, they are listed beside the active ones. */
     showRetired: "Auch ausgemusterte Geräte anzeigen",
+    /** Names the form of the filter for retired machines next to the search (ST-092). */
+    retiredFilter: "Ausgemusterte Geräte filtern",
     noneRetired: "Kein Gerät ist ausgemustert.",
     /** No active machine, but retired ones – the filter form stays so they can be found (ST-055). */
     allRetired: "Alle Geräte sind ausgemustert.",

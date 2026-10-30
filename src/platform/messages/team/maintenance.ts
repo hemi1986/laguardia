@@ -18,7 +18,6 @@ export const maintenanceTexts = {
     nothingDue: "Gerade ist keine Wartung fällig.",
     nothingDueForHelpers: "Gerade ist keine Wartung für Helfer:innen fällig.",
     onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
-    filter: "Filtern",
     allDue: "Alle fälligen Wartungen",
   },
   /** Recording maintenance on a machine (ST-044): from the due maintenance list, on a form page of its own. */

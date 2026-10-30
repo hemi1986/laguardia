@@ -175,7 +175,6 @@ export const repairTexts = {
     allMachines: "Alle Geräte",
     allPriorities: "Alle Prioritäten",
     onlySuitableForHelpers: "Nur für Helfer:innen geeignet",
-    applyFilter: "Filtern",
     noneOfMachine: (museumNumber: string) => `${museumNumber} hat keine offenen Defekte.`,
     noneWithPriority: (priority: string) => `Kein offener Defekt hat die Priorität ${priority}.`,
     noneSuitableForHelpers: "Kein offener Defekt ist für Helfer:innen geeignet.",

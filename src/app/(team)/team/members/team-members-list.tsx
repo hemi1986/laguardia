@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import type { TeamMemberAccount } from "@/modules/team";
 import { teamMessages } from "@/platform/messages";
 
@@ -20,15 +21,12 @@ export function TeamMembersList({
 }) {
   return (
     <>
-      <form action="/team/members" className="flex flex-wrap items-center gap-2">
+      <FilterForm action="/team/members" apply={teamMessages.filters.apply}>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="deaktivierte" value="1" defaultChecked={deactivatedShown} className="size-4" />
+          <Checkbox name="deaktivierte" value="1" defaultChecked={deactivatedShown} />
           {texts.showDeactivated}
         </label>
-        <button type="submit" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          {texts.applyFilter}
-        </button>
-      </form>
+      </FilterForm>
       <ul className="flex flex-col gap-4">
         {accounts.map((account) => (
           <li key={account.id}>

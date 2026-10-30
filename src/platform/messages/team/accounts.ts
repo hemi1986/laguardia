@@ -14,7 +14,6 @@ export const accountsTexts = {
     title: "Teammitglieder",
     newTeamMember: "Neues Teammitglied",
     showDeactivated: "Auch deaktivierte Konten anzeigen",
-    applyFilter: "Anzeigen",
     deactivatedMark: "Deaktiviert",
     name: "Name",
     username: "Benutzername",

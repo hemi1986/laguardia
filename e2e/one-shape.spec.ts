@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aMachine, anOpenDefect, expect, logIn, openDefect, pageWidth, test, tickMachines, unique } from "./fixtures";
+import { aMachine, anOpenDefect, aRetiredMachine, expect, logIn, openDefect, pageWidth, test, tickMachines, unique } from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -130,4 +130,23 @@ test("ST-092: An empty section says so in its frame", async ({ page }) => {
   const workLog = page.getByRole("main").locator("section").filter({ hasText: "Arbeitsschritte" });
   await expect(workLog.getByRole("heading", { level: 2 })).toHaveText("Arbeitsschritte");
   await expect(workLog.locator("[data-slot=card]")).toContainText("Noch kein Arbeitsschritt eingetragen.");
+});
+
+const showRetired = (page: Page) => page.getByLabel("Auch ausgemusterte Geräte anzeigen");
+const machineEntry = (page: Page, machine: { museumNumber: string; title: string }) =>
+  page.getByRole("main").getByRole("listitem").filter({ hasText: `${machine.museumNumber} · ${machine.title}` });
+
+test("ST-092: The retired machines filter does not need the search", async ({ page }) => {
+  await logIn(page);
+  const retired = await aRetiredMachine(page);
+  await page.goto("/team/machines");
+  await expect(page.getByLabel("Suche")).toHaveValue("");
+
+  await showRetired(page).check();
+  await page.getByRole("button", { name: "Filtern" }).click();
+
+  await expect(page).toHaveURL(/retired=1/);
+  await expect(machineEntry(page, retired)).toContainText("Ausgemustert");
+  await expect(showRetired(page)).toBeChecked();
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
