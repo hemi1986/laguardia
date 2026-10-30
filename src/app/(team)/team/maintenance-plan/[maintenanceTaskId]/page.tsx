@@ -28,7 +28,7 @@ export default async function ChangeMaintenanceTaskPage({
   const name = task?.name ?? (plan ? await maintenanceTaskName(db, maintenanceTaskId) : undefined);
 
   return (
-    <Page title={name ? texts.changeTask(name) : texts.change}>
+    <Page title={name ? texts.changeTaskTitle(name) : texts.change}>
       {task && (
         // How many machines the task applies to, and the way to change them (ST-095) – before the first field.
         <div className="flex flex-wrap items-center gap-3">

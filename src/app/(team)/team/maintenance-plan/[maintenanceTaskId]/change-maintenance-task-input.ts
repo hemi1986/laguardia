@@ -21,7 +21,7 @@ export function changeMaintenanceTaskInput(fields: FormFields<ChangeMaintenanceT
   };
 }
 
-/** Reads „Entfernen“ on the question (ST-041): which maintenance task, at the version the page showed. */
+/** Reads „Endgültig entfernen“ on the question (ST-041): which maintenance task, at the version the page showed. */
 export function removeMaintenanceTaskInput(
   fields: FormFields<(typeof removeMaintenanceTaskFields)[number]>,
 ): ChangeMaintenancePlanInput {
@@ -29,8 +29,8 @@ export function removeMaintenanceTaskInput(
 }
 
 /**
- * Where a post of the form stands (ST-041, G10b): „Änderungen speichern“ changes; „Wartungsaufgabe entfernen“ posts
- * `step=ask` and only asks; on the question „Entfernen“ posts `step=remove`, „Zurück“ `step=back`, which returns to the
+ * Where a post of the form stands (ST-041, G10b): „Wartungsaufgabe ändern“ changes; „Wartungsaufgabe entfernen“ posts
+ * `step=ask` and only asks; on the question „Endgültig entfernen“ posts `step=remove`, „Zurück“ `step=back`, which returns to the
  * form with everything typed. Server-side, so it works without JavaScript.
  */
 export function changeStep(formData: FormData): "change" | "ask" | "back" | "remove" {

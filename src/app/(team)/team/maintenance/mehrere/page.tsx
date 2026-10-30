@@ -20,7 +20,7 @@ export default async function RecordForSeveralRoute({ searchParams }: PageProps<
   const data = typeof task === "string" ? await loadRecordForSeveral(database(), systemClock, task, member) : undefined;
 
   return (
-    <Page title={texts.title}>
+    <Page title={data ? texts.title(data.maintenanceTask.name) : recordMaintenance.record}>
       {data ? (
         <RecordForSeveralPage data={data} action={recordForSeveralAction} />
       ) : (

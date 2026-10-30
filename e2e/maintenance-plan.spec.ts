@@ -118,7 +118,7 @@ test.describe("without JavaScript", () => {
       .getByRole("link", { name: `„${name}“ ändern` })
       .click();
     await page.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
-    await page.getByRole("button", { name: "Entfernen" }).click();
+    await page.getByRole("button", { name: "Endgültig entfernen" }).click();
 
     await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist nicht mehr im Wartungsplan.`);
     await expect(entryOf(page, name)).toHaveCount(0);
@@ -133,7 +133,7 @@ test("a technician changes a maintenance task and is back on the maintenance pla
   await entryOf(page, name)
     .getByRole("link", { name: `„${name}“ ändern` })
     .click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`„${name}“ ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartungsaufgabe ändern · ${name}`);
   await expect(page.getByLabel("Anleitung")).toHaveValue("Glass out, clean both sides.");
   await expect(page.getByLabel("Für Helfer:innen geeignet")).toBeChecked();
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
@@ -143,7 +143,7 @@ test("a technician changes a maintenance task and is back on the maintenance pla
   // No restriction to a machine category or technology and no start date to change any more (ST-094).
   await expect(page.getByLabel("Start")).toHaveCount(0);
   await expect(page.getByLabel("Und nur für Technik")).toHaveCount(0);
-  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await page.getByRole("button", { name: "Wartungsaufgabe ändern" }).click();
 
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ geändert.`);
   await expect(entryOf(page, name)).toContainText("Alle 2 Monate · Gilt für kein Gerät");

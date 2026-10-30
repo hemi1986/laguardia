@@ -96,7 +96,7 @@ export const maintenanceTexts = {
   /** Recording one maintenance task for several machines at once (ST-045): a selection page of its own (G4a). */
   recordForSeveral: {
     start: "Für mehrere Geräte erfassen",
-    title: "Für mehrere Geräte erfassen",
+    title: (name: string) => `Wartung erfassen · ${name}`,
     due: "Fällig",
     others: "Weitere Geräte",
     /** A machine to tick (ST-098): „LG-042 · Medieval Madness · Halle 1“. */
@@ -121,12 +121,15 @@ export const maintenanceTexts = {
     changed: (name: string) => `„${name}“ geändert.`,
     removed: (name: string) => `„${name}“ ist nicht mehr im Wartungsplan.`,
     change: "Ändern",
+    /** The name of the „Ändern“ link of one task on the plan, for a screen reader. */
     changeTask: (name: string) => `„${name}“ ändern`,
-    save: "Änderungen speichern",
+    /** The heading of a task's change form (G34). */
+    changeTaskTitle: (name: string) => `Wartungsaufgabe ändern · ${name}`,
+    save: "Wartungsaufgabe ändern",
     remove: "Wartungsaufgabe entfernen",
     removeQuestion: (name: string) =>
       `„${name}“ aus dem Wartungsplan entfernen? Sie wird nie wieder fällig; die Wartungseinträge bleiben.`,
-    confirmRemove: "Entfernen",
+    confirmRemove: "Endgültig entfernen",
     /** Going back from the question to the change form, with everything typed. */
     questionBack: "Zurück",
     notInPlan: "Diese Wartungsaufgabe ist nicht im Wartungsplan.",

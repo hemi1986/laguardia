@@ -210,7 +210,7 @@ test("ST-095: The task's page shows the count and leads to the form page", async
   await page.goto(address);
 
   // Under the heading, before the first field.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`„${name}“ ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartungsaufgabe ändern · ${name}`);
   const main = page.getByRole("main");
   await expect(main.getByText("Gilt für 3 Geräte")).toBeVisible();
   const open = main.getByRole("link", { name: "Geräte ändern" });
@@ -231,7 +231,7 @@ test("ST-095: The task's page shows the count and leads to the form page", async
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Geräte ändern · ${name}`);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
   await page.getByRole("link", { name: "Zurück zur Wartungsaufgabe" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`„${name}“ ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartungsaufgabe ändern · ${name}`);
 });
 
 test("a technician adds a machine on the form page and lands on the plan with the count", async ({ page }) => {
@@ -405,7 +405,7 @@ test("a task removed meanwhile rejects the change and is no longer offered in th
     .getByRole("link", { name: `„${removed}“ ändern` })
     .click();
   await other.getByRole("button", { name: "Wartungsaufgabe entfernen" }).click();
-  await other.getByRole("button", { name: "Entfernen" }).click();
+  await other.getByRole("button", { name: "Endgültig entfernen" }).click();
   await expect(other.getByRole("main").getByRole("status")).toHaveText(`„${removed}“ ist nicht mehr im Wartungsplan.`);
 
   await page.getByRole("button", { name: "Wartungsaufgaben ändern" }).click();

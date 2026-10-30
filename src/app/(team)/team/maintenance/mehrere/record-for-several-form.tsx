@@ -28,7 +28,7 @@ export function ChoiceForSeveral({
   const choice = { name: "machineId", chosen, header: groupedChoice.header, selectAll: groupedChoice.selectAll };
   return (
     <fieldset className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-      <legend className="sr-only">{texts.title}</legend>
+      <legend className="sr-only">{texts.start}</legend>
       {due && <GroupedChoice {...choice} key={`due-${kept}`} groups={[due]} />}
       {others.length > 0 && (
         <div className="flex flex-col gap-2">
