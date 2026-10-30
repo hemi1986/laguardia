@@ -64,7 +64,8 @@ export function withPolicyInput<Input, Result, Error extends string, PolicyInput
 /**
  * The command as it is – its ID, its allowed actors and every other property – running `run` in place of its own: what
  * both ways of adding policies return, so a property a command gains later is never lost on the way (architecture
- * review 2026-10-30).
+ * review 2026-10-30). A property typed on the command's input would come along unchecked for the new input – the type
+ * check is lenient on methods –, so a property that needs the input belongs in `run`.
  */
 function runningInstead<Input, Result, Error extends string, RunInput, RunError extends string>(
   command: Command<Input, Result, Error>,
