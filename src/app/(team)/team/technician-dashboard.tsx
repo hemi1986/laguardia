@@ -19,8 +19,14 @@ const { technicianDashboard: texts, machines } = teamMessages;
  * it says so (G7).
  */
 export function TechnicianDashboard({ data }: { data: TechnicianDashboardData }) {
-  const { problemReports, machinesToReturnToPlay, staleClaims, overdueMaintenance, recentChanges, recentSinceLastVisit } =
-    data;
+  const {
+    problemReports,
+    machinesToReturnToPlay,
+    staleClaims,
+    overdueMaintenance,
+    recentChanges,
+    recentSinceLastVisit,
+  } = data;
   if (
     problemReports.untriaged === 0 &&
     machinesToReturnToPlay.length === 0 &&

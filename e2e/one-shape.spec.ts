@@ -1,5 +1,19 @@
 import type { Locator, Page } from "@playwright/test";
-import { aMachine, allowPreview, anOpenDefect, aRetiredMachine, aTeamMember, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
+import {
+  aMachine,
+  allowPreview,
+  anOpenDefect,
+  aRetiredMachine,
+  aTeamMember,
+  expect,
+  logIn,
+  openDefect,
+  pageWidth,
+  test,
+  tickMachines,
+  unique,
+  untickMaintenanceTasks,
+} from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -92,7 +106,9 @@ async function aMaintenanceRecord(page: Page, machine: { museumNumber: string })
   );
   await page.getByLabel("Ergebnis").selectOption({ label: "Erledigt" });
   await page.getByRole("button", { name: "Wartung eintragen" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toHaveText(`Wartung an ${machine.museumNumber} eingetragen.`);
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
+    `Wartung an ${machine.museumNumber} eingetragen.`,
+  );
 }
 
 test("ST-092: The history pages and the repair times are built from framed sections", async ({ page }) => {
@@ -108,7 +124,11 @@ test("ST-092: The history pages and the repair times are built from framed secti
 
   await page.goto(`/team/machines/${machine.museumNumber}/reparaturhistorie`);
   await expectFramedLikeTheMachineRecord(page, example);
-  await page.getByRole("main").getByRole("link", { name: /^\d{4}/ }).first().click();
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: /^\d{4}/ })
+    .first()
+    .click();
   await expect(page.getByRole("main")).toContainText(title);
   await expectFramedLikeTheMachineRecord(page, example);
 
@@ -134,7 +154,10 @@ test("ST-092: An empty section says so in its frame", async ({ page }) => {
 
 const showRetired = (page: Page) => page.getByLabel("Auch ausgemusterte Geräte anzeigen");
 const machineEntry = (page: Page, machine: { museumNumber: string; title: string }) =>
-  page.getByRole("main").getByRole("listitem").filter({ hasText: `${machine.museumNumber} · ${machine.title}` });
+  page
+    .getByRole("main")
+    .getByRole("listitem")
+    .filter({ hasText: `${machine.museumNumber} · ${machine.title}` });
 
 test("ST-092: The retired machines filter does not need the search", async ({ page }) => {
   await logIn(page);
@@ -314,11 +337,23 @@ test("ST-092: Back links have one shape", async ({ page }) => {
   );
 
   await page.goto("/team/machines/new");
-  expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Zurück zu den Geräten" }))).toEqual(
-    example,
-  );
+  expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Zurück zu den Geräten" }))).toEqual(example);
 
   await page.goto("/team/machines?search=jukebox");
   await expect(page.getByRole("main")).toContainText("Kein Gerät passt zu „jukebox“.");
   expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Suche zurücksetzen" }))).toEqual(example);
+});
+
+test("ST-092: Checkboxes have one size", async ({ page }) => {
+  await logIn(page);
+  const machine = await aMachine(page);
+  await page.goto("/team/maintenance");
+  const example = (await page.getByLabel("Nur für Helfer:innen geeignet").boundingBox())!;
+
+  await page.goto(`/team/machines/stickers?search=${encodeURIComponent(machine.title)}`);
+  const checkbox = page.getByRole("checkbox", { name: new RegExp(machine.museumNumber) });
+  await expect(checkbox).toBeVisible();
+  const size = (await checkbox.boundingBox())!;
+
+  expect({ width: size.width, height: size.height }).toEqual({ width: example.width, height: example.height });
 });

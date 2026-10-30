@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,12 +72,10 @@ export function MaintenanceTaskFields({
         />
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+        <Checkbox
           name="suitableForHelpers"
           defaultChecked={!!values.suitableForHelpers}
           key={`suitableForHelpers-${kept}`}
-          className="size-4"
         />
         {terms["Suitable for helpers"]}
       </label>

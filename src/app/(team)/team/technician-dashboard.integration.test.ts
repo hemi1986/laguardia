@@ -508,10 +508,14 @@ describe("the technician dashboard", () => {
 
       const [entry] = entriesOf(html, "Liegengeblieben");
       expect(entry).toBe(
-        "Display flickers" + "LG-020 · Medieval Madness" + "Von Ben vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.",
+        "Display flickers" +
+          "LG-020 · Medieval Madness" +
+          "Von Ben vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.",
       );
       expect(html).toMatch(
-        new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Display flickers</a><p>LG-020 · Medieval Madness</p>`),
+        new RegExp(
+          `<a [^>]*href="/team/defects/${defectId}"[^>]*>Display flickers</a><p>LG-020 · Medieval Madness</p>`,
+        ),
       );
     });
   });

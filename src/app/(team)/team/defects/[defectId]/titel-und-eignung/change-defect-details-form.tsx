@@ -3,6 +3,7 @@
 import { useActionState, useId } from "react";
 import { VersionField, keptKey } from "@/app/_actions/form-parts";
 import { rejectionText } from "@/app/_actions/rejection-text";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -61,13 +62,11 @@ export function ChangeDefectDetailsForm({
       </Field>
       <div className="flex flex-col gap-1">
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+          <Checkbox
             name="suitableForHelpers"
             defaultChecked={state ? state.values.suitableForHelpers !== "" : suitableForHelpers}
             key={`suitableForHelpers-${keptKey(state)}`}
             aria-describedby={releasesClaimOf ? "releases-claim" : undefined}
-            className="size-4"
           />
           {recordDefect.suitableForHelpers}
         </label>

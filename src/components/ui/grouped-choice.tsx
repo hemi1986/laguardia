@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Checkbox } from "./checkbox";
 
 /** One group of the choice: a name for the header and its entries (checkboxes). */
 export type ChoiceGroup = {
@@ -147,14 +148,13 @@ export function GroupedChoice({
             {group.entries.map((entry) => (
               <li key={entry.value}>
                 <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     name={name}
                     value={entry.value}
                     data-group={group.key}
                     defaultChecked={initiallyChosen.includes(entry.value)}
                     onChange={(event) => touch(event.currentTarget)}
-                    className="mt-0.5 size-4 shrink-0"
+                    className="mt-0.5"
                   />
                   <span className="min-w-0">{entry.label}</span>
                 </label>
