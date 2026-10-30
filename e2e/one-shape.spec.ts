@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aMachine, anOpenDefect, aRetiredMachine, expect, logIn, openDefect, pageWidth, test, tickMachines, unique } from "./fixtures";
+import { aMachine, anOpenDefect, aRetiredMachine, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -149,4 +149,63 @@ test("ST-092: The retired machines filter does not need the search", async ({ pa
   await expect(machineEntry(page, retired)).toContainText("Ausgemustert");
   await expect(showRetired(page)).toBeChecked();
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+});
+
+/**
+ * Two machines of one new machine model, so the model's title finds exactly them – one active, one retired – and a
+ * third of another model, which the search must leave out.
+ */
+async function twoMachinesOfOneModel(page: Page) {
+  const active = await aMachine(page);
+  await page.goto("/team/machines/new");
+  await page.getByLabel("Modell").selectOption({ label: `${active.title} (Williams)` });
+  await untickMaintenanceTasks(page);
+  await page.getByLabel("Standort").fill("Hall 2");
+  await page.getByRole("button", { name: "Gerät erfassen" }).click();
+  const museumNumber = (await page.getByRole("main").getByRole("status").textContent())!.match(/LG-\d{3}/)![0];
+  const retired = { museumNumber, title: active.title };
+  await page.goto(`/team/machines/${museumNumber}/ausmustern`);
+  await page.getByLabel("Grund").fill("Sold to a collector");
+  await page.getByRole("button", { name: "Gerät ausmustern" }).click();
+  await page.getByRole("button", { name: "Endgültig ausmustern" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`${museumNumber} ist ausgemustert.`);
+  const other = await aMachine(page);
+  return { active, retired, other };
+}
+
+test("ST-092: Filtering keeps the search", async ({ page }) => {
+  await logIn(page);
+  const { active, retired, other } = await twoMachinesOfOneModel(page);
+  await page.goto("/team/machines");
+  await page.getByLabel("Suche").fill(active.title);
+  await page.getByRole("button", { name: "Suchen" }).click();
+
+  await showRetired(page).check();
+  await page.getByRole("button", { name: "Filtern" }).click();
+
+  await expect(page).toHaveURL(/retired=1/);
+  await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: active.title })).toHaveCount(2);
+  await expect(machineEntry(page, active)).toBeVisible();
+  await expect(machineEntry(page, retired)).toContainText("Ausgemustert");
+  await expect(machineEntry(page, other)).toHaveCount(0);
+  await expect(page.getByLabel("Suche")).toHaveValue(active.title);
+});
+
+test("ST-092: Searching keeps the filter", async ({ page }) => {
+  await logIn(page);
+  const { active, retired, other } = await twoMachinesOfOneModel(page);
+  await page.goto("/team/machines");
+  await showRetired(page).check();
+  await page.getByRole("button", { name: "Filtern" }).click();
+  await expect(page).toHaveURL(/retired=1/);
+
+  await page.getByLabel("Suche").fill(active.title);
+  await page.getByRole("button", { name: "Suchen" }).click();
+
+  await expect(page).toHaveURL(/search=/);
+  await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: active.title })).toHaveCount(2);
+  await expect(machineEntry(page, active)).toBeVisible();
+  await expect(machineEntry(page, retired)).toContainText("Ausgemustert");
+  await expect(machineEntry(page, other)).toHaveCount(0);
+  await expect(showRetired(page)).toBeChecked();
 });
