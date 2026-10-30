@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { aMachine, anOpenDefect, aRetiredMachine, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
+import { aMachine, anOpenDefect, aRetiredMachine, aTeamMember, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -208,4 +208,27 @@ test("ST-092: Searching keeps the filter", async ({ page }) => {
   await expect(machineEntry(page, retired)).toContainText("Ausgemustert");
   await expect(machineEntry(page, other)).toHaveCount(0);
   await expect(showRetired(page)).toBeChecked();
+});
+
+test("ST-092: The team members list is filtered with „Filtern“", async ({ page }) => {
+  await logIn(page);
+  const { name } = await aTeamMember(page, { name: "Ben Weber" });
+  await page.goto("/team/members");
+  await page.getByRole("link", { name, exact: true }).click();
+  await page.getByRole("button", { name: "Konto deaktivieren" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`Konto von ${name} deaktiviert.`);
+  await page.goto("/team/members");
+
+  await page.getByLabel("Auch deaktivierte Konten anzeigen").check();
+  const apply = page.getByRole("button", { name: "Filtern" });
+  const { width, textWidth } = await apply.evaluate((button) => {
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    return { width: button.getBoundingClientRect().width, textWidth: range.getBoundingClientRect().width };
+  });
+  expect(width).toBeLessThan(textWidth + 40);
+  await apply.click();
+
+  await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: name })).toContainText("Deaktiviert");
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
