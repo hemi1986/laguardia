@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
+import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
 import { MaintenanceRecordList } from "../machine-maintenance";
 import type { AllMaintenanceRecordsData } from "./maintenance-records-data";
@@ -24,18 +25,12 @@ export function MaintenanceRecordsView({
         <p>{texts.nothingRecorded}</p>
       ) : (
         data.years.map(({ year, records }) => (
-          <section key={year} className="flex flex-col gap-4">
-            <h2 className="font-semibold">{texts.year(year, records.length)}</h2>
+          <Section key={year} title={texts.year(year, records.length)}>
             <MaintenanceRecordList records={records} />
-          </section>
+          </Section>
         ))
       )}
-      <Link
-        href={`/team/machines/${encodeURIComponent(museumNumber)}`}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.backToMachine}
-      </Link>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.backToMachine}</BackLink>
     </div>
   );
 }

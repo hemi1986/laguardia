@@ -1,5 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
-import { aMachine, anOpenDefect, expect, logIn, openDefect, pageWidth, test } from "./fixtures";
+import type { Page } from "@playwright/test";
+import { aMachine, anOpenDefect, expect, logIn, openDefect, pageWidth, test, tickMachines, unique } from "./fixtures";
 
 /**
  * Sections, lists, filters and links take one shape on every page (ST-092, G29, G30, G32, G17): two things have the
@@ -72,6 +72,51 @@ test("ST-092: The defect page is built from framed sections and headed by its ti
   await expect(heading).toHaveText(title);
   const machineLink = page.getByRole("main").getByRole("link").first();
   await expect(machineLink).toHaveText(new RegExp(`^${museumNumber} · Medieval Madness`));
+  await expectFramedLikeTheMachineRecord(page, example);
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+});
+
+/** A maintenance task on the machine (Not on display, so nothing is ever due), recorded once from its machine record. */
+async function aMaintenanceRecord(page: Page, machine: { museumNumber: string }) {
+  const name = unique("Clean playfield");
+  await page.goto("/team/maintenance-plan/new");
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Anleitung").fill("Wipe the playfield.");
+  await page.getByLabel("Intervall in Monaten").fill("3");
+  await tickMachines(page, machine);
+  await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+  const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
+  const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
+  await page.goto(
+    `/team/maintenance/erfassen?task=${maintenanceTaskId}&machine=${encodeURIComponent(machine.museumNumber)}&von=geraet`,
+  );
+  await page.getByLabel("Ergebnis").selectOption({ label: "Erledigt" });
+  await page.getByRole("button", { name: "Wartung eintragen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`Wartung an ${machine.museumNumber} eingetragen.`);
+}
+
+test("ST-092: The history pages and the repair times are built from framed sections", async ({ page }) => {
+  await logIn(page);
+  const machine = await aMachine(page, "not-on-display");
+  const title = unique("Left flipper weak");
+  await page.goto(`/team/machines/${machine.museumNumber}/melden/defekt-erfassen`);
+  await page.getByLabel("Beschreibung").fill(`${title} – first seen`);
+  await page.getByLabel("Titel").fill(title);
+  await page.getByRole("button", { name: "Melden und Defekt erfassen" }).click();
+  await aMaintenanceRecord(page, machine);
+  const example = await machineRecordSection(page, machine.museumNumber);
+
+  await page.goto(`/team/machines/${machine.museumNumber}/reparaturhistorie`);
+  await expectFramedLikeTheMachineRecord(page, example);
+  await page.getByRole("main").getByRole("link", { name: /^\d{4}/ }).first().click();
+  await expect(page.getByRole("main")).toContainText(title);
+  await expectFramedLikeTheMachineRecord(page, example);
+
+  await page.goto(`/team/machines/${machine.museumNumber}/wartungseintraege`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartungseinträge · ${machine.museumNumber}`);
+  await expectFramedLikeTheMachineRecord(page, example);
+
+  await page.goto("/team/repair-times");
   await expectFramedLikeTheMachineRecord(page, example);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });

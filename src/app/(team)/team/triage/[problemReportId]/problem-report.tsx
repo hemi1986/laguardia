@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { anythingToLinkTo } from "../../defect-to-link-to-input";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
+import { Section } from "@/components/ui/section";
 import type { Role } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { ProblemReportDescription } from "./problem-report-description";
@@ -89,8 +91,7 @@ function TriageOutcomes({
     ...(technician ? [{ href: "verwerfen", label: teamMessages.dismiss.outcome }] : []),
   ];
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="font-medium">{texts.outcomes}</h2>
+    <Section title={texts.outcomes} className="gap-3">
       <div className="flex flex-wrap gap-2">
         {outcomes.map((outcome) => (
           <Link
@@ -106,14 +107,10 @@ function TriageOutcomes({
       {technician && !canLink && (
         <p className="text-muted-foreground text-sm">{teamMessages.link.noOpenDefects(museumNumber)}</p>
       )}
-    </section>
+    </Section>
   );
 }
 
 function BackToTriage() {
-  return (
-    <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-      {texts.back}
-    </Link>
-  );
+  return <BackLink href="/team/triage">{texts.back}</BackLink>;
 }
