@@ -6,6 +6,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { attachPhotoAction } from "./actions";
 import { AttachPhotoForm } from "./attach-photo-form-view";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord: recordTexts, attachPhoto: texts } = teamMessages;
 
@@ -13,9 +14,12 @@ const { machineRecord: recordTexts, attachPhoto: texts } = teamMessages;
  * Attaching a camera photo as a file (ST-054) – its own page beside attaching a file (user, 2026-10-25), reached from
  * the machine record's files section. Every team member, like attaching a file (ST-037).
  */
-export default async function AttachPhotoPage({ params }: PageProps<"/team/machines/[museumNumber]/foto-anhaengen">) {
+export default async function AttachPhotoPage({
+  params,
+  searchParams,
+}: PageProps<"/team/machines/[museumNumber]/foto-anhaengen">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("foto-anhaengen"));
   const record = await machineRecord(database(), museumNumber);
 
   return (

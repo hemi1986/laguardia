@@ -11,6 +11,7 @@ import { requireTeamMember } from "../../../../../team-session";
 import { teamReportProblemAction } from "./actions";
 import { TeamReportProblemForm } from "./report-problem-form";
 import { TriageChoice } from "./triage-choice";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, reportProblem: texts } = teamMessages;
 
@@ -26,7 +27,7 @@ export default async function TeamReportProblemPage({
   searchParams,
 }: PageProps<"/team/machines/[museumNumber]/melden">) {
   const member = await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("melden"));
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
   const technician = member.role === "technician";

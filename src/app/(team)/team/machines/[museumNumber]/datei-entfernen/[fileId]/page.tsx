@@ -7,6 +7,7 @@ import { commandErrorText, teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../../team-session";
 import { removeFileAction } from "./actions";
 import { RemoveFileButton } from "./remove-file-button";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { removeFile: texts, machineRecord } = teamMessages;
 
@@ -17,10 +18,15 @@ const { removeFile: texts, machineRecord } = teamMessages;
  */
 export default async function RemoveFilePage({
   params,
+  searchParams,
 }: PageProps<"/team/machines/[museumNumber]/datei-entfernen/[fileId]">) {
   const viewer = await requireTechnician();
-  const { museumNumber: encoded, fileId } = await params;
-  const museumNumber = decodeURIComponent(encoded);
+  const { fileId } = await params;
+  const museumNumber = await museumNumberOfPage(
+    { params, searchParams },
+    // The file ID comes from the address as it was – encoded already.
+    teamMachinePage(`datei-entfernen/${fileId}`),
+  );
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
   const file = machine && isId(fileId) ? await machineFile(db, { fileId, machineId: machine.id }) : undefined;

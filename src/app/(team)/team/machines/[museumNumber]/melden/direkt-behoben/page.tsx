@@ -7,6 +7,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../../team-session";
 import { reportAndResolveAction } from "./actions";
 import { ReportAndResolveForm } from "./report-and-resolve-form";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, reportAndResolveOnTheSpot: texts, reportProblem } = teamMessages;
 
@@ -17,9 +18,10 @@ const { machineRecord, reportAndResolveOnTheSpot: texts, reportProblem } = teamM
  */
 export default async function ReportAndResolvePage({
   params,
+  searchParams,
 }: PageProps<"/team/machines/[museumNumber]/melden/direkt-behoben">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("melden/direkt-behoben"));
   const db = database();
   const machine = await machineForTeamForm(db, museumNumber);
   const label = machine && (await named(db, { machines: [machine.id] })).label(machine.id);

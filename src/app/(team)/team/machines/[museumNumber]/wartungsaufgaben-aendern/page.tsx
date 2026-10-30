@@ -5,6 +5,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../team-session";
 import { loadChangeTasks } from "./change-tasks-data";
 import { ChangeTasksForm } from "./change-tasks-form";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, changeTasks: texts } = teamMessages;
 
@@ -15,9 +16,10 @@ const { machineRecord, changeTasks: texts } = teamMessages;
  */
 export default async function ChangeTasksPage({
   params,
+  searchParams,
 }: PageProps<"/team/machines/[museumNumber]/wartungsaufgaben-aendern">) {
   await requireTechnician();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("wartungsaufgaben-aendern"));
   const { machine, groups, chosen } = await loadChangeTasks(database(), museumNumber);
 
   return (

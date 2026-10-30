@@ -5,6 +5,7 @@ import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { MoveMachineForm } from "./move-machine-form";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, machineMove: texts } = teamMessages;
 
@@ -12,9 +13,12 @@ const { machineRecord, machineMove: texts } = teamMessages;
  * Moving a machine (ST-034) – its own page „Standort ändern · LG-042“, reached from the machine record. Every team
  * member may open it; the form is filled in with the current location.
  */
-export default async function MoveMachinePage({ params }: PageProps<"/team/machines/[museumNumber]/standort">) {
+export default async function MoveMachinePage({
+  params,
+  searchParams,
+}: PageProps<"/team/machines/[museumNumber]/standort">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("standort"));
   const machine = await machineForTeamForm(database(), museumNumber);
 
   return (

@@ -66,6 +66,24 @@ test("ST-035: Old QR sticker keeps working", async ({ page, browser }) => {
   await expect(page).toHaveURL(new RegExp(`/team/machines/${corrected}/angaben$`));
 });
 
+test("a reserved museum number leads every page of the machine to the same page under its current one", async ({
+  page,
+  browser,
+}) => {
+  await logIn(page);
+  const { museumNumber: reserved } = await aMachine(page);
+  const corrected = await correctToAFreeNumber(page, reserved);
+
+  for (const sub of ["/standort", "/wartungseintraege", "/reparaturhistorie?jahr=2026", "/melden"]) {
+    await page.goto(`/team/machines/${reserved}${sub}`);
+    await expect(page).toHaveURL(`/team/machines/${corrected}${sub}`);
+  }
+  const phone = await visitorPhone(browser);
+  await phone.goto(`/m/${reserved}/melden`);
+  await expect(phone).toHaveURL(new RegExp(`/m/${corrected}/melden$`));
+  await phone.context().close();
+});
+
 test("a serial number added later shows on the machine record", async ({ page }) => {
   await logIn(page);
   const { museumNumber } = await aMachine(page);

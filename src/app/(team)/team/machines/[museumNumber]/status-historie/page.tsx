@@ -1,11 +1,10 @@
-import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
-import { machineOfMuseumNumber } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { loadStatusHistory } from "./status-history-data";
 import { StatusHistoryView } from "./status-history";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 /**
  * The whole status history of one machine (ST-093) – reached from section 6 of its machine record. Every team member;
@@ -13,16 +12,11 @@ import { StatusHistoryView } from "./status-history";
  */
 export default async function StatusHistoryPage({
   params,
+  searchParams,
 }: PageProps<"/team/machines/[museumNumber]/status-historie">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("status-historie"));
   const data = await loadStatusHistory(database(), museumNumber);
-  if (!data) {
-    const machine = await machineOfMuseumNumber(database(), museumNumber);
-    if (machine && machine.museumNumber !== museumNumber) {
-      redirect(`/team/machines/${encodeURIComponent(machine.museumNumber)}/status-historie`);
-    }
-  }
 
   return (
     <Page title={data ? data.title : teamMessages.terms.Machine}>
