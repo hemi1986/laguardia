@@ -264,7 +264,7 @@ export async function machineRecord(db: Database, museumNumber: string): Promise
     },
     location: m.location,
     machineStatus: m.machineStatus,
-    statusHistory: (await statusHistoryOf(db, m.id)).reverse(),
+    statusHistory: await statusHistoryOfMachine(db, m.id),
     retirement: retirementOf(m),
     files: await filesOfMachine(db, { machineId: m.id, machineModelId: m.machineModelId }),
   };
@@ -301,6 +301,14 @@ export async function retirementLock(tx: Database, machineId: string, mode: "exc
  */
 export function holdAgainstRetirement(tx: Database, machineId: string): Promise<void> {
   return isId(machineId) ? retirementLock(tx, machineId, "shared") : Promise.resolve();
+}
+
+/**
+ * The whole status history of a machine, the newest first – RM-MachineRecord's status history on a page of its own
+ * (ST-093), retired machines included. "… by" are TeamMemberIds.
+ */
+export async function statusHistoryOfMachine(db: Database, machineId: string): Promise<StatusChange[]> {
+  return (await statusHistoryOf(db, machineId)).reverse();
 }
 
 /** A machine's status history, oldest first – module-internal, for this module's tests (the record shows it newest first). */

@@ -48,6 +48,7 @@ export type {
 export {
   machineOverview,
   machineRecord,
+  statusHistoryOfMachine,
   machineForTeamForm,
   machineForReporting,
   holdAgainstRetirement,

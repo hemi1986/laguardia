@@ -260,3 +260,34 @@ export async function tickMachines(page: Page, ...machines: { museumNumber: stri
     await page.getByRole("checkbox", { name: new RegExp(museumNumber) }).check();
   }
 }
+
+/** The page correcting a machine's details, from its machine record (ST-035). */
+export async function openCorrection(page: Page, museumNumber: string) {
+  await page.goto(`/team/machines/${museumNumber}`);
+  await page.getByRole("link", { name: "Angaben korrigieren" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Angaben korrigieren · ${museumNumber}`);
+}
+
+/**
+ * Corrects the machine's museum number to one nobody has – other specs register machines in the same database at the
+ * same time, so a number taken meanwhile is tried again with another. Kept well below LG-999: assignment continues
+ * above the highest number, and ST-010's unknown museum number is LG-999. Its old number stays reserved (ST-035).
+ */
+export async function correctToAFreeNumber(page: Page, museumNumber: string): Promise<string> {
+  await openCorrection(page, museumNumber);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const corrected = `LG-${400 + Math.floor(Math.random() * 200)}`;
+    await page.getByLabel("Museumsnummer").fill(corrected);
+    await page.getByRole("button", { name: "Angaben korrigieren" }).click();
+    const landed = page.waitForURL(new RegExp(`/team/machines/${corrected}\\?`)).then(() => true);
+    // The rejection names the number tried – an alert left from an earlier attempt names another one.
+    const taken = page
+      .getByRole("main")
+      .getByRole("alert")
+      .filter({ hasText: corrected })
+      .waitFor()
+      .then(() => false);
+    if (await Promise.race([landed, taken].map((wait) => wait.catch(() => false)))) return corrected;
+  }
+  throw new Error("no free museum number found");
+}

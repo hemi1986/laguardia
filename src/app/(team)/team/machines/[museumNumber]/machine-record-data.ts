@@ -21,7 +21,10 @@ export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: s
 
 /** The machine record with names – what the page shows (ST-009). */
 export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retirement"> & {
-  statusHistory: NamedStatusChange[];
+  /** Section 6 (ST-093): its latest status changes, the newest first – at most `LATEST_STATUS_CHANGES`. */
+  latestStatusChanges: NamedStatusChange[];
+  /** How many entries its whole status history has – the registration included (ST-093). */
+  statusHistoryCount: number;
   retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string };
   /** Section 4 (ST-033): its open defects, as the open defects list shows them – high priority first. */
   openDefects: OpenDefectsItem[];
@@ -64,6 +67,9 @@ export type ShownMachineMaintenance = Omit<MachineMaintenance, "latestRecords"> 
 /** A maintenance record as the machine record shows it – who recorded it by name. */
 export type ShownMaintenanceRecord = Omit<NamedMaintenanceRecord, "recordedBy"> & { recordedBy: string };
 
+/** How many of the latest status changes the machine record shows (ST-093, G24). */
+export const LATEST_STATUS_CHANGES = 5;
+
 /** How many of the latest maintenance records the machine record shows (user, backlog grooming 2026-10-17). */
 export const LATEST_MAINTENANCE_RECORDS = 5;
 
@@ -89,6 +95,7 @@ export async function loadMachineRecord(
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
+  const latestStatusChanges = record.statusHistory.slice(0, LATEST_STATUS_CHANGES);
   const [open, recent, maintenance] = await Promise.all([
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
@@ -96,7 +103,7 @@ export async function loadMachineRecord(
   ]);
   const shown = await named(db, openDefectReferences(open), {
     teamMembers: [
-      ...record.statusHistory.map((change) => change.changedBy),
+      ...latestStatusChanges.map((change) => change.changedBy),
       record.retirement?.retiredBy,
       ...recent.entries.map((entry) => entry.resolvedBy),
       ...maintenance.latestRecords.map((maintenanceRecord) => maintenanceRecord.recordedBy),
@@ -104,7 +111,8 @@ export async function loadMachineRecord(
   });
   return {
     ...record,
-    statusHistory: record.statusHistory.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
+    latestStatusChanges: latestStatusChanges.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
+    statusHistoryCount: record.statusHistory.length,
     retirement: record.retirement && { ...record.retirement, retiredBy: shown.name(record.retirement.retiredBy) },
     openDefects: shownOpenDefects(clock, open, shown, viewer),
     recentRepairHistory: recent.entries.map((entry) => ({ ...entry, resolvedBy: shown.name(entry.resolvedBy) })),

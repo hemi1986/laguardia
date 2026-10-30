@@ -96,6 +96,8 @@ export const collectionTexts = {
     manufacturer: "Hersteller",
     /** The first entry of the status history – the machine status given at registration (CONTEXT.md: Erfasst). */
     registeredAs: (status: string) => `Erfasst als ${status}`,
+    /** Section 6 (ST-093, G24): below the 5 latest entries – n counts every entry, the registration included. */
+    allStatusChanges: (count: number) => `Alle Statusänderungen (${count})`,
     retired: (date: string, who: string, reason: string) => `Ausgemustert am ${date} von ${who} – ${reason}`,
     /** Section 9 (ST-039): technicians only, not for a retired machine (G11). */
     retire: "Gerät ausmustern",
@@ -231,6 +233,12 @@ export const collectionTexts = {
     back: "Zurück",
     reasonRequired: "Bitte einen Grund angeben.",
     retired: "Dieses Gerät ist schon ausgemustert.",
+    backToMachine: "Zurück zum Gerät",
+  },
+  /** The whole status history of one machine (ST-093, G24) – its own page, reached from section 6 of the machine record. */
+  statusHistory: {
+    title: (museumNumber: string) => `Status-Historie · ${museumNumber}`,
+    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     backToMachine: "Zurück zum Gerät",
   },
   /** Correcting a machine's museum number or serial number (ST-035) – its own page, reached from the machine record. */

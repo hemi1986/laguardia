@@ -136,14 +136,17 @@ export function MachineRecordView({
       </Section>
       {/* Section 5 (ST-047): due maintenance and the latest maintenance records. */}
       <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
+      {/* Section 6 (ST-093): the latest status changes; the whole status history is a page of its own (G24). */}
       <Section title={terms["Status history"]}>
-        <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
-          {record.statusHistory.map((change) => (
-            <li key={change.id} className="flex flex-col gap-0.5 text-sm">
-              <StatusChangeEntry change={change} />
-            </li>
-          ))}
-        </ol>
+        <StatusChangeList changes={record.latestStatusChanges} />
+        {record.statusHistoryCount > record.latestStatusChanges.length && (
+          <Link
+            href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status-historie`}
+            className="self-start text-sm underline underline-offset-4"
+          >
+            {texts.allStatusChanges(record.statusHistoryCount)}
+          </Link>
+        )}
       </Section>
       {/* Section 7 (ST-033): the most recently ended entries of the repair history; the whole repair history is a page of its own (G4a). */}
       <Section title={terms["Repair history"]}>
@@ -286,6 +289,19 @@ function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) 
       <p className="whitespace-pre-line">{repair.note}</p>
       <p className="text-muted-foreground">{texts.whoAndWhen(repair.resolvedBy, formatDateTime(repair.resolvedAt))}</p>
     </article>
+  );
+}
+
+/** Status changes, as the machine record and the status history page list them (ST-093). */
+export function StatusChangeList({ changes }: { changes: NamedStatusChange[] }) {
+  return (
+    <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
+      {changes.map((change) => (
+        <li key={change.id} className="flex flex-col gap-0.5 text-sm">
+          <StatusChangeEntry change={change} />
+        </li>
+      ))}
+    </ol>
   );
 }
 

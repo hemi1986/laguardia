@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  changeMachineStatusCommand,
   createMachineModelCommand,
   machineForTeamForm,
   machineLabels,
@@ -87,4 +88,35 @@ export async function journalSinceRegistration(db: Database, machineId: string) 
   const [registration, ...since] = await journalOf(db, { machineId });
   if (registration?.type !== "EVT-MachineRegistered") throw new Error(`${machineId} was not registered first`);
   return since;
+}
+
+/**
+ * The machine's status changed once at each of the instants, in that order – to Out of order, or back to Playable from
+ * Out of order – for a status history of a given length (ST-093). Changing the status is a
+ * technician's command; each change reads the version stored then.
+ */
+export async function statusChangedAt(
+  db: Database,
+  machineId: string,
+  instants: readonly string[],
+  by: typeof TEST_TECHNICIAN = TEST_TECHNICIAN,
+): Promise<void> {
+  await anExistingTeamMember(db, by);
+  const label = (await machineLabels(db, [machineId])).get(machineId);
+  if (!label) throw new Error(`no machine ${machineId}`);
+  for (const [index, at] of instants.entries()) {
+    const machine = await machineForTeamForm(db, label.museumNumber);
+    if (!machine) throw new Error(`no machine ${machineId}`);
+    const changed = await executeCommand(
+      changeMachineStatusCommand,
+      {
+        machineId,
+        version: machine.version,
+        machineStatus: machine.machineStatus === "out-of-order" ? "playable" : "out-of-order",
+        reason: `Change ${index + 1}`,
+      },
+      { actor: by, db, clock: fixedClock(at), newId: randomUUID },
+    );
+    if (!changed.ok) throw new Error(changed.error);
+  }
 }
