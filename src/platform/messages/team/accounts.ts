@@ -48,7 +48,7 @@ export const accountsTexts = {
     title: "Passwort ändern",
     current: "Aktuelles Passwort",
     new: "Neues Passwort",
-    submit: "Speichern",
+    submit: "Passwort ändern",
     changed: "Passwort geändert.",
   },
   /** Keyed by the kebab-case reason a Team module function rejects a change (ST-005). */

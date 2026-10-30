@@ -24,7 +24,7 @@ test("a team member changes their own password and a wrong current password is r
 
   await page.getByLabel("Aktuelles Passwort").fill("definitely-wrong");
   await page.getByLabel("Neues Passwort").fill("does-not-matter-10");
-  await page.getByRole("button", { name: "Speichern" }).click();
+  await page.getByRole("button", { name: "Passwort ändern" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Das aktuelle Passwort stimmt nicht.");
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
