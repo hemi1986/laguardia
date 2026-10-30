@@ -299,6 +299,11 @@ describe("the repair history's own page", () => {
     // An open defect is part of the repair history, and says it is open.
     expect(of2026.slice(of2026.indexOf("Left flipper weak")).split("</article>")[0]).toContain("Offen");
     expect(of2026).not.toContain("Coin door jammed");
+
+    // A year without entries in the address is no year chosen: the choice again.
+    const of1999 = await page("1999");
+    expect(of1999).toContain("Welches Jahr?");
+    expect(of1999).not.toContain("Left flipper weak");
   });
 
   it("says so for a machine with nothing repaired, and for an unknown machine", async () => {

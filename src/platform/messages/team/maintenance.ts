@@ -51,8 +51,6 @@ export const maintenanceTexts = {
     whoAndWhen: (who: string, when: string) => `${who} · ${when}`,
     allRecords: (count: number) => `Alle Wartungseinträge (${count})`,
     recordsTitle: (museumNumber: string) => `Wartungseinträge · ${museumNumber}`,
-    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
-    backToMachine: "Zurück zum Gerät",
     /** How many maintenance tasks apply to the machine (ST-096) – the names are on the form page. */
     tasksApply: (count: number) =>
       count === 0
@@ -68,7 +66,6 @@ export const maintenanceTexts = {
     open: "Wartungsaufgaben ändern",
     legend: "Wartungsaufgaben des Geräts",
     submit: "Wartungsaufgaben ändern",
-    back: "Zurück zum Gerät",
     toPlan: "Zum Wartungsplan",
     retired: "Dieses Gerät ist ausgemustert – seine Wartungsaufgaben lassen sich nicht mehr ändern.",
     /** After the name of a task: it can be done by helpers (G27). */

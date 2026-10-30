@@ -8,13 +8,11 @@ export const repairTexts = {
   /** The repair history's own page (ST-033): the years first, each with its number of entries (G4a). */
   repairHistory: {
     title: (museumNumber: string) => `Reparaturhistorie · ${museumNumber}`,
-    year: (year: string, count: number) => `${year} · ${count === 1 ? "1 Eintrag" : `${count} Einträge`}`,
     chooseYear: "Welches Jahr?",
     defectOpen: "Offen",
     /** A defect its machine's retirement closed (ST-039) – not resolved, so no closing note. */
     closedOnRetirement: (at: string) => `${sharedTexts.terms["Closed on retirement"]} am ${at}`,
     allYears: "Alle Jahre",
-    backToMachine: "Zurück zum Gerät",
   },
   /** The photo of a problem report (ST-016) – shown to team members only (HS-1). */
   problemReportPhoto: {
@@ -316,7 +314,6 @@ export const repairTexts = {
     descriptionHint: "Was ist kaputt, wo am Gerät? Eine Techniker:in sichtet die Meldung.",
     submit: "Meldung erfassen",
     retired: "Dieses Gerät ist ausgemustert – dafür gibt es keine Meldungen mehr.",
-    back: "Zurück zum Gerät",
     /** The optional photo (ST-016) – the browser's own rejections use the photo errors' texts below. */
     photo: {
       label: "Foto (freiwillig)",

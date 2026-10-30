@@ -41,7 +41,7 @@ export function RecordMaintenancePage({
         whyNot={data.whyNot}
       />
       <BackLink href={backAddress(back, { maintenanceTaskId: maintenanceTask.id, museumNumber: machine.museumNumber })}>
-        {back === "machine" ? teamMessages.machineMaintenance.backToMachine : texts.back}
+        {back === "machine" ? teamMessages.machinePages.backToMachine : texts.back}
       </BackLink>
     </>
   );

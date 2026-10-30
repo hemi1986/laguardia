@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -6,6 +5,7 @@ import { requireTechnician } from "../../../../../team-session";
 import { loadChangeTasks } from "./change-tasks-data";
 import { ChangeTasksForm } from "./change-tasks-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machineRecord, changeTasks: texts } = teamMessages;
 
@@ -31,7 +31,7 @@ export default async function ChangeTasksPage({
       ) : (
         <ChangeTasksForm machineId={machine.id} groups={groups} chosen={chosen} />
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineFile, machineForTeamForm, removeFileRefusal } from "@/modules/collection";
 import { isId } from "@/platform/command";
@@ -8,6 +7,7 @@ import { requireTechnician } from "../../../../../../team-session";
 import { removeFileAction } from "./actions";
 import { RemoveFileButton } from "./remove-file-button";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../../machine-history";
 
 const { removeFile: texts, machineRecord } = teamMessages;
 
@@ -31,7 +31,7 @@ export default async function RemoveFilePage({
   const machine = await machineForTeamForm(db, museumNumber);
   const file = machine && isId(fileId) ? await machineFile(db, { fileId, machineId: machine.id }) : undefined;
   const refusal = file && removeFileRefusal(file, viewer);
-  const back = `/team/machines/${encodeURIComponent(museumNumber)}`;
+  const back = teamMachinePage()(museumNumber);
 
   return (
     <Page title={texts.title(museumNumber)}>
@@ -51,7 +51,7 @@ export default async function RemoveFilePage({
           />
         </>
       )}
-      {(!machine || !file) && <BackLink href={back}>{texts.backToMachine}</BackLink>}
+      {(!machine || !file) && <BackToMachine museumNumber={museumNumber} />}
     </Page>
   );
 }

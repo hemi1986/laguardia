@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { named } from "../../../../named";
@@ -8,8 +7,9 @@ import { requireTeamMember } from "../../../../../../team-session";
 import { reportAndResolveAction } from "./actions";
 import { ReportAndResolveForm } from "./report-and-resolve-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../../machine-history";
 
-const { machineRecord, reportAndResolveOnTheSpot: texts, reportProblem } = teamMessages;
+const { machineRecord, reportAndResolveOnTheSpot: texts } = teamMessages;
 
 /**
  * „Problem melden und als direkt behoben eintragen“ (ST-052, G21a) – the form page of the triage outcome *resolved on
@@ -44,7 +44,7 @@ export default async function ReportAndResolvePage({
           />
         </>
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{reportProblem.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }

@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineForTeamForm, machineStatusesToChangeTo } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -6,6 +5,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { ChangeMachineStatusForm } from "./change-machine-status-form";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { BackToMachine } from "../machine-history";
 
 const { machines, machineRecord, machineStatusChange: texts } = teamMessages;
 
@@ -37,7 +37,7 @@ export default async function ChangeMachineStatusPage({
           <ChangeMachineStatusForm machineId={machine.id} version={machine.version} offered={offered} />
         </>
       )}
-      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
+      <BackToMachine museumNumber={museumNumber} />
     </Page>
   );
 }
