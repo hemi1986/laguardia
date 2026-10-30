@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import { groupMachines } from "@/modules/collection";
 import type { MachineToChoose, MaintenanceForSeveral } from "@/modules/maintenance";
 import { teamMessages } from "@/platform/messages";
-import { machineChoiceGroups } from "../../category-and-technology";
+import { machineChoiceGroups, machineEntryLabel } from "../../category-and-technology";
 
 const { recordForSeveral: texts } = teamMessages;
 
@@ -21,6 +21,6 @@ export function choiceForSeveral({ due, others }: Pick<MaintenanceForSeveral, "d
   };
 }
 
-function entryOf({ machineId, museumNumber, machineModelTitle, location }: MachineToChoose) {
-  return { value: machineId, label: texts.entry(museumNumber, machineModelTitle, location) };
+function entryOf(machine: MachineToChoose) {
+  return { value: machine.machineId, label: machineEntryLabel(machine, machine.location) };
 }

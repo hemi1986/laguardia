@@ -22,6 +22,7 @@ import {
   recordMaintenanceCommand,
   type MaintenanceOutcome,
   type MaintenanceTaskDetails,
+  maintenanceForSeveral,
 } from "@/modules/maintenance";
 import { withoutMaintenanceTasks } from "@/modules/maintenance/maintenance.test-support";
 import { fixedClock } from "@/platform/clock";
@@ -36,7 +37,6 @@ import { dueMaintenanceFilterOf, loadDueMaintenance, type DueMaintenanceFilter }
 import { DueMaintenanceView } from "./due-maintenance";
 import { loadMaintenanceForRecording } from "./erfassen/record-maintenance-data";
 import { RecordMaintenancePage } from "./erfassen/record-maintenance-view";
-import { loadRecordForSeveral } from "./mehrere/record-for-several-data";
 import { RecordForSeveralPage } from "./mehrere/record-for-several-view";
 import { choiceForSeveral } from "./mehrere/choice-for-several";
 import { ChoiceForSeveral } from "./mehrere/record-for-several-form";
@@ -431,10 +431,7 @@ describe("the due maintenance list", () => {
     expect(await countOf()).toBe(1);
     expect((await planPage()).html).toContain("Gilt für 1 Gerät");
     expect(await listedOn("2026-04-02", wax)).toEqual(["LG-005"]);
-    const several = await loadRecordForSeveral(db, fixedClock("2026-04-02T10:00:00Z"), wax, {
-      id: tom.teamMemberId,
-      role: tom.role,
-    });
+    const several = await maintenanceForSeveral(db, fixedClock("2026-04-02T10:00:00Z"), wax, { role: tom.role });
     expect([...(several?.due ?? []), ...(several?.others ?? [])].map((machine) => machine.museumNumber)).toEqual([
       "LG-005",
     ]);
@@ -900,8 +897,7 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
   });
   /** The selection page „Für mehrere Geräte erfassen“ of that task on that day, as that team member sees it. */
   async function selection(on: string, maintenanceTaskId: string, viewer: typeof tom | typeof anna) {
-    const data = await loadRecordForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
-      id: viewer.teamMemberId,
+    const data = await maintenanceForSeveral(db, fixedClock(`${on}T10:00:00Z`), maintenanceTaskId, {
       role: viewer.role,
     });
     return { data, html: data ? renderToStaticMarkup(createElement(RecordForSeveralPage, { data })) : "" };
@@ -914,8 +910,9 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
 
   it("ST-045: Due machines are preselected, all applicable machines can be selected", async () => {
     const lg042 = await aMachine("LG-042", { location: "Hall 2, row 1" });
-    const lg045 = await aMachine("LG-045", { location: "Hall 1, row 3" });
-    const lg046 = await aMachine("LG-046", { location: "Hall 1, row 10" });
+    // By location LG-046 would come first – the page orders by museum number.
+    const lg045 = await aMachine("LG-045", { location: "Hall 1, row 10" });
+    const lg046 = await aMachine("LG-046", { location: "Hall 1, row 3" });
     const lg090 = await aMachine("LG-090", { machineCategory: "arcade", technology: "crt" });
     const cleanGlass = await aMaintenanceTask("Clean glass (inside & out)", [lg042, lg045, lg046], {
       suitableForHelpers: true,
@@ -928,8 +925,9 @@ describe("„Für mehrere Geräte erfassen“ (ST-045)", () => {
     const { data, html } = await selection("2026-04-02", cleanGlass, anna);
 
     expect(data?.due.map((machine) => machine.museumNumber)).toEqual(["LG-042"]);
-    // By location as people read it: row 3 before row 10.
-    expect(data?.others.map((machine) => machine.museumNumber)).toEqual(["LG-045", "LG-046"]);
+    expect(data?.others.map((machine) => machine.museumNumber).sort()).toEqual(["LG-045", "LG-046"]);
+    // The page orders them inside their group by museum number (ST-098) – Maintenance gives them in no order of its own.
+    expect(html.indexOf(lg045)).toBeLessThan(html.indexOf(lg046));
     expect(checkboxOf(html, lg042)).toContain("checked");
     expect(checkboxOf(html, lg045)).not.toContain("checked");
     expect(html).toContain("Weitere Geräte");

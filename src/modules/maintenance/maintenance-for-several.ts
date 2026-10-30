@@ -2,7 +2,7 @@ import { machinesForMaintenance, type MachineCategory, type Technology } from "@
 import type { Clock } from "@/platform/clock";
 import type { Database, Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
-import { byLocation, dueOn } from "./due-maintenance";
+import { dueOn } from "./due-maintenance";
 import { activeMaintenanceTasks } from "./maintenance-plans";
 import { maintenanceTaskAppliesTo } from "./machines-of-maintenance-task";
 import { LONGEST_BACK_DATING_DAYS, recordRefusal, type RecordMaintenanceError } from "./record-maintenance";
@@ -18,8 +18,8 @@ export type FurtherMachineToChoose = MachineToChoose & {
 
 /**
  * A maintenance task as the selection page „Für mehrere Geräte erfassen“ needs it (ST-045, decision D8): the machines
- * it is due on – preselected, in the due maintenance list's order – and every other machine it applies to, by location
- * (the page groups them by machine category and technology, ST-098);
+ * it is due on – preselected, in the due maintenance list's order – and every other machine it applies to, in no order
+ * of their own (the page groups and orders them by machine category, technology and museum number, ST-098);
  * only those on which CMD-RecordMaintenance would accept the team member who asks (G11). `whyNot` is the command's
  * reason when it would accept them on none of them, and the dates are the ones it accepts (D6).
  */
@@ -60,8 +60,7 @@ export async function maintenanceForSeveral(
         ...toChoose({ ...machine, machineId: machine.id }),
         machineCategory: machine.machineCategory,
         technology: machine.technology,
-      }))
-      .sort(byLocation),
+      })),
     whyNot: offered.length === 0 ? refusals.find((refusal) => refusal !== undefined) : undefined,
     today: now,
     earliest: addDays(now, -LONGEST_BACK_DATING_DAYS),

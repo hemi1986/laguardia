@@ -1,11 +1,11 @@
 import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
+import { maintenanceForSeveral } from "@/modules/maintenance";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
 import { recordForSeveralAction } from "./actions";
-import { loadRecordForSeveral } from "./record-for-several-data";
 import { RecordForSeveralPage } from "./record-for-several-view";
 
 const { recordForSeveral: texts, recordMaintenance } = teamMessages;
@@ -17,7 +17,8 @@ const { recordForSeveral: texts, recordMaintenance } = teamMessages;
 export default async function RecordForSeveralRoute({ searchParams }: PageProps<"/team/maintenance/mehrere">) {
   const member = await requireTeamMember();
   const { task } = await searchParams;
-  const data = typeof task === "string" ? await loadRecordForSeveral(database(), systemClock, task, member) : undefined;
+  const data =
+    typeof task === "string" ? await maintenanceForSeveral(database(), systemClock, task, member) : undefined;
 
   return (
     <Page title={data ? texts.title(data.maintenanceTask.name) : recordMaintenance.record}>

@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Rejection } from "@/components/ui/message";
 import { Button } from "@/components/ui/button";
-import { GroupedChoice, type ChoiceGroup } from "@/components/ui/grouped-choice";
+import type { ChoiceGroup } from "@/components/ui/grouped-choice";
+import { TeamGroupedChoice } from "../../team-grouped-choice";
 import { teamMessages } from "@/platform/messages";
 
-const { stickers: texts, groupedChoice } = teamMessages;
+const { stickers: texts } = teamMessages;
 
 /**
  * Choosing the machines to print QR stickers for (ST-011): a plain GET form to the print page, so it works without
@@ -30,12 +31,10 @@ export function StickerChoice({
     <form action="/team/machines/stickers/print" method="get" className="flex flex-col gap-4">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-medium">{texts.choose}</legend>
-        <GroupedChoice
+        <TeamGroupedChoice
           name="m"
           groups={groups}
           chosen={[]}
-          header={groupedChoice.header}
-          selectAll={groupedChoice.selectAll}
           open={!!search}
           onChosenChange={(now) => setChosen(now.size)}
         />

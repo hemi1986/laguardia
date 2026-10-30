@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import type { MachineCategory, MachineGroup, Technology } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 
-const { machineModels } = teamMessages;
+const { machineModels, groupedChoice } = teamMessages;
 
 /**
  * A machine category and technology as G27 names their group: „Flipper · EM“ – by the machine category alone without a
@@ -15,6 +15,17 @@ export function categoryAndTechnologyLabel(
   return [machineModels.categories[machineCategory], technology && machineModels.technologies[technology]]
     .filter(Boolean)
     .join(" · ");
+}
+
+/**
+ * How a machine reads among the entries of a grouped choice (G27): „LG-042 · Medieval Madness“, then what the form adds
+ * – the location, „Nicht ausgestellt“ –, each after „ · “; what is not there is left out. Every machine choice uses it.
+ */
+export function machineEntryLabel(
+  machine: { museumNumber: string; machineModelTitle: string },
+  ...more: readonly (string | false | undefined)[]
+): string {
+  return [groupedChoice.machine(machine.museumNumber, machine.machineModelTitle), ...more].filter(Boolean).join(" · ");
 }
 
 /**

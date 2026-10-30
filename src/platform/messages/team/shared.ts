@@ -64,6 +64,8 @@ export const sharedTexts = {
     /** „Flipper · EM – 4 von 6 ausgewählt“; a group without a technology is named by its category alone. */
     header: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
     selectAll: "Alle auswählen",
+    /** A machine among the entries: „LG-042 · Medieval Madness“ – a form adds what it needs (· Halle 1, · Nicht ausgestellt). */
+    machine: (museumNumber: string, machineModelTitle: string) => `${museumNumber} · ${machineModelTitle}`,
   },
   /**
    * A machine's history on a page of its own – the status history, the maintenance records, the repair history (G24,

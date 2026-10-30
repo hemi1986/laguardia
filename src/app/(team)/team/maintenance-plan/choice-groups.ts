@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import type { ChoosableMachine } from "@/modules/maintenance";
 import type { MachineGroup } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
-import { machineChoiceGroups } from "../category-and-technology";
+import { machineChoiceGroups, machineEntryLabel } from "../category-and-technology";
 
 const { maintenancePlan: texts } = teamMessages;
 
@@ -15,11 +15,6 @@ const { maintenancePlan: texts } = teamMessages;
 export function choiceGroups(groups: MachineGroup<ChoosableMachine>[]): ChoiceGroup[] {
   return machineChoiceGroups(groups, (machine) => ({
     value: machine.machineId,
-    label: [
-      texts.machines.entry(machine.museumNumber, machine.machineModelTitle),
-      machine.notOnDisplay && texts.machines.notOnDisplay,
-    ]
-      .filter(Boolean)
-      .join(" · "),
+    label: machineEntryLabel(machine, machine.notOnDisplay && texts.machines.notOnDisplay),
   }));
 }
