@@ -77,7 +77,7 @@ describe("CMD-RetireMachine", () => {
       retiredBy: eva.teamMemberId,
       retiredAt: new Date("2026-03-01T11:00:00Z"),
     });
-    // Its full history stays: the record still opens with both status history entries.
+    // Its full history stays: both status history entries are still there.
     expect((await statusHistoryOfMachine(db, record!.id)).map((change) => change.newStatus)).toEqual([
       "out-of-order",
       "playable",

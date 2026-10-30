@@ -400,6 +400,27 @@ describe("the machine record", () => {
       expect(repairs).not.toContain("Ganze Reparaturhistorie");
     });
 
+    it("leads to the whole repair history from its first entry, even when the record shows every entry (ST-033)", async () => {
+      // Its page shows more of each entry than the record does – the work log, the photos.
+      const machineId = await registered("LG-042", "2026-01-15T09:00:00Z");
+      const resolved = await executeCommand(
+        resolveDefectCommand,
+        {
+          defectId: await anOpenDefect(machineId, "Left flipper weak", "normal", "2026-10-01T08:00:00Z"),
+          version: 0,
+          closingNote: "Coil replaced",
+        },
+        { actor: eva, db, clock: fixedClock("2026-10-01T12:00:00Z"), newId: randomUUID },
+      );
+      if (!resolved.ok) throw new Error(resolved.error);
+
+      const repairs = section(await page("LG-042"), "Reparaturhistorie");
+
+      expect(repairs).toContain("Coil replaced");
+      expect(repairs).toContain('href="/team/machines/LG-042/reparaturhistorie"');
+      expect(repairs).toMatch(/>Ganze Reparaturhistorie \(1\)</);
+    });
+
     it("shows the 3 most recent repairs, the most recently ended first, and leads to the whole repair history", async () => {
       const lg042 = await registered("LG-042", "2026-01-15T09:00:00Z");
       const days = ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"];
