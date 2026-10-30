@@ -247,7 +247,7 @@ describe("the due maintenance list", () => {
       expect.objectContaining({ museumNumber: "LG-042", lastDone: undefined, dueSince: "2026-06-10" }),
     ]);
     expect(html).toContain("Noch nicht erledigt · fällig seit 10.06.2026");
-    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-005"[^>]*>LG-005<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-005"[^>]*>LG-005 · Medieval Madness pinball\/dmd<\/a>/);
     expect(html).not.toContain("LG-020");
   });
 

@@ -27,6 +27,8 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadDueMaintenance } from "./maintenance/due-maintenance-data";
+import { DueMaintenanceView } from "./maintenance/due-maintenance";
 import { loadTechnicianDashboard } from "./technician-dashboard-data";
 import { TechnicianDashboard } from "./technician-dashboard";
 
@@ -154,9 +156,21 @@ async function workLogged(defectId: string, version: number, by: typeof tom, at:
   );
 }
 
-async function dashboard() {
-  const data = await loadTechnicianDashboard(db, fixedClock(NOW), { id: tom.teamMemberId, role: "technician" });
+async function dashboard(viewer: typeof tom | typeof ben = tom) {
+  const data = await loadTechnicianDashboard(db, fixedClock(NOW), { id: viewer.teamMemberId, role: "technician" });
   return { data, html: renderToStaticMarkup(createElement(TechnicianDashboard, { data })) };
+}
+
+/** The text of each list entry of the section with that title, without the markup – what a person reads. */
+function entriesOf(html: string, title: string): string[] {
+  const start = html.indexOf(`>${title}<`);
+  const end = html.indexOf("</section>", start);
+  return [...html.slice(start, end).matchAll(/<li>(.*?)<\/li>/gs)].map(([, entry]) =>
+    entry
+      .replace(/<[^>]+>/g, "")
+      .replaceAll("&quot;", '"')
+      .replaceAll("&amp;", "&"),
+  );
 }
 
 describe("the technician dashboard", () => {
@@ -184,7 +198,7 @@ describe("the technician dashboard", () => {
       { museumNumber: "LG-042", machineModelTitle: "Medieval Madness", machineStatus: "out-of-order" },
     ]);
     expect(html).toContain("Außer Betrieb · kein offener Defekt");
-    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>LG-042<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>LG-042 · Medieval Madness<\/a>/);
   });
 
   it("ST-048: Machines with open defects are not listed", async () => {
@@ -350,6 +364,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-10T09:00:00Z"),
+        hoursAgo: 1,
         newSinceLastVisit: false,
       },
       {
@@ -359,6 +374,7 @@ describe("the technician dashboard", () => {
         museumNumber: "LG-007",
         by: "Tom",
         at: new Date("2026-06-09T15:00:00Z"),
+        hoursAgo: 19,
         newSinceLastVisit: false,
       },
       {
@@ -368,13 +384,15 @@ describe("the technician dashboard", () => {
         newStatus: "out-of-order",
         by: "Anna",
         at: new Date("2026-06-09T12:00:00Z"),
+        hoursAgo: 22,
         newSinceLastVisit: false,
       },
     ]);
     expect(html).toContain("Letzte Änderungen");
-    expect(html).toContain("Spielbereit → Außer Betrieb · Anna · 09.06.2026, 14:00");
-    expect(html).toContain("(LG-007) wieder geöffnet · Tom · 10.06.2026, 11:00");
-    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Left flipper weak</a>`));
+    // In the helper dashboard's shape since ST-092 (G25): the thing, what happened „von“ whom, how long ago.
+    expect(html).toContain("Spielbereit → Außer Betrieb von Anna · vor 22 Stunden");
+    expect(html).toContain(" an LG-007 · wieder geöffnet von Tom · vor 1 Stunde");
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>„Left flipper weak“</a>`));
     expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-007"[^>]*>LG-007<\/a>/);
   });
 
@@ -410,7 +428,7 @@ describe("the technician dashboard", () => {
     const { html } = await dashboard();
 
     const allEmpty = html.indexOf("Gerade braucht nichts deine Aufmerksamkeit.");
-    const statusChange = html.indexOf("Eingeschränkt → Spielbereit · Tom · 09.06.2026, 14:00");
+    const statusChange = html.indexOf("Eingeschränkt → Spielbereit von Tom · vor 22 Stunden");
     expect(allEmpty).toBeGreaterThan(-1);
     expect(statusChange).toBeGreaterThan(allEmpty);
     expect(html).not.toContain("Liegengeblieben");
@@ -434,5 +452,67 @@ describe("the technician dashboard", () => {
     expect(html).toContain("Eingeschränkt · kein offener Defekt");
     expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042\/status"[^>]*>Status ändern<\/a>/);
     expect(html).toContain("Keine Meldung wartet auf die Sichtung.");
+  });
+
+  describe("one shape per kind of entry (ST-092, G25, G5, G15)", () => {
+    it("ST-092: Change lines on the technician dashboard say what, who and how long ago", async () => {
+      const lg042 = await aMachine("LG-042");
+      const defectId = await anOpenDefect(lg042, "Flipper links schwach");
+      // 2 days before NOW.
+      await statusChanged(lg042, 0, "out-of-order", tom, "2026-06-08T10:00:00Z");
+      // 3 hours before NOW.
+      await run(
+        executeCommand(
+          resolveDefectCommand,
+          { defectId, version: 0, closingNote: "Coil replaced" },
+          as("2026-06-10T07:00:00Z"),
+        ),
+      );
+
+      const { html } = await dashboard(ben);
+
+      expect(entriesOf(html, "Letzte Änderungen")).toEqual([
+        "„Flipper links schwach“ an LG-042 · behoben von Tom · vor 3 Stunden",
+        "LG-042 · Spielbereit → Außer Betrieb von Tom · vor 2 Tagen",
+      ]);
+      expect(html).toMatch(new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>„Flipper links schwach“</a>`));
+      expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>LG-042<\/a>/);
+    });
+
+    it("ST-092: A machine is one link everywhere", async () => {
+      const lg042 = await aMachine("LG-042", "out-of-order");
+      const cleanGlass = await aMaintenanceTaskIn(db, {
+        name: "Clean glass (inside & out)",
+        machineIds: [lg042],
+        intervalMonths: 3,
+        at: "2026-04-01T09:00:00Z",
+        by: tom,
+      });
+
+      const { html: dashboardHtml } = await dashboard(ben);
+      const due = await loadDueMaintenance(db, fixedClock(NOW), { maintenanceTaskId: cleanGlass });
+      const dueHtml = renderToStaticMarkup(createElement(DueMaintenanceView, { data: due }));
+
+      for (const html of [dashboardHtml, dueHtml]) {
+        expect(html).toMatch(/<a [^>]*href="\/team\/machines\/LG-042"[^>]*>LG-042 · Medieval Madness<\/a>/);
+      }
+    });
+
+    it("ST-092: A stale claim is listed like an open defect", async () => {
+      const lg020 = await aMachine("LG-020");
+      const defectId = await anOpenDefect(lg020, "Display flickers", "2026-05-20");
+      // 15 days before NOW.
+      await claimed(defectId, 0, ben, "2026-05-26T10:00:00Z");
+
+      const { html } = await dashboard();
+
+      const [entry] = entriesOf(html, "Liegengeblieben");
+      expect(entry).toBe(
+        "Display flickers" + "LG-020 · Medieval Madness" + "Von Ben vor mehr als 14 Tagen übernommen, seitdem kein Arbeitsschritt.",
+      );
+      expect(html).toMatch(
+        new RegExp(`<a [^>]*href="/team/defects/${defectId}"[^>]*>Display flickers</a><p>LG-020 · Medieval Madness</p>`),
+      );
+    });
   });
 });

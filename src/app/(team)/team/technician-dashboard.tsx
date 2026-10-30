@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { teamMessages } from "@/platform/messages";
-import { formatDateTime } from "@/platform/time";
+import { MachineLink } from "./machine-link";
 import { dueMaintenanceAddress } from "./maintenance/due-maintenance-data";
 import { NewMark } from "./new-mark";
 import type { RecentChange, TechnicianDashboardData } from "./technician-dashboard-data";
@@ -75,15 +75,7 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
                 {machinesToReturnToPlay.map((machine) => (
                   <li key={machine.museumNumber}>
                     <article className="flex flex-col gap-1 text-sm">
-                      <p>
-                        <Link
-                          href={`/team/machines/${encodeURIComponent(machine.museumNumber)}`}
-                          className="font-medium underline underline-offset-4"
-                        >
-                          {machine.museumNumber}
-                        </Link>{" "}
-                        · {machine.machineModelTitle}
-                      </p>
+                      <MachineLink museumNumber={machine.museumNumber} machineModelTitle={machine.machineModelTitle} />
                       <p className="text-muted-foreground">
                         {texts.withoutOpenDefects(machines.statuses[machine.machineStatus])}
                       </p>
@@ -115,14 +107,15 @@ export function TechnicianDashboard({ data }: { data: TechnicianDashboardData })
                 {staleClaims.map((claim) => (
                   <li key={claim.defectId}>
                     <article className="flex flex-col gap-1 text-sm">
+                      {/* A defect is its title as the link, its machine on the line below – the open defects' entry (G15). */}
+                      <Link
+                        href={`/team/defects/${claim.defectId}`}
+                        className="self-start font-medium underline underline-offset-4"
+                      >
+                        {claim.title}
+                      </Link>
                       <p>
-                        <Link
-                          href={`/team/defects/${claim.defectId}`}
-                          className="font-medium underline underline-offset-4"
-                        >
-                          {claim.title}
-                        </Link>{" "}
-                        · {claim.museumNumber} · {claim.machineModelTitle}
+                        {claim.museumNumber} · {claim.machineModelTitle}
                       </p>
                       <p className="text-muted-foreground">{texts.staleBecause(claim.claimant)}</p>
                     </article>
@@ -187,12 +180,12 @@ function RecentChanges({ changes, sinceLastVisit }: { changes: RecentChange[]; s
                         className="font-medium underline underline-offset-4"
                       >
                         {change.museumNumber}
-                      </Link>{" "}
+                      </Link>
                       {texts.statusChanged(
                         machines.statuses[change.previousStatus],
                         machines.statuses[change.newStatus],
                         change.by,
-                        formatDateTime(change.at),
+                        change.hoursAgo,
                       )}
                       <NewMark shown={change.newSinceLastVisit} />
                     </>
@@ -202,9 +195,9 @@ function RecentChanges({ changes, sinceLastVisit }: { changes: RecentChange[]; s
                         href={`/team/defects/${change.defectId}`}
                         className="font-medium underline underline-offset-4"
                       >
-                        {change.title}
-                      </Link>{" "}
-                      {texts.defectChanged(change.kind, change.museumNumber, change.by, formatDateTime(change.at))}
+                        „{change.title}“
+                      </Link>
+                      {texts.defectChanged(change.kind, change.museumNumber, change.by, change.hoursAgo)}
                       <NewMark shown={change.newSinceLastVisit} />
                     </>
                   )}

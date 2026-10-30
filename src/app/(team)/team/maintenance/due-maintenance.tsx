@@ -5,6 +5,7 @@ import { FilterForm } from "@/components/ui/filter-form";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { formatCalendarDate } from "@/platform/time";
 import { commandErrorText, teamMessages } from "@/platform/messages";
+import { MachineLink } from "../machine-link";
 import { recordMaintenanceAddress } from "./erfassen/record-maintenance-address";
 import { dueMaintenanceAddress, type Confirmed, type DueMaintenanceData } from "./due-maintenance-data";
 
@@ -50,15 +51,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
           {chosen.machines.map((machine) => (
             <li key={machine.machineId}>
               <article className="flex flex-col gap-1 text-sm">
-                <p>
-                  <Link
-                    href={`/team/machines/${encodeURIComponent(machine.museumNumber)}`}
-                    className="font-medium underline underline-offset-4"
-                  >
-                    {machine.museumNumber}
-                  </Link>{" "}
-                  · {machine.machineModelTitle}
-                </p>
+                <MachineLink museumNumber={machine.museumNumber} machineModelTitle={machine.machineModelTitle} />
                 <p>{machine.location}</p>
                 <p className="text-muted-foreground">
                   {machine.lastDone
