@@ -1,5 +1,14 @@
 import type { Browser, Page } from "@playwright/test";
-import { aMachine, allowPreview, expect, logIn, pageWidth, test } from "./fixtures";
+import {
+  aMachine,
+  allowPreview,
+  correctToAFreeNumber,
+  expect,
+  logIn,
+  openCorrection,
+  pageWidth,
+  test,
+} from "./fixtures";
 
 /**
  * Correcting a machine's museum number or serial number on a phone (ST-035): from the machine record to its own page,
@@ -12,36 +21,6 @@ const password = process.env.E2E_TEAM_PASSWORD;
 test.beforeEach(() => {
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
 });
-
-async function openCorrection(page: Page, museumNumber: string) {
-  await page.goto(`/team/machines/${museumNumber}`);
-  await page.getByRole("link", { name: "Angaben korrigieren" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Angaben korrigieren · ${museumNumber}`);
-}
-
-/**
- * Corrects the machine's museum number to one nobody has – other specs register machines in the same database at the
- * same time, so a number taken meanwhile is tried again with another. Kept well below LG-999: assignment continues
- * above the highest number, and ST-010's unknown museum number is LG-999.
- */
-async function correctToAFreeNumber(page: Page, museumNumber: string): Promise<string> {
-  await openCorrection(page, museumNumber);
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const corrected = `LG-${400 + Math.floor(Math.random() * 200)}`;
-    await page.getByLabel("Museumsnummer").fill(corrected);
-    await page.getByRole("button", { name: "Angaben korrigieren" }).click();
-    const landed = page.waitForURL(new RegExp(`/team/machines/${corrected}\\?`)).then(() => true);
-    // The rejection names the number tried – an alert left from an earlier attempt names another one.
-    const taken = page
-      .getByRole("main")
-      .getByRole("alert")
-      .filter({ hasText: corrected })
-      .waitFor()
-      .then(() => false);
-    if (await Promise.race([landed, taken].map((wait) => wait.catch(() => false)))) return corrected;
-  }
-  throw new Error("no free museum number found");
-}
 
 async function visitorPhone(browser: Browser) {
   const context = await browser.newContext({ locale: "de-DE", viewport: { width: 360, height: 800 }, isMobile: true });
