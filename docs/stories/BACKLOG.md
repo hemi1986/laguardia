@@ -4,15 +4,20 @@
 
 **Progress: 65 of 67 domain stories done** · scenarios 612 of 637
 
-**95 stories** · In Progress: 0 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 82 · Superseded: 11
+**95 stories** · In Progress: 1 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 82 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-092](ST-092-sections-lists-filters-and-links-in-one-shape.md) | Sections, lists, filters and links take one shape on every page | story | Repair | should | L | medium | ST-091 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-092](ST-092-sections-lists-filters-and-links-in-one-shape.md) | Sections, lists, filters and links take one shape on every page | story | Repair | should | L | medium | ST-091 |
 | [ST-093](ST-093-status-history-latest-five-and-its-own-page.md) | Status history on the machine record – the latest five and a page of its own | story | Collection | should | S | low | – |
 
 ## Done
