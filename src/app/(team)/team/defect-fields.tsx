@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -71,12 +72,10 @@ export function DefectFields({
         </NativeSelect>
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
+        <Checkbox
           name="suitableForHelpers"
           defaultChecked={values ? values.suitableForHelpers !== "" : false}
           key={`suitableForHelpers-${kept}`}
-          className="size-4"
         />
         {texts.suitableForHelpers}
       </label>

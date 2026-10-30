@@ -68,8 +68,8 @@ test("the open defects list on a phone: filtered by machine without JavaScript, 
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 
   await page.getByRole("link", { name: defectTitle }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Defekt");
-  await expect(page.getByRole("heading", { level: 2, name: defectTitle })).toBeVisible();
+  // Headed by its title since ST-092 (G1).
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(defectTitle);
   await expect(page.getByRole("link", { name: `${museumNumber} · ${modelTitle}` })).toBeVisible();
   await expect(page.getByRole("main")).toContainText("Ursprüngliche Meldung");
   await expect(page.getByRole("main")).toContainText("Left flipper barely moves");

@@ -59,7 +59,7 @@ test("a technician changes a defect's title and removes the mark, releasing a he
     `Der Titel ist jetzt „${newTitle}“. „${newTitle}“ ist nicht mehr für Helfer:innen geeignet. ` +
       `Die Übernahme von E2E ${helper.username} ist aufgehoben.`,
   );
-  await expect(main.getByRole("heading", { level: 2, name: newTitle })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: newTitle })).toBeVisible();
   await expect(main).toContainText("Nicht für Helfer:innen geeignet");
   await expect(main).not.toContainText("Übernommen von");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);

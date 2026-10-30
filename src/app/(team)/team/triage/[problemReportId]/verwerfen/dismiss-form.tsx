@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
@@ -100,11 +100,7 @@ export function DismissForm({
       {rejection && (
         <div id={rejectionId} className="flex flex-col gap-2">
           <Rejection>{triageRejectionText(rejection)}</Rejection>
-          {rejection.error === "already-triaged" && (
-            <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-              {triage.back}
-            </Link>
-          )}
+          {rejection.error === "already-triaged" && <BackLink href="/team/triage">{triage.back}</BackLink>}
         </div>
       )}
       <Button type="submit" disabled={pending}>

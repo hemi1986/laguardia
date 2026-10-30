@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
@@ -54,9 +54,7 @@ export default async function ReportAndLinkPage({
           />
         </>
       )}
-      <Link href={record} className="self-start text-sm underline underline-offset-4">
-        {reportProblem.back}
-      </Link>
+      <BackLink href={record}>{reportProblem.back}</BackLink>
     </Page>
   );
 }

@@ -41,17 +41,12 @@ export function RetireMachineForm({
         <input type="hidden" name="machineId" value={machineId} />
         <VersionField version={version} />
         <input type="hidden" name="reason" value={state.values.reason} />
-        <p className="font-medium" role="alert">
-          {texts.question(museumNumber, state.openDefects, state.problemReports)}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" name="step" value="confirm" variant="destructive" disabled={pending}>
-            {texts.confirm}
-          </Button>
-          <Button type="submit" name="step" value="back" variant="outline" disabled={pending}>
-            {texts.back}
-          </Button>
-        </div>
+        <RetireQuestion
+          museumNumber={museumNumber}
+          openDefects={state.openDefects}
+          problemReports={state.problemReports}
+          pending={pending}
+        />
       </form>
     );
   }
@@ -85,5 +80,34 @@ export function RetireMachineForm({
         {texts.submit}
       </Button>
     </form>
+  );
+}
+
+/** The question before retiring (G10b): what will happen, and only its verb red – it cannot be undone (G30). */
+export function RetireQuestion({
+  museumNumber,
+  openDefects,
+  problemReports,
+  pending,
+}: {
+  museumNumber: string;
+  openDefects: number;
+  problemReports: number;
+  pending: boolean;
+}) {
+  return (
+    <>
+      <p className="font-medium" role="alert">
+        {texts.question(museumNumber, openDefects, problemReports)}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" name="step" value="confirm" variant="destructive" disabled={pending}>
+          {texts.confirm}
+        </Button>
+        <Button type="submit" name="step" value="back" variant="outline" disabled={pending}>
+          {texts.back}
+        </Button>
+      </div>
+    </>
   );
 }

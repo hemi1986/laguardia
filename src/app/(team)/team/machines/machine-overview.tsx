@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import { Confirmation } from "@/components/ui/message";
 import { machineStatuses, type MachineStatus } from "@/modules/collection";
 import { teamMessages } from "@/platform/messages";
 import type { MachineOverviewItem, OverviewQuery } from "./machine-overview-data";
+import { MachineSearch } from "./machine-search";
 
 const { machines: texts, machineModels } = teamMessages;
 
@@ -50,6 +53,10 @@ export function MachineOverview({
 
   return (
     <>
+      {/* The confirmation is the first thing under the heading (G3, ST-092). */}
+      {registered && (
+        <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>
+      )}
       {canRegister && (
         <div className="flex flex-wrap gap-2">
           <Link href="/team/machines/new" className={buttonVariants()}>
@@ -60,32 +67,23 @@ export function MachineOverview({
           </Link>
         </div>
       )}
-      {registered && (
-        <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>
-      )}
       {total + retiredCount === 0 ? (
         <p>{texts.empty}</p>
       ) : (
         <>
-          <form action="/team/machines" className="flex flex-col gap-2" role="search">
-            <label htmlFor="search" className="text-sm font-medium">
-              {texts.search}
-            </label>
-            <div className="flex gap-2">
-              <Input id="search" name="search" type="search" defaultValue={search} aria-describedby="search-hint" />
-              {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
-              <button type="submit" className={buttonVariants({ variant: "outline" })}>
-                {texts.searchSubmit}
-              </button>
-            </div>
-            <p id="search-hint" className="text-muted-foreground text-sm">
-              {texts.searchHint}
-            </p>
+          {/* The search and the filter are applied each with its own button and keep each other (G32, ST-092). */}
+          <MachineSearch action="/team/machines" search={search}>
+            {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
+            {retired && <input type="hidden" name="retired" value="1" />}
+          </MachineSearch>
+          <FilterForm action="/team/machines" label={texts.retiredFilter} apply={teamMessages.filters.apply}>
+            {search && <input type="hidden" name="search" value={search} />}
+            {query.machineStatus && <input type="hidden" name="machineStatus" value={query.machineStatus} />}
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="retired" value="1" defaultChecked={retired} className="size-4" />
+              <Checkbox name="retired" value="1" defaultChecked={retired} />
               {texts.showRetired}
             </label>
-          </form>
+          </FilterForm>
           <nav aria-label={texts.filter}>
             <ul className="flex flex-wrap gap-2">
               <FilterLink href={overviewHref({ search, retired })} current={!query.machineStatus}>
@@ -105,7 +103,7 @@ export function MachineOverview({
           {machines.length === 0 ? (
             <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-4 [overflow-wrap:anywhere]">
               {machines.map((machine) => (
                 <li key={machine.id}>
                   <MachineEntry machine={machine} />
@@ -144,9 +142,7 @@ function NothingFound({ search, machineStatus, retired }: OverviewQuery) {
   return (
     <div className="flex flex-col gap-2">
       <p>{texts.noMatch(search)}</p>
-      <Link href={overviewHref({ machineStatus, retired })} className="self-start underline underline-offset-4">
-        {texts.clearSearch}
-      </Link>
+      <BackLink href={overviewHref({ machineStatus, retired })}>{texts.clearSearch}</BackLink>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
 import type { VisitorMessages } from "@/platform/messages";
@@ -22,7 +23,13 @@ export function VisitorMachinePage({
 }) {
   const texts = messages.machinePage;
   // A retired machine – e.g. reached through its old QR sticker: no machine status, no defects, no reporting (ST-055).
-  if (data.retired) return <p>{texts.noLongerInMuseum}</p>;
+  if (data.retired)
+    return (
+      <>
+        <p>{texts.noLongerInMuseum}</p>
+        <BackLink href="/">{texts.toStart}</BackLink>
+      </>
+    );
   const maker = [data.manufacturer, data.year].filter(Boolean).join(" · ");
 
   return (

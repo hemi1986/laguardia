@@ -45,5 +45,5 @@ test("from the QR address to the repair history and back to the defect", async (
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 
   await main.getByRole("link", { name: title }).click();
-  await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 });

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -40,12 +40,9 @@ export default async function PrioritizeDefectPage({ params }: PageProps<"/team/
           />
         </>
       )}
-      <Link
-        href={details ? `/team/defects/${details.id}` : "/team/defects"}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={details ? `/team/defects/${details.id}` : "/team/defects"}>
         {details ? texts.backToDefect : texts.back}
-      </Link>
+      </BackLink>
     </Page>
   );
 }

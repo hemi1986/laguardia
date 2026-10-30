@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { teamMessages } from "@/platform/messages";
 import type { RecordMaintenanceState } from "./actions";
 import type { RecordMaintenancePageData } from "./record-maintenance-data";
@@ -40,12 +40,9 @@ export function RecordMaintenancePage({
         earliest={data.earliest}
         whyNot={data.whyNot}
       />
-      <Link
-        href={backAddress(back, { maintenanceTaskId: maintenanceTask.id, museumNumber: machine.museumNumber })}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={backAddress(back, { maintenanceTaskId: maintenanceTask.id, museumNumber: machine.museumNumber })}>
         {back === "machine" ? teamMessages.machineMaintenance.backToMachine : texts.back}
-      </Link>
+      </BackLink>
     </>
   );
 }

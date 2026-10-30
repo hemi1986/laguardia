@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { teamMemberAccount, type TeamMemberAccount } from "@/modules/team";
 import { isId } from "@/platform/command";
@@ -36,9 +36,7 @@ export default async function AccountPage({ params, searchParams }: PageProps<"/
     return (
       <Page title={accounts.title}>
         <p>{texts.unknown}</p>
-        <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
-          {accounts.backToList}
-        </Link>
+        <BackLink href="/team/members">{accounts.backToList}</BackLink>
       </Page>
     );
   }

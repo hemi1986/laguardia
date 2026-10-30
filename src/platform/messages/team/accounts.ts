@@ -9,12 +9,15 @@ export const accountsTexts = {
     submit: "Anmelden",
     failed: "Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort prüfen.",
     locked: "Zu viele fehlgeschlagene Versuche. Bitte in 15 Minuten erneut versuchen.",
+    /** The way on from the login (G17, ST-092) – as on the visitor pages. */
+    toStart: "Zur Startseite",
   },
   accounts: {
     title: "Teammitglieder",
     newTeamMember: "Neues Teammitglied",
     showDeactivated: "Auch deaktivierte Konten anzeigen",
-    applyFilter: "Anzeigen",
+    /** Names the filter form (ST-092). */
+    filter: "Teammitglieder filtern",
     deactivatedMark: "Deaktiviert",
     name: "Name",
     username: "Benutzername",

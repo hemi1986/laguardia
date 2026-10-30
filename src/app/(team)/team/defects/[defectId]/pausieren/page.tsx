@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { holdReasons } from "@/modules/repair";
 import { database } from "@/platform/database";
@@ -40,12 +40,9 @@ export default async function PutDefectOnHoldPage({ params }: PageProps<"/team/d
           />
         </>
       )}
-      <Link
-        href={details ? `/team/defects/${details.id}` : "/team/defects"}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={details ? `/team/defects/${details.id}` : "/team/defects"}>
         {details ? texts.backToDefect : texts.back}
-      </Link>
+      </BackLink>
     </Page>
   );
 }

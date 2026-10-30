@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { database } from "@/platform/database";
@@ -29,9 +30,7 @@ export default async function RegisterMachinePage() {
       ) : (
         <RegisterMachineForm {...choices} />
       )}
-      <Link href="/team/machines" className="text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href="/team/machines">{texts.back}</BackLink>
     </Page>
   );
 }

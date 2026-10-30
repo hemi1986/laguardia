@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -13,9 +13,7 @@ export default async function NewTeamMemberPage() {
   return (
     <Page title={texts.newTeamMember}>
       <CreateTeamMemberForm />
-      <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
-        {texts.backToList}
-      </Link>
+      <BackLink href="/team/members">{texts.backToList}</BackLink>
     </Page>
   );
 }

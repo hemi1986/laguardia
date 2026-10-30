@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
 import { formatCalendarDate } from "@/platform/time";
 import { recordMaintenanceAddress } from "../../maintenance/erfassen/record-maintenance-address";
@@ -23,66 +23,59 @@ export function MachineMaintenanceSection({
 }) {
   const machine = `/team/machines/${encodeURIComponent(museumNumber)}`;
   return (
-    <section>
-      <Card>
-        <CardHeader>
-          <CardTitle>{texts.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-          {maintenance.notOnDisplay ? (
-            <p className="text-sm">{texts.notOnDisplay}</p>
-          ) : maintenance.due.length === 0 ? (
-            <p className="text-sm">{texts.nothingDue}</p>
-          ) : (
-            <ol className="flex flex-col gap-4">
-              {maintenance.due.map((task) => (
-                <li key={task.maintenanceTaskId}>
-                  <article className="flex flex-col gap-1 text-sm">
-                    <p className="font-medium">{task.name}</p>
-                    <p className="text-muted-foreground">{texts.dueSince(formatCalendarDate(task.dueSince))}</p>
-                    {task.overdue && <p className="font-medium">{dueMaintenance.overdue}</p>}
-                    {task.recordOffered && (
-                      <Link
-                        href={recordMaintenanceAddress({
-                          maintenanceTaskId: task.maintenanceTaskId,
-                          museumNumber,
-                          back: "machine",
-                        })}
-                        className={buttonVariants({ variant: "outline", size: "sm", className: "mt-1 self-start" })}
-                      >
-                        {recordMaintenance.record}
-                      </Link>
-                    )}
-                  </article>
-                </li>
-              ))}
-            </ol>
-          )}
-          <h3 className="text-sm font-medium">{texts.records}</h3>
-          {maintenance.recordCount === 0 ? (
-            <p className="text-sm">{texts.nothingRecorded}</p>
-          ) : (
-            <>
-              <MaintenanceRecordList records={maintenance.latestRecords} />
-              {maintenance.recordCount > maintenance.latestRecords.length && (
-                <Link href={`${machine}/wartungseintraege`} className="self-start text-sm underline underline-offset-4">
-                  {texts.allRecords(maintenance.recordCount)}
-                </Link>
-              )}
-            </>
-          )}
-          <p className="text-sm">{texts.tasksApply(maintenance.taskCount)}</p>
-          {maintenance.changeOffered && (
-            <Link
-              href={`${machine}/wartungsaufgaben-aendern`}
-              className={buttonVariants({ variant: "outline", size: "sm", className: "self-start" })}
-            >
-              {texts.changeTasks}
+    <Section title={texts.title}>
+      {maintenance.notOnDisplay ? (
+        <p className="text-sm">{texts.notOnDisplay}</p>
+      ) : maintenance.due.length === 0 ? (
+        <p className="text-sm">{texts.nothingDue}</p>
+      ) : (
+        <ol className="flex flex-col gap-4">
+          {maintenance.due.map((task) => (
+            <li key={task.maintenanceTaskId}>
+              <article className="flex flex-col gap-1 text-sm">
+                <p className="font-medium">{task.name}</p>
+                <p className="text-muted-foreground">{texts.dueSince(formatCalendarDate(task.dueSince))}</p>
+                {task.overdue && <p className="font-medium">{dueMaintenance.overdue}</p>}
+                {task.recordOffered && (
+                  <Link
+                    href={recordMaintenanceAddress({
+                      maintenanceTaskId: task.maintenanceTaskId,
+                      museumNumber,
+                      back: "machine",
+                    })}
+                    className={buttonVariants({ variant: "outline", size: "sm", className: "mt-1 self-start" })}
+                  >
+                    {recordMaintenance.record}
+                  </Link>
+                )}
+              </article>
+            </li>
+          ))}
+        </ol>
+      )}
+      <h3 className="text-sm font-medium">{texts.records}</h3>
+      {maintenance.recordCount === 0 ? (
+        <p className="text-sm">{texts.nothingRecorded}</p>
+      ) : (
+        <>
+          <MaintenanceRecordList records={maintenance.latestRecords} />
+          {maintenance.recordCount > maintenance.latestRecords.length && (
+            <Link href={`${machine}/wartungseintraege`} className="self-start text-sm underline underline-offset-4">
+              {texts.allRecords(maintenance.recordCount)}
             </Link>
           )}
-        </CardContent>
-      </Card>
-    </section>
+        </>
+      )}
+      <p className="text-sm">{texts.tasksApply(maintenance.taskCount)}</p>
+      {maintenance.changeOffered && (
+        <Link
+          href={`${machine}/wartungsaufgaben-aendern`}
+          className={buttonVariants({ variant: "outline", size: "sm", className: "self-start" })}
+        >
+          {texts.changeTasks}
+        </Link>
+      )}
+    </Section>
   );
 }
 

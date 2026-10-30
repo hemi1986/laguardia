@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import type { TeamMemberAccountWithActions } from "@/modules/team";
 import { teamMessages } from "@/platform/messages";
@@ -17,9 +17,7 @@ export function EditAccountView({ account }: { account: TeamMemberAccountWithAct
     return (
       <Page title={accounts.title}>
         <p>{accountTexts.unknown}</p>
-        <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
-          {accounts.backToList}
-        </Link>
+        <BackLink href="/team/members">{accounts.backToList}</BackLink>
       </Page>
     );
   }
@@ -31,9 +29,7 @@ export function EditAccountView({ account }: { account: TeamMemberAccountWithAct
       ) : (
         <p>{accountErrors["account-deactivated"]}</p>
       )}
-      <Link href={`/team/members/${account.id}`} className="self-start text-sm underline underline-offset-4">
-        {texts.backToTeamMember}
-      </Link>
+      <BackLink href={`/team/members/${account.id}`}>{texts.backToTeamMember}</BackLink>
     </Page>
   );
 }

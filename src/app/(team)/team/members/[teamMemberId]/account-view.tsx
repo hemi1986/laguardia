@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
@@ -53,9 +54,7 @@ export function AccountView({
           offered={actions.activate}
         />
       </div>
-      <Link href="/team/members" className="self-start text-sm underline underline-offset-4">
-        {teamMessages.accounts.backToList}
-      </Link>
+      <BackLink href="/team/members">{teamMessages.accounts.backToList}</BackLink>
     </Page>
   );
 }

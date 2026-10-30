@@ -65,6 +65,10 @@ export const sharedTexts = {
     header: (group: string, chosen: number, total: number) => `${group} – ${chosen} von ${total} ausgewählt`,
     selectAll: "Alle auswählen",
   },
+  /** A list's filter form (G32, ST-092): one shape and one word on every list. */
+  filters: {
+    apply: "Filtern",
+  },
   /** Texts every form on the form runner shares (architecture review 2026-10-17). */
   forms: {
     /**

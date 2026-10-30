@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -14,9 +14,7 @@ export default async function NewMachineModelPage() {
   return (
     <Page title={texts.newMachineModel}>
       <CreateMachineModelForm {...machineModelChoices} />
-      <Link href="/team/machine-models" className="self-start text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href="/team/machine-models">{texts.back}</BackLink>
     </Page>
   );
 }

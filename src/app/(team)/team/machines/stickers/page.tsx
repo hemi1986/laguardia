@@ -1,9 +1,9 @@
 import { Page } from "@/components/page";
-import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { BackLink } from "@/components/ui/back-link";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
+import { MachineSearch } from "../machine-search";
 import { StickerChoice } from "./sticker-choice";
 import { stickerChoiceFor } from "./stickers-data";
 
@@ -24,20 +24,13 @@ export default async function StickersPage({ searchParams }: { searchParams: Sea
   return (
     <Page title={texts.title}>
       <p className="text-muted-foreground text-sm">{texts.sheet}</p>
-      <form action="/team/machines/stickers" className="flex gap-2" role="search">
-        <label htmlFor="search" className="sr-only">
-          {machineTexts.search}
-        </label>
-        <Input id="search" name="search" type="search" defaultValue={search} placeholder={machineTexts.searchHint} />
-        <button type="submit" className={buttonVariants({ variant: "outline" })}>
-          {machineTexts.searchSubmit}
-        </button>
-      </form>
+      <MachineSearch action="/team/machines/stickers" search={search} />
       {groups.length === 0 ? (
         <p>{search ? machineTexts.noMatch(search) : machineTexts.empty}</p>
       ) : (
         <StickerChoice groups={groups} search={search} noneChosen={params.error === "none"} />
       )}
+      <BackLink href="/team/machines">{machineTexts.back}</BackLink>
     </Page>
   );
 }

@@ -306,6 +306,6 @@ describe("new since the Last visit on the technician dashboard", () => {
     expect(data.recentChanges).toMatchObject([
       { kind: "status-change", museumNumber: "LG-042", by: "Ben", newSinceLastVisit: true },
     ]);
-    expect(html).toContain("Spielbereit → Außer Betrieb · Ben · 31.05.2026, 14:00 · <strong");
+    expect(html).toContain("Spielbereit → Außer Betrieb von Ben · vor 10 Tagen · <strong");
   });
 });

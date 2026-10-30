@@ -1,5 +1,7 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/native-select";
 import { priorities } from "@/modules/repair";
@@ -20,16 +22,14 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
     return (
       <div className="flex flex-col gap-2">
         <p>{texts.none}</p>
-        <Link href="/team/triage" className="self-start underline underline-offset-4">
-          {texts.toTriage}
-        </Link>
+        <BackLink href="/team/triage">{texts.toTriage}</BackLink>
       </div>
     );
   }
   return (
     <>
       <p>{texts.open(data.total)}</p>
-      <FilterForm machines={data.machines} filter={data.filter} />
+      <DefectFilter machines={data.machines} filter={data.filter} />
       {data.entries.length === 0 ? (
         <NothingMatches filter={data.filter} />
       ) : (
@@ -46,7 +46,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
 }
 
 /** Machine, priority, suitable for helpers (ST-021), claimed by me (ST-025) and on hold (ST-029) – they combine; the form keeps what is chosen. */
-function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "filter">) {
+function DefectFilter({ machines, filter }: Pick<OpenDefectsData, "machines" | "filter">) {
   // A machine the address names but the list does not offer (no open defects, or a link from elsewhere) stays chosen,
   // so the form never claims "Alle Geräte" while the list is narrowed to one.
   const unoffered =
@@ -54,7 +54,7 @@ function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "fi
       ? filter.museumNumber
       : undefined;
   return (
-    <form action="/team/defects" role="search" aria-label={texts.filter} className="flex flex-col gap-3">
+    <FilterForm action="/team/defects" label={texts.filter} apply={teamMessages.filters.apply}>
       <Field>
         <FieldLabel htmlFor="machine">{terms.Machine}</FieldLabel>
         <NativeSelect id="machine" name="machine" defaultValue={filter.museumNumber ?? ""}>
@@ -79,21 +79,18 @@ function FilterForm({ machines, filter }: Pick<OpenDefectsData, "machines" | "fi
         </NativeSelect>
       </Field>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="helpers" value="1" defaultChecked={filter.suitableForHelpers} className="size-4" />
+        <Checkbox name="helpers" value="1" defaultChecked={filter.suitableForHelpers} />
         {texts.onlySuitableForHelpers}
       </label>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="mine" value="1" defaultChecked={filter.claimedByMe} className="size-4" />
+        <Checkbox name="mine" value="1" defaultChecked={filter.claimedByMe} />
         {texts.onlyClaimedByMe}
       </label>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="held" value="1" defaultChecked={filter.onHold} className="size-4" />
+        <Checkbox name="held" value="1" defaultChecked={filter.onHold} />
         {texts.onlyOnHold}
       </label>
-      <button type="submit" className={`${buttonVariants({ variant: "outline" })} self-start`}>
-        {texts.applyFilter}
-      </button>
-    </form>
+    </FilterForm>
   );
 }
 
@@ -119,9 +116,7 @@ function NothingMatches({ filter }: { filter: OpenDefectsFilter }) {
   return (
     <div className="flex flex-col gap-2">
       <p>{text}</p>
-      <Link href="/team/defects" className="self-start underline underline-offset-4">
-        {texts.showAll}
-      </Link>
+      <BackLink href="/team/defects">{texts.showAll}</BackLink>
     </div>
   );
 }

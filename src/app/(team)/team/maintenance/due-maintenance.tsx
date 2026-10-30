@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
+import { buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FilterForm } from "@/components/ui/filter-form";
 import { Confirmation, Rejection } from "@/components/ui/message";
 import { formatCalendarDate } from "@/platform/time";
 import { commandErrorText, teamMessages } from "@/platform/messages";
+import { MachineLink } from "../machine-link";
 import { recordMaintenanceAddress } from "./erfassen/record-maintenance-address";
 import { dueMaintenanceAddress, type Confirmed, type DueMaintenanceData } from "./due-maintenance-data";
 
@@ -21,12 +25,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
       <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
         {confirmation}
         {/* The way back sits above the machines – a task can be due on 60 of them (G17). */}
-        <Link
-          href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}
-          className="self-start text-sm underline underline-offset-4"
-        >
-          {texts.allDue}
-        </Link>
+        <BackLink href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}>{texts.allDue}</BackLink>
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold">{chosen.name}</h2>
           <p className="text-sm whitespace-pre-line">{chosen.instruction}</p>
@@ -48,15 +47,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
           {chosen.machines.map((machine) => (
             <li key={machine.machineId}>
               <article className="flex flex-col gap-1 text-sm">
-                <p>
-                  <Link
-                    href={`/team/machines/${encodeURIComponent(machine.museumNumber)}`}
-                    className="font-medium underline underline-offset-4"
-                  >
-                    {machine.museumNumber}
-                  </Link>{" "}
-                  · {machine.machineModelTitle}
-                </p>
+                <MachineLink museumNumber={machine.museumNumber} machineModelTitle={machine.machineModelTitle} />
                 <p>{machine.location}</p>
                 <p className="text-muted-foreground">
                   {machine.lastDone
@@ -87,21 +78,12 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   return (
     <>
       {confirmation}
-      <form method="get" action="/team/maintenance" className="flex flex-wrap items-center gap-3">
+      <FilterForm action="/team/maintenance" label={texts.filterLabel} apply={teamMessages.filters.apply}>
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="helpers"
-            value="1"
-            defaultChecked={filter.suitableForHelpers ?? false}
-            className="size-4"
-          />
+          <Checkbox name="helpers" value="1" defaultChecked={filter.suitableForHelpers ?? false} />
           {texts.onlySuitableForHelpers}
         </label>
-        <Button type="submit" variant="outline" size="sm">
-          {texts.filter}
-        </Button>
-      </form>
+      </FilterForm>
       {data.tasks.length === 0 ? (
         <p>{filter.suitableForHelpers ? texts.nothingDueForHelpers : texts.nothingDue}</p>
       ) : (

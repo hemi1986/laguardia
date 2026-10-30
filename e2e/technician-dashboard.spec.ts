@@ -41,7 +41,7 @@ test("ST-048: Returning a machine to play happens on the machine", async ({ page
   // No longer one to return to play – and since ST-058 the change itself is among the recent changes.
   await expect(entry.filter({ hasText: "kein offener Defekt" })).toHaveCount(0);
   await expect(page.getByRole("main").locator("section").filter({ hasText: "Letzte Änderungen" })).toContainText(
-    `${museumNumber} Außer Betrieb → Spielbereit`,
+    `${museumNumber} · Außer Betrieb → Spielbereit von `,
   );
 });
 

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
+import { Section } from "@/components/ui/section";
 import { WorkLogPhotos } from "../../../team-photos";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
@@ -27,9 +29,8 @@ export function RepairHistoryView({
       {data.years.length === 0 ? (
         <p>{machineRecord.nothingRepaired}</p>
       ) : !data.year ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-semibold">{texts.chooseYear}</h2>
-          <ul className="flex flex-col gap-3">
+        <Section title={texts.chooseYear}>
+          <ul className="flex flex-col gap-3 text-sm">
             {data.years.map(({ year, count }) => (
               <li key={year}>
                 <Link href={`${machine}/reparaturhistorie?jahr=${year}`} className="underline underline-offset-4">
@@ -38,12 +39,9 @@ export function RepairHistoryView({
               </li>
             ))}
           </ul>
-        </section>
+        </Section>
       ) : (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-semibold">
-            {texts.year(data.year, data.years.find(({ year }) => year === data.year)?.count ?? 0)}
-          </h2>
+        <Section title={texts.year(data.year, data.years.find(({ year }) => year === data.year)?.count ?? 0)}>
           <ol className="flex flex-col gap-6">
             {data.entries.map((entry) => (
               <li key={entry.id}>
@@ -51,14 +49,10 @@ export function RepairHistoryView({
               </li>
             ))}
           </ol>
-          <Link href={`${machine}/reparaturhistorie`} className="self-start text-sm underline underline-offset-4">
-            {texts.allYears}
-          </Link>
-        </section>
+          <BackLink href={`${machine}/reparaturhistorie`}>{texts.allYears}</BackLink>
+        </Section>
       )}
-      <Link href={machine} className="self-start text-sm underline underline-offset-4">
-        {texts.backToMachine}
-      </Link>
+      <BackLink href={machine}>{texts.backToMachine}</BackLink>
     </div>
   );
 }

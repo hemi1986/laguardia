@@ -41,11 +41,15 @@ export const dashboardTexts = {
       `„${name}“ ist an ${machines === 1 ? "1 Gerät" : `${machines} Geräten`} überfällig.`,
     openDueMaintenance: "Zur Wartung",
     noneOverdue: "Keine Wartung ist überfällig.",
-    /** Section 5 (ST-058) – after the machine's museum number or the defect's title. */
+    /**
+     * Section 5 (ST-058) – after the machine's museum number or the defect's title in quotes, in the helper dashboard's
+     * shape: the thing, what happened „von“ whom, then how long ago (ST-092, G25).
+     */
     recentChanges: "Letzte Änderungen",
-    statusChanged: (from: string, to: string, by: string, at: string) => `${from} → ${to} · ${by} · ${at}`,
-    defectChanged: (kind: "resolved" | "reopened", museumNumber: string, by: string, at: string) =>
-      `(${museumNumber}) ${kind === "resolved" ? "behoben" : "wieder geöffnet"} · ${by} · ${at}`,
+    statusChanged: (from: string, to: string, by: string, hoursAgo: number) =>
+      ` · ${from} → ${to} von ${by} · vor ${elapsedInWords(hoursAgo)}`,
+    defectChanged: (kind: "resolved" | "reopened", museumNumber: string, by: string, hoursAgo: number) =>
+      ` an ${museumNumber} · ${kind === "resolved" ? "behoben" : "wieder geöffnet"} von ${by} · vor ${elapsedInWords(hoursAgo)}`,
     noRecentChanges: "Keine Änderungen in den letzten 7 Tagen.",
     /** When the section reaches back to a Last visit longer ago than 7 days (ST-050). */
     noChangesSinceLastVisit: "Keine Änderungen seit deinem letzten Besuch.",

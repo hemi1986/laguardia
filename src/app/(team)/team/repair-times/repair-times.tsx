@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { Section } from "@/components/ui/section";
 import { repairTimePeriods, type RepairTime } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import type { RepairTimesData } from "./repair-times-data";
@@ -33,8 +34,7 @@ export function RepairTimesView({ period, priorities }: RepairTimesData) {
       {priorities.map(({ priority, toFirstWorkLogEntry, toResolved }) => {
         const label = texts.priority(recordDefect.priorities[priority]);
         return (
-          <section key={priority} aria-label={label} className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold">{label}</h2>
+          <Section key={priority} aria-label={label} title={label} contentClassName="gap-1">
             {!toFirstWorkLogEntry && !toResolved ? (
               <p className="text-sm">{texts.noDefects}</p>
             ) : (
@@ -43,7 +43,7 @@ export function RepairTimesView({ period, priorities }: RepairTimesData) {
                 <TimeLine label={terms["Time to resolved"]} time={toResolved} />
               </>
             )}
-          </section>
+          </Section>
         );
       })}
     </>

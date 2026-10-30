@@ -3,6 +3,7 @@ import { dueMaintenance } from "@/modules/maintenance";
 import { openDefectCounts, resolvedOrReopenedSince, staleClaims, triageList } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
+import { elapsedHours } from "@/platform/time";
 import type { Viewer } from "./claimant";
 import { named } from "./named";
 import { isNew, markLineOf, recentSince } from "./new-since-last-visit";
@@ -19,7 +20,10 @@ export type ShownStaleClaim = {
   claimant: string;
 };
 
-/** A recent change as section 5 names it – who by name, and whether it is new since the viewer's Last visit (ST-050). */
+/**
+ * A recent change as section 5 names it – who by name, how many hours ago (ST-092, G25), and whether it is new since
+ * the viewer's Last visit (ST-050).
+ */
 export type RecentChange = (
   | {
       kind: "status-change";
@@ -30,7 +34,7 @@ export type RecentChange = (
       at: Date;
     }
   | { kind: "resolved" | "reopened"; defectId: string; title: string; museumNumber: string; by: string; at: Date }
-) & { newSinceLastVisit: boolean };
+) & { hoursAgo: number; newSinceLastVisit: boolean };
 
 /**
  * What the technician dashboard shows (RM-TechnicianDashboard, ST-048) – its sections in the order ST-048 fixed (G18):
@@ -70,6 +74,7 @@ export async function loadTechnicianDashboard(
   clock: Clock,
   viewer: Viewer,
 ): Promise<TechnicianDashboardData> {
+  const now = clock.now();
   const marks = await markLineOf(db, clock, viewer);
   // Since the Last visit when that is longer ago than the last 7 days (ST-050).
   const { since, reachedBack } = recentSince(clock, marks);
@@ -133,12 +138,14 @@ export async function loadTechnicianDashboard(
         ...change,
         by: name(changedBy),
         at: changedAt,
+        hoursAgo: elapsedHours(changedAt, now),
         newSinceLastVisit: isNew(marks, changedAt, changedBy),
       })),
       ...defectChanges.map(({ machineId, by, ...change }): RecentChange => ({
         ...change,
         museumNumber: label(machineId).museumNumber,
         by: name(by),
+        hoursAgo: elapsedHours(change.at, now),
         newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),

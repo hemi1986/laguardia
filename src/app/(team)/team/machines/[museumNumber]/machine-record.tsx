@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Section } from "@/components/ui/section";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
@@ -120,144 +121,116 @@ export function MachineRecordView({
         </div>
       )}
       {/* Section 4 (ST-033): the open defects, with the same facts and words as the open defects list. */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>{texts.openDefects}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {record.openDefects.length === 0 ? (
-              <p className="text-sm">{texts.noOpenDefects}</p>
-            ) : (
+      <Section title={texts.openDefects}>
+        {record.openDefects.length === 0 ? (
+          <p className="text-sm">{texts.noOpenDefects}</p>
+        ) : (
+          <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
+            {record.openDefects.map((entry) => (
+              <li key={entry.id}>
+                <OpenDefectEntry entry={entry} withMachine={false} />
+              </li>
+            ))}
+          </ol>
+        )}
+      </Section>
+      {/* Section 5 (ST-047): due maintenance and the latest maintenance records. */}
+      <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
+      <Section title={terms["Status history"]}>
+        <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
+          {record.statusHistory.map((change) => (
+            <li key={change.id} className="flex flex-col gap-0.5 text-sm">
+              <StatusChangeEntry change={change} />
+            </li>
+          ))}
+        </ol>
+      </Section>
+      {/* Section 7 (ST-033): the most recently ended entries of the repair history; the whole repair history is a page of its own (G4a). */}
+      <Section title={terms["Repair history"]}>
+        {record.repairHistoryCount === 0 ? (
+          <p className="text-sm">{texts.nothingRepaired}</p>
+        ) : (
+          <>
+            {record.recentRepairHistory.length > 0 && (
               <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-                {record.openDefects.map((entry) => (
-                  <li key={entry.id}>
-                    <OpenDefectEntry entry={entry} withMachine={false} />
+                {record.recentRepairHistory.map((repair) => (
+                  <li key={repair.id}>
+                    <EndedEntry entry={repair} />
                   </li>
                 ))}
               </ol>
             )}
-          </CardContent>
-        </Card>
-      </section>
-      {/* Section 5 (ST-047): due maintenance and the latest maintenance records. */}
-      <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>{terms["Status history"]}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="flex flex-col gap-3 [overflow-wrap:anywhere]">
-              {record.statusHistory.map((change) => (
-                <li key={change.id} className="flex flex-col gap-0.5 text-sm">
-                  <StatusChangeEntry change={change} />
-                </li>
-              ))}
-            </ol>
-          </CardContent>
-        </Card>
-      </section>
-      {/* Section 7 (ST-033): the most recently ended entries of the repair history; the whole repair history is a page of its own (G4a). */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>{terms["Repair history"]}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {record.repairHistoryCount === 0 ? (
-              <p className="text-sm">{texts.nothingRepaired}</p>
-            ) : (
-              <>
-                {record.recentRepairHistory.length > 0 && (
-                  <ol className="flex flex-col gap-4 [overflow-wrap:anywhere]">
-                    {record.recentRepairHistory.map((repair) => (
-                      <li key={repair.id}>
-                        <EndedEntry entry={repair} />
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                <Link
-                  href={`/team/machines/${encodeURIComponent(record.museumNumber)}/reparaturhistorie`}
-                  className="self-start text-sm underline underline-offset-4"
-                >
-                  {texts.wholeRepairHistory(record.repairHistoryCount)}
-                </Link>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/reparaturhistorie`}
+              className="self-start text-sm underline underline-offset-4"
+            >
+              {texts.wholeRepairHistory(record.repairHistoryCount)}
+            </Link>
+          </>
+        )}
+      </Section>
       {/* Section 8 (ST-037): the files of the machine and its machine model, by file category in glossary order. */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>{texts.files}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {record.files.length === 0 ? (
-              <p className="text-sm">{texts.noFiles}</p>
-            ) : (
-              fileCategories.map((category) => {
-                const ofCategory = record.files.filter((file) => file.fileCategory === category);
-                if (ofCategory.length === 0) return null;
-                return (
-                  <div key={category} className="flex flex-col gap-1">
-                    <h3 className="text-sm font-medium">{teamMessages.fileCategories[category]}</h3>
-                    <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
-                      {ofCategory.map((file) => (
-                        <li key={file.id}>
-                          <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
-                            {file.title}
-                          </a>
-                          {file.ofMachineModel && (
-                            <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
-                          )}
-                          {actions.removeFile && (
-                            <>
-                              {" · "}
-                              <Link
-                                href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
-                                aria-label={texts.removeFileLabel(file.title)}
-                                className="text-muted-foreground underline underline-offset-4"
-                              >
-                                {texts.removeFile}
-                              </Link>
-                            </>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })
-            )}
-            {actions.attachFile && (
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  {texts.attachFile}
-                </Link>
-                <Link
-                  href={`/team/machines/${encodeURIComponent(record.museumNumber)}/foto-anhaengen`}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  {texts.attachPhoto}
-                </Link>
+      <Section title={texts.files}>
+        {record.files.length === 0 ? (
+          <p className="text-sm">{texts.noFiles}</p>
+        ) : (
+          fileCategories.map((category) => {
+            const ofCategory = record.files.filter((file) => file.fileCategory === category);
+            if (ofCategory.length === 0) return null;
+            return (
+              <div key={category} className="flex flex-col gap-1">
+                <h3 className="text-sm font-medium">{teamMessages.fileCategories[category]}</h3>
+                <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
+                  {ofCategory.map((file) => (
+                    <li key={file.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span>
+                        <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
+                          {file.title}
+                        </a>
+                        {file.ofMachineModel && (
+                          <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
+                        )}
+                      </span>
+                      {/* A way to the question, so the shape of any other secondary button – not red (G30). */}
+                      {actions.removeFile && (
+                        <Link
+                          href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
+                          aria-label={texts.removeFileLabel(file.title)}
+                          className={buttonVariants({ variant: "outline" })}
+                        >
+                          {texts.removeFile}
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+            );
+          })
+        )}
+        {actions.attachFile && (
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-anhaengen`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {texts.attachFile}
+            </Link>
+            <Link
+              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/foto-anhaengen`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              {texts.attachPhoto}
+            </Link>
+          </div>
+        )}
+      </Section>
       {actions.retire && (
         // Section 9 (ST-039, G18): retiring – it leads to its own page, which asks once (G10b).
         <section>
           <Link
             href={`/team/machines/${encodeURIComponent(record.museumNumber)}/ausmustern`}
-            className={buttonVariants({ variant: "outline", className: "self-start" })}
+            className={buttonVariants({ variant: "outline" })}
           >
             {texts.retire}
           </Link>
@@ -342,9 +315,5 @@ function StatusChangeEntry({ change }: { change: NamedStatusChange }) {
 }
 
 function BackToMachines() {
-  return (
-    <Link href="/team/machines" className="self-start text-sm underline underline-offset-4">
-      {machines.back}
-    </Link>
-  );
+  return <BackLink href="/team/machines">{machines.back}</BackLink>;
 }

@@ -1,9 +1,13 @@
 import Link from "next/link";
+import { Page } from "@/components/page";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
+import { Section } from "@/components/ui/section";
 import { defectActions, type DefectAction, type DefectRepairTimes } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import { MachineLink } from "../../machine-link";
 import { reporterName } from "../../reporter";
 import { claimantText } from "../../claimant";
 import type { ClaimDefectState, ReleaseClaimState, ResumeDefectState } from "./actions";
@@ -50,39 +54,35 @@ export function DefectDetailsView({
 }) {
   if (!details) {
     return (
-      <div className="flex flex-col gap-2">
+      <Page title={terms.Defect}>
         <p>{texts.unknown}</p>
-        <Link href="/team/defects" className="self-start underline underline-offset-4">
-          {texts.back}
-        </Link>
-      </div>
+        <BackLink href="/team/defects">{texts.back}</BackLink>
+      </Page>
     );
   }
+  // Headed by the defect's title, like every other record (ST-092, G1).
   return (
-    <div className="flex flex-col gap-6 [overflow-wrap:anywhere]">
+    <Page title={details.title}>
       {/* Only who just did it is told so – the address alone cannot make the page say it (G3). */}
       {details.confirmed && (
-        <Confirmation>
-          {defectActionPages[details.confirmed.action].confirmation(details.title, {
-            assignedTo: details.confirmed.assignedTo ?? "",
-            priority: recordDefect.priorities[details.priority],
-            holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
-            suitableForHelpers: details.suitableForHelpers,
-            changedDetails: details.confirmed.changedDetails,
-          })}
-          {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
-          {details.confirmed.newMachineStatus &&
-            ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
-        </Confirmation>
+        <div className="[overflow-wrap:anywhere]">
+          <Confirmation>
+            {defectActionPages[details.confirmed.action].confirmation(details.title, {
+              assignedTo: details.confirmed.assignedTo ?? "",
+              priority: recordDefect.priorities[details.priority],
+              holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
+              suitableForHelpers: details.suitableForHelpers,
+              changedDetails: details.confirmed.changedDetails,
+            })}
+            {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
+            {details.confirmed.newMachineStatus &&
+              ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
+          </Confirmation>
+        </div>
       )}
-      <section className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">{details.title}</h2>
-        <Link
-          href={`/team/machines/${encodeURIComponent(details.museumNumber)}`}
-          className="self-start underline underline-offset-4"
-        >
-          {details.museumNumber} · {details.machineModelTitle}
-        </Link>
+      {/* The header – the page is headed by the defect's title (G1), its machine the link right under it. */}
+      <div className="flex flex-col gap-1 [overflow-wrap:anywhere]">
+        <MachineLink museumNumber={details.museumNumber} machineModelTitle={details.machineModelTitle} />
         <p className="text-sm">{texts.priority(recordDefect.priorities[details.priority])}</p>
         <p className="text-sm">
           {details.suitableForHelpers ? terms["Suitable for helpers"] : texts.notSuitableForHelpers}
@@ -171,39 +171,38 @@ export function DefectDetailsView({
             }
           }
         />
-      </section>
+      </div>
       {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
-      {details.resolutionsAndReopenings.map((step) =>
-        step.kind === "resolution" ? (
-          <section key={step.id} className="flex flex-col gap-1">
-            <h2 className="font-semibold">{terms["Closing note"]}</h2>
+      {details.resolutionsAndReopenings.map((step, index, steps) => {
+        // A resolved defect offers only reopening, at the end of its last closing note (G22, G29).
+        const reopen = index === steps.length - 1 && details.offered.includes("reopen") && (
+          <Link
+            href={defectFormAddress(details.id, "reopen")}
+            className={buttonVariants({ variant: "outline", className: "self-start" })}
+          >
+            {defectActionPages.reopen.form.label}
+          </Link>
+        );
+        return step.kind === "resolution" ? (
+          <Section key={step.id} title={terms["Closing note"]}>
             <p className="whitespace-pre-line">{step.closingNote}</p>
             <p className="text-muted-foreground text-sm">
               {texts.resolvedBy(step.resolvedBy, formatDateTime(step.resolvedAt))}
             </p>
-          </section>
+            {reopen}
+          </Section>
         ) : (
-          <section key={step.id} className="flex flex-col gap-1">
-            <h2 className="font-semibold">{texts.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}</h2>
+          <Section key={step.id} title={texts.reopenedBy(step.reopenedBy, formatDateTime(step.reopenedAt))}>
             <p className="whitespace-pre-line">
               {step.problemReport ? texts.reopenedBecauseOf(step.problemReport.description) : step.reason}
             </p>
-          </section>
-        ),
-      )}
-      {/* A resolved defect offers only reopening, under its closing note (G22). */}
-      {details.offered.includes("reopen") && (
-        <Link
-          href={defectFormAddress(details.id, "reopen")}
-          className={buttonVariants({ variant: "outline", className: "self-start" })}
-        >
-          {defectActionPages.reopen.form.label}
-        </Link>
-      )}
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">{texts.workLog}</h2>
+            {reopen}
+          </Section>
+        );
+      })}
+      <Section title={texts.workLog}>
         {details.workLog.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{texts.noWorkLogged}</p>
+          <p className="text-sm">{texts.noWorkLogged}</p>
         ) : (
           <ol className="flex flex-col gap-4">
             {details.workLog.map((entry) => (
@@ -220,9 +219,8 @@ export function DefectDetailsView({
             ))}
           </ol>
         )}
-      </section>
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">{texts.problemReports}</h2>
+      </Section>
+      <Section title={texts.problemReports}>
         <ol className="flex flex-col gap-4">
           {details.problemReports.map((report) => (
             <li key={report.id}>
@@ -237,11 +235,9 @@ export function DefectDetailsView({
             </li>
           ))}
         </ol>
-      </section>
-      <Link href="/team/defects" className="self-start underline underline-offset-4">
-        {texts.back}
-      </Link>
-    </div>
+      </Section>
+      <BackLink href="/team/defects">{texts.back}</BackLink>
+    </Page>
   );
 }
 

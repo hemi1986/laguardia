@@ -231,7 +231,7 @@ export async function anOpenDefect(page: Page, { suitableForHelpers = false } = 
 export async function openDefect(page: Page, museumNumber: string, title: string) {
   await page.goto(`/team/defects?machine=${museumNumber}`);
   await page.getByRole("link", { name: title }).click();
-  await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 }
 
 /** The one entry the open defects list has for the machine. */

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { MAX_WORK_LOG_PHOTOS } from "@/modules/repair";
 import { database } from "@/platform/database";
@@ -41,12 +41,9 @@ export default async function LogWorkPage({ params }: PageProps<"/team/defects/[
           />
         </>
       )}
-      <Link
-        href={details ? `/team/defects/${details.id}` : "/team/defects"}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={details ? `/team/defects/${details.id}` : "/team/defects"}>
         {details ? texts.backToDefect : texts.back}
-      </Link>
+      </BackLink>
     </Page>
   );
 }
