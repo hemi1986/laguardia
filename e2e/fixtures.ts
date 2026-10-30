@@ -208,7 +208,7 @@ export async function aRetiredMachine(page: Page) {
   await page.goto(`/team/machines/${machine.museumNumber}`);
   await page.getByRole("link", { name: "Gerät ausmustern" }).click();
   await page.getByLabel("Grund").fill("Sold to a collector");
-  await page.getByRole("button", { name: "Weiter" }).click();
+  await page.getByRole("button", { name: "Gerät ausmustern" }).click();
   await page.getByRole("button", { name: "Endgültig ausmustern" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText(`${machine.museumNumber} ist ausgemustert.`);
   return machine;

@@ -10,7 +10,7 @@ import { CorrectDetailsForm } from "./correct-details-form";
 const { machineRecord, machineCorrection: texts } = teamMessages;
 
 /**
- * Correcting a machine's details (ST-035) – its own page „Angaben von LG-042 korrigieren“, reached from the machine
+ * Correcting a machine's details (ST-035) – its own page „Angaben korrigieren · LG-042“, reached from the machine
  * record's section 3. The form is filled in with the museum number and the serial number; someone the command would
  * refuse sees the reason instead (G11).
  */

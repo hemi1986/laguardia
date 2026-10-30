@@ -16,7 +16,7 @@ test.beforeEach(() => {
 async function openCorrection(page: Page, museumNumber: string) {
   await page.goto(`/team/machines/${museumNumber}`);
   await page.getByRole("link", { name: "Angaben korrigieren" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Angaben von ${museumNumber} korrigieren`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Angaben korrigieren · ${museumNumber}`);
 }
 
 /**

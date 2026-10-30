@@ -29,7 +29,7 @@ export type RetireMachineState =
   | null;
 
 /**
- * CMD-RetireMachine from the page „LG-013 ausmustern“ (ST-039) – Repair's command, with its retirement policies (ADR
+ * CMD-RetireMachine from the page „Ausmustern · LG-013“ (ST-039) – Repair's command, with its retirement policies (ADR
  * 0010), through the Server Action runner (ST-073). Sending the reason only asks: the question names how many open
  * defects will be closed and problem reports dismissed (G10). Afterwards the technician is back on the machine record
  * with „LG-013 ist ausgemustert.“ (G3). The page binds the museum number.

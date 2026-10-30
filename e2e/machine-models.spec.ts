@@ -153,7 +153,7 @@ test("ST-036: The correction form says how many machines it affects", async ({ p
   await openMachineModel(page, title);
   await page.getByRole("link", { name: "Modell korrigieren" }).click();
 
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Modell „${title}“ korrigieren`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Modell korrigieren · ${title}`);
   await expect(page.getByRole("main")).toContainText("Gilt für alle 3 Geräte dieses Modells.");
   await expect(page.getByLabel("Baujahr")).toHaveValue("1979");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);

@@ -22,7 +22,7 @@ async function aPlayableMachine(page: Page): Promise<string> {
 async function openStatusChange(page: Page, museumNumber: string) {
   await page.goto(`/team/machines/${museumNumber}`);
   await page.getByRole("link", { name: "Status ändern" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Status von ${museumNumber} ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Status ändern · ${museumNumber}`);
 }
 
 test("ST-012: A helper is offered only Außer Betrieb", async ({ page }) => {

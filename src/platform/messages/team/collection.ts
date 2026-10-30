@@ -20,7 +20,7 @@ export const collectionTexts = {
     unknown: "Dieses Modell gibt es nicht.",
     noYear: "–",
     correct: "Modell korrigieren",
-    correctTitle: (title: string) => `Modell „${title}“ korrigieren`,
+    correctTitle: (title: string) => `Modell korrigieren · ${title}`,
     appliesTo: (machineCount: number) =>
       machineCount === 0
         ? "Noch kein Gerät hat dieses Modell."
@@ -140,7 +140,7 @@ export const collectionTexts = {
   fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
   /** Attaching a file (ST-037) – its own page, reached from the machine record's files section. */
   attachFile: {
-    title: (museumNumber: string) => `Datei an ${museumNumber} anhängen`,
+    title: (museumNumber: string) => `Datei anhängen · ${museumNumber}`,
     /** Strings only below – the form is a client component. */
     form: {
       file: "Datei",
@@ -164,7 +164,7 @@ export const collectionTexts = {
   },
   /** Attaching a camera photo as a file (ST-054) – its own page beside attaching a file; the file category is Photo. */
   attachPhoto: {
-    title: (museumNumber: string) => `Foto an ${museumNumber} anhängen`,
+    title: (museumNumber: string) => `Foto anhängen · ${museumNumber}`,
     /** Strings only below – the form is a client component. */
     form: {
       photo: {
@@ -187,7 +187,7 @@ export const collectionTexts = {
   },
   /** Removing a file (ST-038): the question once, on a page of its own (G10, G10b). */
   removeFile: {
-    title: "Datei entfernen",
+    title: (museumNumber: string) => `Datei entfernen · ${museumNumber}`,
     /** A file of the machine model also says where else it disappears (user, 2026-10-25, acceptance of ST-038). */
     question: (title: string, machineModel?: string) =>
       `„${title}“ entfernen? Die Datei wird endgültig gelöscht.` +
@@ -198,7 +198,7 @@ export const collectionTexts = {
     backToMachine: "Zurück zum Gerät",
   },
   machineStatusChange: {
-    title: (museumNumber: string) => `Status von ${museumNumber} ändern`,
+    title: (museumNumber: string) => `Status ändern · ${museumNumber}`,
     current: (status: string) => `Aktueller Status: ${status}`,
     reason: "Grund",
     reasonHint: "Steht in der Status-Historie, z. B. „linker Flipper schwach“.",
@@ -210,10 +210,10 @@ export const collectionTexts = {
   },
   /** Retiring a machine (ST-039): the reason, then the question once (G10, G10b). */
   machineRetire: {
-    title: (museumNumber: string) => `${museumNumber} ausmustern`,
+    title: (museumNumber: string) => `Ausmustern · ${museumNumber}`,
     reason: "Grund",
     reasonHint: "Warum verlässt das Gerät das Museum?",
-    submit: "Weiter",
+    submit: "Gerät ausmustern",
     /** Names what nobody sees on this screen; a part with zero is left out (backlog grooming 2026-10-17, G10). */
     question: (museumNumber: string, openDefects: number, problemReports: number) => {
       const consequences = [
@@ -233,7 +233,7 @@ export const collectionTexts = {
   },
   /** Correcting a machine's museum number or serial number (ST-035) – its own page, reached from the machine record. */
   machineCorrection: {
-    title: (museumNumber: string) => `Angaben von ${museumNumber} korrigieren`,
+    title: (museumNumber: string) => `Angaben korrigieren · ${museumNumber}`,
     museumNumberHint: "Die bisherige Museumsnummer bleibt reserviert und führt weiter zu diesem Gerät.",
     serialNumberHint: "Leer lassen, wenn das Gerät keine lesbare Seriennummer hat.",
     submit: "Angaben korrigieren",
@@ -247,7 +247,7 @@ export const collectionTexts = {
   },
   /** Moving a machine (ST-034) – its own page, reached from the machine record. */
   machineMove: {
-    title: (museumNumber: string) => `Standort von ${museumNumber} ändern`,
+    title: (museumNumber: string) => `Standort ändern · ${museumNumber}`,
     submit: "Standort ändern",
     unchanged: (museumNumber: string, location: string) => `${museumNumber} steht schon in „${location}“.`,
     retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",

@@ -17,7 +17,7 @@ test.beforeEach(() => {
 async function openMove(page: Page, museumNumber: string) {
   await page.goto(`/team/machines/${museumNumber}`);
   await page.getByRole("link", { name: "Standort ändern" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Standort von ${museumNumber} ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Standort ändern · ${museumNumber}`);
 }
 
 const locationOnRecord = (page: Page) =>
@@ -62,7 +62,7 @@ test("a rejected move stays on the form and keeps the typed text", async ({ page
   await page.getByRole("button", { name: "Standort ändern" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(`${museumNumber} steht schon in „Hall 2, row 3“.`);
   await expect(page.getByLabel("Standort")).toHaveValue(" Hall 2, row 3 ");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Standort von ${museumNumber} ändern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Standort ändern · ${museumNumber}`);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
 

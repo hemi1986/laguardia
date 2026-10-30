@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { anOpenDefect, expect, logIn, openDefectsEntry, pageWidth, reportAsVisitor, test } from "./fixtures";
 
 /**
- * Retiring a machine on a phone (ST-039): section 9 of the machine record leads to „LG-013 ausmustern“; sending the
+ * Retiring a machine on a phone (ST-039): section 9 of the machine record leads to „Ausmustern · LG-013“; sending the
  * reason asks once, naming what nobody sees on this screen (G10, G10b); afterwards the technician is back on the
  * machine record with the confirmation (G3). Needs the e2e technician each local run creates (ST-083) – the preview
  * database has none before ST-068, so this runs locally only.
@@ -28,9 +28,9 @@ async function aMachineWithOpenWork(page: Page) {
 async function askToRetire(page: Page, museumNumber: string) {
   await page.goto(`/team/machines/${museumNumber}`);
   await page.getByRole("link", { name: "Gerät ausmustern" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${museumNumber} ausmustern`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Ausmustern · ${museumNumber}`);
   await page.getByLabel("Grund").fill("Sold to a collector");
-  await page.getByRole("button", { name: "Weiter" }).click();
+  await page.getByRole("button", { name: "Gerät ausmustern" }).click();
 }
 
 const status = (page: Page) =>
