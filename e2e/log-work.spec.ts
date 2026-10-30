@@ -61,7 +61,8 @@ test("a technician logs work twice: confirmed, newest first on the defect's page
   const entries = main
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Arbeitsschritte" }) })
-    .getByRole("article");
+    // The section's frame is an article too since ST-092 (G29) – the entries are its list items.
+    .getByRole("listitem");
   await expect(entries).toHaveCount(2);
   await expect(entries.nth(0)).toContainText("Replaced coil stop and EOS switch");
   await expect(entries.nth(0)).toContainText("Verwendete Teile: 1x coil stop, 1x EOS switch");
