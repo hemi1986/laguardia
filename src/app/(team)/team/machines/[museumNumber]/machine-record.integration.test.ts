@@ -24,6 +24,7 @@ import {
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { statusChangedAt } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import type { Viewer } from "../../claimant";
 import { loadMachineRecord } from "./machine-record-data";
@@ -158,6 +159,59 @@ describe("the machine record", () => {
     expect(registration).toBeGreaterThan(change);
     expect(html).toContain("flipper coil burnt · Tom · 20.01.2026, 14:30");
     expect(html).toContain("Eva · 15.01.2026, 10:00");
+  });
+
+  describe("only the latest five status changes, and a link to all of them (ST-093, G24)", () => {
+    /** One change a day from 1 February 2026 on, at 10:00 UTC – the newest is change `count`. */
+    const changed = (machineId: string, count: number) =>
+      statusChangedAt(
+        db,
+        machineId,
+        Array.from({ length: count }, (_, day) => `2026-02-${String(day + 1).padStart(2, "0")}T10:00:00Z`),
+        tom,
+      );
+    const statusHistory = (html: string) => section(html, "Status-Historie");
+    const entries = (html: string) => [...statusHistory(html).matchAll(/<li\b/g)].length;
+
+    it("ST-093: The machine record shows the latest five status changes", async () => {
+      const machineId = await registered("LG-042", "2026-01-15T09:00:00Z");
+      await changed(machineId, 7);
+
+      const history = statusHistory(await page("LG-042"));
+
+      expect(entries(history)).toBe(5);
+      const shown = [...history.matchAll(/Change (\d)/g)].map((match) => match[1]);
+      expect(shown).toEqual(["7", "6", "5", "4", "3"]);
+      expect(history).not.toContain("Erfasst als Spielbereit");
+      expect(history).toContain('href="/team/machines/LG-042/status-historie"');
+      expect(history).toMatch(/>Alle Statusänderungen \(8\)</);
+      expect(history.indexOf("Alle Statusänderungen")).toBeGreaterThan(history.indexOf("Change 3"));
+    });
+
+    it("ST-093: A short status history needs no link", async () => {
+      await registered("LG-050", "2026-01-15T09:00:00Z");
+
+      const history = statusHistory(await page("LG-050"));
+
+      expect(entries(history)).toBe(1);
+      expect(history).toContain("Erfasst als Spielbereit");
+      expect(history).not.toContain("Alle Statusänderungen");
+    });
+
+    it("ST-093: Five entries need no link, six do", async () => {
+      await changed(await registered("LG-043", "2026-01-15T09:00:00Z"), 4);
+      await changed(await registered("LG-044", "2026-01-15T09:00:00Z"), 5);
+
+      const five = statusHistory(await page("LG-043"));
+      const six = statusHistory(await page("LG-044"));
+
+      expect(entries(five)).toBe(5);
+      expect(five).toContain("Erfasst als Spielbereit");
+      expect(five).not.toContain("Alle Statusänderungen");
+      expect(entries(six)).toBe(5);
+      expect(six).not.toContain("Erfasst als Spielbereit");
+      expect(six).toMatch(/>Alle Statusänderungen \(6\)</);
+    });
   });
 
   it('ST-039: The machine record of a retired machine shows "retired" in place of the status', async () => {
