@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gte, inArray, isNull, max } from "drizzle-orm";
 import { machineForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
-import { aggregateStore, isId, type Database, type Role } from "@/platform/command";
+import { aggregateStore, isId, type Database, type Latest, type Role } from "@/platform/command";
 import { addDays, today, type CalendarDate } from "@/platform/time";
 import { MAINTENANCE_PLAN_ID } from "./maintenance-plan";
 import { activeMaintenanceTasks, maintenancePlans } from "./maintenance-plans";
@@ -84,12 +84,12 @@ export async function latestMaintenanceRecords(
   db: Database,
   machineId: string,
   limit: number,
-): Promise<{ records: NamedMaintenanceRecord[]; total: number }> {
-  const [records, [{ total }]] = await Promise.all([
+): Promise<Latest<NamedMaintenanceRecord>> {
+  const [latest, [{ total }]] = await Promise.all([
     maintenanceRecords(db, { machineId, limit }),
     db.select({ total: count() }).from(maintenanceRecord).where(eq(maintenanceRecord.machineId, machineId)),
   ]);
-  return { records, total };
+  return { latest, total };
 }
 
 /**

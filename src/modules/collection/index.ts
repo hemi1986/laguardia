@@ -49,6 +49,7 @@ export {
   machineOverview,
   machineRecord,
   statusHistoryOfMachine,
+  latestStatusChanges,
   machineForTeamForm,
   machineForReporting,
   holdAgainstRetirement,

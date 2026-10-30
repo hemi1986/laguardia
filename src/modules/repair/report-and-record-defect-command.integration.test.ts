@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { machineRecord } from "@/modules/collection";
+import { machineRecord, statusHistoryOfMachine } from "@/modules/collection";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
@@ -95,7 +95,10 @@ describe("CMD-ReportProblem by a technician", () => {
     });
     const record = await machineRecord(db, await museumNumberOf(machineId));
     expect(record?.machineStatus).toBe("limited");
-    expect(record?.statusHistory[0]).toMatchObject({ newStatus: "limited", reason: "Left flipper sticks" });
+    expect((await statusHistoryOfMachine(db, record!.id))[0]).toMatchObject({
+      newStatus: "limited",
+      reason: "Left flipper sticks",
+    });
     // Stored already triaged: it never appears in the triage list.
     expect((await triageList(db, clock)).map((entry) => entry.id)).not.toContain(problemReportId);
     // One action, three events – all by the same technician, in this order.

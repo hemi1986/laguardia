@@ -1,6 +1,6 @@
 import { machinesForMaintenance } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
-import type { Database, Role } from "@/platform/command";
+import type { Database, Latest, Role } from "@/platform/command";
 import type { CalendarDate } from "@/platform/time";
 import { changeMachinesOffered } from "./change-machines-of-maintenance-task";
 import { dueOn } from "./due-maintenance";
@@ -23,10 +23,8 @@ export type MachineMaintenance = {
   notOnDisplay: boolean;
   /** Its due maintenance tasks – the overdue ones first, then the longest due. */
   due: MachineDueMaintenanceTask[];
-  /** Its latest maintenance records, the newest first – at most the `latestRecordCount` asked for. */
-  latestRecords: NamedMaintenanceRecord[];
-  /** How many maintenance records it has in all. */
-  recordCount: number;
+  /** Its latest maintenance records, the newest first – at most the `latestRecordCount` asked for –, and how many it has. */
+  records: Latest<NamedMaintenanceRecord>;
   /** How many maintenance tasks apply to it (ST-096) – none for a retired machine, which never counts. */
   taskCount: number;
   /** CMD-ChangeMachinesOfMaintenanceTask would accept the team member for this machine (ST-096, G11). */
@@ -46,7 +44,7 @@ export async function machineMaintenance(
   { teamMember, latestRecordCount }: { teamMember: { role: Role }; latestRecordCount: number },
 ): Promise<MachineMaintenance> {
   const published = machinesForMaintenance(db, { machineId });
-  const [machines, due, latest, tasks] = await Promise.all([
+  const [machines, due, records, tasks] = await Promise.all([
     published,
     published.then((machines) => dueOn(db, clock, machines, teamMember)),
     latestMaintenanceRecords(db, machineId, latestRecordCount),
@@ -65,8 +63,7 @@ export async function machineMaintenance(
         })),
       )
       .sort((a, b) => Number(b.overdue) - Number(a.overdue) || a.dueSince.localeCompare(b.dueSince)),
-    latestRecords: latest.records,
-    recordCount: latest.total,
+    records,
     taskCount: machines.length === 0 ? 0 : tasks.filter((task) => maintenanceTaskAppliesTo(task, machineId)).length,
     changeOffered: machines.length > 0 && changeMachinesOffered(teamMember.role),
   };

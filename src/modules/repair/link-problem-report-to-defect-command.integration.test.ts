@@ -6,7 +6,13 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { aDefectWithHistory } from "@/test-support/defects";
-import { changeMachineStatusCommand, machineForTeamForm, machineLabels, machineRecord } from "@/modules/collection";
+import {
+  changeMachineStatusCommand,
+  machineForTeamForm,
+  machineLabels,
+  machineRecord,
+  statusHistoryOfMachine,
+} from "@/modules/collection";
 import {
   defectDetails,
   linkProblemReportToDefectCommand,
@@ -200,7 +206,7 @@ describe("CMD-LinkProblemReportToDefect on a resolved defect", () => {
     });
     const record = await machineRecord(db, (await machineOf(machineId)).museumNumber);
     expect(record?.machineStatus).toBe("out-of-order");
-    expect(record?.statusHistory[0]).toMatchObject({
+    expect((await statusHistoryOfMachine(db, record!.id))[0]).toMatchObject({
       previousStatus: "playable",
       newStatus: "out-of-order",
       reason: "Left flipper weak",

@@ -5,7 +5,13 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { changeMachineStatusCommand, createMachineModelCommand, machineRecord, registerMachineCommand } from ".";
+import {
+  changeMachineStatusCommand,
+  createMachineModelCommand,
+  machineRecord,
+  registerMachineCommand,
+  statusHistoryOfMachine,
+} from ".";
 import { retireMachineCommand } from "./retire-machine-command";
 import { withoutMachines } from "./machines.test-support";
 
@@ -71,8 +77,11 @@ describe("CMD-RetireMachine", () => {
       retiredBy: eva.teamMemberId,
       retiredAt: new Date("2026-03-01T11:00:00Z"),
     });
-    // Its full history stays: the record still opens with both status history entries.
-    expect(record?.statusHistory.map((change) => change.newStatus)).toEqual(["out-of-order", "playable"]);
+    // Its full history stays: both status history entries are still there.
+    expect((await statusHistoryOfMachine(db, record!.id)).map((change) => change.newStatus)).toEqual([
+      "out-of-order",
+      "playable",
+    ]);
     const [, , retired] = await journalOf(db, { machineId });
     // The reason is typed text – it stays in the aggregate (ST-003).
     expect(retired).toMatchObject({

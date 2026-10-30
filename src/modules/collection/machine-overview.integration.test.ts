@@ -8,6 +8,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import {
   createMachineModelCommand,
   machineOverview,
+  latestStatusChanges,
   machineRecord,
   machineStatusCounts,
   registerMachineCommand,
@@ -272,7 +273,12 @@ describe("RM-MachineRecord", () => {
       },
       location: "Hall 2, row 3",
       machineStatus: "playable",
-      statusHistory: [
+      retirement: undefined,
+      files: [],
+    });
+    // Its status history is read on its own – the latest entries and how many there are (ST-093).
+    expect(await latestStatusChanges(db, machineId, 5)).toEqual({
+      latest: [
         {
           id: expect.any(String),
           previousStatus: undefined,
@@ -282,8 +288,7 @@ describe("RM-MachineRecord", () => {
           changedAt: new Date("2026-10-01T10:00:00Z"),
         },
       ],
-      retirement: undefined,
-      files: [],
+      total: 1,
     });
     expect(await machineRecord(db, "LG-043")).toBeUndefined();
   });

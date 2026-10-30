@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import type { Database, TeamMemberId } from "@/platform/command";
+import type { Database, Latest, TeamMemberId } from "@/platform/command";
 import type { DefectState, Resolution, ShownReopening, WorkLogEntry } from "./defect";
 import { reopenings, resolutions, withReopenReasons, workLog } from "./defects";
 import { defect, defectResolution, problemReport } from "./schema";
@@ -131,7 +131,7 @@ export async function recentRepairHistory(
   db: Database,
   machineId: string,
   limit: number,
-): Promise<{ entries: EndedRepairHistoryEntry[]; total: number }> {
+): Promise<Latest<EndedRepairHistoryEntry>> {
   const latestResolution = sql`${defectResolution.position} = (SELECT max(r.position) FROM ${defectResolution} r WHERE r.defect_id = ${defect.id})`;
   const [resolvedDefects, resolvedOnTheSpot, [defects], [problemReports]] = await Promise.all([
     db
@@ -178,7 +178,7 @@ export async function recentRepairHistory(
     ),
   ];
   return {
-    entries: entries.sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime()).slice(0, limit),
+    latest: entries.sort((a, b) => b.resolvedAt.getTime() - a.resolvedAt.getTime()).slice(0, limit),
     total: defects.count + problemReports.count,
   };
 }

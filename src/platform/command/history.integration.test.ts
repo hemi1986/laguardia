@@ -130,3 +130,23 @@ describe("an aggregate store with a history", () => {
     expect((await entriesOf(db, logbookId)).map((entry) => entry.note)).toEqual(["first", "second"]);
   });
 });
+
+describe("the latest entries of a history (architecture review 2026-10-30)", () => {
+  it("reads only the newest entries, the newest first, and how many there are in all", async () => {
+    const dependencies = { actor: technician, db, clock: fixedClock("2026-10-03T10:00:00Z"), newId: randomUUID };
+    const opened = await executeCommand(openLogbook, { note: "1" }, dependencies);
+    if (!opened.ok) throw new Error(opened.error);
+    const { logbookId } = opened.result;
+    for (const [version, note] of ["2", "3", "4"].entries()) {
+      const written = await executeCommand(writeNote, { logbookId, version, note }, dependencies);
+      if (!written.ok) throw new Error(written.error);
+    }
+    const other = await executeCommand(openLogbook, { note: "elsewhere" }, dependencies);
+    if (!other.ok) throw new Error(other.error);
+
+    const latest = await entries.latest(db, logbookId, 2);
+
+    expect({ ...latest, latest: latest.latest.map((entry) => entry.note) }).toEqual({ latest: ["4", "3"], total: 4 });
+    expect(await entries.latest(db, randomUUID(), 2)).toEqual({ latest: [], total: 0 });
+  });
+});

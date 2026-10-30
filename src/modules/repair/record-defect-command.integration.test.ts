@@ -5,7 +5,7 @@ import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { machineRecord } from "@/modules/collection";
+import { machineRecord, statusHistoryOfMachine } from "@/modules/collection";
 import { retireMachineCommand } from "./retirement-policies";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { recordDefectCommand, reportProblemCommand, triageList } from ".";
@@ -107,7 +107,7 @@ describe("CMD-RecordDefect", () => {
     expect((await storedDefect(db, recorded.result.defectId))?.priority).toBe("high");
     const record = await machineRecord(db, museumNumber);
     expect(record?.machineStatus).toBe("out-of-order");
-    expect(record?.statusHistory[0]).toMatchObject({
+    expect((await statusHistoryOfMachine(db, record!.id))[0]).toMatchObject({
       previousStatus: "playable",
       newStatus: "out-of-order",
       reason: "Coil burnt, ball not ejected",
@@ -143,7 +143,9 @@ describe("CMD-RecordDefect", () => {
     expect(recorded).toEqual({ ok: false, error: "machine-retired" });
     expect((await storedProblemReport(db, problemReportId))?.triage).toEqual(triageBefore);
     expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
-    expect((await machineRecord(db, await museumNumberOf(machineId)))?.statusHistory).toHaveLength(1);
+    expect(
+      await statusHistoryOfMachine(db, (await machineRecord(db, await museumNumberOf(machineId)))!.id),
+    ).toHaveLength(1);
     expect(commandErrorText(teamMessages, "machine-retired")).toContain("ausgemustert");
   });
 
@@ -163,7 +165,9 @@ describe("CMD-RecordDefect", () => {
     expect(recorded).toEqual({ ok: false, error: "version-conflict" });
     expect((await storedProblemReport(db, problemReportId))?.triage).toBeUndefined();
     expect(await journalOf(db, { machineId })).toHaveLength(journalBefore);
-    expect((await machineRecord(db, await museumNumberOf(machineId)))?.statusHistory).toHaveLength(1);
+    expect(
+      await statusHistoryOfMachine(db, (await machineRecord(db, await museumNumberOf(machineId)))!.id),
+    ).toHaveLength(1);
   });
 
   it("ST-018: Title is required", async () => {

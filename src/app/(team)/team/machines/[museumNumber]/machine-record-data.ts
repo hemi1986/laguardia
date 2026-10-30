@@ -1,5 +1,6 @@
 import {
   correctDetailsRefusal,
+  latestStatusChanges,
   type MachineRecord,
   machineRecord,
   machineStatusesToChangeTo,
@@ -11,7 +12,7 @@ import {
 import { machineMaintenance, type MachineMaintenance, type NamedMaintenanceRecord } from "@/modules/maintenance";
 import { openDefects, recentRepairHistory, type EndedRepairHistoryEntry } from "@/modules/repair";
 import { systemClock, type Clock } from "@/platform/clock";
-import type { Database } from "@/platform/command";
+import type { Database, Latest } from "@/platform/command";
 import type { Viewer } from "../../claimant";
 import { openDefectReferences, shownOpenDefects, type OpenDefectsItem } from "../../defects/open-defects-data";
 import { named } from "../../named";
@@ -20,18 +21,14 @@ import { named } from "../../named";
 export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: string };
 
 /** The machine record with names – what the page shows (ST-009). */
-export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retirement"> & {
-  /** Section 6 (ST-093): its latest status changes, the newest first – at most `LATEST_STATUS_CHANGES`. */
-  latestStatusChanges: NamedStatusChange[];
-  /** How many entries its whole status history has – the registration included (ST-093). */
-  statusHistoryCount: number;
+export type MachineRecordData = Omit<MachineRecord, "retirement"> & {
+  /** Section 6 (ST-093): its latest status changes – at most `LATEST_STATUS_CHANGES` –, and how many entries its status history has, the registration included. */
+  statusHistory: Latest<NamedStatusChange>;
   retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string };
   /** Section 4 (ST-033): its open defects, as the open defects list shows them – high priority first. */
   openDefects: OpenDefectsItem[];
-  /** Section 7 (ST-033): its most recently ended entries of the repair history, the most recently ended first – at most `RECENT_REPAIR_HISTORY_ENTRIES`. */
-  recentRepairHistory: ShownEndedRepairHistoryEntry[];
-  /** How many entries its whole repair history has – open defects included (ST-033). */
-  repairHistoryCount: number;
+  /** Section 7 (ST-033): its most recently ended entries of the repair history – at most `RECENT_REPAIR_HISTORY_ENTRIES` –, and how many entries its whole repair history has, open defects included. */
+  repairHistory: Latest<ShownEndedRepairHistoryEntry>;
   /** Section 5 (ST-047): its due maintenance tasks and latest maintenance records – Maintenance's. */
   maintenance: ShownMachineMaintenance;
   /** The machine record's own actions the viewer may take (G11) – a section another module decides per item brings its own offer. */
@@ -60,8 +57,8 @@ export type MachineRecordActions = {
 };
 
 /** Section 5 „Wartung“ (ST-047): Maintenance's answer for the machine, with Team's names. */
-export type ShownMachineMaintenance = Omit<MachineMaintenance, "latestRecords"> & {
-  latestRecords: ShownMaintenanceRecord[];
+export type ShownMachineMaintenance = Omit<MachineMaintenance, "records"> & {
+  records: Latest<ShownMaintenanceRecord>;
 };
 
 /** A maintenance record as the machine record shows it – who recorded it by name. */
@@ -95,34 +92,41 @@ export async function loadMachineRecord(
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
-  const latestStatusChanges = record.statusHistory.slice(0, LATEST_STATUS_CHANGES);
-  const [open, recent, maintenance] = await Promise.all([
+  const [statusHistory, open, recent, maintenance] = await Promise.all([
+    latestStatusChanges(db, record.id, LATEST_STATUS_CHANGES),
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
     machineMaintenance(db, clock, record.id, { teamMember: viewer, latestRecordCount: LATEST_MAINTENANCE_RECORDS }),
   ]);
   const shown = await named(db, openDefectReferences(open), {
     teamMembers: [
-      ...latestStatusChanges.map((change) => change.changedBy),
+      ...statusHistory.latest.map((change) => change.changedBy),
       record.retirement?.retiredBy,
-      ...recent.entries.map((entry) => entry.resolvedBy),
-      ...maintenance.latestRecords.map((maintenanceRecord) => maintenanceRecord.recordedBy),
+      ...recent.latest.map((entry) => entry.resolvedBy),
+      ...maintenance.records.latest.map((maintenanceRecord) => maintenanceRecord.recordedBy),
     ],
   });
   return {
     ...record,
-    latestStatusChanges: latestStatusChanges.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
-    statusHistoryCount: record.statusHistory.length,
+    statusHistory: {
+      ...statusHistory,
+      latest: statusHistory.latest.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
+    },
     retirement: record.retirement && { ...record.retirement, retiredBy: shown.name(record.retirement.retiredBy) },
     openDefects: shownOpenDefects(clock, open, shown, viewer),
-    recentRepairHistory: recent.entries.map((entry) => ({ ...entry, resolvedBy: shown.name(entry.resolvedBy) })),
-    repairHistoryCount: recent.total,
+    repairHistory: {
+      ...recent,
+      latest: recent.latest.map((entry) => ({ ...entry, resolvedBy: shown.name(entry.resolvedBy) })),
+    },
     maintenance: {
       ...maintenance,
-      latestRecords: maintenance.latestRecords.map((maintenanceRecord) => ({
-        ...maintenanceRecord,
-        recordedBy: shown.name(maintenanceRecord.recordedBy),
-      })),
+      records: {
+        ...maintenance.records,
+        latest: maintenance.records.latest.map((maintenanceRecord) => ({
+          ...maintenanceRecord,
+          recordedBy: shown.name(maintenanceRecord.recordedBy),
+        })),
+      },
     },
     actions: actionsOf(record, viewer),
   };
