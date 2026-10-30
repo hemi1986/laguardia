@@ -97,7 +97,6 @@ export const maintenanceTexts = {
     title: (name: string) => `Wartung erfassen · ${name}`,
     due: "Fällig",
     others: "Weitere Geräte",
-    /** A machine to tick (ST-098): „LG-042 · Medieval Madness · Halle 1“. */
     none: "Für diese Wartungsaufgabe gibt es kein Gerät.",
     submit: "Wartung eintragen",
     recorded: (name: string, count: number) =>

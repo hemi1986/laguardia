@@ -1,12 +1,12 @@
 import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
+import { maintenanceForSeveral } from "@/modules/maintenance";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../team-session";
 import { recordForSeveralAction } from "./actions";
 import { RecordForSeveralPage } from "./record-for-several-view";
-import { maintenanceForSeveral } from "@/modules/maintenance";
 
 const { recordForSeveral: texts, recordMaintenance } = teamMessages;
 

@@ -144,15 +144,15 @@ closed when the page opens, except those with a choice in them (after a rejectio
 how many of it are chosen. With JavaScript the count follows every tick and „Alle auswählen“ ticks the group (the
 button renders only after hydration, `useSyncExternalStore`); without it the count says what was chosen when the page
 opened. It carries no domain logic and no texts: the page maps its domain groups to `ChoiceGroup`s with the German
-labels, and the client form passes the header function and the button text. Key it on `keptKey(state)` so a rejection
+labels, and a team form shows it through `TeamGroupedChoice` (below), which passes the header and the button text. Key it on `keptKey(state)` so a rejection
 starts it again from the values the state kept. A form that starts with the current choice ticked (ST-095, changing the
 machines of a task) passes `openWithChoice={!!state}`: the groups stay closed until a rejection opens those with a
 choice. A search's matches pass `open`: every group opens with the page (ST-098, the sticker selection); a count elsewhere
 on the page (the sticker selection's „2 Geräte ausgewählt“) hears every change through `onChosenChange` – „Alle auswählen“
 fires no change event. A team form uses `TeamGroupedChoice` (`src/app/(team)/team/team-grouped-choice.tsx`), which passes
 the header text and „Alle auswählen“ from `teamMessages.groupedChoice` – no form passes them itself (architecture review
-2026-10-30). Group order and grouping are Collection's (`groupMachines`) – a module answering machines to choose gives
-them in no order of its own; `machineChoiceGroups` (`src/app/(team)/team/category-and-technology.ts`) turns the groups
+2026-10-30). Group order and grouping are Collection's (`groupMachines`) – a module answering machines to be grouped gives
+them in no order of its own (a list it orders itself, such as the group „Fällig“ in the due list's order, keeps it); `machineChoiceGroups` (`src/app/(team)/team/category-and-technology.ts`) turns the groups
 into `ChoiceGroup`s, and a machine reads `machineEntryLabel(machine, …more)` there („LG-042 · Medieval Madness“, then
 what the form adds) – the page says only what it adds.
 **No-JavaScript test passed:** native checkboxes in a native fold (`e2e/maintenance-plan-machines.spec.ts`).
