@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { aMachine, allowPreview, anOpenDefect, aRetiredMachine, aTeamMember, expect, logIn, openDefect, pageWidth, test, tickMachines, unique, untickMaintenanceTasks } from "./fixtures";
 
 /**
@@ -286,4 +286,39 @@ test("ST-092: Pages without a way on get one", async ({ page, browser }) => {
     expect(await pageWidth(visitor)).toBeLessThanOrEqual(360);
   }
   await visitor.context().close();
+});
+
+/** What makes a back link look like one: its type, colour, underline and how wide it is next to its words. */
+async function linkShape(link: Locator) {
+  return link.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return {
+      type: `${style.fontSize} ${style.fontWeight} ${style.color} ${style.textDecorationLine}`,
+      asWideAsItsWords: Math.abs(element.getBoundingClientRect().width - range.getBoundingClientRect().width) < 2,
+    };
+  });
+}
+
+test("ST-092: Back links have one shape", async ({ page }) => {
+  await logIn(page);
+  const { museumNumber, title } = await anOpenDefect(page);
+  await page.goto(`/team/machines/${museumNumber}/reparaturhistorie`);
+  const example = await linkShape(page.getByRole("link", { name: "Zurück zum Gerät" }));
+  expect(example.asWideAsItsWords).toBe(true);
+
+  await openDefect(page, museumNumber, title);
+  expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Zurück zu den Defekten" }))).toEqual(
+    example,
+  );
+
+  await page.goto("/team/machines/new");
+  expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Zurück zu den Geräten" }))).toEqual(
+    example,
+  );
+
+  await page.goto("/team/machines?search=jukebox");
+  await expect(page.getByRole("main")).toContainText("Kein Gerät passt zu „jukebox“.");
+  expect(await linkShape(page.getByRole("main").getByRole("link", { name: "Suche zurücksetzen" }))).toEqual(example);
 });
