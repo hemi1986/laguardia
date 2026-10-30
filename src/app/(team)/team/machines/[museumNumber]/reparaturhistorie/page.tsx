@@ -4,6 +4,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { loadRepairHistory } from "./repair-history-data";
 import { RepairHistoryView } from "./repair-history";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 /**
  * The repair history of one machine (ST-033) – reached from section 7 of its machine record. Every team member sees
@@ -14,7 +15,7 @@ export default async function RepairHistoryPage({
   searchParams,
 }: PageProps<"/team/machines/[museumNumber]/reparaturhistorie">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("reparaturhistorie"));
   const { jahr } = await searchParams;
   const data = await loadRepairHistory(database(), museumNumber, typeof jahr === "string" ? jahr : undefined);
 

@@ -6,6 +6,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../team-session";
 import { retireMachineAction } from "./actions";
 import { RetireMachineForm } from "./retire-machine-form";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, machineRetire: texts } = teamMessages;
 
@@ -13,9 +14,12 @@ const { machineRecord, machineRetire: texts } = teamMessages;
  * Retiring a machine (ST-039) – its own page „Ausmustern · LG-013“, reached from section 9 of the machine record.
  * Technicians only (helpers are sent away; the command refuses them anyway).
  */
-export default async function RetireMachinePage({ params }: PageProps<"/team/machines/[museumNumber]/ausmustern">) {
+export default async function RetireMachinePage({
+  params,
+  searchParams,
+}: PageProps<"/team/machines/[museumNumber]/ausmustern">) {
   await requireTechnician();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("ausmustern"));
   const machine = await machineForTeamForm(database(), museumNumber);
 
   return (

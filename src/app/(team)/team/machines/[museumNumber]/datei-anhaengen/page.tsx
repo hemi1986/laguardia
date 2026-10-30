@@ -6,6 +6,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../team-session";
 import { attachFileAction } from "./actions";
 import { AttachFileForm } from "./attach-file-form-view";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord: recordTexts, attachFile: texts } = teamMessages;
 
@@ -13,9 +14,12 @@ const { machineRecord: recordTexts, attachFile: texts } = teamMessages;
  * Attaching a file (ST-037) – its own page, reached from the machine record's files section (G21). Every team
  * member; also for a retired machine, whose manuals stay useful (user, 2026-10-18).
  */
-export default async function AttachFilePage({ params }: PageProps<"/team/machines/[museumNumber]/datei-anhaengen">) {
+export default async function AttachFilePage({
+  params,
+  searchParams,
+}: PageProps<"/team/machines/[museumNumber]/datei-anhaengen">) {
   await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("datei-anhaengen"));
   const record = await machineRecord(database(), museumNumber);
 
   return (

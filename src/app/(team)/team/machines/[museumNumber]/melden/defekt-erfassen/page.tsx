@@ -9,6 +9,7 @@ import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "../../../../../../team-session";
 import { reportAndRecordDefectAction } from "./actions";
 import { ReportAndRecordDefectForm } from "./report-and-record-defect-form";
+import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 
 const { machineRecord, reportAndRecordDefect: texts, reportProblem } = teamMessages;
 
@@ -19,9 +20,10 @@ const { machineRecord, reportAndRecordDefect: texts, reportProblem } = teamMessa
  */
 export default async function ReportAndRecordDefectPage({
   params,
+  searchParams,
 }: PageProps<"/team/machines/[museumNumber]/melden/defekt-erfassen">) {
   const member = await requireTeamMember();
-  const museumNumber = decodeURIComponent((await params).museumNumber);
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage("melden/defekt-erfassen"));
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   if (member.role !== "technician") redirect(`${record}/melden`);
   const db = database();

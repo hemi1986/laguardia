@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import { machineOfMuseumNumber } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMemberIfLoggedIn } from "../../team-session";
 import { currentVisitorMessages } from "../../visitor-locale";
 import { VisitorPage } from "../../visitor-page";
 import { loadVisitorMachinePage } from "./visitor-machine-page-data";
 import { VisitorMachinePage } from "./visitor-machine-page";
+import { museumNumberOfPage, visitorMachinePage } from "@/app/museum-number-address";
 
 /**
  * The visitor machine page (ST-010) at the QR address `/m/<museum number>` (ST-060) – public, no login. It reads the
@@ -15,19 +15,14 @@ import { VisitorMachinePage } from "./visitor-machine-page";
  * header against the preview. A logged-in team member is sent to the machine record (ST-011).
  */
 export default async function VisitorMachineRoute({ params, searchParams }: PageProps<"/m/[museumNumber]">) {
-  const museumNumber = decodeURIComponent((await params).museumNumber); // Next.js answers 400 for a malformed one
+  const museumNumber = await museumNumberOfPage({ params, searchParams }, visitorMachinePage());
   // The same QR sticker for everyone (ST-011): a logged-in team member gets the machine record.
   if (await teamMemberIfLoggedIn()) redirect(`/team/machines/${encodeURIComponent(museumNumber)}`);
   const [{ locale, messages }, data] = await Promise.all([
     currentVisitorMessages(),
     loadVisitorMachinePage(database(), museumNumber),
   ]);
-  if (!data) {
-    // An old QR sticker keeps working (ST-035): a reserved museum number leads to the machine under its current one.
-    const machine = await machineOfMuseumNumber(database(), museumNumber);
-    if (machine && machine.museumNumber !== museumNumber) redirect(`/m/${encodeURIComponent(machine.museumNumber)}`);
-    notFound();
-  }
+  if (!data) notFound();
 
   return (
     <VisitorPage title={data.machineModelTitle} locale={locale} messages={messages} back={`/m/${museumNumber}`}>
