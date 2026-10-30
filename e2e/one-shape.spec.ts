@@ -248,3 +248,22 @@ test("ST-092: The sticker selection's search is labelled like the machine overvi
   expect((await hint.boundingBox())!.y).toBeGreaterThan((await search.boundingBox())!.y);
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
+
+test("ST-092: The confirmation after adding a maintenance task sits under the heading", async ({ page }) => {
+  await logIn(page);
+  const name = unique("Wax playfield");
+  await page.goto("/team/maintenance-plan/new");
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Anleitung").fill("Clean and wax the playfield.");
+  await page.getByLabel("Intervall in Monaten").fill("6");
+  await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+
+  const main = page.getByRole("main");
+  await expect(main.getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
+  // The first thing under the heading: the heading's next element holds the confirmation.
+  const afterHeading = main.locator("h1 + *");
+  await expect(afterHeading).toContainText(`„${name}“ ist jetzt im Wartungsplan.`);
+  const confirmation = (await main.getByRole("status").boundingBox())!;
+  const add = (await main.getByRole("link", { name: "Wartungsaufgabe hinzufügen" }).boundingBox())!;
+  expect(confirmation.y).toBeLessThan(add.y);
+});
