@@ -91,8 +91,8 @@ export async function journalSinceRegistration(db: Database, machineId: string) 
 }
 
 /**
- * The machine's status changed once at each of the instants, in that order, alternating between Out of order and
- * Playable (it starts from Playable) – for a status history of a given length (ST-093). Changing the status is a
+ * The machine's status changed once at each of the instants, in that order – to Out of order, or back to Playable from
+ * Out of order – for a status history of a given length (ST-093). Changing the status is a
  * technician's command; each change reads the version stored then.
  */
 export async function statusChangedAt(
@@ -112,7 +112,7 @@ export async function statusChangedAt(
       {
         machineId,
         version: machine.version,
-        machineStatus: index % 2 === 0 ? "out-of-order" : "playable",
+        machineStatus: machine.machineStatus === "out-of-order" ? "playable" : "out-of-order",
         reason: `Change ${index + 1}`,
       },
       { actor: by, db, clock: fixedClock(at), newId: randomUUID },

@@ -22,7 +22,7 @@ export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: s
 /** The machine record with names – what the page shows (ST-009). */
 export type MachineRecordData = Omit<MachineRecord, "statusHistory" | "retirement"> & {
   /** Section 6 (ST-093): its latest status changes, the newest first – at most `LATEST_STATUS_CHANGES`. */
-  statusHistory: NamedStatusChange[];
+  latestStatusChanges: NamedStatusChange[];
   /** How many entries its whole status history has – the registration included (ST-093). */
   statusHistoryCount: number;
   retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string };
@@ -111,7 +111,7 @@ export async function loadMachineRecord(
   });
   return {
     ...record,
-    statusHistory: latestStatusChanges.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
+    latestStatusChanges: latestStatusChanges.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),
     statusHistoryCount: record.statusHistory.length,
     retirement: record.retirement && { ...record.retirement, retiredBy: shown.name(record.retirement.retiredBy) },
     openDefects: shownOpenDefects(clock, open, shown, viewer),

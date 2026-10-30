@@ -10,6 +10,8 @@ import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { retireMachine, statusChangedAt } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadMachineRecord } from "../machine-record-data";
+import { MachineRecordView } from "../machine-record";
 import { loadStatusHistory } from "./status-history-data";
 import { StatusHistoryView } from "./status-history";
 
@@ -131,8 +133,12 @@ describe("the status history page", () => {
     );
     await retireMachine(db, machineId, "2026-09-01T09:00:00Z");
 
+    const record = await loadMachineRecord(db, "LG-013", { viewer: { id: tom.teamMemberId, role: "technician" } });
+    const recordHtml = renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber: "LG-013" }));
     const html = await page("LG-013");
 
+    expect(recordHtml).toContain('href="/team/machines/LG-013/status-historie"');
+    expect(recordHtml).toMatch(/>Alle Statusänderungen \(7\)</);
     expect(entries(year(html, "2026 · 7 Einträge"))).toBe(7);
   });
 

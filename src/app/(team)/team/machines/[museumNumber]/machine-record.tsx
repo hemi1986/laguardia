@@ -138,8 +138,8 @@ export function MachineRecordView({
       <MachineMaintenanceSection maintenance={record.maintenance} museumNumber={record.museumNumber} />
       {/* Section 6 (ST-093): the latest status changes; the whole status history is a page of its own (G24). */}
       <Section title={terms["Status history"]}>
-        <StatusChangeList changes={record.statusHistory} />
-        {record.statusHistoryCount > record.statusHistory.length && (
+        <StatusChangeList changes={record.latestStatusChanges} />
+        {record.statusHistoryCount > record.latestStatusChanges.length && (
           <Link
             href={`/team/machines/${encodeURIComponent(record.museumNumber)}/status-historie`}
             className="self-start text-sm underline underline-offset-4"
