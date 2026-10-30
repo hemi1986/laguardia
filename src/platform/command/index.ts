@@ -126,8 +126,8 @@ export type Command<Input, Result, Error extends string> = {
   removesContent?(result: Result): string | undefined;
   /**
    * The command may end successfully having changed nothing (ST-095: a set delta that is already made) – it then journals
-   * nothing. Set by `aggregateCommand` for a `setDelta`, kept by `withPolicies`. Every other command that journals no
-   * event is a bug and throws.
+   * nothing. Set by `aggregateCommand` for a `setDelta`, kept by `withPolicies` and `withPolicyInput` like every property.
+   * Every other command that journals no event is a bug and throws.
    */
   mayChangeNothing?: true;
 };

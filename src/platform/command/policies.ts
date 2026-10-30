@@ -32,24 +32,18 @@ export function withPolicies<Input, Result, Error extends string, PolicyError ex
   command: Command<Input, Result, Error>,
   policies: readonly Policy<PolicyError>[],
 ): Command<Input, Result, Error | PolicyError> {
-  return {
-    id: command.id,
-    allowedActors: command.allowedActors,
-    removesContent: command.removesContent,
-    mayChangeNothing: command.mayChangeNothing,
-    run: async (input, context) => {
-      const outcome = await command.run(input, context);
-      if (!outcome.ok || outcome.events.length === 0) return outcome;
-      for (const added of policies) {
-        const calls = await added.calls(context.tx, { events: outcome.events, actor: context.actor });
-        for (const call of calls) {
-          if ("policy" in call) await context.runAsSystem(call.policy, call.input);
-          else await context.run(call.command, call.input);
-        }
+  return runningInstead(command, async (input, context) => {
+    const outcome = await command.run(input, context);
+    if (!outcome.ok || outcome.events.length === 0) return outcome;
+    for (const added of policies) {
+      const calls = await added.calls(context.tx, { events: outcome.events, actor: context.actor });
+      for (const call of calls) {
+        if ("policy" in call) await context.runAsSystem(call.policy, call.input);
+        else await context.run(call.command, call.input);
       }
-      return outcome;
-    },
-  };
+    }
+    return outcome;
+  });
 }
 
 /**
@@ -62,11 +56,20 @@ export function withPolicyInput<Input, Result, Error extends string, PolicyInput
   command: Command<Input, Result, Error>,
   policiesFor: (input: PolicyInput) => readonly Policy<PolicyError>[],
 ): Command<{ command: Input; policies: PolicyInput }, Result, Error | PolicyError> {
-  return {
-    id: command.id,
-    allowedActors: command.allowedActors,
-    removesContent: command.removesContent,
-    mayChangeNothing: command.mayChangeNothing,
-    run: (input, context) => withPolicies(command, policiesFor(input.policies)).run(input.command, context),
-  };
+  return runningInstead(command, (input: { command: Input; policies: PolicyInput }, context) =>
+    withPolicies(command, policiesFor(input.policies)).run(input.command, context),
+  );
+}
+
+/**
+ * The command as it is – its ID, its allowed actors and every other property – running `run` in place of its own: what
+ * both ways of adding policies return, so a property a command gains later is never lost on the way (architecture
+ * review 2026-10-30). A property typed on the command's input would come along unchecked for the new input – the type
+ * check is lenient on methods –, so a property that needs the input belongs in `run`.
+ */
+function runningInstead<Input, Result, Error extends string, RunInput, RunError extends string>(
+  command: Command<Input, Result, Error>,
+  run: Command<RunInput, Result, RunError>["run"],
+): Command<RunInput, Result, RunError> {
+  return { ...command, run };
 }
