@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 66 of 67 domain stories done** · scenarios 628 of 637
+**Progress: 67 of 67 domain stories done** · scenarios 637 of 637
 
-**95 stories** · In Progress: 1 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 83 · Superseded: 11
+**95 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 84 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-093](ST-093-status-history-latest-five-and-its-own-page.md) | Status history on the machine record – the latest five and a page of its own | story | Collection | should | S | low | – |
 
 ## Done
 
@@ -93,6 +87,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-090](ST-090-dark-design-with-a-switch-per-device.md) | Dark design on every page, with a switch to light per device | story | Collection | should | M | medium | – |
 | [ST-091](ST-091-headings-and-buttons-say-the-job-in-one-pattern.md) | Headings, buttons and instructions say the job in one pattern | story | Collection | should | S | low | – |
 | [ST-092](ST-092-sections-lists-filters-and-links-in-one-shape.md) | Sections, lists, filters and links take one shape on every page | story | Repair | should | L | medium | ST-091 |
+| [ST-093](ST-093-status-history-latest-five-and-its-own-page.md) | Status history on the machine record – the latest five and a page of its own | story | Collection | should | S | low | – |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
