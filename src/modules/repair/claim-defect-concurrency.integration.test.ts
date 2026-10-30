@@ -21,40 +21,46 @@ const clock = fixedClock("2026-10-12T12:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 
+/** An open defect Tom and Eva both saw – unclaimed, at version 0. */
+async function anOpenDefect() {
+  await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, eva, "Eva");
+  const machineId = await aRegisteredMachine(db);
+  const reported = await executeCommand(
+    reportProblemAndTriageCommand,
+    {
+      machineId,
+      description: "Left flipper barely moves",
+      triage: {
+        outcome: "defect-recorded",
+        title: "Left flipper weak",
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+    },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
+  return reported.result.defectId;
+}
+
+const claim = (defectId: string, actor: typeof tom) =>
+  executeCommand(claimDefectCommand, { defectId, version: 0 }, { actor, db, clock, newId: randomUUID });
+
 describe("two team members and one defect", () => {
   it("ST-025: Two team members claim at the same time", async () => {
-    await anExistingTeamMember(db, tom, "Tom");
-    await anExistingTeamMember(db, eva, "Eva");
-    const machineId = await aRegisteredMachine(db);
-    const reported = await executeCommand(
-      reportProblemAndTriageCommand,
-      {
-        machineId,
-        description: "Left flipper barely moves",
-        triage: {
-          outcome: "defect-recorded",
-          title: "Left flipper weak",
-          priority: undefined,
-          suitableForHelpers: false,
-          machineStatus: undefined,
-          machineVersion: undefined,
-        },
-      },
-      { actor: tom, db, clock, newId: randomUUID },
-    );
-    if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
-    const defectId = reported.result.defectId;
+    const defectId = await anOpenDefect();
 
-    const claim = (actor: typeof tom) =>
-      executeCommand(claimDefectCommand, { defectId, version: 0 }, { actor, db, clock, newId: randomUUID });
     // Both saw the unclaimed defect at version 0. Tom's save queues for the row first, then Eva's.
     const { toms, evas } = await whileHoldingRow(
       db,
       sql`SELECT id FROM defect WHERE id = ${defectId} FOR UPDATE`,
       async (untilWaiting) => {
-        const toms = claim(tom);
+        const toms = claim(defectId, tom);
         await untilWaiting(1);
-        const evas = claim(eva);
+        const evas = claim(defectId, eva);
         await untilWaiting(2);
         return { toms, evas };
       },
@@ -67,9 +73,22 @@ describe("two team members and one defect", () => {
     expect((await journalOf(db, { aggregateId: defectId })).map((entry) => [entry.type, entry.actor])).toEqual([
       ["EVT-DefectClaimed", tom],
     ]);
-    // Eva is told that the defect has changed and asked to reload before claiming again.
+    // Eva is told that the defect has changed and asked to reload before claiming again (in the infinitive, ST-091).
     expect(!rejected.ok && commandErrorText(teamMessages, rejected.error)).toBe(
-      "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
+      "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
+    );
+  });
+
+  it("ST-091: A version conflict asks in the infinitive", async () => {
+    const defectId = await anOpenDefect();
+    expect(await claim(defectId, tom)).toMatchObject({ ok: true });
+
+    // Eva's change still names version 0, which Tom's claim has moved on: a one-tap button, so nothing typed to keep.
+    const rejected = await claim(defectId, eva);
+
+    expect(rejected).toEqual({ ok: false, error: "version-conflict" });
+    expect(!rejected.ok && commandErrorText(teamMessages, rejected.error)).toBe(
+      "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
     );
   });
 });

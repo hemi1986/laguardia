@@ -61,6 +61,22 @@ describe("message catalogs", () => {
     expect(Object.keys(commandErrors).sort()).toEqual(keys(teamAreas.errors).sort());
   });
 
+  it("ST-091: The team catalog has no vague button texts left", () => {
+    // Every fixed text of the team catalog – a button's among them – with the key it sits under (G14).
+    const texts = (value: unknown, key = ""): [string, string][] =>
+      typeof value === "string"
+        ? [[key, value]]
+        : typeof value === "object" && value !== null
+          ? Object.entries(value).flatMap(([child, inner]) => texts(inner, key ? `${key}.${child}` : child))
+          : [];
+    const scanned = texts(teamMessages);
+    expect(scanned.map(([key]) => key)).toContain("ownPassword.submit");
+
+    const vague = scanned.filter(([, text]) => ["Speichern", "Änderungen speichern", "Weiter"].includes(text));
+
+    expect(vague).toEqual([]);
+  });
+
   it("an unknown machine is one code with one text in every catalog (architecture review 2026-10-18)", () => {
     expect(teamMessages.commandErrors["unknown-machine"]).toBe("Dieses Gerät gibt es nicht.");
     expect(visitorMessages("de").commandErrors["unknown-machine"]).toBe("Kein Gerät mit dieser Museumsnummer.");

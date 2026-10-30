@@ -31,7 +31,7 @@ async function thePhotoForm(page: Page) {
   const machine = await aMachine(page);
   await page.goto(`/team/machines/${machine.museumNumber}`);
   await page.getByRole("link", { name: "Foto aufnehmen" }).click();
-  await expect(page.getByRole("heading", { name: `Foto an ${machine.museumNumber} anhängen` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Foto anhängen · ${machine.museumNumber}` })).toBeVisible();
   return machine;
 }
 

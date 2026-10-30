@@ -9,12 +9,14 @@ import {
 import { storedProblemReport } from "@/modules/repair/command-probes.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
+import { formRunner } from "@/app/_actions/form-runner";
 import { testDatabase } from "@/test-support/database";
+import { post } from "@/test-support/forms";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { triageRejectionText } from "../triage-rejection-text";
 import { withWhoTriagedFirst } from "../who-triaged-first";
-import { linkToDefectInput } from "./link-to-defect-input";
+import { linkToDefectFields, linkToDefectInput } from "./link-to-defect-input";
 
 /**
  * What the form „Mit Defekt verknüpfen“ says when it is rejected (ST-022, story review 2026-10-03): who triaged the
@@ -81,6 +83,44 @@ describe("a rejected „Mit Defekt verknüpfen“", () => {
 
     expect(state).toEqual({ error: "already-triaged", values, triagedBy: "Tom" });
     expect(triageRejectionText(state!)).toBe("Tom hat diese Meldung schon gesichtet.");
+  });
+
+  it("ST-091: The status rejection when linking speaks in the infinitive", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const machineId = await aRegisteredMachine(db);
+    const recorded = await executeCommand(
+      recordDefectCommand,
+      {
+        problemReportId: await reported(machineId, "Display goes dark"),
+        version: 0,
+        title: "Display flickers",
+        priority: undefined,
+        suitableForHelpers: false,
+        machineStatus: undefined,
+        machineVersion: undefined,
+      },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!recorded.ok) throw new Error(recorded.error);
+    const problemReportId = await reported(machineId, "Display flickers again");
+    const link = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID })(
+      linkProblemReportToDefectCommand,
+      {
+        fields: linkToDefectFields,
+        input: (fields) => linkToDefectInput(fields, problemReportId),
+        onSuccess: async () => {},
+      },
+    );
+    const typed = { version: "0", defectId: recorded.result.defectId, machineStatus: "limited", machineVersion: "0" };
+
+    const state = await link(null, post(typed));
+
+    expect(state?.error).toBe("machine-status-without-reopening");
+    expect(triageRejectionText(state!)).toBe(
+      "Der Status lässt sich hier nur ändern, wenn ein behobener Defekt wieder geöffnet wird. Bitte „Status nicht ändern“ wählen.",
+    );
+    // The form keeps what was typed (ST-053).
+    expect(state?.values).toMatchObject(typed);
   });
 
   it("says that a defect must be chosen, or that the chosen one can no longer be linked, in the catalogue's words", () => {

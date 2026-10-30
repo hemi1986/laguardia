@@ -67,3 +67,13 @@ test("removes the file for good from its question, and its former address opens 
   await expect(filesSection(page)).not.toContainText("MM Manual (wrong edition)");
   expect((await page.request.get(address!, { maxRedirects: 0 })).status()).toBe(404);
 });
+
+test("ST-091: The question before removing a file names the machine in its heading", async ({ page }) => {
+  needsTechnician();
+  needsBlob();
+  const { museumNumber } = await aMachineWithFile(page, "Manual");
+
+  await filesSection(page).getByRole("link", { name: "„Manual“ entfernen" }).click();
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Datei entfernen · ${museumNumber}`);
+});

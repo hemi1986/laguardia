@@ -416,7 +416,20 @@ describe("linking to a recently resolved defect", () => {
     const { html } = await linkForm(await reportedFor(machineId, "Flipper on the left does nothing"));
     expect(html).toContain("Status nicht ändern");
     expect(html).toContain(
-      "Den Status kannst du nur ändern, wenn du einen behobenen Defekt wählst – er wird wieder geöffnet.",
+      "Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.",
     );
+  });
+
+  it("ST-091: The status hint when linking speaks in the infinitive", async () => {
+    const machineId = await aRegisteredMachine("LG-042");
+    await aDefect(machineId, "Display flickers");
+    // The status choice, and the hint beside it, come only with a recently resolved defect to reopen (ST-053).
+    await aDefect(machineId, "Left flipper weak", "2026-09-30T09:00:00Z");
+
+    const { html } = await linkForm(await reportedFor(machineId, "Flipper on the left does nothing"));
+
+    // Beside the status choice: its description, which the select names.
+    const hint = html.match(/id="machineStatus-hint"[^>]*>(.*?)<\/p>/)?.[1];
+    expect(hint).toContain("Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.");
   });
 });

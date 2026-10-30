@@ -28,7 +28,7 @@ export default async function RemoveFilePage({
   const back = `/team/machines/${encodeURIComponent(museumNumber)}`;
 
   return (
-    <Page title={texts.title}>
+    <Page title={texts.title(museumNumber)}>
       {!machine ? (
         <p>{machineRecord.unknown(museumNumber)}</p>
       ) : !file ? (

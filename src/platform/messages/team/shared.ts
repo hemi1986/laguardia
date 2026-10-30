@@ -114,5 +114,5 @@ export const sharedErrors = {
   /** The command layer. */
   "not-authorized": "Das dürfen nur Techniker:innen.",
   "not-found": "Das gibt es nicht mehr.",
-  "version-conflict": "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
+  "version-conflict": "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
 } as const;

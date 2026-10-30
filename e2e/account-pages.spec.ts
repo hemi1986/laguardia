@@ -106,14 +106,14 @@ test("a new password that is too short is said above the submit button and marks
   await page.goto("/team/password");
   await page.getByLabel("Aktuelles Passwort").fill(password!);
   await page.getByLabel("Neues Passwort").fill("short");
-  await page.getByRole("button", { name: "Speichern" }).click();
+  await page.getByRole("button", { name: "Passwort ändern" }).click();
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Das Passwort braucht mindestens 10 Zeichen.");
   await expect(page.getByLabel("Neues Passwort")).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Aktuelles Passwort")).not.toHaveAttribute("aria-invalid", "true");
   await expect(page.getByLabel("Neues Passwort")).toHaveValue("");
   const alert = await page.getByRole("main").getByRole("alert").boundingBox();
-  const submit = await page.getByRole("button", { name: "Speichern" }).boundingBox();
+  const submit = await page.getByRole("button", { name: "Passwort ändern" }).boundingBox();
   const field = await page.getByLabel("Neues Passwort").boundingBox();
   expect(alert!.y).toBeGreaterThan(field!.y);
   expect(alert!.y).toBeLessThan(submit!.y);

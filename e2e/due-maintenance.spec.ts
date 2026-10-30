@@ -64,7 +64,7 @@ test.describe("recording for several machines without JavaScript", () => {
     const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
 
     await page.goto(`/team/maintenance/mehrere?task=${maintenanceTaskId}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Für mehrere Geräte erfassen");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(`Wartung erfassen · ${name}`);
     await page.getByLabel("Ergebnis").selectOption({ label: "Erledigt" });
     await page.getByRole("button", { name: "Wartung eintragen" }).click();
     await expect(page.getByRole("main").getByRole("alert")).toHaveText("Bitte mindestens ein Gerät auswählen.");

@@ -116,7 +116,7 @@ test("a claim made meanwhile is answered with a conflict, not a silent takeover 
   await main.getByRole("button", { name: "Übernehmen", exact: true }).click();
 
   await expect(main.getByRole("alert")).toHaveText(
-    "Jemand hat das inzwischen geändert. Bitte lade die Seite neu und versuche es noch einmal.",
+    "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
   );
   await expect(main.getByRole("status")).toHaveCount(0);
   // The page shows the defect as it is now: claimed by the helper, who can be taken over from – knowingly.

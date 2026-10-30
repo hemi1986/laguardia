@@ -21,10 +21,10 @@ export type TaskAsItIs = {
 };
 
 /**
- * The change form of a maintenance task (ST-041, G5): its details as they are, „Änderungen speichern“ – and
+ * The change form of a maintenance task (ST-041, G5): its details as they are, „Wartungsaufgabe ändern“ – and
  * „Wartungsaufgabe entfernen“, which only asks, once, on its own (G10, G10b): the question names the task, says that it
  * never becomes due again and that its maintenance records stay. „Zurück“ returns to the form with everything typed;
- * only „Entfernen“ removes it. A rejection keeps every value and marks the field that caused it (G8). A task already
+ * only „Endgültig entfernen“ removes it. A rejection keeps every value and marks the field that caused it (G8). A task already
  * removed when the page loaded shows no form – but one removed while the technician typed keeps the form and the
  * rejection.
  */

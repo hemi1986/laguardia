@@ -9,7 +9,7 @@ risk: low
 events: []
 depends_on: []
 labels: [ui, feature:consistent-layout-dark-mode]
-status: ready
+status: done
 ---
 
 ## Story
@@ -92,7 +92,7 @@ Scenario: A version conflict asks in the infinitive
   And what happens to the typed input is unchanged from today – only the text changes
 
 Scenario: The status hint when linking speaks in the infinitive
-  Given the machine "LG-042" has an untriaged problem report and an open defect
+  Given the machine "LG-042" has an untriaged problem report, an open defect and a recently resolved one
   When a technician opens the form linking the problem report to a defect
   Then beside the status choice it reads „Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.“
 
@@ -111,4 +111,5 @@ Scenario: The status rejection when linking speaks in the infinitive
 - none
 
 ## Notes
+- Scenario „The status hint when linking speaks in the infinitive“: its Given gained „and a recently resolved one“ during implementation – the status choice and its hint appear only while a recently resolved defect is offered (ST-053). User, 2026-10-30.
 - Size estimate by the requirements engineer: S – catalog texts and the tests that name them.

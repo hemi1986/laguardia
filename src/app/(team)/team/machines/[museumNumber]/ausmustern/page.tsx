@@ -10,7 +10,7 @@ import { RetireMachineForm } from "./retire-machine-form";
 const { machineRecord, machineRetire: texts } = teamMessages;
 
 /**
- * Retiring a machine (ST-039) – its own page „LG-013 ausmustern“, reached from section 9 of the machine record.
+ * Retiring a machine (ST-039) – its own page „Ausmustern · LG-013“, reached from section 9 of the machine record.
  * Technicians only (helpers are sent away; the command refuses them anyway).
  */
 export default async function RetireMachinePage({ params }: PageProps<"/team/machines/[museumNumber]/ausmustern">) {
