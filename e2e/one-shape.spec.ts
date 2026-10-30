@@ -232,3 +232,19 @@ test("ST-092: The team members list is filtered with „Filtern“", async ({ pa
   await expect(page.getByRole("main").getByRole("listitem").filter({ hasText: name })).toContainText("Deaktiviert");
   expect(await pageWidth(page)).toBeLessThanOrEqual(360);
 });
+
+test("ST-092: The sticker selection's search is labelled like the machine overview's", async ({ page }) => {
+  await logIn(page);
+  await page.goto("/team/machines/stickers");
+
+  const search = page.getByLabel("Suche");
+  const label = page.locator("label", { hasText: /^Suche$/ });
+  expect((await label.boundingBox())!.width).toBeGreaterThan(10);
+  await search.fill("042");
+  await expect(search).not.toHaveAttribute("placeholder");
+  const hint = page.locator(`#${await search.getAttribute("aria-describedby")}`);
+  await expect(hint).toHaveText("Museumsnummer oder Titel, z. B. 042 oder Medieval");
+  await expect(hint).toBeVisible();
+  expect((await hint.boundingBox())!.y).toBeGreaterThan((await search.boundingBox())!.y);
+  expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+});
