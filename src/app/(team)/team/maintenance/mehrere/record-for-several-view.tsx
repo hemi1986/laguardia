@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import type { MaintenanceForSeveral } from "@/modules/maintenance";
 import { teamMessages } from "@/platform/messages";
 import { dueMaintenanceAddress } from "../due-maintenance-data";
@@ -37,12 +37,7 @@ export function RecordForSeveralPage({
         earliest={data.earliest}
         whyNot={data.whyNot}
       />
-      <Link
-        href={dueMaintenanceAddress({ maintenanceTaskId: maintenanceTask.id })}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.back}
-      </Link>
+      <BackLink href={dueMaintenanceAddress({ maintenanceTaskId: maintenanceTask.id })}>{texts.back}</BackLink>
     </>
   );
 }

@@ -7,6 +7,7 @@ import { Section } from "@/components/ui/section";
 import { defectActions, type DefectAction, type DefectRepairTimes } from "@/modules/repair";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import { MachineLink } from "../../machine-link";
 import { reporterName } from "../../reporter";
 import { claimantText } from "../../claimant";
 import type { ClaimDefectState, ReleaseClaimState, ResumeDefectState } from "./actions";
@@ -64,27 +65,24 @@ export function DefectDetailsView({
     <Page title={details.title}>
       {/* Only who just did it is told so – the address alone cannot make the page say it (G3). */}
       {details.confirmed && (
-        <Confirmation>
-          {defectActionPages[details.confirmed.action].confirmation(details.title, {
-            assignedTo: details.confirmed.assignedTo ?? "",
-            priority: recordDefect.priorities[details.priority],
-            holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
-            suitableForHelpers: details.suitableForHelpers,
-            changedDetails: details.confirmed.changedDetails,
-          })}
-          {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
-          {details.confirmed.newMachineStatus &&
-            ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
-        </Confirmation>
+        <div className="[overflow-wrap:anywhere]">
+          <Confirmation>
+            {defectActionPages[details.confirmed.action].confirmation(details.title, {
+              assignedTo: details.confirmed.assignedTo ?? "",
+              priority: recordDefect.priorities[details.priority],
+              holdReason: details.hold ? texts.holdReasons[details.hold.reason] : "",
+              suitableForHelpers: details.suitableForHelpers,
+              changedDetails: details.confirmed.changedDetails,
+            })}
+            {details.confirmed.takenOverFrom && texts.takenOverFrom(details.confirmed.takenOverFrom)}
+            {details.confirmed.newMachineStatus &&
+              ` ${machineRecord.statusChanged(details.museumNumber, machines.statuses[details.confirmed.newMachineStatus])}`}
+          </Confirmation>
+        </div>
       )}
       {/* The header – the page is headed by the defect's title (G1), its machine the link right under it. */}
       <div className="flex flex-col gap-1 [overflow-wrap:anywhere]">
-        <Link
-          href={`/team/machines/${encodeURIComponent(details.museumNumber)}`}
-          className="self-start underline underline-offset-4"
-        >
-          {details.museumNumber} · {details.machineModelTitle}
-        </Link>
+        <MachineLink museumNumber={details.museumNumber} machineModelTitle={details.machineModelTitle} />
         <p className="text-sm">{texts.priority(recordDefect.priorities[details.priority])}</p>
         <p className="text-sm">
           {details.suitableForHelpers ? terms["Suitable for helpers"] : texts.notSuitableForHelpers}

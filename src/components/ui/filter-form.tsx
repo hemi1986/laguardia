@@ -12,14 +12,14 @@ export function FilterForm({
   children,
 }: {
   action: string;
-  /** Names the form for a screen reader when the page has more than one form. */
-  label?: string;
+  /** Names the filter for a screen reader – it is a search landmark of its own. */
+  label: string;
   /** The button's text – „Filtern“ (G32). */
   apply: string;
   children: ReactNode;
 }) {
   return (
-    <form action={action} method="get" aria-label={label} className="flex flex-col gap-3">
+    <form action={action} method="get" role="search" aria-label={label} className="flex flex-col gap-3">
       {children}
       <button type="submit" className={buttonVariants({ variant: "outline", className: "self-start" })}>
         {apply}

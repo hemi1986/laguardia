@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { anythingToLinkTo } from "../../../defect-to-link-to-input";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
@@ -54,9 +55,7 @@ export default async function LinkToDefectPage({ params }: PageProps<"/team/tria
           />
         </>
       )}
-      <Link href={`/team/triage/${problemReportId}`} className="self-start text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href={`/team/triage/${problemReportId}`}>{texts.back}</BackLink>
     </Page>
   );
 }

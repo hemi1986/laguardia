@@ -99,6 +99,7 @@ async function aMaintenanceRecord(page: Page, machine: { museumNumber: string })
   await page.getByLabel("Intervall in Monaten").fill("3");
   await tickMachines(page, machine);
   await page.getByRole("button", { name: "Wartungsaufgabe hinzufügen" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(`„${name}“ ist jetzt im Wartungsplan.`);
   const change = page.getByRole("main").getByRole("listitem").filter({ hasText: name }).getByRole("link");
   const maintenanceTaskId = (await change.getAttribute("href"))!.split("/").pop()!;
   await page.goto(
@@ -356,4 +357,30 @@ test("ST-092: Checkboxes have one size", async ({ page }) => {
   const size = (await checkbox.boundingBox())!;
 
   expect({ width: size.width, height: size.height }).toEqual({ width: example.width, height: example.height });
+});
+
+/** The browser half of „Only the verb of a question page is red“ (ST-092, G30) – the real question page, no upload. */
+test("on the question before retiring only „Endgültig ausmustern“ is red, the way to it is a secondary button", async ({
+  page,
+}) => {
+  await logIn(page);
+  const { museumNumber } = await aMachine(page);
+  await page.goto(`/team/machines/${museumNumber}`);
+  const main = page.getByRole("main");
+  const background = (locator: Locator) => locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(await background(main.getByRole("link", { name: "Gerät ausmustern" }))).toBe(
+    await background(main.getByRole("link", { name: "Status ändern" })),
+  );
+
+  await main.getByRole("link", { name: "Gerät ausmustern" }).click();
+  await page.getByLabel("Grund").fill("Sold to a collector");
+  await page.getByRole("button", { name: "Gerät ausmustern" }).click();
+
+  const verb = await background(main.getByRole("button", { name: "Endgültig ausmustern" }));
+  const back = await background(main.getByRole("button", { name: "Zurück" }));
+  expect(verb).not.toBe(back);
+  const backgrounds = await main
+    .locator("a, button")
+    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor));
+  expect(backgrounds.filter((color) => color === verb)).toHaveLength(1);
 });

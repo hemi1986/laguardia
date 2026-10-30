@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineFile, machineForTeamForm, removeFileRefusal } from "@/modules/collection";
 import { isId } from "@/platform/command";
@@ -45,11 +45,7 @@ export default async function RemoveFilePage({
           />
         </>
       )}
-      {(!machine || !file) && (
-        <Link href={back} className="self-start text-sm underline underline-offset-4">
-          {texts.backToMachine}
-        </Link>
-      )}
+      {(!machine || !file) && <BackLink href={back}>{texts.backToMachine}</BackLink>}
     </Page>
   );
 }

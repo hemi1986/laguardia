@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { useActionState, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -52,11 +52,7 @@ export function ResolveOnTheSpotForm({
       {state && (
         <div id={rejectionId} className="flex flex-col gap-2">
           <Rejection>{triageRejectionText(state)}</Rejection>
-          {state.error === "already-triaged" && (
-            <Link href="/team/triage" className="self-start text-sm underline underline-offset-4">
-              {triage.back}
-            </Link>
-          )}
+          {state.error === "already-triaged" && <BackLink href="/team/triage">{triage.back}</BackLink>}
         </div>
       )}
       <Button type="submit" disabled={pending}>

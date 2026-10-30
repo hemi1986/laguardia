@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -29,12 +29,7 @@ export default async function ChangeTasksPage({
       ) : (
         <ChangeTasksForm machineId={machine.id} groups={groups} chosen={chosen} />
       )}
-      <Link
-        href={`/team/machines/${encodeURIComponent(museumNumber)}`}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.back}
-      </Link>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
     </Page>
   );
 }

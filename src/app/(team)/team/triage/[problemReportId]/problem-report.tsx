@@ -91,7 +91,7 @@ function TriageOutcomes({
     ...(technician ? [{ href: "verwerfen", label: teamMessages.dismiss.outcome }] : []),
   ];
   return (
-    <Section title={texts.outcomes} className="gap-3">
+    <Section title={texts.outcomes} contentClassName="gap-3">
       <div className="flex flex-wrap gap-2">
         {outcomes.map((outcome) => (
           <Link

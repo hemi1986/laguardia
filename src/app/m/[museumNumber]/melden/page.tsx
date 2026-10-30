@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
 import { database } from "@/platform/database";
 import { currentVisitorMessages } from "../../../visitor-locale";
@@ -30,9 +30,7 @@ export default async function ReportProblemPage({ params }: PageProps<"/m/[museu
         action={reportProblemAction.bind(null, museumNumber)}
         messages={{ reportForm: messages.reportForm, commandErrors: messages.commandErrors }}
       />
-      <Link href={machinePage} className="self-start text-sm underline underline-offset-4">
-        {messages.reportForm.back}
-      </Link>
+      <BackLink href={machinePage}>{messages.reportForm.back}</BackLink>
     </VisitorPage>
   );
 }

@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
  */
 export function Section({
   title,
-  className,
+  contentClassName,
   children,
   "aria-label": ariaLabel,
 }: {
   title: ReactNode;
-  className?: string;
+  /** Classes of the section's content below its title. */
+  contentClassName?: string;
   children: ReactNode;
   "aria-label"?: string;
 }) {
@@ -24,7 +25,7 @@ export function Section({
         <CardHeader>
           <CardTitle>{title}</CardTitle>
         </CardHeader>
-        <CardContent className={cn("[overflow-wrap:anywhere]", className)}>{children}</CardContent>
+        <CardContent className={cn("[overflow-wrap:anywhere]", contentClassName)}>{children}</CardContent>
       </Card>
     </section>
   );

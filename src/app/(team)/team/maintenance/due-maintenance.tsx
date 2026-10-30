@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FilterForm } from "@/components/ui/filter-form";
@@ -24,12 +25,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
       <section className="flex flex-col gap-4 [overflow-wrap:anywhere]">
         {confirmation}
         {/* The way back sits above the machines – a task can be due on 60 of them (G17). */}
-        <Link
-          href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}
-          className="self-start text-sm underline underline-offset-4"
-        >
-          {texts.allDue}
-        </Link>
+        <BackLink href={dueMaintenanceAddress({ ...filter, maintenanceTaskId: undefined })}>{texts.allDue}</BackLink>
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold">{chosen.name}</h2>
           <p className="text-sm whitespace-pre-line">{chosen.instruction}</p>
@@ -82,7 +78,7 @@ export function DueMaintenanceView({ data }: { data: DueMaintenanceData }) {
   return (
     <>
       {confirmation}
-      <FilterForm action="/team/maintenance" apply={teamMessages.filters.apply}>
+      <FilterForm action="/team/maintenance" label={texts.filterLabel} apply={teamMessages.filters.apply}>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="helpers" value="1" defaultChecked={filter.suitableForHelpers ?? false} />
           {texts.onlySuitableForHelpers}

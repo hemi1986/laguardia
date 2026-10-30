@@ -103,7 +103,7 @@ export function MachineOverview({
           {machines.length === 0 ? (
             <NothingFound search={search} machineStatus={query.machineStatus} retired={retired} />
           ) : (
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-4 [overflow-wrap:anywhere]">
               {machines.map((machine) => (
                 <li key={machine.id}>
                   <MachineEntry machine={machine} />

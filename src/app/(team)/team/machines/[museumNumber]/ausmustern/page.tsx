@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -33,12 +33,7 @@ export default async function RetireMachinePage({ params }: PageProps<"/team/mac
           retired={machine.retired}
         />
       )}
-      <Link
-        href={`/team/machines/${encodeURIComponent(museumNumber)}`}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.backToMachine}
-      </Link>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.backToMachine}</BackLink>
     </Page>
   );
 }

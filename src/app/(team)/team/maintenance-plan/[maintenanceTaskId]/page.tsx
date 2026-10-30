@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { maintenancePlan, maintenanceTaskName } from "@/modules/maintenance";
@@ -56,9 +57,7 @@ export default async function ChangeMaintenanceTaskPage({
       ) : (
         <p>{texts.notInPlan}</p>
       )}
-      <Link href="/team/maintenance-plan" className="self-start text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href="/team/maintenance-plan">{texts.back}</BackLink>
     </Page>
   );
 }

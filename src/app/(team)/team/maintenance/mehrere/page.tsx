@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
@@ -26,9 +26,7 @@ export default async function RecordForSeveralRoute({ searchParams }: PageProps<
       ) : (
         <>
           <p>{texts.unknown}</p>
-          <Link href="/team/maintenance" className="self-start text-sm underline underline-offset-4">
-            {recordMaintenance.back}
-          </Link>
+          <BackLink href="/team/maintenance">{recordMaintenance.back}</BackLink>
         </>
       )}
     </Page>

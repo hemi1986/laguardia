@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,9 +22,7 @@ export function OpenDefectsView({ data }: { data: OpenDefectsData }) {
     return (
       <div className="flex flex-col gap-2">
         <p>{texts.none}</p>
-        <Link href="/team/triage" className="self-start underline underline-offset-4">
-          {texts.toTriage}
-        </Link>
+        <BackLink href="/team/triage">{texts.toTriage}</BackLink>
       </div>
     );
   }

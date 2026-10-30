@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
@@ -67,9 +68,5 @@ export default async function MachineModelPage({
 }
 
 function BackToMachineModels() {
-  return (
-    <Link href="/team/machine-models" className="self-start text-sm underline underline-offset-4">
-      {texts.back}
-    </Link>
-  );
+  return <BackLink href="/team/machine-models">{texts.back}</BackLink>;
 }

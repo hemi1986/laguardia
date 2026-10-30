@@ -74,6 +74,7 @@ export async function loadTechnicianDashboard(
   clock: Clock,
   viewer: Viewer,
 ): Promise<TechnicianDashboardData> {
+  const now = clock.now();
   const marks = await markLineOf(db, clock, viewer);
   // Since the Last visit when that is longer ago than the last 7 days (ST-050).
   const { since, reachedBack } = recentSince(clock, marks);
@@ -137,14 +138,14 @@ export async function loadTechnicianDashboard(
         ...change,
         by: name(changedBy),
         at: changedAt,
-        hoursAgo: elapsedHours(changedAt, clock.now()),
+        hoursAgo: elapsedHours(changedAt, now),
         newSinceLastVisit: isNew(marks, changedAt, changedBy),
       })),
       ...defectChanges.map(({ machineId, by, ...change }): RecentChange => ({
         ...change,
         museumNumber: label(machineId).museumNumber,
         by: name(by),
-        hoursAgo: elapsedHours(change.at, clock.now()),
+        hoursAgo: elapsedHours(change.at, now),
         newSinceLastVisit: isNew(marks, change.at, by),
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime()),

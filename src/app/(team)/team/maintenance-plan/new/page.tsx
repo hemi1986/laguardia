@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -16,9 +16,7 @@ export default async function AddMaintenanceTaskPage() {
   return (
     <Page title={texts.add}>
       <AddMaintenanceTaskForm {...data} />
-      <Link href="/team/maintenance-plan" className="self-start text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href="/team/maintenance-plan">{texts.back}</BackLink>
     </Page>
   );
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
 import { stricterMachineStatuses } from "@/modules/repair";
@@ -52,9 +52,7 @@ export default async function RecordDefectPage({
           />
         </>
       )}
-      <Link href={`/team/triage/${problemReportId}`} className="self-start text-sm underline underline-offset-4">
-        {texts.back}
-      </Link>
+      <BackLink href={`/team/triage/${problemReportId}`}>{texts.back}</BackLink>
     </Page>
   );
 }

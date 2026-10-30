@@ -34,7 +34,7 @@ export function RepairTimesView({ period, priorities }: RepairTimesData) {
       {priorities.map(({ priority, toFirstWorkLogEntry, toResolved }) => {
         const label = texts.priority(recordDefect.priorities[priority]);
         return (
-          <Section key={priority} aria-label={label} title={label} className="gap-1">
+          <Section key={priority} aria-label={label} title={label} contentClassName="gap-1">
             {!toFirstWorkLogEntry && !toResolved ? (
               <p className="text-sm">{texts.noDefects}</p>
             ) : (

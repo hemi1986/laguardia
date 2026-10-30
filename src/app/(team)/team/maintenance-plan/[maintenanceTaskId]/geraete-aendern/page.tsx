@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
@@ -27,12 +27,9 @@ export default async function ChangeMachinesPage({
       ) : (
         <p>{texts.notInPlan}</p>
       )}
-      <Link
-        href={task ? `/team/maintenance-plan/${task.id}` : "/team/maintenance-plan"}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={task ? `/team/maintenance-plan/${task.id}` : "/team/maintenance-plan"}>
         {task ? texts.changeMachines.back : texts.back}
-      </Link>
+      </BackLink>
     </Page>
   );
 }

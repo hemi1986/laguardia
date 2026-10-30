@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { anythingToLinkTo } from "../../../defect-to-link-to-input";
 import { Page } from "@/components/page";
 import { machineForTeamForm } from "@/modules/collection";
@@ -60,12 +60,7 @@ export default async function TeamReportProblemPage({
           resolveOnTheSpot={`/team/machines/${encodeURIComponent(museumNumber)}/melden/direkt-behoben`}
         />
       )}
-      <Link
-        href={`/team/machines/${encodeURIComponent(museumNumber)}`}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.back}
-      </Link>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
     </Page>
   );
 }

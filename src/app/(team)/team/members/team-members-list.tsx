@@ -21,7 +21,7 @@ export function TeamMembersList({
 }) {
   return (
     <>
-      <FilterForm action="/team/members" apply={teamMessages.filters.apply}>
+      <FilterForm action="/team/members" label={texts.filter} apply={teamMessages.filters.apply}>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox name="deaktivierte" value="1" defaultChecked={deactivatedShown} />
           {texts.showDeactivated}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { redirect } from "next/navigation";
 import { Page } from "@/components/page";
 import { correctDetailsRefusal, machineForTeamForm, machineOfMuseumNumber } from "@/modules/collection";
@@ -41,12 +41,7 @@ export default async function CorrectDetailsPage({ params }: PageProps<"/team/ma
           serialNumber={machine.serialNumber ?? ""}
         />
       )}
-      <Link
-        href={`/team/machines/${encodeURIComponent(museumNumber)}`}
-        className="self-start text-sm underline underline-offset-4"
-      >
-        {texts.back}
-      </Link>
+      <BackLink href={`/team/machines/${encodeURIComponent(museumNumber)}`}>{texts.back}</BackLink>
     </Page>
   );
 }

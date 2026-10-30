@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
 import { machineModelForTeam } from "@/modules/collection";
 import { database } from "@/platform/database";
@@ -30,12 +30,9 @@ export default async function CorrectMachineModelPage({
           <CorrectMachineModelForm {...machineModelChoices} model={found.model} version={found.version} />
         </>
       )}
-      <Link
-        href={found ? `/team/machine-models/${found.model.id}` : "/team/machine-models"}
-        className="self-start text-sm underline underline-offset-4"
-      >
+      <BackLink href={found ? `/team/machine-models/${found.model.id}` : "/team/machine-models"}>
         {found ? texts.backToModel : texts.back}
-      </Link>
+      </BackLink>
     </Page>
   );
 }
