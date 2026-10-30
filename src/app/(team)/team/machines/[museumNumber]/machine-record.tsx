@@ -207,24 +207,24 @@ export function MachineRecordView({
                     <h3 className="text-sm font-medium">{teamMessages.fileCategories[category]}</h3>
                     <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
                       {ofCategory.map((file) => (
-                        <li key={file.id}>
-                          <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
-                            {file.title}
-                          </a>
-                          {file.ofMachineModel && (
-                            <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
-                          )}
+                        <li key={file.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span>
+                            <a href={`/team/dateien/${file.id}`} className="underline underline-offset-4">
+                              {file.title}
+                            </a>
+                            {file.ofMachineModel && (
+                              <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
+                            )}
+                          </span>
+                          {/* A way to the question, so the shape of any other secondary button – not red (G30). */}
                           {actions.removeFile && (
-                            <>
-                              {" · "}
-                              <Link
-                                href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
-                                aria-label={texts.removeFileLabel(file.title)}
-                                className="text-muted-foreground underline underline-offset-4"
-                              >
-                                {texts.removeFile}
-                              </Link>
-                            </>
+                            <Link
+                              href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
+                              aria-label={texts.removeFileLabel(file.title)}
+                              className={buttonVariants({ variant: "outline" })}
+                            >
+                              {texts.removeFile}
+                            </Link>
                           )}
                         </li>
                       ))}
@@ -257,7 +257,7 @@ export function MachineRecordView({
         <section>
           <Link
             href={`/team/machines/${encodeURIComponent(record.museumNumber)}/ausmustern`}
-            className={buttonVariants({ variant: "outline", className: "self-start" })}
+            className={buttonVariants({ variant: "outline" })}
           >
             {texts.retire}
           </Link>

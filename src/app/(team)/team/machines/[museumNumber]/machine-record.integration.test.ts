@@ -28,6 +28,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import type { Viewer } from "../../claimant";
 import { loadMachineRecord } from "./machine-record-data";
 import { MachineRecordView } from "./machine-record";
+import { RetireQuestion } from "./ausmustern/retire-machine-form";
 
 /**
  * The machine record (RM-MachineRecord, ST-009): the page's data – the Collection module's record with the names of
@@ -456,3 +457,32 @@ async function attached(
   if (!outcome.ok) throw new Error(outcome.error);
   return outcome.result.fileId;
 }
+
+/** The class of the link or button with exactly that text – which component drew it. */
+function classOf(html: string, text: string): string {
+  const match = new RegExp(`<(?:a|button) [^>]*class="([^"]*)"[^>]*>${text}</(?:a|button)>`).exec(html);
+  if (!match) throw new Error(`no link or button „${text}“`);
+  return match[1];
+}
+
+describe("red only for what cannot be undone (ST-092, G30)", () => {
+  it("ST-092: Only the verb of a question page is red", async () => {
+    const machineId = await registered("LG-042", "2026-10-01T09:00:00Z");
+    await attached(machineId, "machine", "Manual", "manual");
+
+    const html = await page("LG-042");
+
+    const secondaryButton = classOf(html, "Status ändern");
+    expect(classOf(html, "Gerät ausmustern")).toBe(secondaryButton);
+    expect(classOf(html, "Entfernen")).toBe(secondaryButton);
+    // Red is the destructive button's own colour – every button names `destructive` for a field marked invalid.
+    expect(html).not.toContain("bg-destructive");
+
+    const question = renderToStaticMarkup(
+      createElement(RetireQuestion, { museumNumber: "LG-042", openDefects: 0, problemReports: 0, pending: false }),
+    );
+    expect(classOf(question, "Endgültig ausmustern")).toContain("bg-destructive");
+    expect(classOf(question, "Zurück")).not.toContain("bg-destructive");
+    expect(question.match(/ bg-destructive\//g)).toHaveLength(1);
+  });
+});
