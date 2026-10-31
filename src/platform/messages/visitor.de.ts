@@ -57,8 +57,8 @@ const legal: {
 
 /** German texts of the visitor pages; `visitor.en.ts` has the same keys. */
 export const visitorDe = {
-  /** The start page (ST-078). */
-  home: {
+  /** The welcome page (ST-078, ST-101). */
+  welcomePage: {
     teamLogin: "Anmeldung fürs Team",
     /** Above the machines on display (ST-101) – only when they are listed and there is at least one. */
     machinesOnDisplay: "Etwas funktioniert nicht? Gerät antippen und Problem melden.",

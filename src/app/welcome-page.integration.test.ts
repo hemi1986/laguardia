@@ -251,7 +251,7 @@ it("sorts titles ignoring case, „Ä“ with „A“ in German, and machines of
   if (!model.ok) throw new Error(model.error);
   for (const [museumNumber, location] of [
     ["LG-012", "Halle 2"],
-    ["LG-010", "Halle 3"],
+    ["LG-010", "Halle 10"],
     ["LG-011", "Halle 2"],
   ]) {
     const registered = await executeCommand(

@@ -1,5 +1,6 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import type { Database } from "@/platform/command";
+import type { VisitorLocale } from "@/platform/messages";
 import { machineCategories, type MachineCategory } from "./create-machine-model";
 import { museumSettings } from "./museum-settings";
 import type { MachineStatus } from "./register-machine";
@@ -25,9 +26,9 @@ export type WelcomePage = { museumName: string; machinesOnDisplay: MachinesOnDis
  * RM-WelcomePage (ST-101) – computed on every request, so a change is visible at the next page load. Machines on display
  * are the registered machines that are not retired and not Not on display, grouped by their machine model's machine
  * category in CONTEXT.md's order, a group only when it has a machine; within a group alphabetical by machine model title
- * in the visitor's language, ignoring case, then by location and museum number.
+ * in the visitor's language, ignoring case, then by location (its numbers as numbers – „Halle 2“ before „Halle 10“) and museum number.
  */
-export async function welcomePage(db: Database, language: "de" | "en"): Promise<WelcomePage> {
+export async function welcomePage(db: Database, locale: VisitorLocale): Promise<WelcomePage> {
   const { museumName, machinesListed } = await museumSettings(db);
   if (!machinesListed) return { museumName, machinesOnDisplay: [] };
   const rows = await db
@@ -41,12 +42,13 @@ export async function welcomePage(db: Database, language: "de" | "en"): Promise<
     .from(machine)
     .innerJoin(machineModel, eq(machine.machineModelId, machineModel.id))
     .where(and(isNull(machine.retiredAt), ne(machine.machineStatus, "not-on-display")));
-  const words = new Intl.Collator(language, { sensitivity: "base" });
-  const numbers = new Intl.Collator(language, { numeric: true });
+  const words = new Intl.Collator(locale, { sensitivity: "base" });
+  const numbers = new Intl.Collator(locale, { numeric: true });
+  const locations = new Intl.Collator(locale, { sensitivity: "base", numeric: true });
   const ordered = rows.sort(
     (a, b) =>
       words.compare(a.machineModelTitle, b.machineModelTitle) ||
-      words.compare(a.location, b.location) ||
+      locations.compare(a.location, b.location) ||
       numbers.compare(a.museumNumber, b.museumNumber),
   );
   const machinesOnDisplay = machineCategories

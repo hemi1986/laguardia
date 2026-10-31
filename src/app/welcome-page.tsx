@@ -14,13 +14,13 @@ export function WelcomePageView({
   museumName,
   locale,
   messages,
-  machinesOnDisplay = [],
-}: MuseumNamedProps & { machinesOnDisplay?: MachinesOnDisplayGroup[] }) {
+  machinesOnDisplay,
+}: MuseumNamedProps & { machinesOnDisplay: MachinesOnDisplayGroup[] }) {
   return (
     <VisitorPage title={museumName} locale={locale} messages={messages} back="/">
       {machinesOnDisplay.length > 0 && (
         <>
-          <p>{messages.home.machinesOnDisplay}</p>
+          <p>{messages.welcomePage.machinesOnDisplay}</p>
           {machinesOnDisplay.map((group) => (
             <MachineGroup key={group.machineCategory} group={group} messages={messages} />
           ))}
@@ -28,7 +28,7 @@ export function WelcomePageView({
       )}
       <div className="border-t pt-4">
         <Link href="/login" className={buttonVariants({ variant: "link", className: "px-0" })}>
-          {messages.home.teamLogin}
+          {messages.welcomePage.teamLogin}
         </Link>
       </div>
     </VisitorPage>
@@ -40,7 +40,7 @@ const machinePage = visitorMachinePage();
 function MachineGroup({ group, messages }: { group: MachinesOnDisplayGroup; messages: VisitorMessages }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-lg font-semibold">{messages.home.machineCategories[group.machineCategory]}</h2>
+      <h2 className="text-lg font-semibold">{messages.welcomePage.machineCategories[group.machineCategory]}</h2>
       <ul className="flex flex-col divide-y rounded-lg border">
         {group.machines.map((machine) => (
           <li key={machine.museumNumber}>
