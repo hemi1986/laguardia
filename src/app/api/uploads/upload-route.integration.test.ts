@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAccount, loggedInTeamMember, logIn } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
@@ -7,7 +7,6 @@ import { memoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { uploadFile } from "@/upload/browser";
-import { pendingUpload } from "@/upload/schema";
 import { uploadRoute } from "./upload-route";
 
 /**
@@ -103,7 +102,9 @@ describe("the upload address route", () => {
     const uploaded = await uploadFile(file, { owner: { machineId }, maximumSize: 1 * MB });
 
     expect(uploaded).toEqual({ ok: false, error: "too-large" });
-    expect(await db.select().from(pendingUpload).where(eq(pendingUpload.issuedTo, teamMember!.id))).toEqual([]);
+    // The upload module keeps its table to itself – read as the e2e database reads it.
+    const pending = await db.execute(sql`SELECT name FROM pending_upload WHERE issued_to = ${teamMember!.id}`);
+    expect(pending.rows).toEqual([]);
   });
 
   it("refuses a declared size above the file size limit with 413, whatever limit the request asks for", async () => {
