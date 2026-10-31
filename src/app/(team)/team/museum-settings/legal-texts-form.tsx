@@ -26,7 +26,7 @@ const textFields: { field: TextField; rows: number }[] = [
 ];
 
 /** The field a rejection names (G9) – the others are about the whole form (a change made meanwhile). */
-const rejectedField: Partial<Record<NonNullable<LegalTextsFormState>["error"], TextField>> = {
+const reasonAtField: Partial<Record<NonNullable<LegalTextsFormState>["error"], TextField>> = {
   "privacy-notice-required": "privacyNoticeDe",
   "english-imprint-needs-german-imprint": "imprintEn",
 };
@@ -53,7 +53,7 @@ export function LegalTextsFormContent({
 }: LegalTextsFormProps & { state: LegalTextsFormState; action?: (formData: FormData) => void; pending?: boolean }) {
   const rejectionId = useId();
   const kept = keptKey(state);
-  const invalid = state ? rejectedField[state.error] : undefined;
+  const invalid = state ? reasonAtField[state.error] : undefined;
   const rejection = state && (
     <div id={rejectionId}>
       <Rejection>{rejectionText(state.error)}</Rejection>
