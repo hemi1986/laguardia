@@ -26,9 +26,41 @@ Two accesses make the engineering workflow a lot smoother – both are optional,
 | GitHub CLI (`gh`), scope `repo` | `gh auth login` (`gh auth refresh -s repo` for the scope) | `/implement` opens the pull request itself; without it you get the compare URL from `git push` |
 | Vercel MCP server (`vercel` in `.mcp.json`) | approve the project server on the first start, then `/mcp` to authenticate | preview deployment status, build and runtime logs for the acceptance step; without it, name the preview URL yourself |
 
-Local development and the integration tests need a database: copy the values from `.env.example` into `.env.development.local`, then `npm run db:up` (PostgreSQL and SeaweedFS – the S3-compatible object store – in Docker, with the local buckets) and `npm run db:migrate:dev`. No cloud store and no Vercel login are needed locally. Previews and production store photos and files in AWS S3 in Frankfurt; its one-time setup is `docs/operations/aws-s3-setup.md` (ST-099, ADR 0012). Environment values from Vercel come with `npx vercel env pull`.
+### Local setup
 
-The local browser tests (`npm run test:e2e`, `npm run verify -- --e2e`) need only `npm run db:up` and `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` in `.env.development.local`: they start their own dev server on port 3100 (distDir `.next-e2e`) against `laguardia_e2e_test`, which is reset on every run and gets the e2e technician automatically, and upload to the bucket `laguardia-e2e` on the local SeaweedFS. Your development database and a dev server on port 3000 are never touched (ST-083).
+```sh
+cp .env.example .env.development.local   # fill in BETTER_AUTH_SECRET and E2E_TEAM_PASSWORD
+npm run db:up                            # PostgreSQL and SeaweedFS (S3) in Docker, with the local buckets
+npm run db:migrate:dev
+npm run setup:first-technician           # your own account in the development database
+npm run dev
+```
+
+`.env.development.local` is the **one** local settings file – `npm run dev`, the local browser tests and the scripts read
+it. Locally nothing comes from Vercel: no Vercel login, no cloud store.
+
+- **Integration tests** (`npm test`) use their own database `laguardia_test` and the bucket `laguardia-test` on the same
+  Docker containers – dropped and re-migrated on every run. `TEST_DATABASE_URL` / `TEST_S3_*` point them elsewhere
+  (CI does).
+- **Local browser tests** (`npm run test:e2e`, `npm run verify -- --e2e`) start their own dev server on port 3100
+  (distDir `.next-e2e`) against `laguardia_e2e_test` and the bucket `laguardia-e2e`, reset on every run, with the e2e
+  technician from `E2E_TEAM_USERNAME` / `E2E_TEAM_PASSWORD` created automatically. Your development database and a
+  dev server on port 3000 are never touched (ST-083). `BASE_URL` (+ `VERCEL_AUTOMATION_BYPASS_SECRET`) points them at a
+  preview instead.
+
+### Environment variables on Vercel
+
+Set in the Vercel dashboard (Project → Settings → Environment Variables), per environment – not from a file:
+
+| Variable | Production / Preview | Where it comes from |
+|---|---|---|
+| `DATABASE_URL` | Neon, a branch per preview | the Neon integration sets it |
+| `BETTER_AUTH_SECRET` | a random secret per environment | by hand, `openssl rand -base64 32` |
+| `S3_BUCKET`, `S3_REGION`, `AWS_ROLE_ARN` | the environment's bucket and IAM role | by hand, `docs/operations/aws-s3-setup.md` (ST-099, ADR 0012) |
+| `BETTER_AUTH_URL` | optional – derived from the Vercel URL | – |
+
+The first technician of a Vercel database: `DATABASE_URL=… npm run setup:first-technician` with that environment's
+`DATABASE_URL` from the dashboard.
 
 You don't have to remember any of this: the `session-start` hook checks all of it at the start of every session and reports only what is missing.
 
