@@ -206,7 +206,7 @@ Scenario: The content security policy names exactly the bucket's host
       user approves the conventions change.
 - [x] `/security-review` has run on the diff (it touches uploads, signed addresses and the security headers) and its
       findings are fixed or answered in the pull request.
-- [ ] The browser tests run against the preview, with the preview bucket on AWS S3, and pass – including the upload
+- [x] The browser tests run against the preview, with the preview bucket on AWS S3, and pass – including the upload
       tests and no request blocked by the content security policy (recorded in the pull request).
 
 ## Out of Scope

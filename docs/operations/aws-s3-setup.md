@@ -128,7 +128,11 @@ No `S3_ENDPOINT` (the regional AWS endpoint is derived) and no access keys. None
 4. The browser tests on the preview (`Browser tests on preview` on the pull request) upload too – they must be green.
 
 A request blocked by CORS or a `403 SignatureDoesNotMatch` in the function logs usually means a wrong `S3_REGION`, a
-bucket name with dots, or a role whose trust policy names another environment.
+bucket name with dots, or a role whose trust policy names another environment. A 500 from `/api/uploads` with
+`InvalidIdentityTokenException: The web identity token provided could not be validated` in the function logs means AWS
+cannot check Vercel's token (found on the first preview, 2026-10-31): the issuer mode on Vercel is not **Team**, or the
+identity provider in IAM is not exactly `oidc.vercel.com/hemi6` with the audience `https://vercel.com/hemi6` – fix it
+and redeploy.
 
 ## 6. After the switch
 
