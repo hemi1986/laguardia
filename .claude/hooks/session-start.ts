@@ -86,7 +86,7 @@ function setupHints(): string[] {
     );
 
   if (!existsSync(join(root, ".env.development.local")))
-    hints.push("- No .env.development.local – `npm run dev` and `npm run db:migrate:dev` have no DATABASE_URL: see .env.example (local database: `npm run db:up`)");
+    hints.push("- No .env.development.local – `cp .env.example .env.development.local`, fill in the two empty values, then `npm run db:up` (README, Local setup)");
 
   return hints;
 }

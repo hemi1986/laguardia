@@ -17,7 +17,7 @@ next-env.d.ts
 *.pem
 npm-debug.log*
 
-# env files (secrets – pulled with `vercel env pull`)
+# env files (local settings and secrets; only the template .env.example is committed)
 .env*
 !.env.example
 

@@ -2,7 +2,7 @@
  * One-off setup (ST-004): creates the first technician account of an empty La Guardia.
  *
  *   npm run setup:first-technician            (local database from .env.development.local)
- *   DATABASE_URL=… npm run setup:first-technician   (e.g. production, from `vercel env pull`)
+ *   DATABASE_URL=… npm run setup:first-technician   (e.g. production, its DATABASE_URL from the Vercel dashboard)
  *
  * Asks for name, username and password (hidden); refuses when any account exists.
  */
