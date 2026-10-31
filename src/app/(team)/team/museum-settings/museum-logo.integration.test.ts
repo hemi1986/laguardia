@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { crc32 } from "node:zlib";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -9,12 +10,13 @@ import { museumSettings, welcomePage } from "@/modules/collection";
 import { museumLogoJournal, withoutLogo } from "@/modules/collection/museum-settings.test-support";
 import { fixedClock } from "@/platform/clock";
 import type { Actor } from "@/platform/command";
-import { visitorMessages } from "@/platform/messages";
+import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { WelcomePageView } from "../../../welcome-page";
 import { logoFormDefinition, removeLogoFormDefinition, uploadLogoCommand, removeLogoCommand } from "./logo-form-input";
+import { LogoFormContent } from "./logo-form";
 import { loadMuseumSettings, savedLanding } from "./museum-settings-data";
 import { MuseumSettingsView } from "./museum-settings";
 
@@ -239,4 +241,70 @@ it("ST-102: The stored logo is scaled down, carries no metadata and keeps its tr
   const { data } = await sharp(stored.bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   expect(data[3]).toBe(0); // top left: still transparent
   expect(data[(250 * 1000 + 999) * 4 + 3]).toBe(255); // right edge: still opaque
+});
+
+/** A PNG file that claims 20 000 × 20 000 pixels in its header – small, and never decoded. */
+async function aHugePng() {
+  const bytes = Buffer.from(await (await aPng(10, 10)).arrayBuffer());
+  // The IHDR chunk: length (4), type (4), width (4), height (4), … and its CRC over type and data.
+  bytes.writeUInt32BE(20_000, 16);
+  bytes.writeUInt32BE(20_000, 20);
+  bytes.writeUInt32BE(crc32(bytes.subarray(12, 29)), 29);
+  return new File([new Uint8Array(bytes)], "logo.png", { type: "image/png" });
+}
+
+const svg = new File(
+  ['<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50"/></svg>'],
+  "logo.svg",
+  { type: "image/svg+xml" },
+);
+const pdfNamedPng = new File(
+  ["%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"],
+  "logo.png",
+  { type: "image/png" },
+);
+
+it("ST-102: Anything but a PNG, JPEG or WebP image within the pixel limit is rejected", async () => {
+  const kept = await aLogo();
+  const huge = await aHugePng();
+  expect(huge.size).toBeLessThan(2_000_000);
+  expect(await sharp(Buffer.from(await huge.arrayBuffer()), { limitInputPixels: false }).metadata()).toMatchObject({ width: 20_000, height: 20_000 });
+
+  for (const file of [svg, pdfNamedPng, huge]) {
+    const state = await logoFormsOf(tom).upload(null, await uploaded(file));
+
+    expect(state, file.name).toMatchObject({ error: "not-a-logo-image" });
+    expect(commandErrorText(teamMessages, state!.error)).toBe("Bitte ein Bild als PNG, JPEG oder WebP wählen.");
+    expect((await museumSettings(db)).logo).toBe(kept);
+    expect(storage.names()).toEqual([kept]);
+  }
+  const form = renderToStaticMarkup(
+    createElement(LogoFormContent, {
+      version: 0,
+      hasLogo: true,
+      uploadState: { error: "not-a-logo-image", values: { version: "0" } },
+      removeState: null,
+    }),
+  );
+  expect(form).toContain("Bitte ein Bild als PNG, JPEG oder WebP wählen.");
+  expect(form).not.toMatch(/erneut|noch einmal auswählen/);
+});
+
+it("ST-102: A logo larger than 2 MB is rejected", async () => {
+  const kept = await aLogo();
+  const jpeg = await sharp({ create: { width: 200, height: 100, channels: 3, background: "#336699" } })
+    .jpeg()
+    .toBuffer();
+  // A JPEG of 3 MB: the image, then bytes a decoder ignores after its end.
+  const threeMb = new File([new Uint8Array(Buffer.concat([jpeg, Buffer.alloc(3_000_000 - jpeg.length)]))], "logo.jpg", {
+    type: "image/jpeg",
+  });
+  expect(threeMb.size).toBe(3_000_000);
+
+  const state = await logoFormsOf(tom).upload(null, await uploaded(threeMb));
+
+  expect(state).toMatchObject({ error: "logo-too-large" });
+  expect(commandErrorText(teamMessages, state!.error)).toBe("Das Logo darf höchstens 2 MB groß sein.");
+  expect((await museumSettings(db)).logo).toBe(kept);
+  expect(storage.names()).toEqual([kept]);
 });
