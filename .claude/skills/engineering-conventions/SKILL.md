@@ -554,22 +554,24 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 ## Photos and stored content (ST-016, ADR 0009 – superseding ADR 0007)
 
 - **A photo is stored only through the photo module's `withStoredPhoto`** (store → run the command with the reference → delete if it fails) – in a Server Action via `formAction` with a `photo` step. Nobody calls the storage seam's `write` for a photo directly.
-- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `size`) is injected like the clock and the ID generator: `blobStorage()` in production (the only file that may import `@vercel/blob` – lint), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `blobStorage()` as its default (`PhotoSource`); a runner takes `storage`.
+- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `details`) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
-- **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when Blob cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
+- **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when the store cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`).
-- **Deleting content is irreversible** (no restore in Blob): only for deliberate removal (spam dismissal, ST-020; a removed file, ST-038) or a failed command – never as a compensation after a committed one.
+- **Deleting content is irreversible** (no restore in the bucket, ADR 0012): only for deliberate removal (spam dismissal, ST-020; a removed file, ST-038) or a failed command – never as a compensation after a committed one.
 - **Content a command removes on purpose is declared by the command** (ST-038 code review): `aggregateCommand({ …, removesContent: (result) => name })`; the Server Action runner deletes it after the commit in every step (`deleteRemovedContent`, `src/platform/storage/`) – a failed delete is logged by name, the removal stands. No form wires it.
 ### Files uploaded from the browser (ST-085, ADR 0009)
 
 Files (up to 100 MB, `FILE_SIZE_LIMIT`) never pass through a function: the browser uploads them straight to the private
 store before the attaching form is sent. The upload module (`src/upload/`, below the modules like the photo module) is
 the only way:
-- **Two steps, one route** (`src/app/api/uploads/`): the browser half `uploadFile(file, { owner, onProgress })`
-  (`src/upload/browser.ts`) first asks the route for a name (`recordPendingUpload`: the server names the content
-  `files/<newId()>` and records a **pending upload** – owner, team member, time, size limit), then the Blob client
-  library's `uploadPresigned` asks the same route for the upload address of that name (`uploadAddressOf`: only for
-  the team member it was recorded for, valid 30 minutes). It resolves with the name – what the attaching form sends –
+- **One request, one PUT** (`src/app/api/uploads/`, ST-099): the browser half `uploadFile(file, { owner, onProgress })`
+  (`src/upload/browser.ts`) declares the file's size and media type to the route (`issueUploadAddress`): a size above
+  the limit gets 413 before anything is recorded or signed (`too-large`); otherwise the server names the content
+  `files/<newId()>`, records a **pending upload** – owner, team member, time, size limit, declared size – and only then
+  signs one presigned PUT for exactly that name, valid 30 minutes, whose signature binds the `Content-Length`, the
+  `Content-Type` and `If-None-Match: *` (a name is written once). The browser sends it with `XMLHttpRequest` (upload
+  progress) – no SDK in the browser, no upload in parts. It resolves with the name – what the attaching form sends –
   or `too-large` / `not-uploaded`, which the form shows instead of attaching nothing. A request may ask for a
   **stricter** limit than 100 MB (the browser tests do), never a larger one.
 - **The route is not behind the page proxy** (`/api/` is not matched): it checks the Origin (`isSameOrigin` from
@@ -580,9 +582,9 @@ the only way:
   command with the name and deletes the content if the command is rejected or throws. Its own rejections are
   `uploadedContentErrors`: `content-gone` (no such pending upload, or nothing uploaded – the form says to choose the
   file again) and `too-large`.
-- **Blob holds only an upload in one piece to the size limit.** An upload in parts (above 20 MB, multipart) is not
-  checked against `maximumSizeInBytes` – found in ST-085 with a 25 MB file under a 21 MB limit. So the size is
-  checked when attaching (`storage.size`), and content above the limit is deleted and refused.
+- **The store holds an upload to its declared size** (ST-099): the signed length makes it refuse anything else, so
+  `too-large` comes only from the route or the early `file.size` check – a store's refusal looks the same in a browser
+  whatever its reason and is `not-uploaded`. Attaching still checks the stored size through `details()` (ADR 0009).
 - **Abandoned uploads** – a form never sent – are cleaned up by `cleanUpAbandonedUploads`: after the response of every
   name the route gives (`after()`), at most 20 pending uploads older than 24 hours, the oldest first, each deleted with
   its content in one transaction (a failed content deletion keeps the record for the next time). No scheduler (ADR 0002).
@@ -590,14 +592,14 @@ the only way:
   page's access check; the plain store address answers 403. A file has an address of its own,
   `/team/dateien/<file ID>` (ST-037, a route handler): it checks the team session and sends the browser on with 303
   to a fresh 5-minute address, so a link on a page never expires. Only PDF and JPEG/PNG/WebP/GIF open in the browser
-  (`opensInBrowser`, by the media type the store kept); everything else gets Blob's `download=1`.
+  (`opensInBrowser`, by the media type the store kept); everything else gets an address that asks the store for `Content-Disposition: attachment` (signed `response-content-disposition`).
 - **A form that attaches uploaded content** (first: ST-037, `…/[museumNumber]/datei-anhaengen/`) uses
   `formAction(command, { fields, upload: { field, clearedWith, owner }, refusal, input, onSuccess })`: the
   chosen file is uploaded when it is chosen (`uploadFile`), the form posts its name in a hidden field. `refusal` – the
   command's rules that need only the fields (`attachFileRefusal`) – is asked first and keeps the uploaded content: the
   form says the chosen file is still attached (user, 2026-10-18). Every later rejection (`content-gone`, `too-large`,
   the command's own) deletes it, the state no longer names it, and the form says to choose it again (G8a).
-- Locally the dev server and the browser tests use a separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`); without it the photo browser tests skip.
+- Locally `npm run db:up` starts SeaweedFS next to PostgreSQL (`docker-compose.yml`, pinned image, a fixed development identity, an init step that creates the buckets with their CORS rule): the dev server uses `laguardia-dev` (`S3_*` in `.env.development.local`), the local browser tests `laguardia-e2e` (set by `scripts/e2e-server.ts`, emptied of the previous run's uploads by name), the S3 adapter's integration tests `laguardia-test` (`src/test-support/object-store.ts`; CI starts the same compose file). No Vercel login, no cloud store. Previews and production: `docs/operations/aws-s3-setup.md`.
 
 ## The event journal
 
@@ -753,14 +755,14 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 
 ## Security
 
-- Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts Blob upload-completion callbacks.
+- Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts upload-completion callbacks from the store.
 - Authorization lives in the command layer, never only in the proxy or a page (ADR 0001).
 - React escapes output; `dangerouslySetInnerHTML` is not used. Security headers: `next.config.ts` – except the Content
   Security Policy.
 - **The Content Security Policy** (ST-070) is set by `src/proxy.ts` on every page request, with a fresh nonce
   (`src/platform/content-security-policy.ts`): scripts only with the nonce and `'strict-dynamic'`, `<style>` elements
   only with the nonce, `style` attributes inline (React's `style` props, Base UI), images and connections only to the
-  application, the private Blob store's host and Blob's upload API. Next.js puts the nonce on its own scripts while
+  application and the origin of the deployment's private bucket (`storeOrigin` from the S3 adapter's settings – path-style with port locally, regional virtual-hosted on AWS). Next.js puts the nonce on its own scripts while
   rendering, so **every page is rendered per request** (`await connection()` in the root layout) – no static
   rendering, ISR or Partial Prerendering. **No inline script or third-party script is added without the nonce**
   (`headers().get("Content-Security-Policy")` holds it), and a new external source is a change of the policy, never a
@@ -851,7 +853,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Test infrastructure itself (the reset guard, preparing the browser-test database, ST-083) | the function in `src/test-support/` – a pure check as a unit test, anything touching PostgreSQL against a database of its own (never `laguardia_e2e_test`, which a browser test may be using) | unit / integration | `src/test-support/reset-test-database.test.ts`, `e2e-database.integration.test.ts` |
 | Load time of a page with realistic data (ST-033: the machine record with 5 years of repair history in under 2 s, user 2026-10-14) | the page data function and its view's `renderToStaticMarkup` against an **isolated** database filled through the commands by a test-support builder (`fiveYearsOfRepairHistory`, `src/test-support/repair-history.ts`), timed with `performance.now()` – the slower of two runs. The browser test of the same page checks what it shows, never how long it takes: the dev server compiles on the first request | integration | `src/app/(team)/team/machines/[museumNumber]/machine-record-load.integration.test.ts` |
 | Time-based rule | the `src/platform/time.ts` helper with a table of cases, or the read model with `fixedClock` | unit / integration | `src/platform/time.test.ts` |
-| Code that stores content (ST-016, user 2026-10-04; uploads ST-085): the photo module's store-run-delete, a form with a photo, a page that shows a photo; the upload address, attaching uploaded content, the cleanup of abandoned uploads | `withStoredPhoto` / `formRunner({ …, storage: memoryStorage() })` with a `photo` step / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. Uploads: `recordPendingUpload`/`uploadAddressOf` with `memoryStorage().upload(address, …)` playing the browser, `withUploadedContent` with the stand-in `src/upload/attach-stand-in.test-support.ts`, `cleanUpAbandonedUploads` with `fixedClock` in an isolated database; the route as `uploadRoute({ … })` with real requests and a real login. The Blob adapter itself only in the browser tests (Development Blob store): the photo, and the browser-side upload function `uploadFile` on the check page | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts`, `src/upload/*.integration.test.ts`, `src/app/api/uploads/upload-route.integration.test.ts`, `e2e/file-upload.spec.ts` |
+| Code that stores content (ST-016, user 2026-10-04; uploads ST-085): the photo module's store-run-delete, a form with a photo, a page that shows a photo; the upload address, attaching uploaded content, the cleanup of abandoned uploads | `withStoredPhoto` / `formRunner({ …, storage: memoryStorage() })` with a `photo` step / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. Uploads: `issueUploadAddress` with `memoryStorage().upload(address, …)` playing the browser (it refuses what S3 refuses: another length or media type, a second upload, a late one), `withUploadedContent` with the stand-in `src/upload/attach-stand-in.test-support.ts`, `cleanUpAbandonedUploads` with `fixedClock` in an isolated database; the route as `uploadRoute({ … })` with real requests and a real login. The S3 adapter itself against SeaweedFS (`s3Storage({ settings, clock })` with `testStoreSettings()`, a plain `fetch` playing the browser, expiry by signing with a `fixedClock` in the past; always in CI), the browser-side `uploadFile` in the route's test (global `fetch` passed to `uploadRoute`) and in the browser tests on the attaching form | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts`, `src/upload/*.integration.test.ts`, `src/app/api/uploads/upload-route.integration.test.ts`, `src/platform/storage/s3-storage.integration.test.ts`, `e2e/file-upload.spec.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |
 | Page flow, phone layout, security of requests (CSRF, headers), a form without JavaScript | the browser at 360 px against the browser tests' own dev server (port 3100, `laguardia_e2e_test`) and the preview | e2e | `e2e/team-accounts.spec.ts`, `e2e/no-js-form.spec.ts`, `e2e/security.spec.ts` |
