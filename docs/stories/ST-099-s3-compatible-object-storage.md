@@ -9,7 +9,7 @@ risk: high
 events: []
 depends_on: [ST-085]
 labels: [files, foundation, feature:s3-object-storage]
-status: ready
+status: in-progress
 ---
 
 ## Task
