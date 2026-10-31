@@ -19,8 +19,19 @@ export type MachineOnDisplay = {
 /** The machines on display of one machine category – never empty. */
 export type MachinesOnDisplayGroup = { machineCategory: MachineCategory; machines: MachineOnDisplay[] };
 
-/** RM-WelcomePage (ST-101): the museum name and, if the museum settings list them, the machines on display. */
-export type WelcomePage = { museumName: string; machinesOnDisplay: MachinesOnDisplayGroup[] };
+/**
+ * RM-WelcomePage (ST-101, ST-102): the museum name, whether there is a logo – never its content reference: visitors get
+ * it through `/logo` –, and, if the museum settings list them, the machines on display.
+ */
+export type WelcomePage = {
+  museumName: string;
+  /**
+   * Whether there is a logo, as the logo's version (HS-16) – undefined without one. The page asks `/logo?v=<version>`, so
+   * a browser that keeps the sending-on for 60 seconds never follows a kept one to a replaced logo's deleted content.
+   */
+  logoVersion: number | undefined;
+  machinesOnDisplay: MachinesOnDisplayGroup[];
+};
 
 /**
  * RM-WelcomePage (ST-101) – computed on every request, so a change is visible at the next page load. Machines on display
@@ -29,8 +40,10 @@ export type WelcomePage = { museumName: string; machinesOnDisplay: MachinesOnDis
  * in the visitor's language, ignoring case, then by location (its numbers as numbers – „Halle 2“ before „Halle 10“) and museum number.
  */
 export async function welcomePage(db: Database, locale: VisitorLocale): Promise<WelcomePage> {
-  const { museumName, machinesListed } = await museumSettings(db);
-  if (!machinesListed) return { museumName, machinesOnDisplay: [] };
+  const settings = await museumSettings(db);
+  const { museumName, machinesListed } = settings;
+  const logoVersion = settings.logo ? settings.logoVersion : undefined;
+  if (!machinesListed) return { museumName, logoVersion, machinesOnDisplay: [] };
   const rows = await db
     .select({
       museumNumber: machine.museumNumber,
@@ -64,5 +77,5 @@ export async function welcomePage(db: Database, locale: VisitorLocale): Promise<
         })),
     }))
     .filter((group) => group.machines.length > 0);
-  return { museumName, machinesOnDisplay };
+  return { museumName, logoVersion, machinesOnDisplay };
 }

@@ -64,6 +64,8 @@ export const visitorDe = {
     machinesOnDisplay: "Etwas funktioniert nicht? Gerät antippen und Problem melden.",
     /** The machine categories heading the groups, in the `_UI (de)_` wording of CONTEXT.md (ST-101). */
     machineCategories: { pinball: "Flipper", arcade: "Arcade", other: "Sonstiges" },
+    /** The logo above the museum name (ST-102), for screen readers. */
+    logo: "Logo des Museums",
 
     /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */
     notFound: "Diese Seite gibt es nicht.",

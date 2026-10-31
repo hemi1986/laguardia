@@ -385,7 +385,9 @@ check apply unchanged and a save of one part never rejects another. A part's row
 migration (fixed ID, like the maintenance plan); "never saved" is that row. The page `/team/museum-settings` has one
 framed `Section` per part, each with its own form; a save lands on `?saved=<part>` and is confirmed **without asking
 the journal** – a save without a change records no event and still lands like a save (HS-27, G33), and the confirmation
-only says what the page shows. Every visitor page that names the museum takes the name from Collection's `museumName(db)`
+only says what the page shows. The logo (ST-102) is the second part: CMD-ReplaceLogo and CMD-RemoveLogo declare the previous or removed logo with
+`removesContent`, and – unlike „Museum“ – every change records an event, so `?saved=logo` is confirmed by the journal
+(`logoChangedBy(db, viewer)`, „Logo gespeichert.“ / „Logo entfernt.“ by what the viewer's latest change was). Every visitor page that names the museum takes the name from Collection's `museumName(db)`
 – never a catalogue text – through a view that receives it (`WelcomePageView`, `UnknownAddressView`, `UnknownMachineView`).
 
 **The two exceptions:** the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
@@ -555,6 +557,12 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   checks again – `MAX_WORK_LOG_PHOTOS`), then stores them through `withStoredPhotos`. That error is about the photos
   themselves, so no "choose again" follows; the other rejections use `photosRejectionText`. A form with **one** photo
   reads only the first file of its field. A form on a defect uses `defectPhotosFormAction`.
+- **A form with the museum's logo** (ST-102) passes `logo: { field }` and `input: (fields, logo) => …`: a native file
+  field posts the file **as chosen** – no `PhotoField`, so the browser's photo preparation (which also turns every image
+  into a JPEG) is skipped –, and the runner runs the command through `withStoredLogo`. A logo's rejections are about the
+  image itself or a change made meanwhile, so the form adds no "choose again" and shows `commandErrorText` (the file
+  chooser shows itself empty). The browser checks the 2 MB itself before sending (with JavaScript); the server checks
+  again.
 - **After a rejection the photo must be chosen again** (UX guideline G8a; ST-023, ST-084): the browser cannot put a
   file back into the form. The runner's photo step marks the state `photoAgain: true` – a photo was attached and the
   rejection is not one of the photo errors, whose texts already say what to do – and the form's rejection text adds
@@ -567,7 +575,18 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `details`) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when the store cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
-- **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`).
+- **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`). Exception: `/logo`, the museum's logo; the welcome page's data holds only whether a logo exists. (ST-102 – that rule
+  protects photos that may show people; the logo is public by nature. `logoRoute` in `src/app/logo/` checks only whether
+  there is a logo and sends the browser on with 307 to a fresh 5-minute view address, `Cache-Control: private,
+  max-age=60`; without a logo it is 404. The welcome page asks `/logo?v=<logo version>` – the version is no content
+  reference –, so a replaced logo is a new address and a kept sending-on is never followed to deleted content.)
+- **The logo has an acceptance of its own** (ST-102, `src/photo/accept-logo.ts`), next to the photo acceptance – which
+  turns every image into a JPEG on white and would destroy a logo's transparency: at most 2 MB (`LOGO_LIMITS`), a real
+  PNG, JPEG or WebP by its content (SVG never) within the photos' pixel limit, scaled to at most 1000 px on its long edge
+  (never enlarged), a JPEG's orientation applied, every metadata dropped, an animated image its first frame, and stored
+  in its own format (`logo/<newId()>.png|jpg|webp`). It is stored only through the photo module's `withStoredLogo`
+  (store → run → delete on failure, like a photo); its errors are `logoErrors` (`not-a-logo-image`, `logo-too-large`,
+  `logo-not-stored`), with texts in Collection's team catalogue.
 - **Deleting content is irreversible** (no restore in the bucket, ADR 0012): only for deliberate removal (spam dismissal, ST-020; a removed file, ST-038) or a failed command – never as a compensation after a committed one.
 - **Content a command removes on purpose is declared by the command** (ST-038 code review): `aggregateCommand({ …, removesContent: (result) => name })`; the Server Action runner deletes it after the commit in every step (`deleteRemovedContent`, `src/platform/storage/`) – a failed delete is logged by name, the removal stands. No form wires it.
 ### Files uploaded from the browser (ST-085, ADR 0009)

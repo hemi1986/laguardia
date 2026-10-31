@@ -10,9 +10,11 @@ import type { ReactNode } from "react";
  */
 export const pageWidth = "mx-auto w-full max-w-[calc(42rem+2rem)] p-4";
 
-export function Page({ title, children }: { title: string; children: ReactNode }) {
+/** `above`: what stands above the title – the museum's logo on the welcome page (ST-102). */
+export function Page({ title, above, children }: { title: string; above?: ReactNode; children: ReactNode }) {
   return (
     <main className={`${pageWidth} flex flex-col gap-6 break-words`}>
+      {above}
       <h1 className="text-xl font-semibold">{title}</h1>
       {children}
     </main>

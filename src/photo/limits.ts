@@ -18,3 +18,9 @@ export const PHOTO_LIMITS = {
   maxInputPixels: 25_000_000,
   acceptedFormats: ["jpeg", "png", "webp"],
 } as const;
+
+/**
+ * What the museum's logo may be (ST-102, user 2026-10-31): the chosen file at most 2 MB, stored at most 1000 px on its
+ * long edge – the welcome page shows it at most a third of the screen's height.
+ */
+export const LOGO_LIMITS = { maxUploadBytes: 2_000_000, maxEdgePx: 1000 } as const;

@@ -9,6 +9,7 @@ import type { MachineMoved } from "./move-machine";
 import type { MachineRegistered } from "./register-machine";
 import type { MachineRetired } from "./retire-machine";
 import type { MuseumDetailsChanged } from "./change-museum-details";
+import type { LogoRemoved, LogoReplaced } from "./replace-logo";
 
 /**
  * Collection's event catalogue (ST-079, architecture review 2026-10-17): per event its aggregate and what reaches the
@@ -100,6 +101,24 @@ export const collectionEvents = eventCatalogue({
       aggregateId: event.museumDetailsId,
       machineId: null,
       data: { changedDetails: event.changedDetails, machinesListed: event.machinesListed },
+    }),
+  },
+  "EVT-LogoReplaced": {
+    aggregate: "AGG-MuseumSettings",
+    // The content references and the media type (ST-102) – who replaced it is the journal's actor.
+    project: (event: LogoReplaced) => ({
+      aggregateId: event.museumLogoId,
+      machineId: null,
+      data: { logo: event.logo, contentType: event.contentType, previousLogo: event.previousLogo ?? null },
+    }),
+  },
+  "EVT-LogoRemoved": {
+    aggregate: "AGG-MuseumSettings",
+    // The removed logo's content reference (ST-102) – who removed it is the journal's actor.
+    project: (event: LogoRemoved) => ({
+      aggregateId: event.museumLogoId,
+      machineId: null,
+      data: { removedLogo: event.removedLogo },
     }),
   },
 });

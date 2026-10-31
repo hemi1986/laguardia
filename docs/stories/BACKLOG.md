@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 69 of 71 domain stories done** · scenarios 655 of 674
+**Progress: 70 of 71 domain stories done** · scenarios 665 of 674
 
-**100 stories** · In Progress: 0 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 87 · Superseded: 11
+**100 stories** · In Progress: 0 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 88 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
 | [ST-103](ST-103-legal-texts-in-the-museum-settings.md) | Privacy notice and imprint written in the museum settings | story | Collection | should | M | medium | ST-100 |
 
 ## Done
@@ -98,6 +97,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-093](ST-093-status-history-latest-five-and-its-own-page.md) | Status history on the machine record – the latest five and a page of its own | story | Collection | should | S | low | – |
 | [ST-100](ST-100-museum-settings-with-the-museum-details.md) | Museum settings with the museum's name and whether the machines are listed | story | Collection | should | M | medium | – |
 | [ST-101](ST-101-welcome-page-with-the-machines-on-display.md) | Welcome page with the machines on display to report a problem | story | Collection | should | M | low | ST-100 |
+| [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |

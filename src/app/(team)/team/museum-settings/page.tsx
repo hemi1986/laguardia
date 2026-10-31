@@ -7,8 +7,8 @@ import { loadMuseumSettings } from "./museum-settings-data";
 
 /** The museum settings (ST-100) – technicians only (G11, G19: behind „Mehr“ after „Teammitglieder“). */
 export default async function MuseumSettingsPage({ searchParams }: PageProps<"/team/museum-settings">) {
-  await requireTechnician();
-  const data = await loadMuseumSettings(database(), await searchParams);
+  const technician = await requireTechnician();
+  const data = await loadMuseumSettings(database(), await searchParams, { viewer: technician.id });
 
   return (
     <Page title={teamMessages.terms["Museum settings"]}>
