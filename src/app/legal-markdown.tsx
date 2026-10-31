@@ -52,6 +52,7 @@ export function legalTextHtml(text: string): string {
 export function LegalMarkdown({ text }: { text: string }) {
   return (
     <div
+      data-slot="legal-text"
       className="flex flex-col gap-3 break-words [&_a]:underline [&_a]:underline-offset-4 [&_h2]:mt-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-1 [&_h3]:font-semibold [&_h4]:font-medium [&_h5]:font-medium [&_h6]:font-medium [&_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
       dangerouslySetInnerHTML={{ __html: legalTextHtml(text) }}
     />

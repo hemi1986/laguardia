@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
 import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
+import { LegalTextsForm } from "./legal-texts-form";
 import { LogoForm } from "./logo-form";
 import { MuseumForm } from "./museum-form";
 import type { MuseumSettingsData } from "./museum-settings-data";
@@ -11,8 +12,8 @@ const texts = teamMessages.museumSettings;
 
 /**
  * The museum settings (ST-100, G18): how the museum presents itself to visitors. Below the heading the way to the
- * welcome page (G17), then one framed section per form, each saved on its own (G29) – „Museum“, „Logo“ (ST-102), and
- * „Rechtstexte“ (ST-103) follows. A saved form confirms itself in its section (G3).
+ * welcome page (G17), then one framed section per form, each saved on its own (G29) – „Museum“, „Logo“ (ST-102) and, last,
+ * „Rechtstexte“ (ST-103). A saved form confirms itself in its section (G3).
  */
 export function MuseumSettingsView({ settings, saved, logo }: MuseumSettingsData) {
   return (
@@ -41,6 +42,10 @@ export function MuseumSettingsView({ settings, saved, logo }: MuseumSettingsData
           <p>{texts.logo.none}</p>
         )}
         <LogoForm version={logo.version} hasLogo={logo.hasLogo} />
+      </Section>
+      <Section title={texts.legalTexts.title} contentClassName="flex flex-col gap-4">
+        {saved === "legal-texts" && <Confirmation>{texts.legalTexts.saved}</Confirmation>}
+        <LegalTextsForm version={settings.legalTextsVersion} texts={settings.legalTexts} />
       </Section>
     </>
   );

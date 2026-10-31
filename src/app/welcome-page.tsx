@@ -17,6 +17,7 @@ export function WelcomePageView({
   messages,
   logoVersion,
   machinesOnDisplay,
+  imprintProvided,
 }: MuseumNamedProps & { logoVersion?: number; machinesOnDisplay: MachinesOnDisplayGroup[] }) {
   const logo = logoVersion !== undefined && (
     // The public address `/logo` sends the browser on to a short-lived view address of the private store (ST-102); the
@@ -25,7 +26,14 @@ export function WelcomePageView({
     <img src={`/logo?v=${logoVersion}`} alt={messages.welcomePage.logo} className="mx-auto max-h-[33dvh] w-auto max-w-full object-contain" />
   );
   return (
-    <VisitorPage title={museumName} locale={locale} messages={messages} back="/" above={logo}>
+    <VisitorPage
+      title={museumName}
+      locale={locale}
+      messages={messages}
+      back="/"
+      above={logo}
+      imprintProvided={imprintProvided}
+    >
       {machinesOnDisplay.length > 0 && (
         <>
           <p>{messages.welcomePage.machinesOnDisplay}</p>

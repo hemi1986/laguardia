@@ -4,8 +4,16 @@ import type { VisitorLocale, VisitorMessages } from "@/platform/messages";
 import { VisitorLanguageSwitch } from "./visitor-language-switch";
 import { VisitorLegalLinks } from "./visitor-legal-links";
 
-/** What every visitor page that names the museum gets (ST-100): its name from the museum settings, and the language. */
-export type MuseumNamedProps = { museumName: string; locale: VisitorLocale; messages: VisitorMessages };
+/**
+ * What every visitor page that names the museum gets (ST-100): its name from the museum settings, the language, and
+ * whether the museum provides an imprint (ST-103).
+ */
+export type MuseumNamedProps = {
+  museumName: string;
+  locale: VisitorLocale;
+  messages: VisitorMessages;
+  imprintProvided: boolean;
+};
 
 /**
  * The frame of every visitor page: its content in the visitor's language (`lang`, ST-010), the language switch at the
@@ -17,6 +25,7 @@ export function VisitorPage({
   messages,
   back,
   above,
+  imprintProvided,
   children,
 }: {
   title: string;
@@ -26,6 +35,8 @@ export function VisitorPage({
   messages: VisitorMessages;
   /** Where the language switch comes back to – usually the page's own path. */
   back: string;
+  /** Whether the museum provides an imprint – then the legal links offer it (ST-103, Collection's `imprintProvided`). */
+  imprintProvided: boolean;
   children: ReactNode;
 }) {
   return (
@@ -33,7 +44,7 @@ export function VisitorPage({
       <Page title={title} above={above}>
         <VisitorLanguageSwitch locale={locale} messages={messages} back={back} />
         {children}
-        <VisitorLegalLinks messages={messages} />
+        <VisitorLegalLinks messages={messages} imprintProvided={imprintProvided} />
       </Page>
     </div>
   );

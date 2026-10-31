@@ -1,32 +1,25 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { visitorMessages, type LegalText, type VisitorMessages } from "@/platform/messages";
+import { visitorMessages } from "@/platform/messages";
 import { VisitorLegalLinks } from "./visitor-legal-links";
 
 /**
- * The legal links every visitor page shows (ST-064). Whether the museum has provided an imprint is a state of the
- * catalogue, not of a database – so both states are rendered here with a catalogue that has or lacks one.
+ * The legal links every visitor page shows (ST-064). Whether the museum provides an imprint is a state of the museum
+ * settings (ST-103) that the page passes in – so both states are rendered here.
  */
-const anImprint: LegalText = { title: "Impressum", sections: [{ heading: "Anbieter", paragraphs: ["Museum"] }] };
-
-function withImprint(imprint: LegalText | null): VisitorMessages {
-  const messages = visitorMessages("de");
-  return { ...messages, legal: { ...messages.legal, imprint } };
-}
-
-function legalLinks(messages: VisitorMessages): string {
-  return renderToStaticMarkup(createElement(VisitorLegalLinks, { messages }));
+function legalLinks(imprintProvided: boolean): string {
+  return renderToStaticMarkup(createElement(VisitorLegalLinks, { messages: visitorMessages("de"), imprintProvided }));
 }
 
 describe("legal links of the visitor pages", () => {
   it("ST-064: Imprint only if the museum provides one", () => {
-    const withoutImprint = legalLinks(withImprint(null));
+    const withoutImprint = legalLinks(false);
     expect(withoutImprint).toContain('href="/datenschutz"');
     expect(withoutImprint).not.toContain("/impressum");
     expect(withoutImprint).not.toContain("Impressum");
 
     // Once the museum provides one, it is offered.
-    expect(legalLinks(withImprint(anImprint))).toMatch(/<a [^>]*href="\/impressum"[^>]*>Impressum<\/a>/);
+    expect(legalLinks(true)).toMatch(/<a [^>]*href="\/impressum"[^>]*>Impressum<\/a>/);
   });
 });

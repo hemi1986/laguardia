@@ -52,7 +52,7 @@ export const visitorEn: VisitorMessages = {
       remove: "Remove photo",
       preparing: "Preparing the photo …",
       notice:
-        "PLACEHOLDER – Only the museum's team members see the photo. We remove the GPS data from the image and keep it as long as the report.",
+        "Only the museum's team members see the photo. We remove the GPS data from the image and keep it as long as the report.",
       noticeLink: "Privacy notice",
     },
     photoAgain: "Please choose the photo again.",
@@ -61,34 +61,8 @@ export const visitorEn: VisitorMessages = {
     label: "Legal",
     privacyNoticeLink: "Privacy",
     imprintLink: "Imprint",
-    privacyNotice: {
-      title: "Privacy notice",
-      sections: [
-        {
-          heading: "Placeholder",
-          paragraphs: ["PLACEHOLDER – The museum replaces this draft with its own privacy notice before going live."],
-        },
-        {
-          heading: "Responsible",
-          paragraphs: ["Flipper- & Arcade Museum Eschbach. [PLACEHOLDER: the museum's address and contact]"],
-        },
-        {
-          heading: "Problem reports",
-          paragraphs: [
-            "On these pages you can report a problem with a machine. We collect no contact data: no name, no e-mail address, no account.",
-            "Only the museum's team members see your report.",
-          ],
-        },
-        {
-          heading: "Photos",
-          paragraphs: [
-            "If you add a photo to your report, we remove the GPS data from the image. Only the museum's team members see the photo.",
-            "A photo is kept as long as its report.",
-          ],
-        },
-      ],
-    },
-    imprint: null,
+    privacyNoticeTitle: "Privacy notice",
+    imprintTitle: "Imprint",
   },
   commandErrors: {
     "description-required": "Please describe the problem.",

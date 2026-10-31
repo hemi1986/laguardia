@@ -31,7 +31,13 @@ afterAll(() => isolated.close());
 async function rendered(view: typeof WelcomePageView, locale: VisitorLocale) {
   const museumName = await museumNameIn(db);
   return renderToStaticMarkup(
-    createElement(view, { museumName, locale, messages: visitorMessages(locale), machinesOnDisplay: [] }),
+    createElement(view, {
+      museumName,
+      locale,
+      messages: visitorMessages(locale),
+      machinesOnDisplay: [],
+      imprintProvided: false,
+    }),
   );
 }
 

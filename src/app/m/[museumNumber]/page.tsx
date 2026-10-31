@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { imprintProvided } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMemberIfLoggedIn } from "../../team-session";
 import { currentVisitorMessages } from "../../visitor-locale";
@@ -18,14 +19,22 @@ export default async function VisitorMachineRoute({ params, searchParams }: Page
   const museumNumber = await museumNumberOfPage({ params, searchParams }, visitorMachinePage());
   // The same QR sticker for everyone (ST-011): a logged-in team member gets the machine record.
   if (await teamMemberIfLoggedIn()) redirect(`/team/machines/${encodeURIComponent(museumNumber)}`);
-  const [{ locale, messages }, data] = await Promise.all([
+  const db = database();
+  const [{ locale, messages }, data, imprint] = await Promise.all([
     currentVisitorMessages(),
-    loadVisitorMachinePage(database(), museumNumber),
+    loadVisitorMachinePage(db, museumNumber),
+    imprintProvided(db),
   ]);
   if (!data) notFound();
 
   return (
-    <VisitorPage title={data.machineModelTitle} locale={locale} messages={messages} back={`/m/${museumNumber}`}>
+    <VisitorPage
+      title={data.machineModelTitle}
+      locale={locale}
+      messages={messages}
+      back={`/m/${museumNumber}`}
+      imprintProvided={imprint}
+    >
       <VisitorMachinePage
         data={data}
         museumNumber={museumNumber}

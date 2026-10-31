@@ -278,6 +278,18 @@ export const collectionTexts = {
       saved: "Logo gespeichert.",
       removed: "Logo entfernt.",
     },
+    /** The form „Rechtstexte“ (ST-103, wording decided by the user on 2026-10-31). */
+    legalTexts: {
+      title: "Rechtstexte",
+      privacyNoticeDe: "Datenschutzhinweis (Deutsch)",
+      privacyNoticeEn: "Datenschutzhinweis (Englisch, freiwillig)",
+      imprintDe: "Impressum (Deutsch, freiwillig)",
+      imprintEn: "Impressum (Englisch, freiwillig)",
+      markdownHint:
+        "Angezeigt werden Überschriften (#), Absätze, **fett**, *kursiv*, Listen und Links auf https- und mailto-Adressen. Alles andere erscheint als einfacher Text.",
+      save: "Rechtstexte speichern",
+      saved: "Rechtstexte gespeichert.",
+    },
   },
 } as const;
 
@@ -291,6 +303,10 @@ export const collectionErrors = {
   "not-a-logo-image": "Bitte ein Bild als PNG, JPEG oder WebP wählen.",
   "logo-too-large": "Das Logo darf höchstens 2 MB groß sein.",
   "logo-not-stored": "Das Logo konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
+  /** The form „Rechtstexte“ of the museum settings (ST-103): the German privacy notice, and the imprint (HS-25). */
+  "privacy-notice-required": "Bitte einen Datenschutzhinweis angeben.",
+  "english-imprint-needs-german-imprint":
+    "Ein englisches Impressum geht nur zusammen mit einem deutschen. Bitte auch das deutsche Impressum angeben.",
   /** Only a page that still showed a logo removes one – someone removed it meanwhile (ST-102). */
   "no-logo": sharedErrors["version-conflict"],
   /** Registering a machine model (ST-006) and correcting it (ST-036): no correction without a change. */
