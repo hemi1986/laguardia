@@ -166,37 +166,37 @@ Scenario: The content security policy names exactly the bucket's host
   And neither contains a wildcard host or a Vercel Blob address
 
 ### Checklist
-- [ ] SeaweedFS probe done first (Task item 0); every difference from AWS (signed `Content-Length`,
+- [x] SeaweedFS probe done first (Task item 0); every difference from AWS (signed `Content-Length`,
       `response-content-disposition`, CORS preflight, `If-None-Match: *`) is recorded in the pull request with where it
       is verified instead.
-- [ ] `ContentStorage` has one S3 adapter for previews, production and local development; the in-memory adapter stays
+- [x] `ContentStorage` has one S3 adapter for previews, production and local development; the in-memory adapter stays
       for integration tests; `@vercel/blob` is no longer a dependency and no file imports it.
-- [ ] `uploadAddress`, the upload-address route's request and the pending upload carry the declared size; the returned
+- [x] `uploadAddress`, the upload-address route's request and the pending upload carry the declared size; the returned
       address shape is the presigned PUT address with the headers to send.
-- [ ] The lint rule in `eslint.config.mjs` moves from `@vercel/blob` to the S3 SDK packages (`@aws-sdk/*`): only the S3
+- [x] The lint rule in `eslint.config.mjs` moves from `@vercel/blob` to the S3 SDK packages (`@aws-sdk/*`): only the S3
       adapter imports them, the browser half imports no SDK. The adapter reads endpoint, region, bucket and
       credentials only from environment variables and uses the regional AWS endpoint.
-- [ ] The store host in the content security policy is derived by the S3 adapter (addressing style, local port and
+- [x] The store host in the content security policy is derived by the S3 adapter (addressing style, local port and
       `http` included), not from a separate setting.
-- [ ] `uploadFile` uploads with one presigned PUT, valid for 30 minutes, without parts, through a transport with upload
+- [x] `uploadFile` uploads with one presigned PUT, valid for 30 minutes, without parts, through a transport with upload
       progress; `too-large` comes only from the route's refusal or the early `file.size` check; the Blob message
       sniffing is gone; the form texts are unchanged. The existing browser test for the upload form shows progress up
       to 100 percent.
-- [ ] The signature binds `Content-Length` and `Content-Type`, and `If-None-Match: *` where SeaweedFS accepts it;
+- [x] The signature binds `Content-Length` and `Content-Type`, and `If-None-Match: *` where SeaweedFS accepts it;
       otherwise the remaining 30-minute overwrite window is noted in the `/security-review`.
-- [ ] The adapter's expiry tests use an injectable signing date, not sleeping.
-- [ ] `docker-compose.yml` starts PostgreSQL and SeaweedFS (pinned image tag) with `npm run db:up`; a one-off init step
+- [x] The adapter's expiry tests use an injectable signing date, not sleeping.
+- [x] `docker-compose.yml` starts PostgreSQL and SeaweedFS (pinned image tag) with `npm run db:up`; a one-off init step
       creates `laguardia-dev` and `laguardia-e2e` with their CORS rules and fails loudly if it cannot.
-- [ ] SeaweedFS runs with one fixed development S3 identity in `docker-compose.yml`, so unsigned, wrongly signed and
+- [x] SeaweedFS runs with one fixed development S3 identity in `docker-compose.yml`, so unsigned, wrongly signed and
       expired requests are refused.
-- [ ] `scripts/e2e-server.ts` deletes the previous run's uploads by their recorded names through the storage seam at
+- [x] `scripts/e2e-server.ts` deletes the previous run's uploads by their recorded names through the storage seam at
       the start of every local run (no list operation on the seam).
-- [ ] On a machine where only `npm run db:up` was run, with no Vercel login and no Blob token, the 18 local browser
+- [x] On a machine where only `npm run db:up` was run, with no Vercel login and no Blob token, the 18 local browser
       tests with uploads pass against SeaweedFS and none of them is skipped for a missing store.
-- [ ] `.github/workflows/ci.yml` starts the repository's `docker-compose.yml` with the init step, waits for health and
+- [x] `.github/workflows/ci.yml` starts the repository's `docker-compose.yml` with the init step, waits for health and
       sets the S3 environment variables; the SeaweedFS adapter tests run there and never skip; locally they fail with
       a clear message when the store is unreachable.
-- [ ] The guide in `docs/operations/` walks the user through the one-time AWS setup: the two buckets in `eu-central-1`
+- [x] The guide in `docs/operations/` walks the user through the one-time AWS setup: the two buckets in `eu-central-1`
       (private, public access blocked; CORS exactly the production origin for production, the pattern
       `https://<project>-*-<team>.vercel.app` with project and team named for previews), the Vercel OIDC identity
       provider, one IAM role per environment limited to its bucket, the environment variables to set on Vercel, and a
@@ -204,7 +204,7 @@ Scenario: The content security policy names exactly the bucket's host
 - [ ] `.env.example`, `README.md`, `docs/architecture/photos.md` and the storage parts of
       `.claude/skills/engineering-conventions/SKILL.md` (incl. the seam catalog row) describe S3 instead of Blob; the
       user approves the conventions change.
-- [ ] `/security-review` has run on the diff (it touches uploads, signed addresses and the security headers) and its
+- [x] `/security-review` has run on the diff (it touches uploads, signed addresses and the security headers) and its
       findings are fixed or answered in the pull request.
 - [ ] The browser tests run against the preview, with the preview bucket on AWS S3, and pass – including the upload
       tests and no request blocked by the content security policy (recorded in the pull request).
