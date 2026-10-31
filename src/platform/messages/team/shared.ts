@@ -41,6 +41,7 @@ export const sharedTexts = {
     more: "Mehr",
     logout: "Abmelden",
     accounts: "Teammitglieder",
+    museumSettings: "Museumseinstellungen",
     maintenance: "Wartung",
     maintenancePlan: "Wartungsplan",
     repairTimes: "Reparaturzeiten",

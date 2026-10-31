@@ -364,7 +364,7 @@ with that section's data from that module.
 
 **A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
-`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` and `?tasksChanged=` are the exceptions named under *Changing the machines of a task* and *Changing the tasks of one machine*); the page confirms it only when `lastCommandBy(db, { machineId } |
+`?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` and `?tasksChanged=` are the exceptions named under *Changing the machines of a task* and *Changing the tasks of one machine*, `?saved=museum` the one under *The museum settings*); the page confirms it only when `lastCommandBy(db, { machineId } |
 { aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team
 member looking at the page ran it. The command layer gives every journal entry its command's ID
 (`event_journal.command_id`), so the answer holds every event the command wrote – a status change made in the same step
@@ -378,6 +378,16 @@ once** and hands it to each module's `…In` (architecture review 2026-10-25): t
 and no other module answers about its commands. The triage outcomes share one module,
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
 `loadMachineConfirmation` and shows one `confirmation`.
+
+**The museum settings** (ST-100, AGG-MuseumSettings in Collection): one singleton in **three parts** – museum details,
+logo, legal texts – each its own record with its own version and its own command, so the existing store and version
+check apply unchanged and a save of one part never rejects another. A part's row is inserted with its defaults by its
+migration (fixed ID, like the maintenance plan); "never saved" is that row. The page `/team/museum-settings` has one
+framed `Section` per part, each with its own form; a save lands on `?saved=<part>` and is confirmed **without asking
+the journal** – a save without a change records no event and still lands like a save (HS-27, G33), and the confirmation
+only says what the page shows. Every visitor page that names the museum takes the name from Collection's `museumName(db)`
+– never a catalogue text – through a view that receives it (`WelcomePageView`, `UnknownAddressView`, `UnknownMachineView`).
+
 **The two exceptions:** the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
 is nobody to bind the confirmation to – it says only that a report was sent, nothing stored. And the team members'
 accounts (ST-081, user 2026-10-25): the Team module's account functions are no commands and journal nothing, so the
@@ -643,7 +653,7 @@ Every aggregate table has `version integer not null default 0`; `aggregateStore`
 2. lets the decision run on it – a **domain rejection comes first** ("already triaged by Eva", ST-018), because it explains more than a conflict;
 3. saves at the **version the acting person saw** and increments it – `version-conflict` when someone changed the aggregate in between and nothing domain-specific explains it. **When the save fails the version check, the layer loads what is stored now and runs the decision again** (ST-018): a domain rejection there wins – the second of two technicians triaging at the same moment gets "already triaged", not a conflict (`src/modules/repair/record-defect-concurrency.integration.test.ts`, two real transactions). The facts are read again for that second decision. It relies on PostgreSQL's default isolation, READ COMMITTED: after the failed `UPDATE` waited for the other transaction, the next read sees what it committed – a stricter isolation level would need a retry instead.
 
-Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise (the one exception is a `setDelta`, see *Changing the machines of a task*). Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
+Creating commands save at version 0. A command run by a person **must** pass the version in `target` – the layer refuses it otherwise (the one exception is a `setDelta`, see *Changing the machines of a task*). A command whose form may be saved **without a change** (HS-27, first: CMD-ChangeMuseumDetails, ST-100) declares `mayChangeNothing: true`: a change is still saved at the version the person saw, but a decision that returns no events (the loaded state itself) ends successfully without saving or journaling – no rejection. Every other command that journals nothing still throws. Only policies (run by the system) may leave the version out of `target` – then the aggregate is loaded with a row lock (`FOR UPDATE`), so concurrent policies wait for each other instead of failing with a conflict nobody caused. A decision that returns **no events** has done nothing: nothing is saved and the version stays. Required for every triage command and every command on a defect (ST-003).
 
 ## Automatic policies
 
