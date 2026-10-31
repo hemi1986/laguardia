@@ -2,11 +2,20 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 67 of 67 domain stories done** · scenarios 637 of 637
+**Progress: 67 of 71 domain stories done** · scenarios 637 of 674
 
-**96 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 85 · Superseded: 11
+**100 stories** · In Progress: 0 · Ready: 4 · In Review: 0 · Draft: 0 · Done: 85 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## Ready
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-100](ST-100-museum-settings-with-the-museum-details.md) | Museum settings with the museum's name and whether the machines are listed | story | Collection | should | M | medium | – |
+| [ST-101](ST-101-welcome-page-with-the-machines-on-display.md) | Welcome page with the machines on display to report a problem | story | Collection | should | M | low | ST-100 |
+| [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
+| [ST-103](ST-103-legal-texts-in-the-museum-settings.md) | Privacy notice and imprint written in the museum settings | story | Collection | should | M | medium | ST-100 |
 
 ## Done
 

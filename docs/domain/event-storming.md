@@ -50,6 +50,10 @@ flowchart LR
         CMD_AttachFile["Attach file"]:::cmd
         CMD_RemoveFile["Remove file"]:::cmd
         CMD_RetireMachine["Retire machine"]:::cmd
+        CMD_ChangeMuseumDetails["Change museum details"]:::cmd
+        CMD_ReplaceLogo["Replace logo"]:::cmd
+        CMD_RemoveLogo["Remove logo"]:::cmd
+        CMD_ChangeLegalTexts["Change legal texts"]:::cmd
         EVT_MachineModelCreated["Machine model created"]:::evt
         EVT_MachineRegistered["⭐ Machine registered"]:::evt
         EVT_MachineStatusChanged["⭐ Machine status changed"]:::evt
@@ -59,6 +63,10 @@ flowchart LR
         EVT_FileAttached["File attached"]:::evt
         EVT_FileRemoved["File removed"]:::evt
         EVT_MachineRetired["⭐ Machine retired"]:::evt
+        EVT_MuseumDetailsChanged["Museum details changed"]:::evt
+        EVT_LogoReplaced["Logo replaced"]:::evt
+        EVT_LogoRemoved["Logo removed"]:::evt
+        EVT_LegalTextsChanged["Legal texts changed"]:::evt
     end
     subgraph BC_Maintenance["Maintenance"]
         CMD_ChangeMaintenancePlan["Change maintenance plan"]:::cmd
@@ -95,6 +103,9 @@ flowchart LR
     RM_TechnicianDashboard[("Technician dashboard")]:::rm
     RM_HelperDashboard[("Helper dashboard")]:::rm
     RM_RepairTimes[("Repair times")]:::rm
+    RM_WelcomePage[("Welcome page")]:::rm
+    RM_LegalPage[("Legal page")]:::rm
+    RM_MuseumSettings[("Museum settings")]:::rm
     ACT_Visitor --> CMD_ReportProblem
     CMD_ReportProblem --> EVT_ProblemReported
     CMD_ReportProblem --> EVT_DefectRecorded
@@ -153,6 +164,14 @@ flowchart LR
     CMD_ChangeMachinesOfMaintenanceTask --> EVT_MachinesOfMaintenanceTaskChanged
     ACT_TeamMember --> CMD_RecordMaintenance
     CMD_RecordMaintenance --> EVT_MaintenanceRecorded
+    ACT_Technician --> CMD_ChangeMuseumDetails
+    CMD_ChangeMuseumDetails --> EVT_MuseumDetailsChanged
+    ACT_Technician --> CMD_ReplaceLogo
+    CMD_ReplaceLogo --> EVT_LogoReplaced
+    ACT_Technician --> CMD_RemoveLogo
+    CMD_RemoveLogo --> EVT_LogoRemoved
+    ACT_Technician --> CMD_ChangeLegalTexts
+    CMD_ChangeLegalTexts --> EVT_LegalTextsChanged
     EVT_ProblemReportLinkedToDefect --> POL_LinkReopensResolvedDefect
     POL_LinkReopensResolvedDefect --> CMD_ReopenDefect
     EVT_MachineRetired --> POL_RetirementClosesDefects
@@ -311,6 +330,25 @@ flowchart LR
     EVT_DefectReopened -.-> RM_RepairTimes
     EVT_DefectClosedOnRetirement -.-> RM_RepairTimes
     RM_RepairTimes -.-> ACT_Technician
+    EVT_MuseumDetailsChanged -.-> RM_WelcomePage
+    EVT_LogoReplaced -.-> RM_WelcomePage
+    EVT_LogoRemoved -.-> RM_WelcomePage
+    EVT_LegalTextsChanged -.-> RM_WelcomePage
+    EVT_MachineModelCreated -.-> RM_WelcomePage
+    EVT_MachineModelCorrected -.-> RM_WelcomePage
+    EVT_MachineRegistered -.-> RM_WelcomePage
+    EVT_MachineStatusChanged -.-> RM_WelcomePage
+    EVT_MachineMoved -.-> RM_WelcomePage
+    EVT_MachineDetailsCorrected -.-> RM_WelcomePage
+    EVT_MachineRetired -.-> RM_WelcomePage
+    RM_WelcomePage -.-> ACT_Visitor
+    EVT_LegalTextsChanged -.-> RM_LegalPage
+    RM_LegalPage -.-> ACT_Visitor
+    EVT_MuseumDetailsChanged -.-> RM_MuseumSettings
+    EVT_LogoReplaced -.-> RM_MuseumSettings
+    EVT_LogoRemoved -.-> RM_MuseumSettings
+    EVT_LegalTextsChanged -.-> RM_MuseumSettings
+    RM_MuseumSettings -.-> ACT_Technician
     classDef evt fill:#a3391f,stroke:#e65100,color:#fff
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
@@ -466,11 +504,44 @@ flowchart LR
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
 ```
 
+### The museum's welcome page
+
+Feature museum-start-page (2026-10-31). A technician sets the museum's name, logo and legal texts and chooses whether the machines on display are listed; a visitor on the welcome page taps a machine and reports a problem on its visitor machine page as from its QR code.
+
+```mermaid
+flowchart LR
+    ACT_Technician(["Technician"]):::act
+    EVT_MuseumDetailsChanged["Museum details changed"]:::evt
+    EVT_LogoReplaced["Logo replaced"]:::evt
+    EVT_LegalTextsChanged["Legal texts changed"]:::evt
+    ACT_Visitor(["Visitor"]):::act
+    EVT_ProblemReported["⭐ Problem reported"]:::evt
+    ACT_Technician --> EVT_MuseumDetailsChanged
+    EVT_MuseumDetailsChanged --> EVT_LogoReplaced
+    EVT_LogoReplaced --> EVT_LegalTextsChanged
+    EVT_LegalTextsChanged --> ACT_Visitor
+    ACT_Visitor --> EVT_ProblemReported
+    classDef evt fill:#a3391f,stroke:#e65100,color:#fff
+    classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
+    classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
+    classDef rm fill:#81c784,stroke:#1b5e20,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
+    classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
+    classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
+    classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
+```
+
 ## Bounded Contexts & Aggregates
 
 | Context | Purpose | Aggregates | Events |
 |---|---|---|---|
-| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, File | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File attached, File removed, Machine retired |
+| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files – and how the museum presents itself to visitors (museum settings) | Machine, Machine model, File, Museum settings | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File attached, File removed, Machine retired, Museum details changed, Logo replaced, Logo removed, Legal texts changed |
 | Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect details changed, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
 | Team (`BC-Team`) | Generic, not modelled – team member accounts, roles (helper, technician), signing in and last visit; supplier to all other contexts | – | – |
 | Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Machines of maintenance task changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
+
+## Open Hotspots
+
+- **HS-25** – The imprint is optional in German and in English. May a technician provide an English imprint without a German one – German visitors would then see no imprint link while English visitors do? Recommendation – no: an English imprint only together with a German one (an invariant of the museum settings), so the imprint link is offered in both languages or in neither, as ST-064 already requires (German and English agree on whether there is one), and English visitors read the German imprint where no English one is provided. _(refs: AGG-MuseumSettings, CMD-ChangeLegalTexts, RM-LegalPage, RM-WelcomePage)_
+- **HS-26** – Legal texts are Markdown with only headings, paragraphs, bold and italic, lists and links to https and mailto addresses. What happens to anything else a technician types or pastes – raw HTML, an image, a table, a link to another kind of address? Rejected when saving, or saved and shown to visitors as plain text? Recommendation – saved as typed and shown as plain text (HTML escaped, a disallowed link as its text), so a pasted privacy notice is never refused and visitors still only ever see safe text; the settings page says which Markdown is shown. _(refs: CMD-ChangeLegalTexts, RM-LegalPage, AGG-MuseumSettings)_
+- **HS-27** – What does saving the museum form or the legal texts form without any change do? CMD-ChangeDefectDetails rejects such a change; CMD-ChangeMachinesOfMaintenanceTask records no event. Recommendation – no event and no rejection: the form just shows the values as saved, because a settings page saved twice is harmless and a rejection message there would only confuse. _(refs: CMD-ChangeMuseumDetails, CMD-ChangeLegalTexts, EVT-MuseumDetailsChanged, EVT-LegalTextsChanged)_

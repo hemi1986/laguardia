@@ -1,7 +1,7 @@
 # UX Guidelines – La Guardia
 
 > **Status: accepted by the user on 2026-10-01, amended since – last on 2026-10-25.** Every rule below (G1–G34,
-> including G2a, G4a, G6a, G8a, G10a, G10b and G21a) is binding. One violation is known and accepted: the
+> including G2a, G4a, G6a, G8a, G10a, G10b, G10c and G21a) is binding. One violation is known and accepted: the
 > unchanged-form rejections of ST-031 and ST-036, named under G33. The exception under G2a ended with ST-036. The changes of 2026-10-25 (G16's one width, G26 dark design, G27 grouped
 > checkboxes, G28 account pages, and with it G10, G10a and G10b, and G29–G34) are decided but not built yet – the screens
 > contradict them until the stories of that day's `/feature` are done.
@@ -282,9 +282,21 @@ that was typed. Only the verb button carries the action out.
 form. Without one shape, each would pick its own – and a „Zurück“ that loses the reason just typed punishes the
 person for checking.
 „Endgültig …“ is said only for what cannot be undone.
+*Exception: G10c* – content that can be uploaded again is removed without this page.
 *Amendment of 2026-10-17 withdrawn on 2026-10-25 (user, `/feature` grilling):* deactivating an account had its own
 question page with „Konto deaktivieren“ / „Zurück“ (ST-081). It is now one tap on the team member's page, without a
 question (G28), because it is reversible (G10a).
+
+**G10c – Removing content that can be uploaded again is one step, with no question page** (user, 2026-10-31, feature
+`museum-start-page`, ST-102). An explicit exception to G10 and G10a.
+The museum's logo in the museum settings is removed by one tap on „Logo entfernen“. The page confirms as in G3 and
+shows that there is no logo now (G7). The question page of G10b is not shown.
+The exception holds only for content a person can put back at any time by uploading it again and that is not the
+history of a machine. Anything else that deletes stored content keeps G10 and G10b – a file on a machine's record
+(ST-038) is not covered by this exception unless the user decides it separately.
+*Why:* nothing is lost that cannot be restored by uploading again, so a question in front of the tap only costs time
+(the same reasoning as G28 for a reversible action). The logo is not a recorded fact about a machine, and G10a's
+boundary – recorded facts and deleted bytes stay irreversible – exists to protect exactly that.
 
 **G11 – Someone who may not do a thing does not see the control.**
 The page shows the rest; the command refuses it anyway (`allowedActors` – the UI never carries the rule alone).
@@ -494,3 +506,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-25 | **G29 added** (sections of records and dashboards: framed, with a title), **G30 added** (red only for the verb on a question page that does what cannot be undone), **G31 added** (one look for every fold: „Mehr“, „Verwalten“, G27's groups), **G32 added** (filters are applied with „Filtern“, a checkbox never through another form's button). | User, `/feature` grilling 2026-10-25 – the four rules proposed by the consistency audit (F5, F11, D3, F6) |
 | 2026-10-25 | **G27 amended** (the header count follows the ticks only with JavaScript, without it the state when the page opened; groups without an entry not shown; groups in `CONTEXT.md`'s order, task groups by interval shortest first; machines by museum number, tasks by name; an entry that cannot become due says so – „· Nicht ausgestellt“). **G33 added** (a form sent unchanged lands like a save with a confirmation of the resulting state; ST-031 and ST-036 an accepted exception until a story touches them). **G28 amended** (one's own edit page shows the role without a choice – „Die eigene Rolle kann nur eine andere Techniker:in ändern.“ – and no „Neues Passwort“, only a link to „Passwort ändern“; heading „Konto bearbeiten · Anna Berger“). **G34 added** (form headings „<job> · <thing>“ everywhere). | User, story review 2026-10-25 (`docs/reviews/2026-10-25-story-review.md`, "Proposed guideline changes" and "Decisions (user)" 1 and 4) |
 | 2026-10-25 | Housekeeping: **G2a's exception ended** (ST-036 is done, the machine model has its own pages); **G9's "not yet true"** and **G22's "already built"** updated to what is built; status line updated. | The yardstick said things that are no longer true (ux-designer, consistency audit `docs/reviews/2026-10-25-ux-audit-consistency.md`) |
+| 2026-10-31 | **G10c added** (removing content that can be uploaded again – the museum's logo in the museum settings – is one step without a question page; an explicit exception to G10/G10a; a file on a machine's record, ST-038, stays under G10 and G10b). | User, feature `museum-start-page` (ST-102): nothing is lost that cannot be restored by uploading again, and the logo is not the history of a machine |

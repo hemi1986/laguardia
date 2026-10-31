@@ -1,6 +1,6 @@
 # Logical Data Model
 
-> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-25 (per-machine maintenance)
+> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-31 (museum settings, feature museum-start-page)
 >
 > No physical model yet – the stack is only *proposed* (`docs/adr/0001-tech-stack.md`, `0002`, `0003`). A "Physical Model" section follows once the user accepts them.
 
@@ -33,6 +33,8 @@
 | `Interval` | Positive time span of a maintenance task (all initial values are whole months) |
 | `Photo` | A stored image (content reference, media type, size); used by problem reports and work log entries |
 | `FileContent` | A stored document or image (content reference, original name, media type, size) |
+| `LogoContent` | The logo kept in the object store: content reference (its name in the store, reached through the storage seam – ADR 0012) and media type (PNG, JPEG or WebP, re-encoded by the server without metadata) |
+| `LegalText` | A non-empty Markdown text of which visitors see only headings, paragraphs, bold and italic, lists and links to https and mailto addresses (CMD-ChangeLegalTexts; other Markdown: HS-26) |
 | `Text` / `Title` | Free text; `Title` is short and, for defects, understandable for visitors |
 | `Timestamp` / `Date` | Point in time / calendar date |
 
@@ -61,9 +63,11 @@ erDiagram
     TEAM_MEMBER ||--o{ DEFECT : "refers to (claimant)"
     TEAM_MEMBER ||--o{ WORK_LOG_ENTRY : "refers to (logged by)"
     TEAM_MEMBER ||--o{ MAINTENANCE_RECORD : "refers to (recorded by)"
+    MUSEUM_SETTINGS ||--o| LOGO : contains
+    MUSEUM_SETTINGS ||--|{ LEGAL_TEXT : contains
 ```
 
-`TEAM_MEMBER` is also referenced by every other "… by" attribute; those lines are omitted for readability.
+`TEAM_MEMBER` is also referenced by every other "… by" attribute; those lines are omitted for readability. `MUSEUM_SETTINGS` refers to no other aggregate: the welcome page joins it with machines and machine models only when it is read.
 
 ---
 
@@ -403,6 +407,59 @@ stateDiagram-v2
 
 ---
 
+## Museum settings (`AGG-MuseumSettings`, context `BC-Collection`)
+
+**Invariants**
+- There is exactly one museum settings – never created or removed by a command
+- The museum name is never empty
+- The German privacy notice is never empty; every other legal text is either not provided or not empty
+- There is at most one logo, and it is a PNG, JPEG or WebP image without metadata
+
+**Singleton with defaults (feature museum-start-page, user 2026-10-31):** like the maintenance plan, one per museum, without an ID and without a creating event. Until a technician changes a part, it holds the defaults – these are the only values without a source event:
+
+| Attribute | Default | Source of the default |
+|---|---|---|
+| Museum name | "Flipper- & Arcade Museum Eschbach" | `docs/product/vision.md` (user, 2026-09-29) |
+| Machines listed on the welcome page | no | user, 2026-10-31 |
+| Logo | none | user, 2026-10-31 |
+| Privacy notice (German, English) | today's placeholder privacy notice | ST-064 (`src/platform/messages/visitor.de.ts`, `visitor.en.ts`) |
+| Imprint (German, English) | none | ST-064 |
+
+**Three parts, versioned separately (domain-architect, 2026-10-31):** *museum details* (museum name, machines listed), *logo* and *legal texts* are each changed by their own form and command. No invariant spans two parts, so each part carries its own version for the usual check "someone changed it meanwhile": saving the legal texts is not rejected because another technician replaced the logo in between.
+
+**Logo content:** the logo's content lives in the object store, reached only through the storage seam (`src/platform/storage/`, ADR 0012); the museum settings hold only its `LogoContent` reference. At most 2 MB, it goes through the server like a photo – stored, the command run with the reference, the content deleted if the command fails (ADR 0009) – and never leaves a pending upload. Replacing or removing the logo deletes the previous content after the commit (deliberate removal, ADR 0009). Visitors reach it through a public address of its own (`/logo`) that checks nothing but whether a logo exists and sends the browser on to a fresh 5-minute view address – the pattern of `/team/dateien/<file ID>` without the team session. This is the one exception to "only team pages issue view addresses" (engineering conventions, HS-1): that rule protects photos that may show people; the logo is public by nature. The bucket stays private and the content security policy unchanged.
+
+**Journal:** the typed museum name and the legal texts are free text and stay out of the event journal's data (engineering conventions); `EVT-MuseumDetailsChanged` and `EVT-LegalTextsChanged` name which details or texts changed, `EVT-LogoReplaced` and `EVT-LogoRemoved` carry the content references.
+
+**Lifecycle** – the museum details and the legal texts only change values; the logo has two states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> NoLogo : default
+    NoLogo --> WithLogo : EVT-LogoReplaced
+    WithLogo --> WithLogo : EVT-LogoReplaced
+    WithLogo --> NoLogo : EVT-LogoRemoved
+```
+
+`NoLogo` and `WithLogo` are only diagram labels, not domain terms.
+
+| Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
+|---|---|---|---|---|---|
+| Museum settings | Root | – | – | – | singleton, one per museum |
+| | | Museum name | `Text` | yes (default above) | EVT-MuseumDetailsChanged; *Museum name* in RM-WelcomePage, RM-MuseumSettings |
+| | | Machines listed on the welcome page | Boolean | yes (default no) | EVT-MuseumDetailsChanged; RM-MuseumSettings |
+| | | Logo | `LogoContent` (VO) | no | EVT-LogoReplaced, EVT-LogoRemoved; *Logo* in RM-WelcomePage, RM-MuseumSettings |
+| | | Legal texts | list of Legal text | yes – at least the German privacy notice | see below |
+| Legal text | VO (at most one per kind and language) | Kind | *privacy notice* \| *imprint* | yes | EVT-LegalTextsChanged |
+| | | Language | *German* \| *English* | yes | EVT-LegalTextsChanged |
+| | | Text | `LegalText` | yes | EVT-LegalTextsChanged; *Text in German*, *Text in English* in RM-LegalPage |
+
+Who changed a part and when is journal-only (*Changed by*, *Replaced by*, *Removed by* and the occurrence time); no read model shows it.
+
+Derived for read models: *Imprint provided* (`RM-WelcomePage`, `RM-LegalPage`) – a German imprint exists (whether an English one alone counts: HS-25). The English page shows the German text where no English one exists (`RM-LegalPage`). *Machines on display* (`RM-WelcomePage`) – only when *Machines listed on the welcome page* is yes: machines that are not retired and whose machine status is not *Not on display*, grouped by their machine model's machine category, alphabetical by machine model title within a group; each with its location, its machine status only if *Out of order* or *Limited*, and its current museum number for `/m/<museum number>`. Nothing new is stored for it.
+
+---
+
 ## Team member (Team area – generic, not modelled)
 
 Not an aggregate of this model; listed only because all contexts reference it (`docs/domain/context-map.md`, `docs/adr/0004-team-authentication.md`).
@@ -428,3 +485,4 @@ The dashboards compute their mark line with this rule at display time and never 
 ## Open points
 HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the Last visit – where the previous dashboard visit began.
 - Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen; whether removed file content is deleted.
+- Museum settings (open, inside the aggregate, no context boundary): HS-25 (English imprint without a German one), HS-26 (Markdown outside the allowed elements – rejected or shown as plain text), HS-27 (saving a form without any change).

@@ -17,7 +17,7 @@ external_systems: []
 bounded_contexts:
   - id: BC-Collection
     name: Collection
-    purpose: Which machines the museum has, what they are, where they stand, whether they are playable, and their files
+    purpose: Which machines the museum has, what they are, where they stand, whether they are playable, and their files – and how the museum presents itself to visitors (museum settings)
   - id: BC-Repair
     name: Repair
     purpose: From problem reports via triage to defects that are worked on and resolved
@@ -115,6 +115,25 @@ aggregates:
       - A maintenance record has exactly one outcome – done or partially done
       - A maintenance record is never changed or removed
 
+  - id: AGG-MuseumSettings
+    name: Museum settings
+    context: BC-Collection
+    description: >-
+      Exactly one for the museum (feature museum-start-page, 2026-10-31) – how the museum presents itself to visitors.
+      Like the maintenance plan a singleton: it is never created or removed, and without any change it holds the
+      defaults – museum name "Flipper- & Arcade Museum Eschbach", no logo, the placeholder privacy notice in German and
+      English (ST-064), no imprint, machines not listed. Three parts, each changed by its own form and command: museum
+      details (museum name, machines listed on the welcome page), logo, legal texts. No invariant spans two parts, so
+      the version check is per part (domain-architect, 2026-10-31): a save is rejected only when someone changed the
+      same part meanwhile, never because another form was saved. The logo belongs here as a reference to its content
+      in the object store (through the storage seam, ADR 0012), not as a file – files belong to a machine or machine
+      model. The museum name is the one visitors see wherever a visitor page names the museum.
+    invariants:
+      - There is exactly one museum settings – never created or removed by a command
+      - The museum name is never empty
+      - The German privacy notice is never empty; every other legal text is either not provided or not empty
+      - There is at most one logo, and it is a PNG, JPEG or WebP image without metadata
+      - An English imprint is provided only together with a German one (HS-25)
 events:
   # --- Problem reports ---
   - id: EVT-ProblemReported
@@ -277,6 +296,33 @@ events:
       Only "done" resets the interval, counted from the date it was carried out (a calendar day, Europe/Berlin), not from
       when it was recorded.
 
+  # Feature museum-start-page (2026-10-31): how the museum presents itself to visitors.
+  - id: EVT-MuseumDetailsChanged
+    name: Museum details changed
+    aggregate: AGG-MuseumSettings
+    data: [Changed details (museum name, machines listed or both), Museum name, Machines listed on the welcome page (yes/no), Changed by]
+    description: >-
+      Names which details changed, so the journal can say so without repeating the typed museum name (as
+      EVT-DefectDetailsChanged does for the defect title); the name lives only in the museum settings.
+  - id: EVT-LogoReplaced
+    name: Logo replaced
+    aggregate: AGG-MuseumSettings
+    data: [Logo (content reference, media type), Previous logo (content reference, optional), Replaced by]
+    description: >-
+      The first logo is a replacement of none. The image is checked and re-encoded without metadata before it is
+      kept; the previous logo's content is deleted once the replacement is stored (deliberate removal, ADR 0009).
+  - id: EVT-LogoRemoved
+    name: Logo removed
+    aggregate: AGG-MuseumSettings
+    data: [Removed logo (content reference), Removed by]
+    description: The removed logo's content is deleted once the removal is stored (deliberate removal, ADR 0009).
+  - id: EVT-LegalTextsChanged
+    name: Legal texts changed
+    aggregate: AGG-MuseumSettings
+    data: [Changed texts (privacy notice German / English, imprint German / English), Privacy notice (German, English), Imprint (German, English), Changed by]
+    description: >-
+      The texts themselves are not part of the journal – free text stays out of it; the journal names which texts
+      changed, who changed them and when.
 commands:
   # --- Problem reports ---
   - id: CMD-ReportProblem
@@ -513,6 +559,48 @@ commands:
       - The machine is not retired
       - The date it was carried out (a calendar day, Europe/Berlin) may be up to 7 days in the past (default today), never in the future
       - Any machine the maintenance task applies to can be recorded, whether due or not; the interval restarts from the date it was carried out
+  - id: CMD-ChangeMuseumDetails
+    name: Change museum details
+    aggregate: AGG-MuseumSettings
+    actor: ACT-Technician
+    produces: [EVT-MuseumDetailsChanged]
+    description: The museum form of the museum settings – museum name and whether the machines on display are listed on the welcome page.
+    rules:
+      - If someone changed the museum details meanwhile, the command is rejected (version check of this part only)
+      - What a save that changes neither the museum name nor the listing does – see HS-27
+  - id: CMD-ReplaceLogo
+    name: Replace logo
+    aggregate: AGG-MuseumSettings
+    actor: ACT-Technician
+    produces: [EVT-LogoReplaced]
+    description: >-
+      The logo form. The image goes through the server like a photo (at most 2 MB fits a request) – stored, the
+      command run with its reference, the content deleted if the command fails (ADR 0009) – never as a pending upload.
+    rules:
+      - The chosen image is a PNG, JPEG or WebP of at most 2 MB; anything else, SVG included, is rejected
+      - The server checks that it is such an image and re-encodes it without metadata, keeping transparency
+      - If someone changed the logo meanwhile, the command is rejected (version check of this part only)
+      - The previous logo's content is deleted once the replacement is stored
+  - id: CMD-RemoveLogo
+    name: Remove logo
+    aggregate: AGG-MuseumSettings
+    actor: ACT-Technician
+    produces: [EVT-LogoRemoved]
+    description: The logo form; no confirmation step (user, 2026-10-31).
+    rules:
+      - There is a logo; if someone changed the logo meanwhile, the command is rejected (version check of this part only)
+      - The removed logo's content is deleted once the removal is stored
+  - id: CMD-ChangeLegalTexts
+    name: Change legal texts
+    aggregate: AGG-MuseumSettings
+    actor: ACT-Technician
+    produces: [EVT-LegalTextsChanged]
+    description: The legal texts form – privacy notice and imprint, each in German and English.
+    rules:
+      - The English privacy notice and the imprint in both languages are optional; one left empty is not provided
+      - Whether an English imprint needs a German one – see HS-25
+      - "Texts are Markdown; visitors see only headings, paragraphs, bold and italic, lists and links to https and mailto addresses – no HTML, images or tables. Whether other Markdown is rejected on saving or shown as plain text – see HS-26"
+      - If someone changed the legal texts meanwhile, the command is rejected (version check of this part only)
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect
@@ -650,6 +738,34 @@ read_models:
     fed_by: [EVT-ProblemReported, EVT-DefectRecorded, EVT-ProblemReportLinkedToDefect, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement]
     used_by: [ACT-Technician]
     fields: [Priority, Period, Time to first work log entry, Time to resolved, Number of defects]
+  - id: RM-WelcomePage
+    name: Welcome page
+    description: >-
+      The visitor page at La Guardia's root address, German and English, the same for everyone. Logo and museum name;
+      if the museum settings say so, the machines on display – registered, not retired, machine status not Not on
+      display – grouped by machine category and sorted alphabetically by machine model title within each group, each
+      leading to its visitor machine page (/m/<museum number>). The logo is shown only here; visitors get it through a
+      public address of its own that sends them on to a fresh short-lived view address (docs/architecture/data-model.md).
+    fed_by: [EVT-MuseumDetailsChanged, EVT-LogoReplaced, EVT-LogoRemoved, EVT-LegalTextsChanged, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineRetired]
+    used_by: [ACT-Visitor]
+    fields: [Museum name, Logo, Machines on display (Machine category, Machine model title, Location, Machine status if Out of order or Limited, Museum number for the address), Imprint provided]
+  - id: RM-LegalPage
+    name: Legal page
+    description: >-
+      The privacy notice or the imprint in the visitor's language; the German text where no English one is provided.
+      Rendered from Markdown, showing only the allowed elements (rule on CMD-ChangeLegalTexts). Every visitor page
+      links the privacy notice, and the imprint only when one is provided (ST-064).
+    fed_by: [EVT-LegalTextsChanged]
+    used_by: [ACT-Visitor]
+    fields: [Text in German, Text in English, Imprint provided]
+  - id: RM-MuseumSettings
+    name: Museum settings
+    description: >-
+      The technician's page "Museumseinstellungen" (team area, under „Mehr“) with its three forms – museum, logo,
+      legal texts – each showing the current values and saved on its own.
+    fed_by: [EVT-MuseumDetailsChanged, EVT-LogoReplaced, EVT-LogoRemoved, EVT-LegalTextsChanged]
+    used_by: [ACT-Technician]
+    fields: [Museum name, Machines listed on the welcome page, Logo, Privacy notice (German, English), Imprint (German, English)]
 hotspots:
   # --- Flow: problem report to defect ---
   - id: HS-1
@@ -835,6 +951,36 @@ hotspots:
       Last done; the migration sets "added" to the date each machine started counting under the old rule, and a machine
       without a done record since then becomes due at once. The machine model's category history is kept, although
       Maintenance no longer reads it after the migration.
+  # --- Feature museum-start-page (domain-architect, 2026-10-31) ---
+  - id: HS-25
+    question: >-
+      The imprint is optional in German and in English. May a technician provide an English imprint without a German
+      one – German visitors would then see no imprint link while English visitors do? Recommendation – no: an English
+      imprint only together with a German one (an invariant of the museum settings), so the imprint link is offered
+      in both languages or in neither, as ST-064 already requires (German and English agree on whether there is one),
+      and English visitors read the German imprint where no English one is provided.
+    refs: [AGG-MuseumSettings, CMD-ChangeLegalTexts, RM-LegalPage, RM-WelcomePage]
+    status: resolved
+    resolution: No English imprint without a German one – an invariant of the museum settings; the imprint link is offered in both languages or in neither (user, 2026-10-31).
+  - id: HS-26
+    question: >-
+      Legal texts are Markdown with only headings, paragraphs, bold and italic, lists and links to https and mailto
+      addresses. What happens to anything else a technician types or pastes – raw HTML, an image, a table, a link to
+      another kind of address? Rejected when saving, or saved and shown to visitors as plain text? Recommendation –
+      saved as typed and shown as plain text (HTML escaped, a disallowed link as its text), so a pasted privacy notice
+      is never refused and visitors still only ever see safe text; the settings page says which Markdown is shown.
+    refs: [CMD-ChangeLegalTexts, RM-LegalPage, AGG-MuseumSettings]
+    status: resolved
+    resolution: Saved as typed and shown to visitors as plain text where it is not allowed Markdown (HTML escaped, a disallowed link as its text); the settings page says which Markdown is shown (user, 2026-10-31).
+  - id: HS-27
+    question: >-
+      What does saving the museum form or the legal texts form without any change do? CMD-ChangeDefectDetails rejects
+      such a change; CMD-ChangeMachinesOfMaintenanceTask records no event. Recommendation – no event and no
+      rejection: the form just shows the values as saved, because a settings page saved twice is harmless and a
+      rejection message there would only confuse.
+    refs: [CMD-ChangeMuseumDetails, CMD-ChangeLegalTexts, EVT-MuseumDetailsChanged, EVT-LegalTextsChanged]
+    status: resolved
+    resolution: No event and no rejection – the form shows the values as saved (user, 2026-10-31).
 
 flows:
   - id: FLOW-ProblemReportTriage
@@ -866,3 +1012,10 @@ flows:
       machine it newly applies to; each machine's interval then runs from its own last done maintenance record, so
       the work spreads out instead of falling due everywhere on the same day.
     sequence: [ACT-Technician, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, ACT-TeamMember, EVT-MaintenanceRecorded]
+  - id: FLOW-MuseumStartPage
+    name: The museum's welcome page
+    description: >-
+      Feature museum-start-page (2026-10-31). A technician sets the museum's name, logo and legal texts and chooses
+      whether the machines on display are listed; a visitor on the welcome page taps a machine and reports a problem
+      on its visitor machine page as from its QR code.
+    sequence: [ACT-Technician, EVT-MuseumDetailsChanged, EVT-LogoReplaced, EVT-LegalTextsChanged, ACT-Visitor, EVT-ProblemReported]
