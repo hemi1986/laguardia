@@ -4,8 +4,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import {
+  changeMachineStatusCommand,
   changeMuseumDetailsCommand,
+  correctMachineDetailsCommand,
   createMachineModelCommand,
+  machineForTeamForm,
+  moveMachineCommand,
   museumSettings,
   registerMachineCommand,
   welcomePage,
@@ -17,7 +21,9 @@ import { withDefaultMuseumDetails } from "@/modules/collection/museum-settings.t
 import { executeCommand } from "@/platform/command";
 import { visitorMessages, type VisitorLocale } from "@/platform/messages";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { retireMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadVisitorMachinePage } from "./m/[museumNumber]/visitor-machine-page-data";
 import { WelcomePageView } from "./welcome-page";
 
 /**
@@ -114,4 +120,120 @@ it("ST-101: The machines on display are listed by machine category and title", a
   expect(entry.indexOf("Medieval Madness")).toBeLessThan(entry.indexOf("Halle 2, Reihe 3"));
   expect(text(html)).not.toMatch(/LG-\d{3}/);
   expect(text(html)).not.toContain("Sonstiges");
+});
+
+/** The machine's version as a technician's form reads it (HS-16). */
+async function versionOf(museumNumber: string) {
+  const machine = await machineForTeamForm(db, museumNumber);
+  if (!machine) throw new Error(`no machine ${museumNumber}`);
+  return { machineId: machine.id, version: machine.version };
+}
+
+async function statusChanged(museumNumber: string, machineStatus: MachineStatus) {
+  const changed = await executeCommand(
+    changeMachineStatusCommand,
+    { ...(await versionOf(museumNumber)), machineStatus, reason: "Checked" },
+    as(),
+  );
+  if (!changed.ok) throw new Error(changed.error);
+}
+
+it("ST-101: Machines that are not playable say so", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-042", "Medieval Madness", "pinball", "Halle 2", "out-of-order");
+  await aMachine("LG-005", "Fireball", "pinball", "Halle 1", "limited");
+  await aMachine("LG-020", "Pac-Man", "arcade", "Halle 3", "playable");
+
+  const html = await opened("de");
+
+  expect(text(entryOf(html, "Medieval Madness")!)).toContain("Außer Betrieb");
+  expect(text(entryOf(html, "Fireball")!)).toContain("Eingeschränkt");
+  expect(text(entryOf(html, "Pac-Man")!).trim()).toBe("Pac-Man Halle 3");
+});
+
+it("ST-101: Machines not on display and retired machines are not listed", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-042", "Medieval Madness", "pinball");
+  await aMachine("LG-030", "Twilight Zone", "pinball", "Lager", "not-on-display");
+  await retireMachine(db, await aMachine("LG-007", "Gorgar", "pinball"));
+
+  const html = await opened("de");
+
+  expect(entryOf(html, "Medieval Madness")).toBeDefined();
+  expect(html).not.toContain("Twilight Zone");
+  expect(html).not.toContain("LG-030");
+  expect(html).not.toContain("Gorgar");
+  expect(html).not.toContain("LG-007");
+});
+
+it("ST-101: Tapping a machine opens its visitor machine page", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-042", "Medieval Madness", "pinball");
+  const corrected = await executeCommand(
+    correctMachineDetailsCommand,
+    { ...(await versionOf("LG-042")), museumNumber: "LG-043", serialNumber: "" },
+    as(),
+  );
+  expect(corrected.ok).toBe(true);
+
+  const html = await opened("de");
+
+  const entry = entryOf(html, "Medieval Madness")!;
+  expect(entry).toMatch(/^<a[^>]*href="\/m\/LG-043"/);
+  const machinePage = await loadVisitorMachinePage(db, "LG-043");
+  expect(machinePage).toMatchObject({ retired: false, machineModelTitle: "Medieval Madness", reportingPossible: true });
+});
+
+it("ST-101: The welcome page in English", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-042", "Medieval Madness", "pinball", "Halle 2, Reihe 3", "out-of-order");
+
+  const html = await opened("en");
+
+  expect(groups(html).map((group) => group.heading)).toEqual(["Pinball"]);
+  expect(text(entryOf(html, "Medieval Madness")!).trim()).toBe("Medieval Madness Halle 2, Reihe 3 Out of order");
+  expect(text(html)).toContain("Something not working? Tap a machine and report the problem.");
+  expect(text(html)).not.toContain("Etwas funktioniert nicht?");
+});
+
+it("ST-101: With the listing switched off only the museum is shown", async () => {
+  await listingSwitched(false);
+  await aMachine("LG-042", "Medieval Madness", "pinball");
+
+  const html = await opened("de");
+
+  expect(html).toMatch(/<h1[^>]*>Flipper- &amp; Arcade Museum Eschbach<\/h1>/);
+  expect(text(html)).not.toContain("Etwas funktioniert nicht?");
+  expect(html).not.toContain("Medieval Madness");
+  expect(html).not.toContain("<section");
+  const bottom = html.slice(html.indexOf("Anmeldung fürs Team"));
+  expect(html).toContain('href="/login"');
+  expect(bottom).toContain('href="/datenschutz"');
+});
+
+it("ST-101: No machine on display shows no list", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-030", "Twilight Zone", "pinball", "Lager", "not-on-display");
+  await retireMachine(db, await aMachine("LG-007", "Gorgar", "pinball"));
+
+  const html = await opened("de");
+
+  expect(text(html)).not.toContain("Etwas funktioniert nicht?");
+  expect(html).not.toContain("<section");
+  expect(html).not.toContain("<ul");
+  expect(html).toMatch(/<h1[^>]*>Flipper- &amp; Arcade Museum Eschbach<\/h1>/);
+  expect(text(html)).toContain("Anmeldung fürs Team");
+  expect(html).toContain('href="/datenschutz"');
+});
+
+it("ST-101: Changes are visible at the next page load", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-042", "Medieval Madness", "pinball", "Halle 2, Reihe 3", "playable");
+  expect(text(entryOf(await opened("de"), "Medieval Madness")!).trim()).toBe("Medieval Madness Halle 2, Reihe 3");
+
+  const moved = await executeCommand(moveMachineCommand, { ...(await versionOf("LG-042")), location: "Halle 4" }, as());
+  expect(moved.ok).toBe(true);
+  await statusChanged("LG-042", "out-of-order");
+
+  expect(text(entryOf(await opened("de"), "Medieval Madness")!).trim()).toBe("Medieval Madness Halle 4 Außer Betrieb");
 });
