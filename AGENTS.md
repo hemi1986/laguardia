@@ -42,9 +42,23 @@ Keep this block short: it is loaded into every session. Put rules into the skill
   scope are in `docs/product/vision.md`; the vocabulary is `CONTEXT.md`.
 - **Shape:** a Next.js monolith at the repository root (`docs/adr/0001-tech-stack.md`). Discovery artifacts and code
   live in this one repository and change together.
-- **Languages:** artifacts, stories, glossary, code and comments in English; UI texts in German. The values come from
-  `languages` in `.claude/project.json`.
 - **Tooling in `.claude/`:** TypeScript executed directly by Node ≥ 22.18 (type stripping) – no Python, no build step,
   erasable TypeScript syntax only. The application has its own Next.js build.
-- **Where the rest lives:** `docs/workflow.md` (sources of truth, commands, rules, tool access),
-  `docs/engineering/conventions.md` (module layout, seam catalog, definition of done).
+
+## Rules
+
+**Read `docs/workflow.md` before planning or implementing.** It holds the sources-of-truth table, the command list
+and the full rule text; `docs/engineering/conventions.md` holds the module layout, the seam catalog and the
+definition of done. These hold every turn:
+
+- **Language:** artifacts, stories, glossary, code and comments in English; UI texts in German – the values are
+  `languages` in `.claude/project.json`.
+- **IDs** come from `docs/domain/events.yaml`; every Gherkin scenario has a test titled exactly
+  `ST-NNN: <scenario title>`.
+- **Never weaken or delete a test to get green.** One branch and one pull request per story – the user merges.
+- **Status changes only** through `node .claude/skills/implement/scripts/story-status.ts`; a `done` story is never
+  reopened.
+- **Don't guess:** unclear → hotspot (`HS-n`) or `[OPEN]` + row in `OPEN_QUESTIONS.md`; a wrong story goes back to
+  `review`, never decided in the code.
+- **Subagents don't know the conversation** – pass file paths and a clear task. At most 3 questions at once, except
+  in grilling rounds, which ask the whole frontier.
