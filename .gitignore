@@ -27,3 +27,7 @@ npm-debug.log*
 # Playwright
 /test-results/
 /playwright-report/
+
+# Kataster
+.claude/node_modules/
+.kataster/

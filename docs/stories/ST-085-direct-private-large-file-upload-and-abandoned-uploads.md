@@ -38,7 +38,7 @@ Rejected alternatives:
 - [x] When the attaching command is rejected, the uploaded content is deleted through the seam (ADR 0007); asserted with the in-memory adapter.
 - [x] Abandoned uploads are cleaned up as the ADR decides: a pending upload older than the fixed age is deleted after a later request and a younger one is kept (integration test with the injected clock and the in-memory adapter).
 - [x] The upload works under the current security headers: a browser test on the preview uploads a file and finds no blocked request. ST-070's script policy, which comes after this task, allows only the Blob store's host for it.
-- [x] `.claude/skills/engineering-conventions/SKILL.md` (user approves): the seam catalog row for code that stores content is extended with the upload address and the browser-side upload function, and the cleanup of abandoned uploads is documented.
+- [x] `docs/engineering/conventions.md` (user approves): the seam catalog row for code that stores content is extended with the upload address and the browser-side upload function, and the cleanup of abandoned uploads is documented.
 
 ## Out of Scope
 - The form, the file categories, the machine record's files section and `CMD-AttachFile` itself (ST-037)

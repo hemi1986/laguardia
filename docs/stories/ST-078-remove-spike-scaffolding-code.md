@@ -24,7 +24,7 @@ The spikes (`docs/reviews/ST-001-code-review.md` finding #2, `docs/reviews/ST-00
 - the test page `src/app/page.tsx` – passphrase gate, *Report problem* form for the hard-coded machine `"test-machine"`, the list of its reports and the links to the spike pages – and the parts of `src/app/actions.ts` that serve it,
 - the `spike` block in `src/platform/messages/team.de.ts`,
 - the browser test `e2e/report-problem.spec.ts`, which drives that page,
-- the spike's traces in the repository's configuration: `SPIKE_PASSWORD` in `.env.example`, the `SPIKE_PASSWORD` environment entry in `.github/workflows/e2e-preview.yml`, the `spike` element and its rules in `eslint.config.mjs`, the spike case in `src/platform/module-boundaries.test.ts`, the spike sentence in `playwright.config.ts` and the `spike/` line in the module layout of `.claude/skills/engineering-conventions/SKILL.md`.
+- the spike's traces in the repository's configuration: `SPIKE_PASSWORD` in `.env.example`, the `SPIKE_PASSWORD` environment entry in `.github/workflows/e2e-preview.yml`, the `spike` element and its rules in `eslint.config.mjs`, the spike case in `src/platform/module-boundaries.test.ts`, the spike sentence in `playwright.config.ts` and the `spike/` line in the module layout of `docs/engineering/conventions.md`.
 
 **Kept:** the photo building block `src/photo/*` and its tests. It is **not** spike scaffolding – ST-016, ST-032 and ST-054 build on it (`docs/architecture/photos.md`).
 

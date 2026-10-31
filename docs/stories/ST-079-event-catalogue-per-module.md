@@ -31,7 +31,7 @@ Because the backlog order is derived from priority and story ID (a higher ID nev
 - [ ] `journalOf` returns entries typed per event type: reading a field of `EVT-ProblemReported` that its projection does not list is a type error (type test).
 - [ ] `npm run verify` fails when a catalogue event is missing from `docs/domain/events.yaml`, or declares a different aggregate than `events.yaml`; both demonstrated with a deliberate change and then removed.
 - [ ] Every behaviour asserted by an existing journal test is still asserted after the conversion; no assertion is dropped (evidence: list old test → new test in the pull request). No test weakened.
-- [ ] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "The event journal" – the event catalogue.
+- [ ] Updates `docs/engineering/conventions.md` (user approves): "The event journal" – the event catalogue.
 
 ## Out of Scope
 - Highlighting what is new since the last visit on the dashboards (ST-050)

@@ -6,10 +6,11 @@
  *   done is final      – changes become a new story
  *   superseded         – from draft, review or ready: done elsewhere or replaced by a new planning; final as well
  *
- * Usage: node story-status.ts ST-010 in-progress|done|review|superseded
+ * Usage: node story-status.ts ST-010 in-progress|ready|done|review|superseded
  */
 import * as d from "../../../lib/discovery.ts";
 import * as e from "../../../lib/engineering.ts";
+import { syncStatusAfterChange } from "../../../lib/backlog-sync.ts";
 
 const [id, to] = process.argv.slice(2);
 if (!id || !to || !(d.STATUSES as readonly string[]).includes(to)) {
@@ -39,3 +40,8 @@ if (!report.ok) {
 }
 d.writeBacklogMd();
 console.log(`${d.storyId(story)}: ${from} → ${to}`);
+
+// With a tracker the local mirror is only half the change. GitHub can follow from here (gh); for Jira this prints
+// the MCP transition the agent has to run. A failure here never rolls the status back.
+const tracker = syncStatusAfterChange({ ...story, meta: { ...story.meta, status: to } }, to);
+if (tracker) console.log(tracker);

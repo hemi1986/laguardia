@@ -37,7 +37,7 @@ The runner, its signature and its lint rule stay as ST-073 built them. Tests kee
 - [x] After a technician changes a helper's role to technician, the helper's next command through the runner acts with the role technician, without logging in again.
 - [x] A command sent with the session of a deactivated account is rejected and stores neither a change nor a journal entry – also a visitor-allowed command such as `CMD-ReportProblem`, which is not run as a visitor (integration test with an account marked deactivated in the test data).
 - [x] A forged Server Action post by a signed-in helper that adds form fields such as `role=technician` or another team member's ID is still run as that helper: a technician-only command is rejected with `not-authorized` (browser or integration test).
-- [x] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that `currentPerson()` reads the session and that the system actor never comes from a session.
+- [x] The engineering conventions (`docs/engineering/conventions.md`) state that `currentPerson()` reads the session and that the system actor never comes from a session.
 
 ## Out of Scope
 - The Server Action runner, its missing actor parameter and the lint rule against direct `executeCommand` calls under `src/app/` (ST-073)

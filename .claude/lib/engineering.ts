@@ -309,6 +309,16 @@ export interface LanguageFinding {
   preferred: string;
 }
 
+/** Language of docs and stories, from the project profile (default English). */
+function artifactLanguage(): string {
+  try {
+    const profile = JSON.parse(readFileSync(join(d.ROOT, ".claude", "project.json"), "utf8"));
+    return String(profile.languages?.artifacts ?? "en").toLowerCase();
+  } catch {
+    return "en";
+  }
+}
+
 export function languageFindings(): LanguageFinding[] {
   const g = loadGlossary();
   if (!g.avoid.length) return [];
@@ -319,8 +329,9 @@ export function languageFindings(): LanguageFinding[] {
   }
   const out: LanguageFinding[] = [];
   const files = projectFiles();
-  // User-facing English text: message catalog values (German catalogs use the _UI (de)_ words; see engineering conventions)
-  for (const f of files.filter((f) => isCatalog(f) && basename(f).toLowerCase().startsWith("en"))) {
+  // User-facing text in the artifact language: message catalog values (other catalogs use the _UI (<lang>)_ words)
+  const language = artifactLanguage();
+  for (const f of files.filter((f) => isCatalog(f) && basename(f).toLowerCase().startsWith(language))) {
     let data: unknown;
     try {
       data = JSON.parse(read(f));

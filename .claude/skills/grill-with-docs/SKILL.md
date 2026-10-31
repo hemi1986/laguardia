@@ -4,4 +4,4 @@ description: A relentless interview to sharpen a plan or design, which also crea
 disable-model-invocation: true
 ---
 
-Call the Skill tool three times, for "grilling", "domain-model" and "architect".
+Call the `skill` tool three times, for `grilling`, `domain-model` and `architect`.

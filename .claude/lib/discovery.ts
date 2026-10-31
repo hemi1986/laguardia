@@ -15,6 +15,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { parse as parseYaml, YAMLError } from "yaml";
+import { isManagedLabel, labelPrefix, loadBacklogConfig } from "./config.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Obj = Record<string, any>;
@@ -539,18 +540,18 @@ export function scenarioTitlesIn(body: string): string[] {
 }
 
 /**
- * What a story with a screen has not decided yet – UX guidelines G7, G8 and G11 (user, 2026-10-01).
+ * What a story with a screen has not decided yet – the UX guidelines for the empty case, rejected input and
+ * permission.
  *
- * The backlog grooming of 2026-10-01 found the same three gaps 45 times across 63 stories, because nobody had
- * the list: 12 stories introduced a screen with no empty case, 20 never said what a rejection does with what was
- * typed, 13 let a person meet a wall instead of removing the door. A machine should remember that, not a person.
+ * These three gaps repeat across backlogs because nobody carries the list: stories introduce a screen with no
+ * empty case, never say what a rejection does with what was typed, or let a person meet a wall instead of
+ * removing the door. The validator should remember that, not a person.
  *
- * **Warnings, never errors, and a prompt to look rather than a verdict.** Each rule matches the wording the
- * stories actually use, which means it both misses cases and names stories where the guideline does not apply
- * (a story whose screen has no list has no empty case to describe). Checked against the 2026-10-01 grooming:
- * it finds twelve stories for G7, the same number the ux-designer found by reading – but not the same twelve.
- * Do not tune it further against a particular backlog; that fits the regex to 63 stories instead of to the rule.
- * The `ux-designer` in `/review-stories` is what reads for meaning, and it stays the authority.
+ * **Warnings, never errors, and a prompt to look rather than a verdict.** Each rule matches the wording stories
+ * actually use, which means it both misses cases and names stories where the guideline does not apply (a story
+ * whose screen has no list has no empty case to describe). Do not tune it against a particular backlog – that
+ * fits the regex to one project instead of to the rule. The `ux-designer` in `/review-stories` reads for meaning
+ * and stays the authority.
  */
 export function completenessWarnings(story: Story): string[] {
   if (story.meta.type !== "story") return []; // spikes and tech tasks carry checklists, not screens
@@ -561,7 +562,7 @@ export function completenessWarnings(story: Story): string[] {
   const out: string[] = [];
 
   // G7 – the empty case, but only where there is something that can *be* empty. A `ui` story is often a single
-  // action on a page another story owns (change a status, claim a defect) and has no empty case of its own.
+  // action on a page another story owns (change a status, claim a record) and has no empty case of its own.
   const showsAList = /\b(listed|overview|dashboard)\b/i.test(ac);
   if (showsAList && !titles.some((t) => /\b(no|nothing|none|empty)\b/i.test(t))) {
     out.push("no scenario for the empty case – what does the screen show before anything exists? (UX guideline G7)");
@@ -575,7 +576,7 @@ export function completenessWarnings(story: Story): string[] {
   // every scenario does ("When a technician registers …"). Otherwise G8 would never fire.
   const aboutPermission = (b: string) =>
     /\b(cannot|can not|may not|is not allowed|tries to|do(es)? not reach)\b/i.test(b) ||
-    /^\s*Given\b.*\b(helpers?|technicians?|visitors?)\b.*\bis logged in\b/im.test(b);
+    /^\s*Given\b.*\bis logged in\b/im.test(b);
 
   // G8 – a rejected form keeps what was typed. Skipped when every rejection is a permission rejection:
   // "a helper tries and is refused" has nothing typed to keep.
@@ -607,6 +608,7 @@ export function validateStories(report: Report, only: string | null = null, leni
   for (const s of parsed) counts.set(storyId(s), (counts.get(storyId(s)) ?? 0) + 1);
   const stories = new Map<string, Story>();
   for (const s of parsed) if (storyId(s)) stories.set(storyId(s), s);
+  const backlog = loadBacklogConfig();
 
   for (const s of parsed) {
     const r = isMine(s.path) ? report : new Report();
@@ -654,6 +656,27 @@ export function validateStories(report: Report, only: string | null = null, leni
     if (m.type === "story" && COMMITTED.has(status) && !list(m.events).length) {
       r.warn(where, "no domain events linked – traceability is missing");
     }
+
+    // In tracker mode the Markdown file is a mirror. A story that is handed to engineering must carry its
+    // external key, otherwise the next pull cannot match it and the tracker is not the source of truth any more.
+    if (backlog.provider !== "local") {
+      const ext = m.external;
+      if (ext !== undefined) {
+        if (ext === null || typeof ext !== "object" || ext.provider !== backlog.provider) {
+          r.error(where, `external.provider must be '${backlog.provider}' – the configured backlog provider`);
+        } else if (typeof ext.key !== "string" || !ext.key) {
+          r.error(where, "external.key is missing");
+        }
+      }
+      if (COMMITTED.has(status) && !(ext && typeof ext === "object" && typeof ext.key === "string" && ext.key)) {
+        r.error(where, `not linked to the ${backlog.provider} backlog – run /backlog-sync push before '${status}'`);
+      }
+      const prefix = labelPrefix(backlog);
+      for (const label of list(m.labels)) {
+        if (isManagedLabel(label, prefix)) r.warn(where, `label '${label}' is reserved for the backlog sync`);
+      }
+    }
+
     checkBody(r, where, m, s.body);
     // Completeness is checked while a story is being written; `ready` ones were approved under the older rules
     // and are challenged in `/groom-backlog` instead (user, 2026-10-01).
@@ -729,6 +752,16 @@ export function renderBacklog(stories: Story[], model: Obj | null): string {
     "> Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.",
     "",
   ];
+  const backlog = loadBacklogConfig();
+  if (backlog.provider !== "local") {
+    const target = backlog.provider === "jira"
+      ? `Jira (\`${backlog.jira.project || "project not configured"}\`)`
+      : "GitHub Issues";
+    out.push(
+      `> Backlog backend: **${target}** – \`docs/stories/\` is the local mirror of the tracker. Sync with \`/backlog-sync\`.`,
+      "",
+    );
+  }
   if (!stories.length) {
     out.push("_No stories yet. Derive them from the event storming with `@requirements-engineer`._", "");
     return out.join("\n");

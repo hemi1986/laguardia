@@ -41,7 +41,7 @@ Build a nonce-based script policy as described in the Next.js guide `node_module
 - [x] A photo upload and a file upload to the private Vercel Blob store and a presigned download of a stored file work on the preview under the policy; the policy allows only the Blob store's host for them.
 - [x] `npm run dev` works locally under the policy (with `'unsafe-eval'` only there).
 - [x] With every page rendered per request, the visitor machine page responds in under 1 s on the preview (Definition of Done, ST-059).
-- [x] The engineering conventions (`.claude/skills/engineering-conventions/SKILL.md`) state that pages are rendered per request because of the nonce, and that no inline script or third-party script is added without the nonce.
+- [x] The engineering conventions (`docs/engineering/conventions.md`) state that pages are rendered per request because of the nonce, and that no inline script or third-party script is added without the nonce.
 
 ## Out of Scope
 - The CSRF protection itself (ST-003, `src/proxy.ts`)

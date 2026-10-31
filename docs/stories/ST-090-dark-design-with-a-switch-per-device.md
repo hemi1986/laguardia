@@ -108,5 +108,5 @@ Scenario: Every fold looks the same
 
 ## Notes
 - Size estimate by the requirements engineer: M (the colour tokens exist since ST-076; the work is the device choice without JavaScript, the print page, the native controls and one fold look).
-- Lead dev (story review 2026-10-25): the server renders the design from a device setting before the page is sent, so no inline script is needed (ST-070); the visitor, legal and print pages must not follow that setting (a route-group decision, e.g. by the proxy); print needs a light set of colours scoped to it; one shared fold for „Mehr“, „Verwalten“ and G27's groups. Theme resolution per route group is a convention topic – the pull request names the paragraph of `.claude/skills/engineering-conventions/SKILL.md` it adds or changes.
+- Lead dev (story review 2026-10-25): the server renders the design from a device setting before the page is sent, so no inline script is needed (ST-070); the visitor, legal and print pages must not follow that setting (a route-group decision, e.g. by the proxy); print needs a light set of colours scoped to it; one shared fold for „Mehr“, „Verwalten“ and G27's groups. Theme resolution per route group is a convention topic – the pull request names the paragraph of `docs/engineering/conventions.md` it adds or changes.
 - Built after ST-089 (order by ID within `should`).

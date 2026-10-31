@@ -39,7 +39,7 @@ Feature `per-machine-maintenance` (user, 2026-10-25; `docs/domain/events.yaml` *
 - **Any rejection of the registration keeps every tick** of a task still offered and opens every group with a choice in it, together with ST-007's kept values (G8, G27). A task removed meanwhile is named: „„Wax playfield“ ist nicht mehr im Wartungsplan. Es wurde nichts gespeichert.“
 - After registering, the technician lands on the machine overview with ST-007's confirmation (unchanged).
 
-**Definition of done** (not a scenario): `.claude/skills/engineering-conventions/SKILL.md` gets a paragraph on the actor of a command another module runs in the same step (here *Changed by* = the registering technician – through the policy's `runs` or an actor passed to the policy, decided in the test plan); the pull request names it (the conventions are approved by the user).
+**Definition of done** (not a scenario): `docs/engineering/conventions.md` gets a paragraph on the actor of a command another module runs in the same step (here *Changed by* = the registering technician – through the policy's `runs` or an actor passed to the policy, decided in the test plan); the pull request names it (the conventions are approved by the user).
 
 ## Acceptance Criteria
 

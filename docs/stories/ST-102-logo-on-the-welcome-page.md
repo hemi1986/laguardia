@@ -60,7 +60,7 @@ at most a minute longer. Without a logo, `/logo` is not found. The welcome page 
 logo, never the logo's content reference. The store stays private and the content security policy unchanged.
 
 **Definition of done** (not scenarios) – an amendment of the engineering conventions
-(`.claude/skills/engineering-conventions/SKILL.md`) in this story, named in the pull request; the user approves it:
+(`docs/engineering/conventions.md`) in this story, named in the pull request; the user approves it:
 1. **Exception to „Only team pages issue view addresses“** (HS-1), with the sentence: "Exception: `/logo`, the
    museum's logo; the welcome page's data holds only whether a logo exists." That rule protects photos that may show
    people; the logo is public by nature.

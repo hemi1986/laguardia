@@ -9,7 +9,11 @@
       "Bash(node .claude/skills/implement/scripts/*)",
       "Bash(git status *)",
       "Bash(git diff *)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(node .claude/skills/adopt/scripts/*)",
+      "Bash(node .claude/skills/backlog/scripts/*)",
+      "Bash(gh issue *)",
+      "Bash(gh label *)"
     ],
     "deny": [],
     "ask": []
@@ -57,6 +61,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/code-check.ts\"",
             "timeout": 90
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/project-check.ts\"",
+            "timeout": 60
           }
         ]
       }

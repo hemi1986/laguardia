@@ -10,6 +10,7 @@ events: [EVT-Example]
 depends_on: []
 labels: []
 status: draft
+# external: { provider: github|jira, key: "…", url: "…" } – written by /backlog-sync, never by hand
 ---
 
 ## Story

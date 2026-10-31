@@ -1,6 +1,6 @@
 /**
  * Ubiquitous language in the code: flags words that CONTEXT.md lists under `_Avoid_`
- *   - in English message catalog values (files in messages/, locales/ or i18n/ starting with "en")
+ *   - in message catalog values (files in messages/, locales/ or i18n/ starting with the artifact language)
  *   - in identifiers declared in application code (generic programming words like "id" or "type" are skipped)
  *
  * Advisory: findings are warnings and never fail the build. A line containing `language-ok` is skipped
