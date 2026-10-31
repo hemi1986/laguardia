@@ -29,7 +29,7 @@ export type UploadRequest = {
  * record, no signature (`too-large`). Otherwise the server names the content, records it as a pending upload of its
  * owner, and only then signs an upload address for exactly that name, size and media type, valid for 30 minutes.
  */
-export async function issueUploadAddress(
+export async function grantUploadAddress(
   { db, storage, clock, newId }: UploadDependencies,
   request: UploadRequest,
 ): Promise<{ ok: true; name: string; address: UploadAddress } | { ok: false; error: "too-large" | "unknown-owner" }> {
@@ -52,7 +52,11 @@ export async function issueUploadAddress(
     throw error;
   }
   const validUntil = new Date(issuedAt.getTime() + UPLOAD_ADDRESS_MINUTES * 60 * 1000);
-  const address = await storage.uploadAddress(name, { size: request.size, contentType: request.contentType, validUntil });
+  const address = await storage.uploadAddress(name, {
+    size: request.size,
+    contentType: request.contentType,
+    validUntil,
+  });
   return { ok: true, name, address };
 }
 

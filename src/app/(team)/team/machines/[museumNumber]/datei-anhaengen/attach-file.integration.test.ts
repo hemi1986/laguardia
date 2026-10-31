@@ -10,7 +10,7 @@ import { testDatabase } from "@/test-support/database";
 import { post } from "@/test-support/forms";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { issueUploadAddress } from "@/upload";
+import { grantUploadAddress } from "@/upload";
 import { attachFileForm } from "./attach-file-form";
 import { rejectionWithFile } from "./attach-file-form-view";
 
@@ -33,12 +33,9 @@ beforeAll(async () => {
 });
 
 /** A PDF Anna chose on the form: uploaded for the machine, as the browser does it with the upload address. */
-async function aChosenPdf(
-  storage: MemoryStorage,
-  { bytes = 3, maximumSize = undefined as number | undefined } = {},
-) {
+async function aChosenPdf(storage: MemoryStorage, { bytes = 3, maximumSize = undefined as number | undefined } = {}) {
   const at = { db, storage, clock: fixedClock(uploadedAt), newId: randomUUID };
-  const issued = await issueUploadAddress(at, {
+  const issued = await grantUploadAddress(at, {
     issuedTo: anna.teamMemberId,
     owner: { machineId },
     size: bytes,

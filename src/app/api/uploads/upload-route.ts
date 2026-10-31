@@ -1,7 +1,7 @@
 import "server-only";
 import { isId } from "@/platform/command";
 import { isSameOrigin } from "@/platform/same-origin";
-import { cleanUpAbandonedUploads, issueUploadAddress, type UploadDependencies, type UploadRequest } from "@/upload";
+import { cleanUpAbandonedUploads, grantUploadAddress, type UploadDependencies, type UploadRequest } from "@/upload";
 
 export type UploadRouteDependencies = UploadDependencies & {
   /** The team member of the request's session – none without a session, or for a deactivated account. */
@@ -26,7 +26,7 @@ export function uploadRoute(dependencies: UploadRouteDependencies) {
 
     const asked = uploadRequest(await request.json().catch(() => undefined));
     if (!asked) return new Response("Bad request", { status: 400 });
-    const issued = await issueUploadAddress(dependencies, { issuedTo: teamMember.id, ...asked });
+    const issued = await grantUploadAddress(dependencies, { issuedTo: teamMember.id, ...asked });
     if (!issued.ok) {
       return issued.error === "too-large"
         ? new Response("Content too large", { status: 413 })

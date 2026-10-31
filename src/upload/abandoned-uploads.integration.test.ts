@@ -8,7 +8,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { cleanUpAbandonedUploads, issueUploadAddress, withUploadedContent } from ".";
+import { cleanUpAbandonedUploads, grantUploadAddress, withUploadedContent } from ".";
 
 /**
  * Abandoned uploads (ST-085, ADR 0009): content uploaded from the browser whose form was never sent. After a later
@@ -43,7 +43,7 @@ const at = (instant: string, storage: MemoryStorage) => ({
 
 /** A file Anna uploaded at the given time and never attached. */
 async function uploadedAt(instant: string, storage: MemoryStorage): Promise<string> {
-  const issued = await issueUploadAddress(at(instant, storage), {
+  const issued = await grantUploadAddress(at(instant, storage), {
     issuedTo: anna.teamMemberId,
     owner: { machineId },
     size: 1,

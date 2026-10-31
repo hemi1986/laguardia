@@ -6,7 +6,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { issueUploadAddress, withUploadedContent, type UploadOwner } from ".";
+import { grantUploadAddress, withUploadedContent, type UploadOwner } from ".";
 import { attachForTest, type AttachInput } from "./attach-stand-in.test-support";
 
 /**
@@ -40,7 +40,7 @@ const at = (instant: string, storage: MemoryStorage) => ({
 
 /** A file Anna uploaded for the machine with the upload address she was given. */
 async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Promise<string> {
-  const issued = await issueUploadAddress(at(uploadedAt, storage), {
+  const issued = await grantUploadAddress(at(uploadedAt, storage), {
     issuedTo: anna.teamMemberId,
     owner: { machineId },
     size: 3,
@@ -141,7 +141,7 @@ describe("attaching uploaded content", () => {
 
   it("does not run the command when nothing was uploaded under the name", async () => {
     const storage = memoryStorage();
-    const issued = await issueUploadAddress(at(uploadedAt, storage), {
+    const issued = await grantUploadAddress(at(uploadedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       size: 3,

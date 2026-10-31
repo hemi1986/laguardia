@@ -8,7 +8,7 @@ import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { eq } from "drizzle-orm";
-import { FILE_SIZE_LIMIT, issueUploadAddress } from ".";
+import { FILE_SIZE_LIMIT, grantUploadAddress } from ".";
 import { pendingUpload } from "./schema";
 
 /**
@@ -53,7 +53,7 @@ async function pendingUploadsNamed(name: string) {
 describe("the upload address", () => {
   it("is issued for a name the server chose, the declared size and media type, valid for 30 minutes", async () => {
     const storage = memoryStorage();
-    const issued = await issueUploadAddress(at(issuedAt, storage), {
+    const issued = await grantUploadAddress(at(issuedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(3),
@@ -67,7 +67,7 @@ describe("the upload address", () => {
   });
 
   it("records the pending upload with its owner, team member, time, size limit and declared size", async () => {
-    const issued = await issueUploadAddress(at(issuedAt), {
+    const issued = await grantUploadAddress(at(issuedAt), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(3),
@@ -92,7 +92,7 @@ describe("the upload address", () => {
     const names = () => db.select({ name: pendingUpload.name }).from(pendingUpload);
     const before = await names();
 
-    const refused = await issueUploadAddress(at(issuedAt, storage), {
+    const refused = await grantUploadAddress(at(issuedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(4, 3),
@@ -103,12 +103,12 @@ describe("the upload address", () => {
   });
 
   it("never allows more than the file size limit, whatever the request asks for", async () => {
-    const declaredAboveTheLimit = await issueUploadAddress(at(issuedAt), {
+    const declaredAboveTheLimit = await grantUploadAddress(at(issuedAt), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(FILE_SIZE_LIMIT + 1, FILE_SIZE_LIMIT * 2),
     });
-    const atTheLimit = await issueUploadAddress(at(issuedAt), {
+    const atTheLimit = await grantUploadAddress(at(issuedAt), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(FILE_SIZE_LIMIT, FILE_SIZE_LIMIT * 2),
@@ -121,7 +121,7 @@ describe("the upload address", () => {
 
   it("is no longer valid 30 minutes after it was issued", async () => {
     const storage = memoryStorage();
-    const issued = await issueUploadAddress(at(issuedAt, storage), {
+    const issued = await grantUploadAddress(at(issuedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
       ...aPdf(3),
@@ -136,7 +136,7 @@ describe("the upload address", () => {
   it("is recorded for a machine model as well", async () => {
     const machineModelId = await aMachineModel();
 
-    const issued = await issueUploadAddress(at(issuedAt), {
+    const issued = await grantUploadAddress(at(issuedAt), {
       issuedTo: tom.teamMemberId,
       owner: { machineModelId },
       ...aPdf(3),
@@ -147,14 +147,14 @@ describe("the upload address", () => {
 
   it("is not recorded for an owner that does not exist", async () => {
     expect(
-      await issueUploadAddress(at(issuedAt), {
+      await grantUploadAddress(at(issuedAt), {
         issuedTo: anna.teamMemberId,
         owner: { machineId: randomUUID() },
         ...aPdf(3),
       }),
     ).toEqual({ ok: false, error: "unknown-owner" });
     expect(
-      await issueUploadAddress(at(issuedAt), {
+      await grantUploadAddress(at(issuedAt), {
         issuedTo: anna.teamMemberId,
         owner: { machineModelId: randomUUID() },
         ...aPdf(3),
