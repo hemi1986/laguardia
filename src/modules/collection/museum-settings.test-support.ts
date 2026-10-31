@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { journalOf, type Database } from "@/platform/command";
+import { LEGAL_TEXTS_ID } from "./change-legal-texts";
 import { MUSEUM_DETAILS_ID } from "./change-museum-details";
 import { MUSEUM_LOGO_ID } from "./replace-logo";
 
@@ -32,4 +33,21 @@ export function museumLogoJournal(db: Database) {
  */
 export async function withoutLogo(db: Database): Promise<void> {
   await db.execute(sql`UPDATE museum_logo SET content = NULL, content_type = NULL, version = version + 1`);
+}
+
+/** The journal of the legal texts (ST-103), oldest first – for tests that check what a save recorded. */
+export function legalTextsJournal(db: Database) {
+  return journalOf(db, { aggregateId: LEGAL_TEXTS_ID });
+}
+
+/**
+ * Puts the legal texts of an isolated test database back to their defaults – the placeholder privacy notice (the
+ * columns' defaults, as the migration inserts them) and no imprint –, so each test starts from "no technician has changed
+ * the legal texts yet". Its version goes on counting, as it would.
+ */
+export async function withDefaultLegalTexts(db: Database): Promise<void> {
+  await db.execute(
+    sql`UPDATE legal_texts SET privacy_notice_de = DEFAULT, privacy_notice_en = DEFAULT, imprint_de = NULL,
+      imprint_en = NULL, version = version + 1`,
+  );
 }
