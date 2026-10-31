@@ -6,7 +6,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
-import { changeMuseumDetailsCommand, museumSettings, welcomePage } from "@/modules/collection";
+import {
+  changeMuseumDetailsCommand,
+  museumSettings,
+  removeLogoCommand,
+  replaceLogoCommand,
+  welcomePage,
+} from "@/modules/collection";
 import { museumLogoJournal, withoutLogo } from "@/modules/collection/museum-settings.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
@@ -15,7 +21,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { WelcomePageView } from "../../../welcome-page";
-import { logoFormDefinition, removeLogoFormDefinition, uploadLogoCommand, removeLogoCommand } from "./logo-form-input";
+import { logoFormDefinition, removeLogoFormDefinition } from "./logo-form-input";
 import { LogoFormContent } from "./logo-form";
 import { loadMuseumSettings, savedLanding } from "./museum-settings-data";
 import { MuseumSettingsView } from "./museum-settings";
@@ -52,7 +58,7 @@ function logoFormsOf(actor: Actor) {
   const landed: string[] = [];
   const runner = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage });
   return {
-    upload: runner(uploadLogoCommand, { ...logoFormDefinition, onSuccess: async () => void landed.push("saved") }),
+    upload: runner(replaceLogoCommand, { ...logoFormDefinition, onSuccess: async () => void landed.push("saved") }),
     remove: runner(removeLogoCommand, {
       ...removeLogoFormDefinition,
       onSuccess: async () => void landed.push("removed"),

@@ -68,7 +68,7 @@ export function LogoFormContent({
       <form action={upload} className="flex flex-col gap-4">
         <VersionField version={version} />
         <Field data-invalid={imageInvalid}>
-          <FieldLabel htmlFor="logo">{hasLogo ? texts.replace : texts.upload}</FieldLabel>
+          <FieldLabel htmlFor="logo">{texts.image}</FieldLabel>
           <Input
             id="logo"
             name={LOGO_FIELD}
@@ -84,7 +84,7 @@ export function LogoFormContent({
             aria-invalid={imageInvalid || undefined}
             aria-describedby={rejection ? `${rejectionId} logo-hint` : "logo-hint"}
           />
-          <FieldDescription id="logo-hint">{texts.file}</FieldDescription>
+          <FieldDescription id="logo-hint">{texts.hint}</FieldDescription>
         </Field>
         {rejection && (
           <div id={rejectionId}>

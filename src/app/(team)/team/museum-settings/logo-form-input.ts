@@ -1,4 +1,4 @@
-import { removeLogoCommand, replaceLogoCommand, type LogoMediaType, type RemoveLogoError } from "@/modules/collection";
+import type { LogoMediaType, RemoveLogoError, removeLogoCommand, replaceLogoCommand } from "@/modules/collection";
 import type { FormFields, FormState } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
 import type { LogoError } from "@/photo";
@@ -12,12 +12,8 @@ export type LogoFormField = (typeof logoFormFields)[number];
 /** The file field of the upload – posted as chosen, without the browser's photo preparation (ST-102). */
 export const LOGO_FIELD = "logo";
 
-/** The command each part of the form runs – named here, so the actions and their tests run the same ones. */
-export const uploadLogoCommand = replaceLogoCommand;
-export { removeLogoCommand };
-
 /**
- * How the upload of the form „Logo“ is read (ST-102): the logo version the page showed and the logo as the photo module
+ * How the upload of the form „Logo“ (CMD-ReplaceLogo) is read (ST-102): the logo version the page showed and the logo as the photo module
  * accepted and stored it – what its Server Action runs and its tests post through.
  */
 export const logoFormDefinition = {
@@ -30,7 +26,7 @@ export const logoFormDefinition = {
   }),
 } as const;
 
-/** How the removal of the logo is read (ST-102): one tap, only the logo version the page showed. */
+/** How the removal of the logo (CMD-RemoveLogo) is read (ST-102): one tap, only the logo version the page showed. */
 export const removeLogoFormDefinition = {
   fields: logoFormFields,
   input: (fields: FormFields<LogoFormField>) => ({ version: versionSeen(fields.version) }),
