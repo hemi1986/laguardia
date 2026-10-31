@@ -4,14 +4,12 @@ import { aMachine, expect, logIn, test } from "./fixtures";
 
 /**
  * A camera photo as a file on a phone (ST-054): from the machine record's files section to its own page, where the
- * photo is taken (or chosen), prepared in the browser and stored through the server in the private Blob store –
- * locally the Development Blob store – as a file of the file category Photo.
+ * photo is taken (or chosen), prepared in the browser and stored through the server in the private bucket – locally
+ * `laguardia-e2e` on SeaweedFS (ST-099) – as a file of the file category Photo.
  */
 const needsTechnician = () =>
   test.skip(!process.env.E2E_TEAM_USERNAME || !process.env.E2E_TEAM_PASSWORD, "needs a technician account");
 // The photo is stored before the command can reject it – without the store the answer is not-stored.
-const needsBlob = () =>
-  test.skip(!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BASE_URL, "needs the Development Blob store");
 
 /** A phone camera's photo: sideways with EXIF orientation 6, and with a GPS location. */
 async function aCameraPhoto() {
@@ -45,7 +43,6 @@ const filesSection = (page: Page) =>
 
 test("attaching a camera photo leads back to the machine record, which shows it under Foto", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await thePhotoForm(page);
 
   await takeAPhoto(page);
@@ -67,7 +64,6 @@ test("attaching a camera photo leads back to the machine record, which shows it 
 
 test("ST-054: A rejection says the photo must be chosen again", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await thePhotoForm(page);
 
   await takeAPhoto(page);

@@ -8,7 +8,7 @@ import {
 import { photoViewAddresses } from "@/photo";
 import { systemClock, type Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { blobStorage } from "@/platform/storage";
+import { s3Storage } from "@/platform/storage";
 import { named } from "../../../named";
 import { byYear } from "../history-by-year";
 import { photoAt, type PhotoSource } from "../../../team-photos";
@@ -53,7 +53,7 @@ export async function loadRepairHistory(
   db: Database,
   museumNumber: string,
   chosenYear?: string,
-  { clock = systemClock, storage = blobStorage() }: PhotoSource & { clock?: Clock } = {},
+  { clock = systemClock, storage = s3Storage() }: PhotoSource & { clock?: Clock } = {},
 ): Promise<RepairHistoryData | undefined> {
   // A retired machine keeps its repair history (ST-039).
   const machineId = await machineIdOf(db, museumNumber, { retiredToo: true });

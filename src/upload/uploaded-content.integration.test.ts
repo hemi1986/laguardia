@@ -6,7 +6,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { recordPendingUpload, uploadAddressOf, withUploadedContent, type UploadOwner } from ".";
+import { grantUploadAddress, withUploadedContent, type UploadOwner } from ".";
 import { attachForTest, type AttachInput } from "./attach-stand-in.test-support";
 
 /**
@@ -40,15 +40,16 @@ const at = (instant: string, storage: MemoryStorage) => ({
 
 /** A file Anna uploaded for the machine with the upload address she was given. */
 async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Promise<string> {
-  const pending = await recordPendingUpload(at(uploadedAt, storage), {
+  const issued = await grantUploadAddress(at(uploadedAt, storage), {
     issuedTo: anna.teamMemberId,
     owner: { machineId },
+    size: 3,
+    contentType: "application/pdf",
     maximumSize,
   });
-  if (!pending.ok) throw new Error(pending.error);
-  const address = await uploadAddressOf(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, name: pending.name });
-  await storage.upload(address!, new Uint8Array([1, 2, 3]), "application/pdf", new Date(uploadedAt));
-  return pending.name;
+  if (!issued.ok) throw new Error(issued.error);
+  await storage.upload(issued.address, new Uint8Array([1, 2, 3]), "application/pdf", new Date(uploadedAt));
+  return issued.name;
 }
 
 function attach(
@@ -128,12 +129,11 @@ describe("attaching uploaded content", () => {
     });
   });
 
-  it("refuses content larger than the pending upload allowed and deletes it – Blob does not hold a multipart upload to the limit", async () => {
+  it("refuses content larger than the pending upload allowed and deletes it – the last check after the store's", async () => {
     const storage = memoryStorage();
     const name = await anUploadedFile(storage, 3);
-    // An upload in parts: Blob checks the size limit only for an upload in one piece (ST-085).
-    const address = await uploadAddressOf(at(uploadedAt, storage), { issuedTo: anna.teamMemberId, name });
-    await storage.upload(address!, new Uint8Array(4), "application/pdf", new Date(uploadedAt), { multipart: true });
+    // However it got there: the store holds more than the limit allowed (ADR 0009 keeps checking when attaching).
+    await storage.write(name, new Uint8Array(4), "application/pdf");
 
     expect(await attach(storage, "throw")(name)).toEqual({ ok: false, error: "too-large" });
     expect(storage.read(name)).toBeUndefined();
@@ -141,13 +141,15 @@ describe("attaching uploaded content", () => {
 
   it("does not run the command when nothing was uploaded under the name", async () => {
     const storage = memoryStorage();
-    const pending = await recordPendingUpload(at(uploadedAt, storage), {
+    const issued = await grantUploadAddress(at(uploadedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
+      size: 3,
+      contentType: "application/pdf",
     });
-    if (!pending.ok) throw new Error(pending.error);
+    if (!issued.ok) throw new Error(issued.error);
 
-    expect(await attach(storage, "throw")(pending.name)).toEqual({ ok: false, error: "content-gone" });
+    expect(await attach(storage, "throw")(issued.name)).toEqual({ ok: false, error: "content-gone" });
   });
 
   it("deletes the uploaded content when its size cannot be read, and the error still reaches the caller", async () => {

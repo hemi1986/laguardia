@@ -10,7 +10,7 @@ import { testDatabase } from "@/test-support/database";
 import { post } from "@/test-support/forms";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { recordPendingUpload, uploadAddressOf } from "@/upload";
+import { grantUploadAddress } from "@/upload";
 import { attachFileForm } from "./attach-file-form";
 import { rejectionWithFile } from "./attach-file-form-view";
 
@@ -33,16 +33,18 @@ beforeAll(async () => {
 });
 
 /** A PDF Anna chose on the form: uploaded for the machine, as the browser does it with the upload address. */
-async function aChosenPdf(
-  storage: MemoryStorage,
-  { bytes = 3, multipart = false, maximumSize = undefined as number | undefined } = {},
-) {
+async function aChosenPdf(storage: MemoryStorage, { bytes = 3, maximumSize = undefined as number | undefined } = {}) {
   const at = { db, storage, clock: fixedClock(uploadedAt), newId: randomUUID };
-  const pending = await recordPendingUpload(at, { issuedTo: anna.teamMemberId, owner: { machineId }, maximumSize });
-  if (!pending.ok) throw new Error(pending.error);
-  const address = await uploadAddressOf(at, { issuedTo: anna.teamMemberId, name: pending.name });
-  await storage.upload(address!, new Uint8Array(bytes), "application/pdf", new Date(uploadedAt), { multipart });
-  return pending.name;
+  const issued = await grantUploadAddress(at, {
+    issuedTo: anna.teamMemberId,
+    owner: { machineId },
+    size: bytes,
+    contentType: "application/pdf",
+    maximumSize,
+  });
+  if (!issued.ok) throw new Error(issued.error);
+  await storage.upload(issued.address, new Uint8Array(bytes), "application/pdf", new Date(uploadedAt));
+  return issued.name;
 }
 
 function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}) {
@@ -138,9 +140,10 @@ describe("the form that attaches a file", () => {
     expect(await titles()).not.toContain("Too late");
   });
 
-  it("refuses a file above its size limit when attaching, though Blob let the upload in parts through", async () => {
+  it("refuses a file above its size limit when attaching, however the store came to hold it", async () => {
     const storage = memoryStorage();
-    const content = await aChosenPdf(storage, { bytes: 5, multipart: true, maximumSize: 4 });
+    const content = await aChosenPdf(storage, { bytes: 4, maximumSize: 4 });
+    await storage.write(content, new Uint8Array(5), "application/pdf");
 
     const state = await sendForm(storage).send({ ...complete, title: "Too large", content });
 

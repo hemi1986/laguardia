@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { renewedSessionCookie } from "@/modules/team";
-import { blobStoreHost, contentSecurityPolicy, newNonce } from "@/platform/content-security-policy";
+import { contentSecurityPolicy, newNonce } from "@/platform/content-security-policy";
 import { database } from "@/platform/database";
 import { isSameOrigin } from "@/platform/same-origin";
+// The settings alone, not the seam: the proxy runs on every page request and needs no S3 SDK.
+import { s3Settings, storeOrigin } from "@/platform/storage/s3-settings";
 import { PAGE_PATH_HEADER } from "@/app/design";
 
 /**
@@ -25,7 +27,7 @@ export async function proxy(request: NextRequest) {
   const policy = contentSecurityPolicy({
     nonce: newNonce(),
     development: process.env.NODE_ENV === "development",
-    blobStoreHost: blobStoreHost(),
+    storeOrigin: storeOriginOfThisDeployment(),
   });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("Content-Security-Policy", policy);
@@ -33,6 +35,12 @@ export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", policy);
   return withRenewedSessionCookie(request, response);
+}
+
+/** The bucket's origin from the same settings the S3 adapter signs with (ST-099) – none when no store is configured. */
+function storeOriginOfThisDeployment(): string | undefined {
+  const settings = s3Settings();
+  return settings && storeOrigin(settings);
 }
 
 /** The session cookie slides with every page request – 90 days without use (ST-004, src/modules/team/session-cookie.ts). */

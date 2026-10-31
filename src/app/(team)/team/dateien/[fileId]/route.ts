@@ -3,7 +3,7 @@ import { fileToOpen } from "@/modules/collection";
 import { systemClock } from "@/platform/clock";
 import { isId } from "@/platform/command";
 import { database } from "@/platform/database";
-import { blobStorage } from "@/platform/storage";
+import { s3Storage } from "@/platform/storage";
 import { viewAddressOf } from "@/upload";
 import { requireTeamMember } from "../../../../team-session";
 
@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/team/dat
   const { fileId } = await params;
   const found = isId(fileId) ? await fileToOpen(database(), fileId) : undefined;
   if (!found) notFound();
-  const address = await viewAddressOf(blobStorage(), systemClock, found.content, { download: found.download });
+  const address = await viewAddressOf(s3Storage(), systemClock, found.content, { download: found.download });
   if (!address) notFound();
   return new Response(null, { status: 303, headers: { Location: address, "Cache-Control": "private, no-store" } });
 }

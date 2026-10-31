@@ -3,12 +3,10 @@ import { aMachine, expect, logIn, test } from "./fixtures";
 
 /**
  * Removing a file on a phone (ST-038): „Entfernen“ next to a file on the machine record leads to the question of its
- * own (G10b), which names the file and says that it is deleted for good. Attaching uses the Development Blob store.
+ * own (G10b), which names the file and says that it is deleted for good. Attaching uses the local bucket on SeaweedFS (ST-099).
  */
 const needsTechnician = () =>
   test.skip(!process.env.E2E_TEAM_USERNAME || !process.env.E2E_TEAM_PASSWORD, "needs a technician account");
-const needsBlob = () =>
-  test.skip(!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BASE_URL, "needs the Development Blob store");
 
 /** A new machine of a new machine model with a small PDF of the model attached; ends on its machine record. */
 async function aMachineWithFile(page: Page, title: string) {
@@ -37,7 +35,6 @@ const filesSection = (page: Page) =>
 
 test("ST-038: Removal needs a confirmation", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const machine = await aMachineWithFile(page, "MM Operations Manual");
 
   await filesSection(page).getByRole("link", { name: "„MM Operations Manual“ entfernen" }).click();
@@ -54,7 +51,6 @@ test("ST-038: Removal needs a confirmation", async ({ page }) => {
 
 test("removes the file for good from its question, and its former address opens nothing", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   await aMachineWithFile(page, "MM Manual (wrong edition)");
   const address = await filesSection(page)
     .getByRole("link", { name: "MM Manual (wrong edition)", exact: true })
@@ -70,7 +66,6 @@ test("removes the file for good from its question, and its former address opens 
 
 test("ST-091: The question before removing a file names the machine in its heading", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await aMachineWithFile(page, "Manual");
 
   await filesSection(page).getByRole("link", { name: "„Manual“ entfernen" }).click();

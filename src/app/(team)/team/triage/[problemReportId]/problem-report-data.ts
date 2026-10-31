@@ -2,7 +2,7 @@ import { defectsToLinkTo, problemReportForTriage, type DefectsToLinkTo } from "@
 import { named } from "../../named";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
-import { blobStorage } from "@/platform/storage";
+import { s3Storage } from "@/platform/storage";
 import type { PhotoSource } from "../../team-photos";
 import { withNames, type TriageListItem } from "../triage-list-data";
 
@@ -28,7 +28,7 @@ export async function loadProblemReport(
   db: Database,
   clock: Clock,
   problemReportId: string,
-  { storage = blobStorage() }: PhotoSource = {},
+  { storage = s3Storage() }: PhotoSource = {},
 ): Promise<ProblemReportData> {
   const found = await problemReportForTriage(db, clock, problemReportId);
   if (!found) return undefined;

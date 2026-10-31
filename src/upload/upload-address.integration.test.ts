@@ -7,12 +7,15 @@ import { memoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { FILE_SIZE_LIMIT, recordPendingUpload, uploadAddressOf } from ".";
+import { eq } from "drizzle-orm";
+import { FILE_SIZE_LIMIT, grantUploadAddress } from ".";
+import { pendingUpload } from "./schema";
 
 /**
- * The upload address (ST-085, ADR 0009): the server names the content, records it as a pending upload for one owner
- * and the team member who asked, and only then signs a permission for exactly that name – limited in size and valid
- * for 30 minutes. The in-memory storage adapter shows what the permission allows; real PostgreSQL holds the records.
+ * The upload address (ST-085, ST-099, ADR 0009/0012): the server holds the declared size to the limit, names the
+ * content, records it as a pending upload for one owner and the team member who asked, and only then signs a permission
+ * for exactly that name, size and media type, valid for 30 minutes. The in-memory storage adapter shows what the
+ * permission allows; real PostgreSQL holds the records.
  */
 const db = testDatabase();
 const issuedAt = "2026-10-18T10:00:00Z";
@@ -41,82 +44,121 @@ const at = (instant: string, storage = memoryStorage()) => ({
   newId: randomUUID,
 });
 
+const aPdf = (size: number, maximumSize?: number) => ({ size, contentType: "application/pdf", maximumSize });
+
+async function pendingUploadsNamed(name: string) {
+  return db.select().from(pendingUpload).where(eq(pendingUpload.name, name));
+}
+
 describe("the upload address", () => {
-  it("is issued for a name the server chose, limited to the file size limit and valid for 30 minutes", async () => {
+  it("is issued for a name the server chose, the declared size and media type, valid for 30 minutes", async () => {
     const storage = memoryStorage();
-    const pending = await recordPendingUpload(at(issuedAt, storage), {
+    const issued = await grantUploadAddress(at(issuedAt, storage), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
+      ...aPdf(3),
     });
-    if (!pending.ok) throw new Error(pending.error);
+    if (!issued.ok) throw new Error(issued.error);
 
-    expect(pending.name).toMatch(/^files\/[0-9a-f-]{36}$/);
-    expect(
-      await uploadAddressOf(at("2026-10-18T10:05:00Z", storage), { issuedTo: anna.teamMemberId, name: pending.name }),
-    ).toEqual({
-      name: pending.name,
-      maximumSize: FILE_SIZE_LIMIT,
-      validUntil: "2026-10-18T10:30:00.000Z",
-    });
+    expect(issued.name).toMatch(/^files\/[0-9a-f-]{36}$/);
+    expect(issued.address.url).toBe(`memory://${issued.name}?upload-until=2026-10-18T10:30:00.000Z&size=3`);
+    await storage.upload(issued.address, new Uint8Array(3), "application/pdf", new Date("2026-10-18T10:29:59Z"));
+    expect(storage.read(issued.name)?.bytes).toHaveLength(3);
   });
 
-  it("refuses content above the size limit by the permission itself", async () => {
-    const storage = memoryStorage();
-    const pending = await recordPendingUpload(at(issuedAt, storage), {
+  it("records the pending upload with its owner, team member, time, size limit and declared size", async () => {
+    const issued = await grantUploadAddress(at(issuedAt), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
-      maximumSize: 3,
+      ...aPdf(3),
     });
-    if (!pending.ok) throw new Error(pending.error);
-    const address = await uploadAddressOf(at(issuedAt, storage), { issuedTo: anna.teamMemberId, name: pending.name });
+    if (!issued.ok) throw new Error(issued.error);
 
-    await expect(storage.upload(address!, new Uint8Array(4), "application/pdf", new Date(issuedAt))).rejects.toThrow(
-      "too large",
-    );
-    await storage.upload(address!, new Uint8Array(3), "application/pdf", new Date(issuedAt));
-    expect(storage.read(pending.name)?.bytes).toHaveLength(3);
+    expect(await pendingUploadsNamed(issued.name)).toEqual([
+      {
+        name: issued.name,
+        machineId,
+        machineModelId: null,
+        issuedTo: anna.teamMemberId,
+        issuedAt: new Date(issuedAt),
+        maximumSize: FILE_SIZE_LIMIT,
+        declaredSize: 3,
+      },
+    ]);
+  });
+
+  it("refuses a declared size above the size limit before recording or signing anything", async () => {
+    const storage = memoryStorage();
+    const names = () => db.select({ name: pendingUpload.name }).from(pendingUpload);
+    const before = await names();
+
+    const refused = await grantUploadAddress(at(issuedAt, storage), {
+      issuedTo: anna.teamMemberId,
+      owner: { machineId },
+      ...aPdf(4, 3),
+    });
+
+    expect(refused).toEqual({ ok: false, error: "too-large" });
+    expect(await names()).toEqual(before);
   });
 
   it("never allows more than the file size limit, whatever the request asks for", async () => {
-    const pending = await recordPendingUpload(at(issuedAt), {
+    const declaredAboveTheLimit = await grantUploadAddress(at(issuedAt), {
       issuedTo: anna.teamMemberId,
       owner: { machineId },
-      maximumSize: FILE_SIZE_LIMIT * 2,
+      ...aPdf(FILE_SIZE_LIMIT + 1, FILE_SIZE_LIMIT * 2),
     });
-    if (!pending.ok) throw new Error(pending.error);
+    const atTheLimit = await grantUploadAddress(at(issuedAt), {
+      issuedTo: anna.teamMemberId,
+      owner: { machineId },
+      ...aPdf(FILE_SIZE_LIMIT, FILE_SIZE_LIMIT * 2),
+    });
+    if (!atTheLimit.ok) throw new Error(atTheLimit.error);
 
-    expect(await uploadAddressOf(at(issuedAt), { issuedTo: anna.teamMemberId, name: pending.name })).toMatchObject({
-      maximumSize: FILE_SIZE_LIMIT,
-    });
+    expect(declaredAboveTheLimit).toEqual({ ok: false, error: "too-large" });
+    expect(await pendingUploadsNamed(atTheLimit.name)).toMatchObject([{ maximumSize: FILE_SIZE_LIMIT }]);
   });
 
-  it("is issued only to the team member the pending upload was recorded for, and only for 30 minutes", async () => {
-    const pending = await recordPendingUpload(at(issuedAt), { issuedTo: anna.teamMemberId, owner: { machineId } });
-    if (!pending.ok) throw new Error(pending.error);
+  it("is no longer valid 30 minutes after it was issued", async () => {
+    const storage = memoryStorage();
+    const issued = await grantUploadAddress(at(issuedAt, storage), {
+      issuedTo: anna.teamMemberId,
+      owner: { machineId },
+      ...aPdf(3),
+    });
+    if (!issued.ok) throw new Error(issued.error);
 
-    expect(await uploadAddressOf(at(issuedAt), { issuedTo: tom.teamMemberId, name: pending.name })).toBeUndefined();
-    expect(
-      await uploadAddressOf(at(issuedAt), { issuedTo: anna.teamMemberId, name: "files/someone-elses" }),
-    ).toBeUndefined();
-    expect(
-      await uploadAddressOf(at("2026-10-18T10:30:01Z"), { issuedTo: anna.teamMemberId, name: pending.name }),
-    ).toBeUndefined();
+    await expect(
+      storage.upload(issued.address, new Uint8Array(3), "application/pdf", new Date("2026-10-18T10:30:01Z")),
+    ).rejects.toThrow("expired");
   });
 
   it("is recorded for a machine model as well", async () => {
     const machineModelId = await aMachineModel();
 
-    const pending = await recordPendingUpload(at(issuedAt), { issuedTo: tom.teamMemberId, owner: { machineModelId } });
+    const issued = await grantUploadAddress(at(issuedAt), {
+      issuedTo: tom.teamMemberId,
+      owner: { machineModelId },
+      ...aPdf(3),
+    });
 
-    expect(pending.ok).toBe(true);
+    expect(issued.ok).toBe(true);
   });
 
   it("is not recorded for an owner that does not exist", async () => {
     expect(
-      await recordPendingUpload(at(issuedAt), { issuedTo: anna.teamMemberId, owner: { machineId: randomUUID() } }),
+      await grantUploadAddress(at(issuedAt), {
+        issuedTo: anna.teamMemberId,
+        owner: { machineId: randomUUID() },
+        ...aPdf(3),
+      }),
     ).toEqual({ ok: false, error: "unknown-owner" });
     expect(
-      await recordPendingUpload(at(issuedAt), { issuedTo: anna.teamMemberId, owner: { machineModelId: randomUUID() } }),
+      await grantUploadAddress(at(issuedAt), {
+        issuedTo: anna.teamMemberId,
+        owner: { machineModelId: randomUUID() },
+        ...aPdf(3),
+      }),
     ).toEqual({ ok: false, error: "unknown-owner" });
   });
 });

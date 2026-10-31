@@ -125,6 +125,10 @@ _UI (de)_: Datei
 Technical, not a domain term (ST-085, ADR 0009): content a team member uploaded from the browser for a machine or machine model that no file refers to yet. Attaching it as a file ends it; one older than 24 hours is abandoned and cleaned up. It is not a *File* – the noun "upload" alone still means nothing here.
 _Avoid_: Upload (alone), temporary file
 
+**Upload address**:
+Technical, not a domain term (ST-085, ADR 0009, ADR 0012): the short-lived permission the server gives a team member's browser to put content of a declared size under exactly one name in the store. Issuing it records a *Pending upload*.
+_Avoid_: Upload URL, upload token
+
 **File category**:
 The fixed kind of a file: *Manual*, *Schematic*, *Photo* or *Other*.
 _Avoid_: File type, format, tag

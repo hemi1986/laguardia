@@ -4,7 +4,7 @@
 
 **Progress: 67 of 67 domain stories done** · scenarios 637 of 637
 
-**95 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 84 · Superseded: 11
+**96 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 85 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -62,12 +62,13 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-096](ST-096-change-a-machines-maintenance-tasks-on-its-record.md) | Change a machine's maintenance tasks from its machine record | story | Maintenance | must | M | medium | ST-095 |
 | [ST-097](ST-097-choose-maintenance-tasks-when-registering-a-machine.md) | Choose a new machine's maintenance tasks when registering it | story | Maintenance | must | M | high | ST-096 |
 | [ST-098](ST-098-sticker-selection-and-recording-for-several-in-groups.md) | The sticker selection and recording for several machines choose in folding groups | story | Collection | must | S | low | ST-094 |
+| [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
+| [ST-099](ST-099-s3-compatible-object-storage.md) | S3-compatible object storage everywhere | tech-task | Collection | must | L | high | ST-085 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
 | [ST-034](ST-034-move-machine.md) | Move a machine to a new location | story | Collection | should | XS | low | ST-009 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | should | M | medium | ST-009, ST-010, ST-043, ST-044 |
-| [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
 | [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
 | [ST-039](ST-039-retire-machine.md) | Retire a machine, closing its open defects and problem reports | story | Collection | should | M | high | ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |

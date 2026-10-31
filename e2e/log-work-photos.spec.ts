@@ -4,13 +4,12 @@ import { anOpenDefect, expect, logIn, openDefect, pageWidth, test } from "./fixt
 
 /**
  * Photos on a work log entry on a phone (ST-032): the browser prepares each photo, the server stores them in the
- * private Blob store – locally the separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`)
- * – and the defect's page shows them under the entry. Needs the e2e technician each local run creates (ST-083).
+ * private bucket – locally `laguardia-e2e` on SeaweedFS (`npm run db:up`, ST-099) – and the defect's page shows them
+ * under the entry. Needs the e2e technician each local run creates (ST-083).
  */
 test.beforeEach(async ({ page }) => {
   const { E2E_TEAM_USERNAME: username, E2E_TEAM_PASSWORD: password, BASE_URL } = process.env;
   test.skip(!username || !password || !!BASE_URL, "needs a local technician account");
-  test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "needs the Development Blob store");
   await logIn(page);
 });
 

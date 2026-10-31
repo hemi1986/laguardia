@@ -1,13 +1,7 @@
 import "server-only";
 import { isId } from "@/platform/command";
 import { isSameOrigin } from "@/platform/same-origin";
-import {
-  cleanUpAbandonedUploads,
-  recordPendingUpload,
-  uploadAddressOf,
-  type UploadDependencies,
-  type UploadOwner,
-} from "@/upload";
+import { cleanUpAbandonedUploads, grantUploadAddress, type UploadDependencies, type UploadRequest } from "@/upload";
 
 export type UploadRouteDependencies = UploadDependencies & {
   /** The team member of the request's session – none without a session, or for a deactivated account. */
@@ -17,11 +11,11 @@ export type UploadRouteDependencies = UploadDependencies & {
 };
 
 /**
- * The route that issues upload addresses (ST-085, ADR 0009) – the two steps of a direct upload from the browser:
- * 1. `laguardia.pending-upload` with the owner (and, if wanted, a stricter size limit): the server names the content and
- *    records it as a pending upload → `{ name }`; afterwards abandoned uploads are cleaned up.
- * 2. `blob.generate-presigned-url` – sent by the Blob client library's `uploadPresigned` with that name: the upload
- *    address for it → `{ presignedUrlPayload }`.
+ * The route that issues upload addresses (ST-085, ST-099, ADR 0009/0012). The browser asks with
+ * `laguardia.upload-address`: the owner, the exact size and the media type of the file it will upload (and, if wanted,
+ * a stricter size limit). A size above the limit is refused with 413 before anything is recorded or signed; otherwise
+ * the server names the content, records it as a pending upload and answers `{ name, address }` – the presigned PUT
+ * for exactly that name, size and media type. Afterwards abandoned uploads are cleaned up.
  * The page proxy does not cover `/api/`, so the route checks the Origin and the team session itself, before anything.
  */
 export function uploadRoute(dependencies: UploadRouteDependencies) {
@@ -30,36 +24,36 @@ export function uploadRoute(dependencies: UploadRouteDependencies) {
     const teamMember = await dependencies.teamMember(request.headers);
     if (!teamMember) return new Response("Unauthorized", { status: 401 });
 
-    const body: unknown = await request.json().catch(() => undefined);
-    const start = pendingUploadRequest(body);
-    if (start) {
-      const pending = await recordPendingUpload(dependencies, { issuedTo: teamMember.id, ...start });
-      if (!pending.ok) return new Response("Unknown owner", { status: 400 });
-      dependencies.afterResponse(() => cleanUpAbandonedUploads(dependencies));
-      return Response.json({ name: pending.name });
+    const asked = uploadRequest(await request.json().catch(() => undefined));
+    if (!asked) return new Response("Bad request", { status: 400 });
+    const issued = await grantUploadAddress(dependencies, { issuedTo: teamMember.id, ...asked });
+    if (!issued.ok) {
+      return issued.error === "too-large"
+        ? new Response("Content too large", { status: 413 })
+        : new Response("Unknown owner", { status: 400 });
     }
-    const name = uploadAddressRequest(body);
-    if (name) {
-      const address = await uploadAddressOf(dependencies, { issuedTo: teamMember.id, name });
-      if (!address) return new Response("Forbidden", { status: 403 });
-      return Response.json({ type: "blob.generate-presigned-url", presignedUrlPayload: address });
-    }
-    return new Response("Bad request", { status: 400 });
+    dependencies.afterResponse(() => cleanUpAbandonedUploads(dependencies));
+    return Response.json({ name: issued.name, address: issued.address });
   };
 }
 
-function pendingUploadRequest(body: unknown): { owner: UploadOwner; maximumSize?: number } | undefined {
-  if (!isObject(body) || body.type !== "laguardia.pending-upload" || !isObject(body.owner)) return undefined;
-  const { owner, maximumSize } = body;
-  const size = Number.isSafeInteger(maximumSize) && (maximumSize as number) > 0 ? (maximumSize as number) : undefined;
-  if (isIdString(owner.machineId)) return { owner: { machineId: owner.machineId }, maximumSize: size };
-  if (isIdString(owner.machineModelId)) return { owner: { machineModelId: owner.machineModelId }, maximumSize: size };
+function uploadRequest(body: unknown): Omit<UploadRequest, "issuedTo"> | undefined {
+  if (!isObject(body) || body.type !== "laguardia.upload-address" || !isObject(body.owner)) return undefined;
+  const { owner, size, contentType, maximumSize } = body;
+  if (!Number.isSafeInteger(size) || (size as number) < 0 || !isMediaType(contentType)) return undefined;
+  const declared = {
+    size: size as number,
+    contentType,
+    maximumSize: Number.isSafeInteger(maximumSize) && (maximumSize as number) > 0 ? (maximumSize as number) : undefined,
+  };
+  if (isIdString(owner.machineId)) return { owner: { machineId: owner.machineId }, ...declared };
+  if (isIdString(owner.machineModelId)) return { owner: { machineModelId: owner.machineModelId }, ...declared };
   return undefined;
 }
 
-function uploadAddressRequest(body: unknown): string | undefined {
-  if (!isObject(body) || body.type !== "blob.generate-presigned-url" || !isObject(body.payload)) return undefined;
-  return typeof body.payload.pathname === "string" ? body.payload.pathname : undefined;
+/** A media type as a browser names a file's – `type/subtype`, nothing that could carry another header. */
+function isMediaType(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 127 && /^[\w.+-]+\/[\w.+-]+$/.test(value);
 }
 
 function isIdString(value: unknown): value is string {

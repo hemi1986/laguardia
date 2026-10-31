@@ -200,8 +200,8 @@ describe("module boundaries", () => {
     expect(moduleIntoRunner).toEqual([expect.stringContaining("app")]);
   });
 
-  it("reject @vercel/blob anywhere under src/ but the Blob adapter of the storage seam (ST-016)", async () => {
-    const importing = 'import { put } from "@vercel/blob";\nexport const x = put;\n';
+  it("reject the S3 SDK anywhere under src/ but the S3 adapter of the storage seam (ST-016, ST-099)", async () => {
+    const importing = 'import { S3Client } from "@aws-sdk/client-s3";\nexport const x = S3Client;\n';
 
     expect(await importErrors("src/photo/deliberate-violation.ts", importing)).toEqual([
       expect.stringContaining("storage seam"),
@@ -215,7 +215,10 @@ describe("module boundaries", () => {
     expect(await importErrors("src/app/deliberate.integration.test.ts", importing)).toEqual([
       expect.stringContaining("storage seam"),
     ]);
-    expect(await importErrors("src/platform/storage/blob-storage.ts", importing)).toEqual([]);
+    expect(await importErrors("src/upload/deliberate-violation.ts", importing)).toEqual([
+      expect.stringContaining("storage seam"),
+    ]);
+    expect(await importErrors("src/platform/storage/s3-storage.ts", importing)).toEqual([]);
   });
 
   it("reject importing the photo module's internals – only its public interface (ST-016)", async () => {

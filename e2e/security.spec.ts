@@ -163,15 +163,15 @@ test("the policy keeps the ST-003 protection and allows styles only with the non
   expect(directive(policy, "base-uri")).toEqual(["'self'"]);
   expect(directive(policy, "form-action")).toEqual(["'self'"]);
   expect(directive(policy, "default-src")).toEqual(["'self'"]);
-  // Photos and uploads reach only this deployment's private Blob store and Blob's upload API – no wildcard (on the
-  // preview the store comes from BLOB_STORE_ID, locally from the Development store's token).
-  const store = /^https:\/\/[a-z0-9]+\.private\.blob\.vercel-storage\.com$/;
+  // Photos and uploads reach only this deployment's private bucket – no wildcard (ST-099): on the preview the shared
+  // preview bucket at the regional AWS endpoint, locally the browser tests' bucket on SeaweedFS.
+  const store = onPreview ? /^https:\/\/[a-z0-9-]+\.s3\.eu-central-1\.amazonaws\.com$/ : /^http:\/\/localhost:8333$/;
   const images = directive(policy, "img-src");
   expect(images.slice(0, 3)).toEqual(["'self'", "blob:", "data:"]);
   expect(images.slice(3)).toHaveLength(1);
   expect(images[3]).toMatch(store);
   const connections = directive(policy, "connect-src");
-  expect(connections).toEqual(["'self'", images[3], "https://vercel.com/api/blob/"]);
+  expect(connections).toEqual(["'self'", images[3]]);
   // `next dev` allows inline `<style>` for its dev tools – the preview never does.
   expect(directive(policy, "style-src")).toEqual(onPreview ? ["'self'", nonce] : ["'self'", "'unsafe-inline'"]);
 });

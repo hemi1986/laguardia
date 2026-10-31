@@ -22,8 +22,8 @@ export function e2eDatabaseUrl(): URL {
  * Without a technician (E2E_TEAM_* unset) no account is created and the account-dependent specs skip.
  *
  * With a `storage`, the content the previous run stored is deleted from it first – every name its database still
- * knows. The browser tests share the developer's Blob store, and their uploads (up to 100 MB each) had filled its
- * 1 GB quota (2026-10-18); the developer's own content is never named in this database.
+ * knows – by name, the storage seam has no list operation. The local browser tests have a bucket of their own
+ * (`laguardia-e2e`, ST-099), and their uploads (up to 100 MB each) would otherwise pile up in it run after run.
  */
 export async function prepareE2eDatabase(
   url: URL,

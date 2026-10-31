@@ -13,14 +13,16 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "verify": "node .claude/skills/implement/scripts/verify.ts",
-    "db:up": "docker compose up -d --wait",
+    "db:up": "docker compose up -d --wait db seaweedfs && docker compose run --rm seaweedfs-init",
     "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate",
     "test:e2e": "playwright test",
     "setup:first-technician": "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/setup-first-technician.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1154.0",
+    "@aws-sdk/credential-provider-web-identity": "^3.972.81",
+    "@aws-sdk/s3-request-presigner": "^3.1154.0",
     "@base-ui/react": "^1.9.0",
-    "@vercel/blob": "^2.8.2",
     "@vercel/functions": "^3.10.3",
     "better-auth": "^1.7.12",
     "class-variance-authority": "^0.7.1",

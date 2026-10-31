@@ -3,10 +3,10 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
-/** ST-016: `@vercel/blob` belongs to the Blob adapter of the storage seam (`src/platform/storage/blob-storage.ts`). */
-const blobOnlyInTheAdapter = {
-  group: ["@vercel/blob", "@vercel/blob/*"],
-  message: "Store content only through the storage seam (src/platform/storage) – its Blob adapter is the one place for @vercel/blob (ST-016)",
+/** ST-016, ST-099: the S3 SDK belongs to the S3 adapter of the storage seam (`src/platform/storage/s3-storage.ts`). */
+const s3SdkOnlyInTheAdapter = {
+  group: ["@aws-sdk/*"],
+  message: "Store content only through the storage seam (src/platform/storage) – its S3 adapter is the one place for the S3 SDK (ST-099)",
 };
 
 const eslintConfig = defineConfig([
@@ -141,13 +141,13 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // ST-016 (architecture review Q8): Vercel Blob is reached only through the storage seam's Blob adapter.
-    files: ["src/**/*.{ts,tsx}"],
+    // ST-016 (architecture review Q8), ST-099: the bucket is reached only through the storage seam's S3 adapter – the
+    // browser half of the upload module (ST-085) uploads with the address it issued, without an SDK.
     // src/app/ outside the runner and its tests gets the same pattern from the next block (one rule, one list per file).
-    // The upload module's browser half (ST-085) is the client counterpart: it uploads with the address the adapter issued.
-    ignores: ["src/platform/storage/blob-storage.ts", "src/upload/upload-file.ts"],
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/platform/storage/s3-storage.ts"],
     rules: {
-      "no-restricted-imports": ["error", { patterns: [blobOnlyInTheAdapter] }],
+      "no-restricted-imports": ["error", { patterns: [s3SdkOnlyInTheAdapter] }],
     },
   },
   {
@@ -160,7 +160,7 @@ const eslintConfig = defineConfig([
         "error",
         {
           patterns: [
-            blobOnlyInTheAdapter,
+            s3SdkOnlyInTheAdapter,
             {
               group: ["@/platform/command", "**/platform/command", "**/platform/command/index"],
               importNames: ["executeCommand"],

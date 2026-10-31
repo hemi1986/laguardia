@@ -5,7 +5,7 @@ How La Guardia takes, checks and stores photos. Used by the photo on a problem r
 ## Flow
 
 ```
-phone camera / gallery ──► preparePhoto (browser) ──► server action ──► withStoredPhoto: acceptPhoto ──► storage seam ──► private Blob (fra1)
+phone camera / gallery ──► preparePhoto (browser) ──► server action ──► withStoredPhoto: acceptPhoto ──► storage seam ──► private S3 bucket (eu-central-1)
                                                        (formAction, photo step)          └─► command ──► delete the photo if it fails
                            upright, ≤ 2048 px,          authorization     ≤ 2 MB in,       unguessable
                            JPEG ≤ 1 MB, no EXIF         in the command    re-encoded,      name; shown via
@@ -23,7 +23,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 | `photoViewAddresses(storage, clock, photos)` | `src/photo/store-photo.ts` (server, ST-016) | Addresses valid for 5 minutes from the injected clock's time – only issued after the page's access check (team pages, HS-1). |
 | `formAction` with `photo` | `src/app/_actions/form-action.ts` (ST-016; one runner since the architecture review 2026-10-18) | The Server Action runner's photo step: the command run through `withStoredPhoto`; a rejection of a form that had a photo attached is marked `photoAgain` (G8a). |
 | `PhotoField` | `src/app/photo-field.tsx` (browser, ST-016) | The form's photo: two pickers without a name ("Foto aufnehmen" with `capture`, "Foto auswählen"), `preparePhoto`, then the prepared JPEG goes into the form's file field (`DataTransfer`) – the form still posts natively. |
-| Storage seam | `src/platform/storage/` (ST-016) | `ContentStorage`: write, delete, `viewAddresses` (one read token per page, every address signed on the server). `blobStorage()` (the only importer of `@vercel/blob`, lint) and `memoryStorage()` for integration tests – injected like the clock. |
+| Storage seam | `src/platform/storage/` (ST-016) | `ContentStorage`: write, delete, `viewAddresses` (one call per page, every address presigned on the server without a request to the store). `s3Storage()` (ST-099, ADR 0012 – AWS S3 on Vercel, SeaweedFS locally; the only importer of `@aws-sdk/*`, lint) and `memoryStorage()` for integration tests – injected like the clock. |
 
 **Public interface:** `src/photo/index.ts` (server) and `src/photo/browser.ts` (client components); lint refuses any other import of the module.
 | Limits | `src/photo/limits.ts` (`PHOTO_LIMITS`) | The numbers below, used by both halves. |
@@ -42,7 +42,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 
 ## Decisions
 
-- **Several photos in one request (ST-032, user 2026-10-25):** a work log entry takes up to 5 photos in one Server Action. 5 × 1 MB would exceed both the Server Action body limit and Vercel's 4.5 MB request body, so the browser prepares each photo of such a form to at most 600 KB and the body limit is 4 MB. The alternative – each photo uploaded on its own straight to the Blob store (ST-085's upload module) and re-encoded by the server afterwards – was rejected as much more work for a limit typical phone photos (234–413 KB measured) never reach. A work log entry keeps its photos' names in a column of its own row: saved once with the entry and never changed, so no photo can be added to an existing entry.
+- **Several photos in one request (ST-032, user 2026-10-25):** a work log entry takes up to 5 photos in one Server Action. 5 × 1 MB would exceed both the Server Action body limit and Vercel's 4.5 MB request body, so the browser prepares each photo of such a form to at most 600 KB and the body limit is 4 MB. The alternative – each photo uploaded on its own straight to the store (ST-085's upload module) and re-encoded by the server afterwards – was rejected as much more work for a limit typical phone photos (234–413 KB measured) never reach. A work log entry keeps its photos' names in a column of its own row: saved once with the entry and never changed, so no photo can be added to an existing entry.
 
 - **HEIC (iPhone):** converted, never stored. iOS Safari hands a HEIC photo to a page with `accept="image/*"` as JPEG (measured: "Original: image/jpeg" for camera and gallery photos); Safari can also decode HEIC on a canvas. The server's `sharp` has no HEIC (HEVC) decoder, so a HEIC file is rejected – as `unsupported-format` (tested with AVIF, the same HEIF container) or as `not-an-image`; a real HEIC fixture cannot be generated with sharp; a browser that cannot decode a photo shows "Dieses Foto kann der Browser nicht lesen (z. B. HEIC). Bitte als JPEG aufnehmen."
 - **Two inputs:** "Foto aufnehmen" (`accept="image/*" capture="environment"` – opens the camera directly) and "Foto auswählen" (`accept="image/*"` – camera or gallery). Both work in iOS Safari and Android Chrome.
@@ -56,7 +56,7 @@ Unlike large PDF files (ST-001, direct browser upload), **photos go through the 
 | iPhone, Safari | JPEG 1,695 KB | 633 KB in 111 ms | 2048×1536, 234 KB | 1,683 ms (1,361 ms) | **1.8 s** |
 | Android, Chrome | JPEG 394 KB (1600×1200) | 463 KB in 184 ms | 1600×1200, 413 KB | 1,955 ms (1,614 ms) | **2.1 s** |
 
-Portrait and landscape photos from camera and gallery were stored upright on both phones. All six stored photos were downloaded and inspected: JPEG, ≤ 2048 px, no EXIF, no GPS, no XMP, no ICC profile, no orientation tag. Most of the time is the server's Blob write (cold start included); well within the 5-second target.
+Portrait and landscape photos from camera and gallery were stored upright on both phones. All six stored photos were downloaded and inspected: JPEG, ≤ 2048 px, no EXIF, no GPS, no XMP, no ICC profile, no orientation tag. Most of the time was the server's Blob write (cold start included; measured before ST-099 moved the store to S3); well within the 5-second target.
 
 ## Notes for the stories that use it
 
@@ -64,7 +64,7 @@ Portrait and landscape photos from camera and gallery were stored upright on bot
 - **Order of storing (ST-016, ADR 0007):** store → run the command → delete the photo if the command is rejected or throws – all inside `withStoredPhoto`; no caller sequences it by hand, and there is no cleanup job. The only possible leftover is a photo written just before a server crash: unreferenced, private, unreachable without a signed address.
 
 - The form sends the **prepared** blob (`preparePhoto`), never the original file; its Server Action uses `formAction` with a `photo` step, which stores the photo, runs the command with the reference and keeps the reference with the problem report (ST-016) / work log entry (ST-032) / file (ST-054).
-- **Local development and browser tests** store photos in a separate Development Blob store (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`, user 2026-10-04); without it the photo browser tests skip. Integration tests use `memoryStorage()` and never reach Blob.
+- **Local development and browser tests** store photos in SeaweedFS in Docker (`npm run db:up`, ST-099): the dev server in the bucket `laguardia-dev`, the local browser tests in `laguardia-e2e` – no cloud store, nothing skips. Integration tests use `memoryStorage()`; only the S3 adapter's own tests reach SeaweedFS (`laguardia-test`).
 - Visitor photos (ST-016) are uploaded without login, so the visitor page's command must apply its own limits (ST-014 rate limits); the building block itself does not authorize.
 - A small original can get slightly larger after re-encoding (measured: 394 KB → 413 KB) – harmless, still within the limits.
 - `acceptPhoto` is tested with generated images (EXIF orientation 6 + GPS, badly compressible noise, GIF, PDF bytes) in `src/photo/accept-photo.test.ts`; the canvas half can only be checked on real phones.
