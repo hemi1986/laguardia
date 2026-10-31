@@ -1,6 +1,6 @@
 # Logical Data Model
 
-> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-31 (museum settings, feature museum-start-page)
+> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-31 (AI assistance, feature ai-assessment; museum settings, feature museum-start-page)
 >
 > No physical model yet – the stack is only *proposed* (`docs/adr/0001-tech-stack.md`, `0002`, `0003`). A "Physical Model" section follows once the user accepts them.
 
@@ -35,6 +35,14 @@
 | `FileContent` | A stored document or image (content reference, original name, media type, size) |
 | `LogoContent` | The logo kept in the object store: content reference (its name in the store, reached through the storage seam – ADR 0012) and media type (PNG, JPEG or WebP, re-encoded by the server without metadata) |
 | `LegalText` | A non-empty Markdown text of which visitors see only headings, paragraphs, bold and italic, lists and links to https and mailto addresses (CMD-ChangeLegalTexts; other Markdown: HS-26) |
+| `AiAssessmentId` | Opaque identity of an AI assessment, like the IDs above |
+| `ModelId` | OpenRouter's identifier of an AI model, e.g. `google/gemini-embedding-2` – chosen from OpenRouter's model list or typed by hand |
+| `EncryptedKey` | The OpenRouter API key, encrypted with a key from the environment; never shown, never journaled (ADR 0014) |
+| `Embedding` | The embedding model's numbers for one passage, page image or image – 1536 of them (user, 2026-10-31; only embedding models that return 1536 numbers – HS-34) |
+| `Cost` | What OpenRouter charged for a request, in OpenRouter's credits (US dollars) as OpenRouter reports it |
+| `IndexingFailureReason` | *not readable* \| *format not indexed* \| *OpenRouter refused* \| *OpenRouter not reachable* |
+| `AssessmentFailureReason` | *key invalid* \| *credit used up* \| *model not available* \| *timed out* \| *OpenRouter not reachable* \| *AI off* \| *answer unusable* |
+| `PageNumber` | A page of a PDF, counted from 1 as the PDF shows it |
 | `Text` / `Title` | Free text; `Title` is short and, for defects, understandable for visitors |
 | `Timestamp` / `Date` | Point in time / calendar date |
 
@@ -65,9 +73,17 @@ erDiagram
     TEAM_MEMBER ||--o{ MAINTENANCE_RECORD : "refers to (recorded by)"
     MUSEUM_SETTINGS ||--o| LOGO : contains
     MUSEUM_SETTINGS ||--|{ LEGAL_TEXT : contains
+    FILE ||--o| AI_INDEX_ENTRY : "refers to (indexed as)"
+    MACHINE ||--o{ AI_INDEX_ENTRY : "refers to (owner of the file)"
+    MACHINE_MODEL ||--o{ AI_INDEX_ENTRY : "refers to (owner of the file)"
+    AI_INDEX_ENTRY ||--o{ INDEX_ITEM : contains
+    DEFECT ||--o{ AI_ASSESSMENT : "refers to (assessment of)"
+    AI_ASSESSMENT ||--o{ REFERENCE : contains
+    FILE ||--o{ REFERENCE : "refers to (relied on)"
+    TEAM_MEMBER ||--o{ AI_ASSESSMENT : "refers to (requested by)"
 ```
 
-`TEAM_MEMBER` is also referenced by every other "… by" attribute; those lines are omitted for readability. `MUSEUM_SETTINGS` refers to no other aggregate: the welcome page joins it with machines and machine models only when it is read.
+`TEAM_MEMBER` is also referenced by every other "… by" attribute; those lines are omitted for readability. `MUSEUM_SETTINGS` refers to no other aggregate: the welcome page joins it with machines and machine models only when it is read. `AI_SETTINGS` is a singleton that refers to no other aggregate and is left out of the diagram.
 
 ---
 
@@ -460,6 +476,145 @@ Derived for read models: *Imprint provided* (`RM-WelcomePage`, `RM-LegalPage`) �
 
 ---
 
+## AI settings (`AGG-AiSettings`, context `BC-AiAssistance`)
+
+**Invariants**
+- There is exactly one AI settings – never created or removed by a command
+- AI is on exactly while a key, a chat model and an embedding model are saved
+- The saved key is never shown or handed out again – only its last four characters
+
+**Singleton without values (feature ai-assessment, 2026-10-31):** like the museum settings, one per museum, without an ID and without a creating event. Until a technician saves something it holds no key and no models, so AI is off. One part, one version (`CMD-ChangeAiSettings` rejects a save when someone changed the AI settings meanwhile).
+
+**The key:** kept only encrypted (`EncryptedKey`) with a key from an environment variable that the maintainer creates once per environment (ADR 0014); the server decrypts it only to send a request to OpenRouter. It is never part of the journal, never sent to the browser, never logged; the form shows its last four characters. If the environment's key is missing or changed, the saved key cannot be decrypted: AI counts as off and the form asks for the key again (ADR 0014).
+
+**Lifecycle** – *On* and *Off* are derived from the attributes, not stored:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Off : default (no key, no models)
+    Off --> Off : EVT-AiSettingsChanged (still missing a key or a model)
+    Off --> On : EVT-AiSettingsChanged (key and both models saved)
+    On --> On : EVT-AiSettingsChanged (key replaced, chat model or embedding model changed)
+    On --> Off : EVT-AiSettingsChanged (key removed)
+```
+
+`On` and `Off` are only diagram labels for "AI is on / off". Turning AI on and changing the embedding model start indexing (`POL-AiIndexFollowsTheSettings`); turning it off keeps the AI index.
+
+| Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
+|---|---|---|---|---|---|
+| AI settings | Root | – | – | – | singleton, one per museum |
+| | | Key | `EncryptedKey` | no | EVT-AiSettingsChanged (*Key* – kept encrypted, never journaled) |
+| | | Last four characters of the key | `Text` | with the key | EVT-AiSettingsChanged; RM-AiSettings |
+| | | Chat model | `ModelId` | no | EVT-AiSettingsChanged; RM-AiSettings, RM-DefectAiAssessments (via the AI assessment) |
+| | | Embedding model | `ModelId` | no | EVT-AiSettingsChanged; RM-AiSettings |
+
+Derived: *AI on* (`RM-AiSettings`, `RM-DefectAiAssessments`, every command of AI assistance) – key, chat model and embedding model all saved. Who changed the AI settings and when is journal-only. *Models offered by OpenRouter* (`RM-AiSettings`) is read from OpenRouter when the form is opened and never stored.
+
+---
+
+## AI index entry (`AGG-AiIndexEntry`, context `BC-AiAssistance`)
+
+**Invariants**
+- An AI index entry refers to exactly one file and to that file's machine or machine model, which never change; a file has at most one AI index entry
+- An AI index entry is either indexed or failed – an indexed one holds the file's passages, page images and images, each with where it came from (file and, for a PDF, page), all made with the one embedding model it names; a failed one holds none of them and exactly one reason
+- Indexing a file again replaces its AI index entry as a whole – never a mix of two indexings or two embedding models
+
+**One per file, identified by its file:** the entry's identity is the `FileId`. It copies the file's owner (machine or machine model) once, because the owner never changes (`AGG-File`) and the search is limited to the defect's machine and its machine model.
+
+**Waiting is derived, not stored:** a file that is not removed and has no entry for the current embedding model is *waiting* – just attached, attached while AI was off, indexed with an earlier embedding model, or left by a broken-off indexing. The background work and the daily retry find their work this way (`EVT-AiWorkLeftUnfinished`, ADR 0015); nothing records "waiting". An entry made with an earlier embedding model stays until it is replaced, but is never searched.
+
+**What is indexed (user, 2026-10-31):** a PDF – per page its text layer as a passage and the page rendered as an image (no OCR; a scanned page is found through its image); a Markdown or text file – its text in passages; a PNG, JPEG or WebP image – the image. Video, audio and other formats fail with *format not indexed*. Page images are not kept: when an AI assessment sends a found page, it renders that page again from the file (ADR 0014).
+
+**Removal:** `CMD-RemoveFile` removes the entry and its items in the same transaction (`POL-RemovedFileLeavesAiIndex`, HS-29). Storing an entry and removing its file are serialised by the file's removal lock (ADR 0014), so an indexing that read the file before its removal never stores an entry afterwards.
+
+**Lifecycle** – a file without an entry is *waiting* (derived):
+
+```mermaid
+stateDiagram-v2
+    [*] --> Indexed : EVT-FileIndexedForAi
+    [*] --> Failed : EVT-FileIndexingFailed
+    Indexed --> Indexed : EVT-FileIndexedForAi (indexed again, e.g. new embedding model)
+    Indexed --> Failed : EVT-FileIndexingFailed
+    Failed --> Indexed : EVT-FileIndexedForAi („Erneut versuchen“, daily retry – HS-32)
+    Failed --> Failed : EVT-FileIndexingFailed
+    Indexed --> [*] : EVT-FileLeftAiIndex
+    Failed --> [*] : EVT-FileLeftAiIndex
+```
+
+| Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
+|---|---|---|---|---|---|
+| AI index entry | Root | File | `FileId` | yes, unique (identity) | EVT-FileIndexedForAi, EVT-FileIndexingFailed |
+| | | Owner of the file | `MachineId` xor `MachineModelId` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed (*Machine or machine model of the file*) |
+| | | State | *indexed* \| *failed* | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed; *Für die KI nicht lesbar* in RM-MachineRecord |
+| | | Embedding model | `ModelId` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed |
+| | | Indexed or failed at | `Timestamp` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed (occurrence) |
+| | | Failure reason | `IndexingFailureReason` | when failed | EVT-FileIndexingFailed; *Files failed* in RM-AiSettings |
+| | | Pages indexed | Count | when indexed | EVT-FileIndexedForAi; the cost estimate of `CMD-ChangeAiSettings` |
+| | | Images indexed | Count | when indexed | EVT-FileIndexedForAi; the cost estimate of `CMD-ChangeAiSettings` |
+| | | Cost | `Cost` | when indexed | EVT-FileIndexedForAi; *Cost of indexing so far* in RM-AiSettings (summed from the journal, replaced entries included) |
+| Index item | Entity | Kind | *passage* \| *page image* \| *image* | yes | EVT-FileIndexedForAi (*Passages*, *Page images and images*) |
+| | | Page | `PageNumber` | for a PDF | EVT-FileIndexedForAi; *References (file, page)* in RM-DefectAiAssessments |
+| | | Text | `Text` | for a passage | EVT-FileIndexedForAi (*Passages*) – what an AI assessment sends of a text hit |
+| | | Embedding | `Embedding` | yes | EVT-FileIndexedForAi (never journaled) |
+
+Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-AiSettings`) and the per-file state on the machine record (`RM-MachineRecord`) – from the entries and Collection's files that are not removed, counting only entries of the current embedding model as indexed. Passages, page images and embeddings stay out of the journal; `EVT-FileIndexedForAi` names the file, the embedding model, the counts and the cost.
+
+**Technical, not domain (ADR 0015):** while the background work indexes a file or writes an AI assessment it holds that piece of work for a limited time, so two runs do not do – and pay for – the same work; the hold is a short-lived record of the background work (file or AI assessment, held until), like a pending upload. It has no event and no read model and is not part of any aggregate. A hold lasts 15 minutes (HS-33).
+
+---
+
+## AI assessment (`AGG-AiAssessment`, context `BC-AiAssistance`)
+
+**Invariants**
+- An AI assessment refers to exactly one defect, which never changes
+- An AI assessment is requested, then either written or failed exactly once; a written or failed AI assessment never changes
+- The note, the photos, who requested it and the chat model it was requested with never change
+- Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
+- Every reference names a file of the defect's machine or its machine model and, for a PDF, a page
+
+**Set-based rule (HS-31):** at most one AI assessment of a defect is *requested* (being written) at a time – checked by `CMD-RequestAiAssessment` and guaranteed by the store with a uniqueness among the requested AI assessments of a defect, like the museum number (HS-17). A broken-off write is written once more after its 15-minute hold and failed as "timed out" if that breaks off too (HS-33).
+
+**Lifecycle**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested : EVT-AiAssessmentRequested
+    Requested --> Written : EVT-AiAssessmentWritten
+    Requested --> Failed : EVT-AiAssessmentFailed
+    Written --> [*]
+    Failed --> [*]
+```
+
+The defect's own state plays no part after the request: a defect resolved or closed on retirement meanwhile does not stop the writing (HS-30).
+
+| Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
+|---|---|---|---|---|---|
+| AI assessment | Root | ID | `AiAssessmentId` | yes | – (identity) |
+| | | Defect | `DefectId` | yes | EVT-AiAssessmentRequested |
+| | | Note | `Text` | no | EVT-AiAssessmentRequested; *Note and photos of the request* in RM-DefectAiAssessments |
+| | | Photos | list of `Photo` (as on a work log entry; „Erneut versuchen“ refers to the same stored photos as the failed AI assessment – they are never deleted, so sharing is safe, ADR 0009) | no | EVT-AiAssessmentRequested; RM-DefectAiAssessments |
+| | | Requested by | `TeamMemberId` | yes | EVT-AiAssessmentRequested; RM-DefectAiAssessments |
+| | | Requested at | `Timestamp` | yes | EVT-AiAssessmentRequested (occurrence); RM-DefectAiAssessments |
+| | | Chat model | `ModelId` | yes | EVT-AiAssessmentRequested, EVT-AiAssessmentWritten; RM-DefectAiAssessments |
+| | | State | *requested* \| *written* \| *failed* | yes | EVT-AiAssessmentRequested, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed; *State* in RM-DefectAiAssessments |
+| | | Summary | `Text` | when written | EVT-AiAssessmentWritten |
+| | | Probable causes | ranked list of `Text` | when written | EVT-AiAssessmentWritten |
+| | | What to check first | list of `Text` | when written | EVT-AiAssessmentWritten |
+| | | References | list of Reference | when written (may be empty) | see below |
+| | | Files searched | list of `FileId` | when written | EVT-AiAssessmentWritten |
+| | | Embedding model | `ModelId` | when written | EVT-AiAssessmentWritten |
+| | | Cost | `Cost` | when written | EVT-AiAssessmentWritten; RM-DefectAiAssessments |
+| | | Written or failed at | `Timestamp` | when written or failed | EVT-AiAssessmentWritten, EVT-AiAssessmentFailed (occurrence) |
+| | | Failure reason | `AssessmentFailureReason` | when failed | EVT-AiAssessmentFailed; *State (failed with reason)* in RM-DefectAiAssessments |
+| Reference | VO | File | `FileId` | yes | EVT-AiAssessmentWritten (*References (file, page)*) |
+| | | Page | `PageNumber` | for a PDF | EVT-AiAssessmentWritten |
+
+The written text (summary, causes, what to check first) and the note stay out of the journal – free text, like the legal texts; `EVT-AiAssessmentWritten` journals that it was written, the models and the cost. A reference's file title is read from Collection when shown; a removed file keeps its title there and is shown without a link (`RM-DefectAiAssessments`). The photos are stored through the photo module like a work log entry's (store → command → delete on failure, ADR 0009).
+
+Derived for read models: *May request* (`RM-DefectAiAssessments`) – AI on, the defect open (Repair), the viewer a technician or the defect suitable for helpers, and no AI assessment of the defect requested.
+
+---
+
 ## Team member (Team area – generic, not modelled)
 
 Not an aggregate of this model; listed only because all contexts reference it (`docs/domain/context-map.md`, `docs/adr/0004-team-authentication.md`).
@@ -485,4 +640,5 @@ The dashboards compute their mark line with this rule at display time and never 
 ## Open points
 HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the Last visit – where the previous dashboard visit began.
 - Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen; whether removed file content is deleted.
-- Museum settings (open, inside the aggregate, no context boundary): HS-25 (English imprint without a German one), HS-26 (Markdown outside the allowed elements – rejected or shown as plain text), HS-27 (saving a form without any change).
+- Museum settings: HS-25, HS-26 and HS-27 are resolved.
+- AI assistance: HS-28 and HS-32 to HS-34 are resolved (user, 2026-10-31).
