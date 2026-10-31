@@ -59,7 +59,6 @@ const legal: {
 export const visitorDe = {
   /** The start page (ST-078). */
   home: {
-    museum: "Flipper- & Arcade Museum Eschbach",
     teamLogin: "Anmeldung fürs Team",
 
     /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */

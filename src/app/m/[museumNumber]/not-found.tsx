@@ -1,17 +1,10 @@
-import { BackLink } from "@/components/ui/back-link";
-import { VisitorPage } from "../../visitor-page";
+import { museumName } from "@/modules/collection";
+import { database } from "@/platform/database";
 import { currentVisitorMessages } from "../../visitor-locale";
+import { UnknownMachineView } from "./unknown-machine";
 
-/**
- * An unknown museum number (ST-010): said in the visitor's language, with HTTP status 404, the language switch (it goes
- * back to the start page – not-found knows no address) and a way on (G17).
- */
+/** An unknown museum number (ST-010), with HTTP status 404 – see `UnknownMachineView`. */
 export default async function UnknownMachine() {
-  const { locale, messages } = await currentVisitorMessages();
-  return (
-    <VisitorPage title={messages.home.museum} locale={locale} messages={messages} back="/">
-      <p>{messages.machinePage.unknown}</p>
-      <BackLink href="/">{messages.machinePage.toStart}</BackLink>
-    </VisitorPage>
-  );
+  const [{ locale, messages }, name] = await Promise.all([currentVisitorMessages(), museumName(database())]);
+  return <UnknownMachineView museumName={name} locale={locale} messages={messages} />;
 }

@@ -1,6 +1,7 @@
-import { BackLink } from "@/components/ui/back-link";
-import { VisitorPage } from "./visitor-page";
+import { museumName } from "@/modules/collection";
+import { database } from "@/platform/database";
 import { currentVisitorMessages } from "./visitor-locale";
+import { UnknownAddressView } from "./unknown-address";
 
 /**
  * Any address that leads nowhere, with HTTP status 404 – in the frame of the visitor pages and the visitor's language.
@@ -8,11 +9,6 @@ import { currentVisitorMessages } from "./visitor-locale";
  * Content Security Policy blocks (ST-070).
  */
 export default async function NotFound() {
-  const { locale, messages } = await currentVisitorMessages();
-  return (
-    <VisitorPage title={messages.home.museum} locale={locale} messages={messages} back="/">
-      <p>{messages.home.notFound}</p>
-      <BackLink href="/">{messages.machinePage.toStart}</BackLink>
-    </VisitorPage>
-  );
+  const [{ locale, messages }, name] = await Promise.all([currentVisitorMessages(), museumName(database())]);
+  return <UnknownAddressView museumName={name} locale={locale} messages={messages} />;
 }
