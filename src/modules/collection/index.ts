@@ -27,6 +27,9 @@ export { machineCategories, technologies, technologiesOf } from "./create-machin
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
 export { groupMachines, type MachineGroup } from "./machine-groups";
 export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTeam } from "./machine-models";
+export { changeMuseumDetailsCommand } from "./change-museum-details-command";
+export type { ChangeMuseumDetailsError, ChangeMuseumDetailsInput } from "./change-museum-details";
+export { museumName, museumSettings, type MuseumSettings } from "./museum-settings";
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";

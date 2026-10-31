@@ -137,7 +137,7 @@ describe("command layer", () => {
     });
     const delta = (
       store: AggregateStore<{ id: string }>,
-      extra: { setDelta?: true },
+      extra: { setDelta?: true; mayChangeNothing?: true },
       events: number,
       version?: number,
     ) =>
@@ -197,6 +197,22 @@ describe("command layer", () => {
       await expect(executeCommand(delta(store, {}, 0, 3), undefined, deps(technician))).rejects.toThrow(
         /journals no event/,
       );
+    });
+
+    it("lets a versioned command that may change nothing end without saving or journaling (HS-27)", async () => {
+      const { store, seen } = countingStore();
+      const nothing = delta(store, { mayChangeNothing: true }, 0, 3);
+
+      expect(await executeCommand(nothing, undefined, deps(technician))).toEqual({ ok: true, result: undefined });
+      expect(seen).toEqual({ lock: false, savedAt: undefined });
+    });
+
+    it("still checks the version when a command that may change nothing does change something", async () => {
+      const { store, seen } = countingStore();
+
+      await executeCommand(delta(store, { mayChangeNothing: true }, 1, 2), undefined, deps(technician));
+
+      expect(seen.savedAt).toBe(2);
     });
 
     it("still has nothing to do with policies added – withPolicies keeps the set delta", async () => {

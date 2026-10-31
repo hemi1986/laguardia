@@ -228,6 +228,13 @@ type Changing<
    * - like every changing command, its decision returns the **loaded state itself** when it has no events.
    */
   setDelta?: true;
+  /**
+   * A command of a person, at the version they saw, that **may change nothing** (HS-27, ST-100: a settings form saved
+   * without a change): when its decision returns no events, it ends successfully without saving or journaling and the
+   * version stays – no rejection, and no version check either, since nothing is written. A change is saved at the
+   * version the person saw, as always. A `setDelta` implies it.
+   */
+  mayChangeNothing?: true;
   decide: (
     state: State,
     input: Input,
@@ -261,7 +268,7 @@ export function aggregateCommand<
     id: definition.id,
     allowedActors: definition.allowedActors,
     removesContent: definition.removesContent,
-    mayChangeNothing: !definition.creates && definition.setDelta ? true : undefined,
+    mayChangeNothing: !definition.creates && (definition.setDelta || definition.mayChangeNothing) ? true : undefined,
     run: async (input: Input, context: CommandContext) => {
       const { tx, actor, clock, newId } = context;
       // executeCommand runs a command only for an actor in its allowedActors (policies: only as the system).

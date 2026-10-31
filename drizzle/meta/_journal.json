@@ -246,6 +246,13 @@
       "when": 1793454908072,
       "tag": "0034_pending-upload-declared-size",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793464306382,
+      "tag": "0035_museum_details",
+      "breakpoints": true
     }
   ]
 }
