@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
-import { aggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, entriesOf, lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
 import { MUSEUM_DETAILS_ID, type MuseumDetails } from "./change-museum-details";
+import { collectionEvents } from "./events";
 import { MUSEUM_LOGO_ID, type LogoMediaType, type MuseumLogo } from "./replace-logo";
 import { museumDetails as museumDetailsTable, museumLogo as museumLogoTable } from "./schema";
 
@@ -82,4 +83,16 @@ export async function museumLogo(db: Database): Promise<string | undefined> {
 /** The museum's name – the one every visitor page that names the museum shows (ST-100), in every language. */
 export async function museumName(db: Database): Promise<string> {
   return (await storedDetails(db)).museumName;
+}
+
+/**
+ * What the team member's latest change of the logo was (ST-102), for the confirmation on the museum settings page (G3) –
+ * only when the latest command on the logo is theirs. The logo's ID stays inside Collection, like the maintenance plan's.
+ */
+export async function logoChangedBy(db: Database, teamMemberId: TeamMemberId): Promise<"replaced" | "removed" | undefined> {
+  const command = await lastCommandBy(db, { aggregateId: MUSEUM_LOGO_ID }, teamMemberId);
+  const entries = command ? entriesOf(collectionEvents, command) : [];
+  if (entries.some((entry) => entry.type === "EVT-LogoReplaced")) return "replaced";
+  if (entries.some((entry) => entry.type === "EVT-LogoRemoved")) return "removed";
+  return undefined;
 }

@@ -578,7 +578,8 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`). Exception: `/logo`, the museum's logo; the welcome page's data holds only whether a logo exists. (ST-102 – that rule
   protects photos that may show people; the logo is public by nature. `logoRoute` in `src/app/logo/` checks only whether
   there is a logo and sends the browser on with 307 to a fresh 5-minute view address, `Cache-Control: private,
-  max-age=60`, so a replaced or removed logo shows at most a minute longer; without a logo it is 404.)
+  max-age=60`; without a logo it is 404. The welcome page asks `/logo?v=<logo version>` – the version is no content
+  reference –, so a replaced logo is a new address and a kept sending-on is never followed to deleted content.)
 - **The logo has an acceptance of its own** (ST-102, `src/photo/accept-logo.ts`), next to the photo acceptance – which
   turns every image into a JPEG on white and would destroy a logo's transparency: at most 2 MB (`LOGO_LIMITS`), a real
   PNG, JPEG or WebP by its content (SVG never) within the photos' pixel limit, scaled to at most 1000 px on its long edge

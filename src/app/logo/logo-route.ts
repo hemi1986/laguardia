@@ -15,7 +15,7 @@ const REUSE_SECONDS = 60;
  * when the store cannot sign – it is not found.
  */
 export function logoRoute({ db, storage, clock }: { db: Database; storage: ContentStorage; clock: Clock }) {
-  return async (_request: Request): Promise<Response> => {
+  return async (): Promise<Response> => {
     const logo = await museumLogo(db);
     const address = logo && (await photoViewAddresses(storage, clock, [logo])).get(logo);
     if (!address) return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });

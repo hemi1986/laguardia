@@ -119,8 +119,8 @@ async function welcome() {
   );
 }
 
-/** The welcome page's logo is the public address `/logo`, above the museum name. */
-const logoBeforeName = /<img[^>]*src="\/logo"[^>]*>[\s\S]*<h1/;
+/** The welcome page's logo is the public address `/logo` (with the logo's version), above the museum name. */
+const logoBeforeName = /<img[^>]*src="\/logo\?v=\d+"[^>]*>[\s\S]*<h1/;
 
 it("ST-102: A technician uploads the first logo", async () => {
   const { upload, landed } = logoFormsOf(tom);
@@ -174,8 +174,12 @@ it("ST-102: Without a logo the welcome page shows only the museum name", async (
 
 it("ST-102: A technician replaces the logo", async () => {
   const previous = await aLogo();
+  const before = (await welcome()).match(/src="(\/logo[^"]*)"/)?.[1];
 
   expect(await logoFormsOf(tom).upload(null, await uploaded(await aWebp()))).toBeNull();
+
+  // A new address: a sending-on the browser kept for the previous logo is never followed to its deleted content.
+  expect((await welcome()).match(/src="(\/logo[^"]*)"/)?.[1]).not.toBe(before);
 
   const { logo } = await museumSettings(db);
   expect(logo).toMatch(/^logo\/[0-9a-f-]{36}\.webp$/);

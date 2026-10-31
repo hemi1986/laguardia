@@ -13,6 +13,7 @@ export {
   type PhotoError,
   type PhotoOwner,
   type PhotoReference,
+  type StoredLogo,
   type StoredPhoto,
 } from "./store-photo";
 export { logoErrors, type LogoError } from "./accept-logo";

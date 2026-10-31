@@ -2,7 +2,7 @@ import "server-only";
 import type { Clock } from "@/platform/clock";
 import type { CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
-import { acceptLogo, type LogoError } from "./accept-logo";
+import { acceptLogo, type LogoContentType, type LogoError } from "./accept-logo";
 import { acceptPhoto } from "./accept-photo";
 
 /** Every way a photo can fail – defined once here (ST-016), each with a text in the team and visitor catalogs. */
@@ -67,16 +67,18 @@ export async function withStoredPhotos<Result, Error extends string>(
 export async function withStoredLogo<Result, Error extends string>(
   sent: Uint8Array | undefined,
   { storage, newId }: PhotoDependencies,
-  run: (logo: StoredPhoto) => Promise<CommandResult<Result, Error>>,
+  run: (logo: StoredLogo) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: LogoError }> {
   const accepted = await acceptLogo(sent ?? new Uint8Array());
   if (!accepted.ok) return accepted;
   const { bytes, contentType, extension } = accepted.logo;
-  const outcome = await storeThenRun(storage, [{ name: `logo/${newId()}.${extension}`, bytes, contentType }], "logo", (_, [logo]) =>
-    run(logo),
-  );
+  const name = `logo/${newId()}.${extension}`;
+  const outcome = await storeThenRun(storage, [{ name, bytes, contentType }], "logo", () => run({ name, contentType }));
   return outcome === "not-stored" ? { ok: false, error: "logo-not-stored" } : outcome;
 }
+
+/** A stored logo: its name in the storage seam and the media type it was stored with. */
+export type StoredLogo = { name: PhotoReference; contentType: LogoContentType };
 
 /** Stores accepted content under its names, runs the command with them, and deletes them when anything fails. */
 async function storeThenRun<Result, Error extends string>(

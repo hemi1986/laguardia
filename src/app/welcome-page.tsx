@@ -15,13 +15,14 @@ export function WelcomePageView({
   museumName,
   locale,
   messages,
-  hasLogo,
+  logoVersion,
   machinesOnDisplay,
-}: MuseumNamedProps & { hasLogo?: boolean; machinesOnDisplay: MachinesOnDisplayGroup[] }) {
-  const logo = hasLogo && (
-    // The public address `/logo` sends the browser on to a short-lived view address of the private store (ST-102).
+}: MuseumNamedProps & { logoVersion?: number; machinesOnDisplay: MachinesOnDisplayGroup[] }) {
+  const logo = logoVersion !== undefined && (
+    // The public address `/logo` sends the browser on to a short-lived view address of the private store (ST-102); the
+    // version makes a replaced logo a new address, so a sending-on the browser kept is never followed to deleted content.
     // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo" alt={messages.welcomePage.logo} className="mx-auto max-h-[33dvh] w-auto max-w-full object-contain" />
+    <img src={`/logo?v=${logoVersion}`} alt={messages.welcomePage.logo} className="mx-auto max-h-[33dvh] w-auto max-w-full object-contain" />
   );
   return (
     <VisitorPage title={museumName} locale={locale} messages={messages} back="/" above={logo}>

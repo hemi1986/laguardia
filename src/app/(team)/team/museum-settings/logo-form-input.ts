@@ -1,7 +1,7 @@
-import type { LogoMediaType, RemoveLogoError, removeLogoCommand, replaceLogoCommand } from "@/modules/collection";
+import type { RemoveLogoError, removeLogoCommand, replaceLogoCommand } from "@/modules/collection";
 import type { FormFields, FormState } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
-import type { LogoError } from "@/photo";
+import type { LogoError, StoredLogo } from "@/photo";
 import type { CommandError } from "@/platform/command";
 
 /** The form „Logo“'s own fields (ST-102): only the version of the logo it showed – the image is the file field `logo`. */
@@ -19,11 +19,7 @@ export const LOGO_FIELD = "logo";
 export const logoFormDefinition = {
   fields: logoFormFields,
   logo: { field: LOGO_FIELD },
-  input: (fields: FormFields<LogoFormField>, logo: { name: string; contentType: string }) => ({
-    version: versionSeen(fields.version),
-    // The logo acceptance only gives these three (invariant: a PNG, JPEG or WebP image).
-    logo: { name: logo.name, contentType: logo.contentType as LogoMediaType },
-  }),
+  input: (fields: FormFields<LogoFormField>, logo: StoredLogo) => ({ version: versionSeen(fields.version), logo }),
 } as const;
 
 /** How the removal of the logo (CMD-RemoveLogo) is read (ST-102): one tap, only the logo version the page showed. */

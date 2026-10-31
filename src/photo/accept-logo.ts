@@ -6,7 +6,10 @@ import { LOGO_LIMITS, PHOTO_LIMITS } from "./limits";
 export const logoErrors = ["logo-too-large", "not-a-logo-image", "logo-not-stored"] as const;
 export type LogoError = (typeof logoErrors)[number];
 
-export type AcceptedLogo = { bytes: Buffer; contentType: "image/png" | "image/jpeg" | "image/webp"; extension: string };
+/** The media types a logo is stored with – the only ones the logo acceptance gives. */
+export type LogoContentType = "image/png" | "image/jpeg" | "image/webp";
+
+export type AcceptedLogo = { bytes: Buffer; contentType: LogoContentType; extension: string };
 
 const formats = {
   png: { contentType: "image/png", extension: "png" },

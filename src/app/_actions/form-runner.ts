@@ -9,9 +9,11 @@ import {
   type CommandError,
 } from "@/platform/command";
 import {
+  LOGO_LIMITS,
   withStoredLogo,
   withStoredPhotos,
   type LogoError,
+  type StoredLogo,
   type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
 import { s3Storage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
@@ -84,7 +86,7 @@ export type LogoFormDefinition<Input, Result, Field extends string> = Omit<
   "input"
 > & {
   logo: { field: string };
-  input: (fields: FormFields<Field>, logo: StoredPhoto) => Input;
+  input: (fields: FormFields<Field>, logo: StoredLogo) => Input;
 };
 
 /** After a rejection of a form with a photo: also whether the photo must be chosen again (G8a) – set only then. */
@@ -338,6 +340,8 @@ function logoStep<Input, Result, Error extends string, Field extends string>(
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
     const [file] = postedPhotos(formData, definition.logo.field);
+    // Known before reading it: a file over the limit is not copied into memory (the acceptance checks again).
+    if (file && file.size > LOGO_LIMITS.maxUploadBytes) return { error: "logo-too-large", values: valuesOf(fields) };
     const actor = await currentPerson();
     const outcome = await withStoredLogo(
       file && new Uint8Array(await file.arrayBuffer()),

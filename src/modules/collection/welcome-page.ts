@@ -23,7 +23,15 @@ export type MachinesOnDisplayGroup = { machineCategory: MachineCategory; machine
  * RM-WelcomePage (ST-101, ST-102): the museum name, whether there is a logo – never its content reference: visitors get
  * it through `/logo` –, and, if the museum settings list them, the machines on display.
  */
-export type WelcomePage = { museumName: string; hasLogo: boolean; machinesOnDisplay: MachinesOnDisplayGroup[] };
+export type WelcomePage = {
+  museumName: string;
+  /**
+   * Whether there is a logo, as the logo's version (HS-16) – undefined without one. The page asks `/logo?v=<version>`, so
+   * a browser that keeps the sending-on for 60 seconds never follows a kept one to a replaced logo's deleted content.
+   */
+  logoVersion: number | undefined;
+  machinesOnDisplay: MachinesOnDisplayGroup[];
+};
 
 /**
  * RM-WelcomePage (ST-101) – computed on every request, so a change is visible at the next page load. Machines on display
@@ -32,9 +40,10 @@ export type WelcomePage = { museumName: string; hasLogo: boolean; machinesOnDisp
  * in the visitor's language, ignoring case, then by location (its numbers as numbers – „Halle 2“ before „Halle 10“) and museum number.
  */
 export async function welcomePage(db: Database, locale: VisitorLocale): Promise<WelcomePage> {
-  const { museumName, machinesListed, logo } = await museumSettings(db);
-  const hasLogo = !!logo;
-  if (!machinesListed) return { museumName, hasLogo, machinesOnDisplay: [] };
+  const settings = await museumSettings(db);
+  const { museumName, machinesListed } = settings;
+  const logoVersion = settings.logo ? settings.logoVersion : undefined;
+  if (!machinesListed) return { museumName, logoVersion, machinesOnDisplay: [] };
   const rows = await db
     .select({
       museumNumber: machine.museumNumber,
@@ -68,5 +77,5 @@ export async function welcomePage(db: Database, locale: VisitorLocale): Promise<
         })),
     }))
     .filter((group) => group.machines.length > 0);
-  return { museumName, hasLogo, machinesOnDisplay };
+  return { museumName, logoVersion, machinesOnDisplay };
 }

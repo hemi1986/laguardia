@@ -1,3 +1,5 @@
+import { sharedErrors } from "./shared";
+
 /**
  * The team UI's texts of the Collection context (BC-Collection): machine models, machines, the machine record,
  * QR stickers, files, machine status and location.
@@ -290,7 +292,7 @@ export const collectionErrors = {
   "logo-too-large": "Das Logo darf höchstens 2 MB groß sein.",
   "logo-not-stored": "Das Logo konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
   /** Only a page that still showed a logo removes one – someone removed it meanwhile (ST-102). */
-  "no-logo": "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
+  "no-logo": sharedErrors["version-conflict"],
   /** Registering a machine model (ST-006) and correcting it (ST-036): no correction without a change. */
   "manufacturer-required": "Bitte einen Hersteller angeben.",
   "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",

@@ -46,8 +46,10 @@ export async function loadMuseumSettings(
   }: { viewer?: TeamMemberId; storage?: ContentStorage; clock?: Clock } = {},
 ): Promise<MuseumSettingsData> {
   const settings = await museumSettings(db);
-  const addresses = settings.logo ? await photoViewAddresses(storage, clock, [settings.logo]) : new Map();
-  const confirmed = params.saved === "logo" && viewer ? await logoChangedBy(db, viewer) : undefined;
+  const [addresses, confirmed] = await Promise.all([
+    settings.logo ? photoViewAddresses(storage, clock, [settings.logo]) : new Map<string, string>(),
+    params.saved === "logo" && viewer ? logoChangedBy(db, viewer) : undefined,
+  ]);
   return {
     settings,
     saved: params.saved === "museum" ? "museum" : undefined,

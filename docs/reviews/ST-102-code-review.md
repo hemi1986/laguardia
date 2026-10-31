@@ -1,0 +1,42 @@
+# Code review – ST-102: Replace or remove the museum's logo on the welcome page
+Base: main · Commits: 9 · Date: 2026-10-31
+
+The story's ten scenario tests and the unit tests of the logo acceptance pass (`accept-logo.test.ts`, `museum-logo.integration.test.ts`, `logo-route.integration.test.ts`: 17 tests). `check-language.ts` reports nothing in the diff. Both commands go through `aggregateCommand` with `allowedActors: ["technician"]`. The version check covers the logo part only (its own `museum_logo` row). The content follows ADR 0009: store, run, delete on failure, and the previous or removed content is deleted after the commit through `removesContent`. The welcome page's data holds only `hasLogo`.
+
+The decisions the main session asked about:
+- **`no-logo` with the version-conflict text:** sound. `aggregateCommand` decides on the fresh state before it checks the version, so a stale removal after someone else removed the logo lands on the decision, not on the version check. The scenario's "Then" asks for exactly this text. One wording finding is below (#3).
+- **307, `private, max-age=60`, 404 `no-store`:** matches the story. `private` keeps the redirect out of shared caches. Finding #6 is only about checking the header in a production build.
+- **`?saved=logo` confirmed through the journal:** correct under G3. Every change of the logo records an event, so the exception that „Museum“ needs (HS-27) does not apply. The integration test proves that a second technician opening the same address gets no confirmation.
+- **Optional `hasLogo` on `WelcomePageView`:** acceptable, see #4.
+
+The conventions amendment matches the code. It has the HS-1 exception sentence word for word, the logo acceptance (`accept-logo.ts`, `LOGO_LIMITS`, `logo/<newId()>.<ext>`, `logoErrors`), the runner's `logo` step (a native file field, no `PhotoField`, the 2 MB check in the browser repeated on the server) and the journal-confirmed `?saved=logo`.
+
+| # | Severity | Area | File:line | Finding | Source (ADR, rule, glossary, smell) | Suggested direction |
+|---|---|---|---|---|---|---|
+| 1 | minor | Design | src/photo/store-photo.ts:928-940, src/app/(team)/team/museum-settings/logo-form-input.ts:21-25 | `withStoredLogo` hands the command a `StoredPhoto`, whose `contentType` is a bare `string`. The union that `acceptLogo` already knows (`AcceptedLogo.contentType`) is lost at that point, and the form definition casts it back with `as LogoMediaType`. The same three media types are also spelled out twice: in `LogoMediaType` (Collection) and in `AcceptedLogo` (photo). The interface leaks the photo's shape into the logo, and correctness depends on a cast instead of on the type. | Primitive Obsession, leaking module (codebase-design) | Have `withStoredLogo` pass a stored logo typed with the photo module's media-type union, so the cast in `logo-form-input.ts` disappears. Collection's `LogoMediaType` can stay as the domain's own type, since the two match structurally. |
+| 2 | minor | Design | src/modules/collection/in-command.ts:386-392 | Every other function in `in-command.ts` is a pure reader of one command's journal entries (`…In(command)`). `logoChangedBy` queries the database. That gives the file a second reason to change, and the `In` naming convention no longer tells a reader what they will find there. | Divergent Change | Move `logoChangedBy` next to the museum settings read model (`museum-settings.ts`), or wherever Collection's other `lastCommandBy` queries for confirmations live. |
+| 3 | minor | Code smell | src/platform/messages/team/collection.ts:293 | The `no-logo` text copies the `version-conflict` sentence from `team/shared.ts:136` as a literal. If one of them is reworded, the two drift apart, and the scenario only holds while they are equal. | Duplicated Code | Reference the shared `version-conflict` text instead of repeating it, or keep the literal and add a one-line test that asserts both texts are equal. |
+| 4 | minor | Design | src/app/welcome-page.tsx:298-301 | `hasLogo?: boolean` is optional on the view, while `RM-WelcomePage` (`WelcomePage.hasLogo`) requires it. The view's interface was loosened so that an ST-100 test (`visitor-museum-name.integration.test.ts:31`, typed as `typeof WelcomePageView` and shared with other views) needs no change. A future caller that forgets the prop silently shows no logo, and the type checker cannot catch it. | Interface weaker than its read model (codebase-design) | Acceptable as it is, because the only production call site spreads `WelcomePage`. If it is touched again, make the prop required and give the ST-100 helper `hasLogo: false`. Adding a required prop to a test is not weakening the test. |
+| 5 | minor | Domain rule / UX | src/app/(team)/team/museum-settings/logo-form.tsx:76-81, next.config.ts (`bodySizeLimit: "4mb"`) | Without JavaScript, the "logo larger than 2 MB" text appears only for files of about 2 to 4 MB. Above the Server Action body limit, Next.js rejects the request before the runner runs, and the technician gets the generic error instead of „Das Logo darf höchstens 2 MB groß sein.“. With JavaScript the browser check covers this, and the scenario (3 MB) passes. | Story: rejection text for files over 2 MB, "works without JavaScript" | Leave a line in the conventions, or accept it as it is. No follow-up story (no security or data-loss risk). |
+| 6 | minor | Verification | src/app/logo/logo-route.ts:231-234, e2e/museum-logo.spec.ts (skips when `BASE_URL` is set) | `Cache-Control: private, max-age=60` is asserted only in the integration test and in the local `next dev` e2e. The spec skips on the preview, so nothing confirms that the production build and Vercel keep the route handler's header unchanged after `connection()`. | Story: "the browser may reuse the sending-on for at most 60 seconds" | Before merging, check the preview once with `curl -sI <preview>/logo` and note the result in the PR. |
+| 7 | minor | Security | src/app/logo/logo-route.ts:229-233 | The 307 `Location` reveals the content name `logo/<uuid>.<ext>` and the bucket host to visitors. That is inherent to a presigned address, and the story accepts it (the HS-1 exception: the logo is public). The name is random and identifies no person or machine. | Security criterion: no internal IDs on visitor pages | No change. Recorded so the exception is visibly deliberate. |
+
+Verdict: ready to merge
+Most important finding: #1 – `withStoredLogo` passes the logo on as a `StoredPhoto` with a bare `string` media type, so the invariant "a PNG, JPEG or WebP image" reaches the command through a cast instead of through the type.
+
+## Refactor (main session, 2026-10-31)
+
+- **#1 fixed** – `withStoredLogo` passes a `StoredLogo` (`{ name, contentType: LogoContentType }`); the cast in `logo-form-input.ts` is gone. `museumLogoStore.toState` keeps its cast on the row, guarded by the migration's CHECK.
+- **#2 fixed** – `logoChangedBy` moved to `museum-settings.ts`, next to the read model.
+- **#3 fixed** – `no-logo` references `sharedErrors["version-conflict"]`.
+- **#4 obsolete** – the view now takes `logoVersion?: number` (see below); still optional, for the ST-100 helper – revisit when the file is touched again.
+- **#5 skipped minor** – the runner now refuses a file over 2 MB by its size before reading it; above the 4 MB body limit without JavaScript Next.js' own error stays (accepted, no follow-up).
+- **#6** – to check on the preview before the merge (`curl -sI <preview>/logo`); noted in the pull request.
+- **#7 no change** – deliberate (HS-1 exception).
+
+From the bug review (`/code-review`), fixed in this story:
+- **A kept sending-on followed to deleted content** – the browser may keep `/logo` for 60 s, but the previous logo's content is deleted at once, so the welcome page would show a broken image for up to a minute after a replacement. The welcome page now asks `/logo?v=<logo version>` (no content reference), so a replacement is a new address; the replacement scenario test checks the address changes.
+- The logo section's field is marked invalid only for rejections of the image itself (not for `logo-not-stored`); the settings page reads the view address and the confirmation in parallel.
+- Skipped minors: a broken image on the welcome page while the store cannot sign (a store outage; the page still works), and no text in the team section when a logo exists but cannot be signed – revisit when the store's availability becomes a topic.
+
+Security review (`/security-review`): no findings with confidence ≥ 8.

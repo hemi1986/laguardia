@@ -39,8 +39,8 @@ async function aLogo(name: string) {
   if (!replaced.ok) throw new Error(replaced.error);
 }
 
-/** Someone not logged in opens the address – no cookie, no header of a session. */
-const opened = () => logoRoute({ db, storage: memoryStorage(), clock })(new Request("http://localhost/logo"));
+/** Someone not logged in opens the address – the route reads nothing of the request, no cookie, no session. */
+const opened = () => logoRoute({ db, storage: memoryStorage(), clock })();
 
 it("ST-102: Visitors get the logo without logging in", async () => {
   await aLogo("logo/4b0e7c4e-8f0a-4a63-9d43-1f1b7a0b1c11.png");
