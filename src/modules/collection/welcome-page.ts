@@ -2,7 +2,7 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import type { Database } from "@/platform/command";
 import type { VisitorLocale } from "@/platform/messages";
 import { machineCategories, type MachineCategory } from "./create-machine-model";
-import { museumSettings } from "./museum-settings";
+import { imprintProvided as imprintOffered, museumSettings } from "./museum-settings";
 import type { MachineStatus } from "./register-machine";
 import { machine, machineModel } from "./schema";
 
@@ -42,8 +42,8 @@ export type WelcomePage = {
  * in the visitor's language, ignoring case, then by location (its numbers as numbers – „Halle 2“ before „Halle 10“) and museum number.
  */
 export async function welcomePage(db: Database, locale: VisitorLocale): Promise<WelcomePage> {
-  const settings = await museumSettings(db);
-  const { museumName, machinesListed, imprintProvided } = settings;
+  const [settings, imprintProvided] = await Promise.all([museumSettings(db), imprintOffered(db)]);
+  const { museumName, machinesListed } = settings;
   const logoVersion = settings.logo ? settings.logoVersion : undefined;
   if (!machinesListed) return { museumName, logoVersion, imprintProvided, machinesOnDisplay: [] };
   const rows = await db

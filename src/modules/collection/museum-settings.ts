@@ -79,8 +79,6 @@ export type MuseumSettings = {
   legalTexts: { privacyNoticeDe: string; privacyNoticeEn: string; imprintDe: string; imprintEn: string };
   /** The version of the legal texts the form „Rechtstexte“ posts (HS-16). */
   legalTextsVersion: number;
-  /** Whether visitor pages offer an imprint – a German one is provided (RM-WelcomePage, RM-LegalPage). */
-  imprintProvided: boolean;
 };
 
 async function storedDetails(db: Database) {
@@ -120,7 +118,6 @@ export async function museumSettings(db: Database): Promise<MuseumSettings> {
       imprintEn: legal.imprintEn ?? "",
     },
     legalTextsVersion: legal.version,
-    imprintProvided: legal.imprintDe !== null,
   };
 }
 
@@ -145,8 +142,9 @@ export async function legalPage(
 
 /** Whether the museum provides an imprint (ST-103) – every visitor page offers it then, in German and English (HS-25). */
 export async function imprintProvided(db: Database): Promise<boolean> {
-  return (await storedLegalTexts(db)).imprintDe !== null;
+  return !!legalTextsOf(await storedLegalTexts(db)).imprint;
 }
+
 
 /**
  * The logo's content name for the public address `/logo` (ST-102) – the one place outside a team page that issues a view

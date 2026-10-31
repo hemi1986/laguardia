@@ -789,7 +789,9 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 - React escapes output; `dangerouslySetInnerHTML` is not used – **one named exception** (ST-103, ADR 0013): the legal
   texts' Markdown, rendered on the server only through `LegalMarkdown` / `legalTextHtml` (`src/app/legal-markdown.tsx`,
   markdown-it with raw HTML escaped, every element but headings, paragraphs, bold, italic, lists and https/mailto links
-  left as its source); lint `react/no-danger` refuses it anywhere else. Security headers: `next.config.ts` – except the
+  left as its source – the image rule is wrapped, not disabled, so `![x](https://…)` stays its whole source rather than a
+  `!` and a link; markdown-it is pinned to its minor version, since the wrapper reads `inline.ruler.__rules__`); lint
+  `react/no-danger` refuses it anywhere else. Security headers: `next.config.ts` – except the
   Content Security Policy.
 - **The Content Security Policy** (ST-070) is set by `src/proxy.ts` on every page request, with a fresh nonce
   (`src/platform/content-security-policy.ts`): scripts only with the nonce and `'strict-dynamic'`, `<style>` elements

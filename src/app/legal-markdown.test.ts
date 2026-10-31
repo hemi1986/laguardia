@@ -43,6 +43,8 @@ describe("rendering a legal text", () => {
     ["a data: link", "[x](data:text/html;base64,PHNjcmlwdD4=)", "[x](data:text/html;base64,PHNjcmlwdD4=)"],
     ["a javascript: autolink", "<javascript:alert(1)>", "&lt;javascript:alert(1)&gt;"],
     ["a javascript: reference link", "[Klick][x]\n\n[x]: javascript:alert(1)", "[Klick][x]"],
+    ["an https reference link", "[Klick][x]\n\n[x]: https://example.org", "[x]: https://example.org"],
+    ["a reference image", "![Bild][x]\n\n[x]: https://example.org/x.png", "![Bild][x]"],
     ["a table", "| Zweck | Dauer |\n| --- | --- |\n| Meldung | 1 Jahr |", "| Zweck | Dauer |"],
     ["a quotation", "> zitiert", "&gt; zitiert"],
     ["code", "`code`", "`code`"],

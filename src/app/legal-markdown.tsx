@@ -4,7 +4,8 @@ import MarkdownIt from "markdown-it";
  * The legal texts' Markdown (ST-103, ADR 0013) – the one place it is rendered. Visitors see headings, paragraphs, bold
  * and italic, lists and links to https and mailto addresses. Everything else stays its source, as typed (HS-26): raw HTML
  * is escaped (`html: false`), the rules of every other element are off – so an image, a table, a quotation, code, a rule
- * or a crossed-out word is plain text –, a bare address is no link (`linkify: false`), and a link to any other kind of
+ * or a crossed-out word is plain text, a reference definition (`[r]: https://…`) stays its line, so a reference link is
+ * its source too –, a bare address is no link (`linkify: false`), and a link to any other kind of
  * address fails `validateLink` and stays its text.
  */
 const markdown = new MarkdownIt({ html: false, linkify: false, typographer: false }).disable([
@@ -15,6 +16,7 @@ const markdown = new MarkdownIt({ html: false, linkify: false, typographer: fals
   "hr",
   "backticks",
   "strikethrough",
+  "reference",
 ]);
 
 // An image is its source as typed – the whole of it. Switching its rule off would leave `![Bild](https://…)` a `!` and a

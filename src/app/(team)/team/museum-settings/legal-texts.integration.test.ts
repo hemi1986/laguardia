@@ -257,6 +257,8 @@ it("ST-103: Markdown outside the shown elements reaches visitors as plain text",
     "| Meldung | 1 Jahr |",
     "",
     "[Klick](javascript:alert(1))",
+    "",
+    "[Kontakt](https://flippermuseum-eschbach.de/kontakt) und [Mail](mailto:info@example.org)",
   ].join("\n");
 
   await saved({ privacyNoticeDe: typed });
@@ -273,8 +275,8 @@ it("ST-103: Markdown outside the shown elements reaches visitors as plain text",
     expect(shown).toContain(escaped(source).replaceAll("&quot;", '"'));
   }
   expect(shown).not.toMatch(/<(script|img|table)\b/);
-  for (const [address] of shown.matchAll(/<a [^>]*href="([^"]*)"/g)) expect(address).toMatch(/href="(https|mailto):/);
-  expect(shown).not.toMatch(/<a\b/);
+  const addresses = [...shown.matchAll(/<a [^>]*href="([^"]*)"/g)].map(([, address]) => address);
+  expect(addresses).toEqual(["https://flippermuseum-eschbach.de/kontakt", "mailto:info@example.org"]);
 });
 
 it("ST-103: Legal texts changed by someone else meanwhile are not overwritten", async () => {
