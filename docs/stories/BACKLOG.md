@@ -4,9 +4,15 @@
 
 **Progress: 67 of 67 domain stories done** · scenarios 637 of 637
 
-**95 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 84 · Superseded: 11
+**96 stories** · In Progress: 0 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 84 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## Ready
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-099](ST-099-s3-compatible-object-storage.md) | S3-compatible object storage everywhere | tech-task | Collection | must | L | high | ST-085 |
 
 ## Done
 
