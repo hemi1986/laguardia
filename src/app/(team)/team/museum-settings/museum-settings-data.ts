@@ -4,6 +4,11 @@ import type { Database } from "@/platform/command";
 /** Which form of the museum settings was just saved – so far only „Museum“ (ST-100); the logo and the legal texts follow. */
 export type SavedSection = "museum";
 
+/** Where a saved form of the museum settings lands (G3) – what the page reads back as `saved`. */
+export function savedLanding(section: SavedSection): string {
+  return `/team/museum-settings?saved=${section}`;
+}
+
 export type MuseumSettingsData = { settings: MuseumSettings; saved: SavedSection | undefined };
 
 /**

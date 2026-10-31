@@ -5,7 +5,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
 import { changeMuseumDetailsCommand, museumSettings } from "@/modules/collection";
-import { museumDetailsJournal, withDefaultMuseumDetails } from "@/modules/collection/museum-settings.test-support";
+import {
+  DEFAULT_MUSEUM_NAME,
+  museumDetailsJournal,
+  withDefaultMuseumDetails,
+} from "@/modules/collection/museum-settings.test-support";
 import { fixedClock } from "@/platform/clock";
 import type { Actor } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -13,7 +17,7 @@ import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { museumFormDefinition } from "./museum-form-input";
 import { MuseumFormContent } from "./museum-form";
-import { loadMuseumSettings } from "./museum-settings-data";
+import { loadMuseumSettings, savedLanding } from "./museum-settings-data";
 import { MuseumSettingsView } from "./museum-settings";
 
 /**
@@ -59,7 +63,8 @@ async function filledIn(change: { museumName?: string; machinesListed?: boolean 
 }
 
 /** The page the technician lands on – after a save it says so (`?saved=museum`). */
-async function page(params: Record<string, string> = {}) {
+async function page(address = "/team/museum-settings") {
+  const params = Object.fromEntries(new URL(address, "http://localhost").searchParams);
   return renderToStaticMarkup(createElement(MuseumSettingsView, await loadMuseumSettings(db, params)));
 }
 
@@ -75,13 +80,13 @@ const nameField = (html: string) => html.match(/<input[^>]*name="museumName"[^>]
 const listingField = (html: string) => html.match(/<input[^>]*name="machinesListed"[^>]*>/)?.[0] ?? "";
 
 it("ST-100: A technician changes the museum's name", async () => {
-  expect((await museumSettings(db)).museumName).toBe("Flipper- & Arcade Museum Eschbach");
+  expect((await museumSettings(db)).museumName).toBe(DEFAULT_MUSEUM_NAME);
   const { action, landed } = museumFormOf(tom);
 
   expect(await action(null, await filledIn({ museumName: "Flippermuseum Eschbach" }))).toBeNull();
 
   expect(landed).toEqual(["saved"]);
-  const html = await page({ saved: "museum" });
+  const html = await page(savedLanding("museum"));
   expect(nameField(html)).toContain('value="Flippermuseum Eschbach"');
   expect(html).toContain("Museum gespeichert.");
   const [changed] = (await museumDetailsJournal(db)).slice(-1);
@@ -97,9 +102,8 @@ it("ST-100: A technician changes the museum's name", async () => {
 it("ST-100: Before any change the museum settings hold the defaults", async () => {
   const html = await page();
 
-  expect(html).toContain("<h2");
-  expect(html).toContain("Museum");
-  expect(nameField(html)).toContain('value="Flipper- &amp; Arcade Museum Eschbach"');
+  expect(html).toMatch(/<h2[^>]*>Museum<\/h2>/);
+  expect(nameField(html)).toContain(`value="${DEFAULT_MUSEUM_NAME.replaceAll("&", "&amp;")}"`);
   expect(html).toContain("Geräteliste auf der Startseite anzeigen");
   expect(listingField(html)).not.toContain("checked");
   expect(html).not.toContain("Museum gespeichert.");
@@ -111,12 +115,12 @@ it("ST-100: A technician switches the listing of the machines on", async () => {
   expect(await action(null, await filledIn({ machinesListed: true }))).toBeNull();
 
   expect(await museumSettings(db)).toMatchObject({
-    museumName: "Flipper- & Arcade Museum Eschbach",
+    museumName: DEFAULT_MUSEUM_NAME,
     machinesListed: true,
   });
-  const html = await page({ saved: "museum" });
+  const html = await page(savedLanding("museum"));
   expect(listingField(html)).toContain("checked");
-  expect(nameField(html)).toContain('value="Flipper- &amp; Arcade Museum Eschbach"');
+  expect(nameField(html)).toContain(`value="${DEFAULT_MUSEUM_NAME.replaceAll("&", "&amp;")}"`);
   expect((await museumDetailsJournal(db)).at(-1)).toMatchObject({
     data: { changedDetails: ["machines-listed"], machinesListed: true },
   });
@@ -145,9 +149,9 @@ it("ST-100: Saving without a change is no rejection", async () => {
   expect(await action(null, await filledIn({}))).toBeNull();
 
   expect(landed).toEqual(["saved"]);
-  const html = await page({ saved: "museum" });
+  const html = await page(savedLanding("museum"));
   expect(html).toContain("Museum gespeichert.");
-  expect(nameField(html)).toContain('value="Flipper- &amp; Arcade Museum Eschbach"');
+  expect(nameField(html)).toContain(`value="${DEFAULT_MUSEUM_NAME.replaceAll("&", "&amp;")}"`);
   expect(listingField(html)).not.toContain("checked");
   expect(await museumSettings(db)).toEqual(before);
   expect(await museumDetailsJournal(db)).toEqual(journalBefore);

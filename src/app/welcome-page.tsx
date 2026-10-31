@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import type { VisitorLocale, VisitorMessages } from "@/platform/messages";
-import { VisitorPage } from "./visitor-page";
-
-/** What every visitor page that names the museum gets (ST-100): its name from the museum settings, and the language. */
-export type MuseumNamedProps = { museumName: string; locale: VisitorLocale; messages: VisitorMessages };
+import { VisitorPage, type MuseumNamedProps } from "./visitor-page";
 
 /**
  * The welcome page (ST-078): the museum's name – from the museum settings, not translated (ST-100) –, the way to the team

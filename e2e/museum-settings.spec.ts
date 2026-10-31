@@ -44,6 +44,9 @@ test("ST-100: Helpers do not get the museum settings", async ({ page, browser })
   await helperPhone.goto("/team/museum-settings");
   await expect(helperPhone).toHaveURL(/\/team$/);
 
+  await page.goto("/");
+  const before = await page.getByRole("heading", { level: 1 }).textContent();
+
   // The form as a technician's page shows it, sent with the helper's session.
   await logIn(page);
   await page.goto("/team/museum-settings");
@@ -55,6 +58,6 @@ test("ST-100: Helpers do not get the museum settings", async ({ page, browser })
   await expect(page).toHaveURL(/\/team$/);
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).not.toHaveText(name);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(before ?? "");
   await helperPhone.close();
 });

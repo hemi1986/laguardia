@@ -1,6 +1,5 @@
 import { BackLink } from "@/components/ui/back-link";
-import { VisitorPage } from "../../visitor-page";
-import type { MuseumNamedProps } from "../../welcome-page";
+import { VisitorPage, type MuseumNamedProps } from "../../visitor-page";
 
 /**
  * An unknown museum number (ST-010), named by the museum's name from the museum settings (ST-100): said in the visitor's

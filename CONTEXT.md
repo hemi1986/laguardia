@@ -39,6 +39,12 @@ machines on display are listed for visitors to report a problem. Only technician
 _Avoid_: Configuration, admin settings, museum profile
 _UI (de)_: Museumseinstellungen
 
+**Museum details**:
+The part of the museum settings that holds the museum's name and whether the machines on display are listed on the
+welcome page; changed together in the form „Museum“, versioned apart from the logo and the legal texts.
+_Avoid_: Museum profile, general settings
+_UI (de)_: Museum (the form's title)
+
 **Logo**:
 The museum's picture on the welcome page; there is at most one, and only technicians replace or remove it in the
 museum settings.
