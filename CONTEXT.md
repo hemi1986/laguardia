@@ -43,7 +43,8 @@ How the museum presents itself to visitors: its name, its logo, the privacy noti
 machines on display are listed for visitors to report a problem. Only technicians change them, on the settings page
 (feature ai-assessment, 2026-10-31: the page is no longer called after them).
 _Avoid_: Configuration, admin settings, museum profile
-_UI (de)_: no page title of its own any more – its forms „Museum“, „Logo“ and „Rechtstexte“ sit on „Einstellungen“
+_UI (de)_: Museumseinstellungen
+_Note_: ST-104 renames the page to „Einstellungen“ (feature ai-assessment); from then on the museum settings have no page title of their own – their forms „Museum“, „Logo“ and „Rechtstexte“ sit on „Einstellungen“, and this line changes with the catalog.
 
 **Museum details**:
 The part of the museum settings that holds the museum's name and whether the machines on display are listed on the

@@ -31,7 +31,8 @@ ST-100, ST-102, ST-103) and, last, the new **„KI“**. ST-100, ST-102 and ST-1
 that assert the old label (`e2e/museum-settings.spec.ts`) follow the new label as part of this story – a rename, not a
 weakening; **the titles of those tests stay unchanged**. The comment in `src/app/(team)/navigation.tsx` and the
 catalog's glossary term for the page are brought in line with `CONTEXT.md` (*Settings* „Einstellungen“; *Museum
-settings* has no page title of its own any more).
+settings* has no page title of its own any more – its `_UI (de)_` line in `CONTEXT.md` still says „Museumseinstellungen“
+until this story and changes with the catalog, as its `_Note_` says).
 
 **The form „KI“** – `CMD-ChangeAiSettings`, technicians only (ACT-Technician):
 - **AI is on exactly while a key, a chat model and an embedding model are saved** (invariant). Until a technician saves
@@ -203,5 +204,3 @@ Scenario: Helpers do not get the AI settings
   ST-107 → ST-108 → ST-109 → ST-110 → ST-111; `depends_on` carries the real dependencies.
 - OpenRouter is an external system behind the AI seam (ADR 0014); the scenarios describe behaviour, the tests use the
   seam's in-memory stand-in.
-- The proposal markers on *Chat model* and *Embedding model* in `CONTEXT.md` are to be removed now that the labels are
-  settled (domain-model owner).
