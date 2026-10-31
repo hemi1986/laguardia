@@ -13,7 +13,7 @@ import type { Clock } from "@/platform/clock";
 import { lastCommandBy, type Database } from "@/platform/command";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
-import { blobStorage } from "@/platform/storage";
+import { s3Storage } from "@/platform/storage";
 import { photoAt, type PhotoSource } from "../../team-photos";
 import { shownReporter, type ShownReporter } from "../../reporter";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
@@ -108,7 +108,7 @@ export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  { storage = blobStorage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
+  { storage = s3Storage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;

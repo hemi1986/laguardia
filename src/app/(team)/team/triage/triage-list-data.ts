@@ -2,7 +2,7 @@ import { triageList, type TriageListEntry } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import { photoViewAddresses } from "@/photo";
-import { blobStorage, type ContentStorage } from "@/platform/storage";
+import { s3Storage, type ContentStorage } from "@/platform/storage";
 import { named } from "../named";
 import { photoAt, type PhotoSource } from "../team-photos";
 import { shownReporter, type ShownReporter } from "../reporter";
@@ -29,7 +29,7 @@ export type TriageListItem = {
 export async function loadTriageList(
   db: Database,
   clock: Clock,
-  { storage = blobStorage() }: PhotoSource = {},
+  { storage = s3Storage() }: PhotoSource = {},
 ): Promise<{ entries: TriageListItem[] }> {
   return { entries: await withNames(db, await triageList(db, clock), { clock, storage }) };
 }

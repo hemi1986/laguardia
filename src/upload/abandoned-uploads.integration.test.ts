@@ -8,7 +8,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { cleanUpAbandonedUploads, recordPendingUpload, uploadAddressOf, withUploadedContent } from ".";
+import { cleanUpAbandonedUploads, issueUploadAddress, withUploadedContent } from ".";
 
 /**
  * Abandoned uploads (ST-085, ADR 0009): content uploaded from the browser whose form was never sent. After a later
@@ -43,14 +43,15 @@ const at = (instant: string, storage: MemoryStorage) => ({
 
 /** A file Anna uploaded at the given time and never attached. */
 async function uploadedAt(instant: string, storage: MemoryStorage): Promise<string> {
-  const pending = await recordPendingUpload(at(instant, storage), {
+  const issued = await issueUploadAddress(at(instant, storage), {
     issuedTo: anna.teamMemberId,
     owner: { machineId },
+    size: 1,
+    contentType: "application/pdf",
   });
-  if (!pending.ok) throw new Error(pending.error);
-  const address = await uploadAddressOf(at(instant, storage), { issuedTo: anna.teamMemberId, name: pending.name });
-  await storage.upload(address!, new Uint8Array([7]), "application/pdf", new Date(instant));
-  return pending.name;
+  if (!issued.ok) throw new Error(issued.error);
+  await storage.upload(issued.address, new Uint8Array([7]), "application/pdf", new Date(instant));
+  return issued.name;
 }
 
 const now = "2026-10-19T12:00:00Z";

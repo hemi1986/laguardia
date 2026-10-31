@@ -4,7 +4,12 @@
  * browser half is `./browser.ts`.
  */
 export { FILE_SIZE_LIMIT } from "./limits";
-export { recordPendingUpload, uploadAddressOf, type UploadDependencies, type UploadOwner } from "./pending-uploads";
+export {
+  issueUploadAddress,
+  type UploadDependencies,
+  type UploadOwner,
+  type UploadRequest,
+} from "./pending-uploads";
 export {
   uploadedContentErrors,
   withUploadedContent,

@@ -23,7 +23,7 @@ const storage = (clock = systemClock) => s3Storage({ settings, clock });
 const minutesFromNow = (minutes: number) => new Date(Date.now() + minutes * MINUTE);
 
 /** What the browser does with an upload address: one PUT with the address's headers. */
-function send(address: UploadAddress, bytes: Uint8Array, url = address.url): Promise<Response> {
+function send(address: UploadAddress, bytes: Uint8Array<ArrayBuffer>, url = address.url): Promise<Response> {
   return fetch(url, { method: "PUT", headers: address.headers, body: bytes });
 }
 

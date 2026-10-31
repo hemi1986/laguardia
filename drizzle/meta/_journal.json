@@ -239,6 +239,13 @@
       "when": 1793131271655,
       "tag": "0033_machines_of_task_removed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793454908072,
+      "tag": "0034_pending-upload-declared-size",
+      "breakpoints": true
     }
   ]
 }

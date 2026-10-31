@@ -3,7 +3,7 @@ import { memoryStorage } from "./memory-storage";
 
 /**
  * The storage seam (ST-016, architecture review Q8/Q16, ADR 0007): write, delete and a short-lived view address.
- * Shown with the in-memory adapter integration tests use; the Vercel Blob adapter is shown by the photo browser test.
+ * Shown with the in-memory adapter integration tests use; the S3 adapter has its own tests against SeaweedFS.
  */
 describe("the storage seam", () => {
   it("stores content under its name and gives view addresses valid until the given time", async () => {
@@ -40,48 +40,48 @@ describe("the storage seam", () => {
 });
 
 /**
- * The upload address (ST-085, ADR 0009): a permission to upload content of at most a given size under exactly one
- * name, until a given time. The size limit is the caller's, and the permission itself refuses more.
+ * The upload address (ST-085, ST-099, ADR 0009/0012): a permission to upload content of exactly the declared size and
+ * media type under exactly one name, once, until a given time – the in-memory adapter refuses what the S3 store refuses.
  */
 describe("an upload address", () => {
   const until = new Date("2026-10-18T10:30:00Z");
+  const before = new Date("2026-10-18T10:29:59Z");
+  const declared = { size: 4, contentType: "application/pdf", validUntil: until };
 
-  it("lets the browser upload content of at most the given size under its name", async () => {
+  it("lets the browser upload content of the declared size and media type under its name", async () => {
     const storage = memoryStorage();
-    const address = await storage.uploadAddress("files/a", { maximumSize: 4, validUntil: until });
+    const address = await storage.uploadAddress("files/a", declared);
 
-    await storage.upload(address, new Uint8Array([1, 2, 3, 4]), "application/pdf", new Date("2026-10-18T10:29:59Z"));
+    await storage.upload(address, new Uint8Array([1, 2, 3, 4]), "application/pdf", before);
 
     expect(storage.read("files/a")).toEqual({ bytes: new Uint8Array([1, 2, 3, 4]), contentType: "application/pdf" });
+    expect(address.headers).toEqual({ "Content-Type": "application/pdf", "If-None-Match": "*" });
   });
 
-  it("refuses content above the size limit, whatever the form allowed", async () => {
+  it("refuses content of another length or media type than declared", async () => {
     const storage = memoryStorage();
-    const address = await storage.uploadAddress("files/b", { maximumSize: 4, validUntil: until });
+    const address = await storage.uploadAddress("files/b", declared);
 
-    await expect(
-      storage.upload(address, new Uint8Array([1, 2, 3, 4, 5]), "application/pdf", new Date("2026-10-18T10:00:00Z")),
-    ).rejects.toThrow("too large");
+    await expect(storage.upload(address, new Uint8Array(5), "application/pdf", before)).rejects.toThrow("length");
+    await expect(storage.upload(address, new Uint8Array(4), "text/html", before)).rejects.toThrow("media type");
     expect(storage.names()).toEqual([]);
   });
 
-  it("does not hold an upload in parts to the size limit – like Blob", async () => {
+  it("stores content under its name only once", async () => {
     const storage = memoryStorage();
-    const address = await storage.uploadAddress("files/e", { maximumSize: 4, validUntil: until });
+    const address = await storage.uploadAddress("files/e", declared);
+    await storage.upload(address, new Uint8Array([1, 2, 3, 4]), "application/pdf", before);
 
-    await storage.upload(address, new Uint8Array(5), "application/pdf", new Date("2026-10-18T10:00:00Z"), {
-      multipart: true,
-    });
-
-    expect((await storage.details("files/e"))?.size).toBe(5);
+    await expect(storage.upload(address, new Uint8Array(4), "application/pdf", before)).rejects.toThrow("already");
+    expect(storage.read("files/e")?.bytes).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   it("refuses an upload after the address is no longer valid", async () => {
     const storage = memoryStorage();
-    const address = await storage.uploadAddress("files/c", { maximumSize: 4, validUntil: until });
+    const address = await storage.uploadAddress("files/c", declared);
 
     await expect(
-      storage.upload(address, new Uint8Array([1]), "application/pdf", new Date("2026-10-18T10:30:01Z")),
+      storage.upload(address, new Uint8Array(4), "application/pdf", new Date("2026-10-18T10:30:01Z")),
     ).rejects.toThrow("expired");
     expect(storage.names()).toEqual([]);
   });

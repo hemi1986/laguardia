@@ -9,7 +9,7 @@ import {
   type CommandError,
 } from "@/platform/command";
 import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
-import { blobStorage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
+import { s3Storage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 import { SEEN_FIELD, seenOf } from "./form-parts";
 
@@ -289,7 +289,7 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
     const outcome = await withStoredPhotos(
       photos,
       owner,
-      { storage: storage ?? blobStorage(), newId: dependencies.newId ?? randomUUID },
+      { storage: storage ?? s3Storage(), newId: dependencies.newId ?? randomUUID },
       (references, stored) =>
         executeCommand(command, definition.input(fields, references, stored), { ...dependencies, actor }),
     );
@@ -320,7 +320,7 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
     const outcome = await withUploadedContent(
       {
         db: dependencies.db ?? database(),
-        storage: storage ?? blobStorage(),
+        storage: storage ?? s3Storage(),
         clock: dependencies.clock ?? systemClock,
         newId: dependencies.newId ?? randomUUID,
       },
@@ -438,5 +438,5 @@ async function deleteWhatItRemoved<Result>(
   result: Result,
 ): Promise<void> {
   const removed = command.removesContent?.(result);
-  if (removed) await deleteRemovedContent(storage ?? blobStorage(), removed);
+  if (removed) await deleteRemovedContent(storage ?? s3Storage(), removed);
 }
