@@ -4,13 +4,11 @@ import { aMachine, allowPreview, expect, logIn, test } from "./fixtures";
 
 /**
  * Attaching files on a phone (ST-037): the form on the machine's page uploads the chosen file straight to the private
- * Blob store (ST-085) – locally the Development Blob store – and the machine record lists the files by file category,
- * each opened through its own team-only address.
+ * bucket (ST-085, ST-099) – locally `laguardia-e2e` on SeaweedFS – and the machine record lists the files by file
+ * category, each opened through its own team-only address.
  */
 const needsTechnician = () =>
   test.skip(!process.env.E2E_TEAM_USERNAME || !process.env.E2E_TEAM_PASSWORD, "needs a technician account");
-const needsBlob = () =>
-  test.skip(!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BASE_URL, "needs the Development Blob store");
 
 const MB = 1024 * 1024;
 
@@ -52,7 +50,6 @@ const filesSection = (page: Page) =>
 test("ST-037: Large manual is attached", async ({ page }) => {
   test.setTimeout(180_000);
   needsTechnician();
-  needsBlob();
   const { title: machineModel } = await theAttachForm(page);
 
   await choose(page, aFileOnDisk("schematic.pdf", 60 * MB), "schematic.pdf", 150_000);
@@ -75,7 +72,6 @@ test("ST-037: Large manual is attached", async ({ page }) => {
 test("ST-037: Files above 100 MB are rejected", async ({ page }) => {
   test.setTimeout(120_000);
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await theAttachForm(page);
 
   await page.getByLabel("Datei", { exact: true }).setInputFiles(aFileOnDisk("scanned-manual.pdf", 120 * MB));
@@ -90,7 +86,6 @@ test("ST-037: Files above 100 MB are rejected", async ({ page }) => {
 
 test("ST-037: Other formats are only downloaded", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const { title: machineModel } = await theAttachForm(page);
   await choose(page, aFileOnDisk("sound.rom", 4096, "ROM"), "sound.rom");
   await fillIn(page, {
@@ -109,7 +104,6 @@ test("ST-037: Other formats are only downloaded", async ({ page }) => {
 
 test("ST-037: Files are team-only", async ({ page, browser }) => {
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await theAttachForm(page);
   await choose(page, aFileOnDisk("manual.pdf", 4096), "manual.pdf");
   await fillIn(page, { title: "MM Operations Manual", category: "Handbuch", attachTo: `nur ${museumNumber}` });
@@ -131,7 +125,6 @@ test("ST-037: Files are team-only", async ({ page, browser }) => {
 
 test("ST-037: A rejection says what happened to the chosen file", async ({ page }) => {
   needsTechnician();
-  needsBlob();
   const { museumNumber } = await theAttachForm(page);
   await choose(page, aFileOnDisk("manual.pdf", 4096), "manual.pdf");
   await fillIn(page, { category: "Handbuch", attachTo: `nur ${museumNumber}` });

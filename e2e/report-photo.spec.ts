@@ -4,15 +4,14 @@ import { aHelper, allowPreview, expect, logIn, openMore, test, untickMaintenance
 
 /**
  * The photo on a problem report on a phone (ST-016): a visitor takes or chooses a photo on the report form, the browser
- * prepares it, the server stores it in the private Blob store – locally the separate Development Blob store
- * (`BLOB_READ_WRITE_TOKEN` in `.env.development.local`) – and a technician sees it in the triage list. The machines are
- * registered by the e2e technician each local run creates (ST-083); the preview database has none before ST-068.
+ * prepares it, the server stores it in the private bucket – locally `laguardia-e2e` on SeaweedFS (`npm run db:up`,
+ * ST-099) – and a technician sees it in the triage list. The machines are registered by the e2e technician each local
+ * run creates (ST-083); the preview database has none before ST-068.
  */
 const username = process.env.E2E_TEAM_USERNAME;
 const password = process.env.E2E_TEAM_PASSWORD;
 const needsMachines = () =>
   test.skip(!username || !password || !!process.env.BASE_URL, "needs a local technician account");
-const needsBlob = () => test.skip(!process.env.BLOB_READ_WRITE_TOKEN, "needs the Development Blob store");
 
 /** A playable machine registered by the e2e technician, who logs out again – returns its museum number. */
 async function aPlayableMachine(page: Page): Promise<string> {
@@ -58,7 +57,6 @@ const unique = (text: string) => `${text} ${Date.now().toString(36)}${Math.rando
 
 test("ST-016: Visitor adds a photo taken with the phone camera", async ({ page, browser }) => {
   needsMachines();
-  needsBlob();
   const museumNumber = await aPlayableMachine(page);
   const phone = await visitor(browser, "de-DE");
   const description = unique("Ball stuck behind the left ramp");
@@ -128,7 +126,6 @@ test("after a rejection the photo is gone from the form – also when the same r
   browser,
 }) => {
   needsMachines();
-  needsBlob(); // the photo is stored before the command rejects it – without the store the answer is not-stored
   const museumNumber = await aPlayableMachine(page);
   const phone = await visitor(browser, "de-DE");
   await phone.goto(`/m/${museumNumber}/melden`);
@@ -149,7 +146,6 @@ test("after a rejection the photo is gone from the form – also when the same r
 
 test("ST-084: Team report form says the photo must be chosen again", async ({ page }) => {
   needsMachines();
-  needsBlob(); // the photo is stored before the command rejects it – without the store the answer is not-stored
   const museumNumber = await aPlayableMachine(page);
   await logIn(page);
   await logIn(page, await aHelper(page));
