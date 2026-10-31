@@ -125,18 +125,26 @@ function roleCredentials(roleArn: string, region: string): () => Promise<Tempora
 /**
  * An address signed with temporary credentials stops working when they expire, whatever its own validity says. The
  * SDK renews them only 5 minutes before they expire – an upload address signed then would die after 5 minutes. These
- * are renewed as soon as less than `CREDENTIALS_MUST_LAST_MS` is left, and again after a failed attempt.
+ * are renewed as soon as less than `CREDENTIALS_MUST_LAST_MS` is left, and again after a failed attempt; calls that
+ * arrive while the role is being assumed wait for that one attempt. Marked `memoized`, so the SDK asks this provider
+ * for every signature instead of caching its answer until 5 minutes before expiry (`normalizeCredentialProvider` in
+ * `@aws-sdk/core`) – whether a client lives for one request or longer.
  */
 export function lastingCredentials(
   assume: () => Promise<TemporaryCredentials>,
   now: () => number = Date.now,
-): () => Promise<TemporaryCredentials> {
+): (() => Promise<TemporaryCredentials>) & { memoized: true } {
   let current: Promise<TemporaryCredentials> | undefined;
-  return async () => {
-    const credentials = await current?.catch(() => undefined);
-    const lasting = credentials?.expiration?.getTime() ?? Number.POSITIVE_INFINITY;
-    if (credentials && lasting - now() > CREDENTIALS_MUST_LAST_MS) return credentials;
+  const lasts = (credentials: TemporaryCredentials) =>
+    (credentials.expiration?.getTime() ?? Number.POSITIVE_INFINITY) - now() > CREDENTIALS_MUST_LAST_MS;
+  const provider = async () => {
+    const pending = current;
+    const credentials = await pending?.catch(() => undefined);
+    if (credentials && lasts(credentials)) return credentials;
+    // Another call renewed them while this one waited – take that attempt instead of assuming the role again.
+    if (current !== pending) return current!;
     current = assume();
     return current;
   };
+  return Object.assign(provider, { memoized: true as const });
 }

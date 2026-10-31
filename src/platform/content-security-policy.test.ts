@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { s3Settings, storeOrigin } from "@/platform/storage";
-import { s3Storage } from "@/platform/storage/s3-storage";
+import { s3Settings, s3Storage, storeOrigin } from "@/platform/storage";
 import { contentSecurityPolicy } from "./content-security-policy";
 
 /**

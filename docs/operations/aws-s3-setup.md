@@ -134,6 +134,9 @@ bucket name with dots, or a role whose trust policy names another environment.
 
 Delete the old Vercel Blob stores (development, and the one previews and production used) by hand, and remove
 `BLOB_STORE_ID`, `BLOB_READ_WRITE_TOKEN` and `BLOB_WEBHOOK_PUBLIC_KEY` from Vercel and from `.env.development.local`.
-The content in them is test data and is not migrated (ADR 0012).
+The content in them is test data and is not migrated (ADR 0012). The preview and production databases still name it:
+problem reports, work log entries and files attached before the switch show no photo, and their files open nothing.
+Leave them, or remove those files on the machine record (Datei entfernen) – pending uploads were already cleared by the
+migration.
 
 Before real visitor data is stored: confirm the AWS DPA (part of the AWS Service Terms) – go-live planning.

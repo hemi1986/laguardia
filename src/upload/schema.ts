@@ -15,7 +15,10 @@ export const pendingUpload = pgTable(
     issuedTo: uuid("issued_to").notNull(),
     issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
     maximumSize: bigint("maximum_size", { mode: "number" }).notNull(),
-    /** The exact size the browser declared – the upload address binds it (ST-099, ADR 0012). */
+    /**
+     * The exact size the browser declared – the upload address binds it, so the store holds nothing else (ST-099,
+     * ADR 0012). A record only: attaching checks the stored size against `maximumSize`, as before.
+     */
     declaredSize: bigint("declared_size", { mode: "number" }).notNull(),
   },
   (t) => [index("pending_upload_issued_at_idx").on(t.issuedAt)],
