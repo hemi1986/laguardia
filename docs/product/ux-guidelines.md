@@ -1,6 +1,6 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01, amended since – last on 2026-10-25.** Every rule below (G1–G34,
+> **Status: accepted by the user on 2026-10-01, amended since – last on 2026-10-31.** Every rule below (G1–G39,
 > including G2a, G4a, G6a, G8a, G10a, G10b, G10c and G21a) is binding. One violation is known and accepted: the
 > unchanged-form rejections of ST-031 and ST-036, named under G33. The exception under G2a ended with ST-036. The changes of 2026-10-25 (G16's one width, G26 dark design, G27 grouped
 > checkboxes, G28 account pages, and with it G10, G10a and G10b, and G29–G34) are decided but not built yet – the screens
@@ -194,6 +194,23 @@ One's own changes are never listed.
 *Why:* three stories list changes on the dashboards; a date or a code makes the person work out how old it is (G6),
 and seeing what one did oneself is noise that hides what others did.
 
+**G38 – AI output says it is AI, and says what it cost and who asked** (user, 2026-10-31, feature `ai-assessment`).
+Everything an AI wrote is headed with what it is („KI-Einschätzung“, `CONTEXT.md`'s wording) and carries the chat
+model, the time, who requested it and the cost, in words and German numbers (G6, G13). It never changes domain data
+by itself: no status, priority, claim or defect text is set from it – a team member does that with the ordinary
+actions, with the assessment on screen.
+*Why:* a volunteer must not mistake a guess for a fact recorded by a colleague, and the cost is the technicians' reason
+to decide how freely to use it.
+
+**G39 – Earlier entries of the same kind: the newest expanded, older ones collapsed** (user, 2026-10-31, feature
+`ai-assessment`).
+When a page keeps several entries of one kind (the AI assessments of a defect), they are listed newest first; the
+newest is open, every older one is a fold that opens without JavaScript, with the same look as every fold (G31) and a
+header that says what it is and when („KI-Einschätzung vom 31.10.2026“, G6). This is for entries a person wants to
+read, not for history lines: a history of recorded facts follows G24.
+*Why:* the newest is the one that matters now, the older ones are there to compare; all of them open would bury the
+rest of a 360 px defect page.
+
 ## 3. The states that must exist
 
 **G7 – Empty: say what to do about it.**
@@ -244,6 +261,33 @@ out.
 *Why:* a single confirmation hides the machines that were not recorded – their task stays due and nobody knows why;
 a single rejection hides that most of them were.
 
+**G35 – Background work a person started is a state on the page where it belongs** (user, 2026-10-31, feature
+`ai-assessment`).
+Work that runs after the tap (an AI assessment being written) shows on the page of the thing it belongs to, in words
+that say it is running („KI-Einschätzung läuft …“). The person lands there at once, is never made to wait on a
+spinner and can leave; the page refreshes itself until the work is done, so the result is there when they look again.
+When the work fails, the same place says so with the reason in German – „KI-Einschätzung fehlgeschlagen: <Grund>“ –
+and offers „Erneut versuchen“. A failed run is a state of the page, not a rejection of a form (G8) and not a
+confirmation (G3).
+*Why:* no notifications (vision): the screen the person looks at has to carry the information. A request that
+returns before the work is done must still say where the work is, or it looks like nothing happened (G3).
+
+**G36 – A secret a person saves is never shown again** (user, 2026-10-31, feature `ai-assessment`).
+After saving, a secret (the OpenRouter API key) appears only as its last four characters („…a1b2“) with the actions
+„Ersetzen“ and „Entfernen“. The field for a new secret is empty, it is never filled back after a rejection (as G8
+says for passwords), and no page, message or link ever contains the secret.
+*Why:* a key on the screen of a shared workshop PC or in a screenshot is a key given away; the last four characters
+are enough to tell which key is saved.
+
+**G37 – A feature that depends on a setting is absent while the setting is off, not disabled** (user, 2026-10-31,
+feature `ai-assessment`).
+While AI is off there is no „KI-Einschätzung anfordern“, no empty „KI-Einschätzungen“ section and no greyed-out
+substitute. Content that already exists (earlier AI assessments) stays visible and readable. This is G11's logic for
+a setting instead of a role: what cannot be done is not offered. The settings form that switches the feature on
+(„KI“ on „Einstellungen“) says what is missing.
+*Why:* a disabled button asks a question the helper cannot answer; an empty section is noise on a phone page. What
+was written while AI was on is still the record of that defect.
+
 **G10 – A destructive or irreversible action asks once, and says in words what will happen to whom.**
 „LG-042 ausmustern? 2 offene Defekte werden geschlossen. Das lässt sich nicht rückgängig machen.“
 How the question is shown is G10b. The question names the thing by its own words **and the consequences nobody sees on this screen**: retiring a
@@ -289,7 +333,7 @@ question (G28), because it is reversible (G10a).
 
 **G10c – Removing content that can be uploaded again is one step, with no question page** (user, 2026-10-31, feature
 `museum-start-page`, ST-102). An explicit exception to G10 and G10a.
-The museum's logo in the museum settings is removed by one tap on „Logo entfernen“. The page confirms as in G3 and
+The museum's logo, in the form „Logo“ on „Einstellungen“ (G19 row 9a), is removed by one tap on „Logo entfernen“. The page confirms as in G3 and
 shows that there is no logo now (G7). The question page of G10b is not shown.
 The exception holds only for content a person can put back at any time by uploading it again and that is not the
 history of a machine. Anything else that deletes stored content keeps G10 and G10b – a file on a machine's record
@@ -446,6 +490,7 @@ question for the user, not a line a story adds on its way past.
 | 7 | Repair times | Reparaturzeiten | ST-051 | technicians | "Mehr" |
 | 8 | Machine models | Modelle | ST-006 | technicians | "Mehr" |
 | 9 | Team members | Teammitglieder | ST-005 | technicians | "Mehr" |
+| 9a | Settings | Einstellungen | ST-100 (as „Museumseinstellungen“), feature `ai-assessment` | technicians | "Mehr" |
 | 10 | Own password | Passwort ändern | ST-004 | everyone | "Mehr" |
 | 11 | Log out | Abmelden (button) | ST-004 | everyone | "Mehr" |
 
@@ -461,6 +506,9 @@ item 3). Recorded here when ST-051 was built (2026-10-25).
 *Changed 2026-10-25 (user, `/feature` grilling):* „Mehr“ gets the design switch of G26 – „Helles Design“ /
 „Dunkles Design“, for everyone. It is not a destination but an entry like „Abmelden“, and it sits between row 10
 „Passwort ändern“ and row 11 „Abmelden“.
+*Changed 2026-10-31 (user, feature `ai-assessment`):* row 9a added and renamed – the destination built as
+„Museumseinstellungen“ (ST-100) is **„Einstellungen“** (`CONTEXT.md`: *Settings*), with the forms „Museum“, „Logo“,
+„Rechtstexte“ and „KI“, each saved on its own. It is numbered 9a so the row numbers other guidelines cite stay valid.
 *Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
 navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
 happens at ten.
@@ -507,3 +555,4 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-25 | **G27 amended** (the header count follows the ticks only with JavaScript, without it the state when the page opened; groups without an entry not shown; groups in `CONTEXT.md`'s order, task groups by interval shortest first; machines by museum number, tasks by name; an entry that cannot become due says so – „· Nicht ausgestellt“). **G33 added** (a form sent unchanged lands like a save with a confirmation of the resulting state; ST-031 and ST-036 an accepted exception until a story touches them). **G28 amended** (one's own edit page shows the role without a choice – „Die eigene Rolle kann nur eine andere Techniker:in ändern.“ – and no „Neues Passwort“, only a link to „Passwort ändern“; heading „Konto bearbeiten · Anna Berger“). **G34 added** (form headings „<job> · <thing>“ everywhere). | User, story review 2026-10-25 (`docs/reviews/2026-10-25-story-review.md`, "Proposed guideline changes" and "Decisions (user)" 1 and 4) |
 | 2026-10-25 | Housekeeping: **G2a's exception ended** (ST-036 is done, the machine model has its own pages); **G9's "not yet true"** and **G22's "already built"** updated to what is built; status line updated. | The yardstick said things that are no longer true (ux-designer, consistency audit `docs/reviews/2026-10-25-ux-audit-consistency.md`) |
 | 2026-10-31 | **G10c added** (removing content that can be uploaded again – the museum's logo in the museum settings – is one step without a question page; an explicit exception to G10/G10a; a file on a machine's record, ST-038, stays under G10 and G10b). | User, feature `museum-start-page` (ST-102): nothing is lost that cannot be restored by uploading again, and the logo is not the history of a machine |
+| 2026-10-31 | Feature `ai-assessment`: **G35 added** (background work is a state on its page – „KI-Einschätzung läuft …“, self-refreshing, no spinner; failure „… fehlgeschlagen: <Grund>“ with „Erneut versuchen“), **G36** (a saved secret is never shown again – „…a1b2“, „Ersetzen“, „Entfernen“), **G37** (a feature that depends on a setting is absent while it is off, existing content stays), **G38** (AI output is labelled „KI-Einschätzung“ with model, time, requester and cost, and never changes domain data), **G39** (earlier entries of one kind: newest expanded, older collapsed). **G19 row 9a added**: „Museumseinstellungen“ is now „Einstellungen“ with the forms Museum, Logo, Rechtstexte, KI. **G10c** names the form „Logo“ on „Einstellungen“. | User, `ai-assessment` grilling 2026-10-31. Background work, secrets and AI output are first met here; G15 – a new pattern comes here first |

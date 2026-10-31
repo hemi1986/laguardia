@@ -39,6 +39,12 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - Visitors see a machine's open defects (by title) before writing a report, to avoid duplicates.
 - Helpers may resolve a problem report on the spot (e.g. stuck ball) and mark a machine *Out of order* when unsafe; all other triage, status changes, file deletion, the maintenance plan, the machines a maintenance task applies to and machine registration are technician-only.
 - Any team member can upload files.
+- AI assessments (user, 2026-10-31, `feature:ai-assessment`): once a technician saves an OpenRouter API key and
+  two models in the settings, a team member who may work on an open defect can ask for an AI assessment – probable
+  causes, what to check first and references into the machine's manuals, schematics and images. The machines' and
+  machine models' files are indexed for it (text, PDF pages as images, image files). The AI never changes a defect,
+  and nothing reaches the AI while AI is off. Out of the first version: AI in triage, chat or follow-up questions,
+  automatic assessments, video and audio, rating assessments, AI for visitors, asking the files without a defect.
 
 ## Non-Goals
 - Ticketing / admission
@@ -65,6 +71,9 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - On-site usage / devices: mainly smartphones, probably tablets; the workshop PC for administration.
 - Network/Wi-Fi in the exhibition: good Wi-Fi everywhere, no offline capability needed.
 - Operations & hosting: minimal operating effort – keep it simple.
+- AI: OpenRouter is the only AI backend, paid with the museum's own API key; only providers that neither keep nor
+  train on the data are used. Problem report descriptions and photos – also visitors' – reach it, so the privacy
+  notice has to say so (the technicians change the legal texts).
 - Who develops and maintains it long-term: a single volunteer, who is also one of the two technicians.
 
 ## Initial Maintenance Plan

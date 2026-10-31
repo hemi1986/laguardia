@@ -78,14 +78,35 @@ flowchart LR
         EVT_MaintenanceTaskOverdue["Maintenance task overdue"]:::evt
         EVT_MaintenanceRecorded["Maintenance recorded"]:::evt
     end
+    subgraph BC_AiAssistance["AI assistance"]
+        CMD_ChangeAiSettings["Change AI settings"]:::cmd
+        CMD_IndexFileForAi["Index file for AI"]:::cmd
+        CMD_RemoveFileFromAiIndex["Remove file from AI index"]:::cmd
+        CMD_RequestAiAssessment["Request AI assessment"]:::cmd
+        CMD_WriteAiAssessment["Write AI assessment"]:::cmd
+        EVT_AiSettingsChanged["AI settings changed"]:::evt
+        EVT_FileIndexedForAi["File indexed for AI"]:::evt
+        EVT_FileIndexingFailed["File indexing failed"]:::evt
+        EVT_FileLeftAiIndex["File left the AI index"]:::evt
+        EVT_AiWorkLeftUnfinished["AI work left unfinished"]:::evt
+        EVT_AiAssessmentRequested["⭐ AI assessment requested"]:::evt
+        EVT_AiAssessmentWritten["AI assessment written"]:::evt
+        EVT_AiAssessmentFailed["AI assessment failed"]:::evt
+    end
     ACT_Visitor(["Visitor"]):::act
     ACT_Helper(["Helper"]):::act
     ACT_Technician(["Technician"]):::act
     ACT_TeamMember(["Team member"]):::act
+    EXT_OpenRouter[["OpenRouter"]]:::ext
     POL_LinkReopensResolvedDefect{{"Linking to a resolved defect reopens it"}}:::pol
     POL_RetirementClosesDefects{{"Retirement closes open defects"}}:::pol
     POL_RetirementDismissesProblemReports{{"Retirement dismisses untriaged problem reports"}}:::pol
     POL_RegistrationAppliesChosenMaintenanceTasks{{"Registering a machine applies the chosen maintenance tasks"}}:::pol
+    POL_AiIndexFollowsTheSettings{{"The AI index follows the AI settings"}}:::pol
+    POL_AttachedFileIsIndexedForAi{{"An attached file is indexed for AI"}}:::pol
+    POL_RemovedFileLeavesAiIndex{{"A removed file leaves the AI index"}}:::pol
+    POL_RequestedAiAssessmentIsWritten{{"A requested AI assessment is written"}}:::pol
+    POL_UnfinishedAiWorkIsRetried{{"Unfinished AI work is retried"}}:::pol
     POL_TriageProblemReports{{"New problem reports are triaged"}}:::pol
     POL_DefectMayChangeMachineStatus{{"A new or reopened defect may change the machine status"}}:::pol
     POL_ResolvedDefectsReturnMachineToPlay{{"Machines without open defects return to play"}}:::pol
@@ -106,6 +127,8 @@ flowchart LR
     RM_WelcomePage[("Welcome page")]:::rm
     RM_LegalPage[("Legal page")]:::rm
     RM_MuseumSettings[("Museum settings")]:::rm
+    RM_AiSettings[("AI settings")]:::rm
+    RM_DefectAiAssessments[("AI assessments of a defect")]:::rm
     ACT_Visitor --> CMD_ReportProblem
     CMD_ReportProblem --> EVT_ProblemReported
     CMD_ReportProblem --> EVT_DefectRecorded
@@ -172,6 +195,16 @@ flowchart LR
     CMD_RemoveLogo --> EVT_LogoRemoved
     ACT_Technician --> CMD_ChangeLegalTexts
     CMD_ChangeLegalTexts --> EVT_LegalTextsChanged
+    ACT_Technician --> CMD_ChangeAiSettings
+    CMD_ChangeAiSettings --> EVT_AiSettingsChanged
+    ACT_Technician --> CMD_IndexFileForAi
+    CMD_IndexFileForAi --> EVT_FileIndexedForAi
+    CMD_IndexFileForAi --> EVT_FileIndexingFailed
+    CMD_RemoveFileFromAiIndex --> EVT_FileLeftAiIndex
+    ACT_TeamMember --> CMD_RequestAiAssessment
+    CMD_RequestAiAssessment --> EVT_AiAssessmentRequested
+    CMD_WriteAiAssessment --> EVT_AiAssessmentWritten
+    CMD_WriteAiAssessment --> EVT_AiAssessmentFailed
     EVT_ProblemReportLinkedToDefect --> POL_LinkReopensResolvedDefect
     POL_LinkReopensResolvedDefect --> CMD_ReopenDefect
     EVT_MachineRetired --> POL_RetirementClosesDefects
@@ -180,6 +213,17 @@ flowchart LR
     POL_RetirementDismissesProblemReports --> CMD_DismissProblemReport
     EVT_MachineRegistered --> POL_RegistrationAppliesChosenMaintenanceTasks
     POL_RegistrationAppliesChosenMaintenanceTasks --> CMD_ChangeMachinesOfMaintenanceTask
+    EVT_AiSettingsChanged --> POL_AiIndexFollowsTheSettings
+    POL_AiIndexFollowsTheSettings --> CMD_IndexFileForAi
+    EVT_FileAttached --> POL_AttachedFileIsIndexedForAi
+    POL_AttachedFileIsIndexedForAi --> CMD_IndexFileForAi
+    EVT_FileRemoved --> POL_RemovedFileLeavesAiIndex
+    POL_RemovedFileLeavesAiIndex --> CMD_RemoveFileFromAiIndex
+    EVT_AiAssessmentRequested --> POL_RequestedAiAssessmentIsWritten
+    POL_RequestedAiAssessmentIsWritten --> CMD_WriteAiAssessment
+    EVT_AiWorkLeftUnfinished --> POL_UnfinishedAiWorkIsRetried
+    POL_UnfinishedAiWorkIsRetried --> CMD_IndexFileForAi
+    POL_UnfinishedAiWorkIsRetried --> CMD_WriteAiAssessment
     EVT_ProblemReported --> POL_TriageProblemReports
     POL_TriageProblemReports --> CMD_RecordDefect
     POL_TriageProblemReports --> CMD_LinkProblemReportToDefect
@@ -269,6 +313,10 @@ flowchart LR
     EVT_DefectDetailsChanged -.-> RM_MachineRecord
     EVT_MaintenancePlanChanged -.-> RM_MachineRecord
     EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MachineRecord
+    EVT_FileIndexingFailed -.-> RM_MachineRecord
+    EVT_FileIndexedForAi -.-> RM_MachineRecord
+    EVT_AiAssessmentWritten -.-> RM_MachineRecord
+    EVT_AiAssessmentFailed -.-> RM_MachineRecord
     RM_MachineRecord -.-> ACT_TeamMember
     EVT_MaintenancePlanChanged -.-> RM_DueMaintenance
     EVT_MachinesOfMaintenanceTaskChanged -.-> RM_DueMaintenance
@@ -349,6 +397,23 @@ flowchart LR
     EVT_LogoRemoved -.-> RM_MuseumSettings
     EVT_LegalTextsChanged -.-> RM_MuseumSettings
     RM_MuseumSettings -.-> ACT_Technician
+    EVT_AiSettingsChanged -.-> RM_AiSettings
+    EVT_FileIndexedForAi -.-> RM_AiSettings
+    EVT_FileIndexingFailed -.-> RM_AiSettings
+    EVT_FileLeftAiIndex -.-> RM_AiSettings
+    EVT_FileAttached -.-> RM_AiSettings
+    EVT_FileRemoved -.-> RM_AiSettings
+    RM_AiSettings -.-> ACT_Technician
+    EVT_AiAssessmentRequested -.-> RM_DefectAiAssessments
+    EVT_AiAssessmentWritten -.-> RM_DefectAiAssessments
+    EVT_AiAssessmentFailed -.-> RM_DefectAiAssessments
+    EVT_DefectResolved -.-> RM_DefectAiAssessments
+    EVT_DefectReopened -.-> RM_DefectAiAssessments
+    EVT_DefectClosedOnRetirement -.-> RM_DefectAiAssessments
+    EVT_DefectDetailsChanged -.-> RM_DefectAiAssessments
+    EVT_AiSettingsChanged -.-> RM_DefectAiAssessments
+    EVT_FileRemoved -.-> RM_DefectAiAssessments
+    RM_DefectAiAssessments -.-> ACT_TeamMember
     classDef evt fill:#a3391f,stroke:#e65100,color:#fff
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
@@ -531,6 +596,35 @@ flowchart LR
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
 ```
 
+### AI assessment of a defect
+
+Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the files of the machines and machine models are indexed for AI in the background. A team member who may work on an open defect asks for an AI assessment with an optional note and photos; it is written in the background and kept with the defect.
+
+```mermaid
+flowchart LR
+    ACT_Technician(["Technician"]):::act
+    EVT_AiSettingsChanged["AI settings changed"]:::evt
+    EVT_FileIndexedForAi["File indexed for AI"]:::evt
+    ACT_TeamMember(["Team member"]):::act
+    EVT_AiAssessmentRequested["⭐ AI assessment requested"]:::evt
+    EXT_OpenRouter[["OpenRouter"]]:::ext
+    EVT_AiAssessmentWritten["AI assessment written"]:::evt
+    ACT_Technician --> EVT_AiSettingsChanged
+    EVT_AiSettingsChanged --> EVT_FileIndexedForAi
+    EVT_FileIndexedForAi --> ACT_TeamMember
+    ACT_TeamMember --> EVT_AiAssessmentRequested
+    EVT_AiAssessmentRequested --> EXT_OpenRouter
+    EXT_OpenRouter --> EVT_AiAssessmentWritten
+    classDef evt fill:#a3391f,stroke:#e65100,color:#fff
+    classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
+    classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
+    classDef rm fill:#81c784,stroke:#1b5e20,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
+    classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
+    classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
+    classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
+```
+
 ## Bounded Contexts & Aggregates
 
 | Context | Purpose | Aggregates | Events |
@@ -539,9 +633,10 @@ flowchart LR
 | Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect details changed, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
 | Team (`BC-Team`) | Generic, not modelled – team member accounts, roles (helper, technician), signing in and last visit; supplier to all other contexts | – | – |
 | Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Machines of maintenance task changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
+| AI assistance (`BC-AiAssistance`) | Asking an AI for help with open defects – the AI settings, the AI index of the machines' and machine models' files, and the AI assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of Collection, Repair and Team; the only context that talks to OpenRouter (EXT-OpenRouter), behind an anti-corruption layer | AI settings, AI index entry, AI assessment | AI settings changed, File indexed for AI, File indexing failed, File left the AI index, AI work left unfinished, AI assessment requested, AI assessment written, AI assessment failed |
 
 ## Open Hotspots
 
-- **HS-25** – The imprint is optional in German and in English. May a technician provide an English imprint without a German one – German visitors would then see no imprint link while English visitors do? Recommendation – no: an English imprint only together with a German one (an invariant of the museum settings), so the imprint link is offered in both languages or in neither, as ST-064 already requires (German and English agree on whether there is one), and English visitors read the German imprint where no English one is provided. _(refs: AGG-MuseumSettings, CMD-ChangeLegalTexts, RM-LegalPage, RM-WelcomePage)_
-- **HS-26** – Legal texts are Markdown with only headings, paragraphs, bold and italic, lists and links to https and mailto addresses. What happens to anything else a technician types or pastes – raw HTML, an image, a table, a link to another kind of address? Rejected when saving, or saved and shown to visitors as plain text? Recommendation – saved as typed and shown as plain text (HTML escaped, a disallowed link as its text), so a pasted privacy notice is never refused and visitors still only ever see safe text; the settings page says which Markdown is shown. _(refs: CMD-ChangeLegalTexts, RM-LegalPage, AGG-MuseumSettings)_
-- **HS-27** – What does saving the museum form or the legal texts form without any change do? CMD-ChangeDefectDetails rejects such a change; CMD-ChangeMachinesOfMaintenanceTask records no event. Recommendation – no event and no rejection: the form just shows the values as saved, because a settings page saved twice is harmless and a rejection message there would only confuse. _(refs: CMD-ChangeMuseumDetails, CMD-ChangeLegalTexts, EVT-MuseumDetailsChanged, EVT-LegalTextsChanged)_
+- **HS-32** – Which failed files does the daily retry (POL-UnfinishedAiWorkIsRetried) index again on its own? A file that failed because OpenRouter was not reachable would otherwise stay "Für die KI nicht lesbar" until a technician taps „Erneut versuchen“. Recommendation – the daily retry indexes again the files that failed with "OpenRouter not reachable" or "OpenRouter refused" (credit used up, a provider down – it may work tomorrow), at most once a day each; files that failed with "not readable" or "format not indexed" are tried again only by hand, because the same file fails the same way and costs every time. _(refs: POL-UnfinishedAiWorkIsRetried, CMD-IndexFileForAi, EVT-FileIndexingFailed, AGG-AiIndexEntry)_
+- **HS-33** – A write that breaks off (a crash, a deployment, the function's time limit) leaves an AI assessment requested, and HS-31 then rejects every new request for that defect – in the worst case until the daily retry. When does such an AI assessment count as no longer being written? Recommendation – the background work holds an AI assessment for 15 minutes (far longer than a write takes); after that the next run of the background work – started by any request, attached file, continuation or the daily retry, and by the defect page itself when it refreshes and sees one held longer – writes it once more; if that second attempt breaks off too, it is failed as "timed out". The team member never waits for the next day while looking at the defect. _(refs: CMD-RequestAiAssessment, CMD-WriteAiAssessment, POL-UnfinishedAiWorkIsRetried, AGG-AiAssessment, RM-DefectAiAssessments)_
+- **HS-34** – The AI index stores embeddings of 1536 numbers (user, 2026-10-31 – the default embedding model returns that size on request). An embedding model that cannot return 1536 numbers cannot be searched with the same index. Which embedding models may a technician choose? Recommendation – only those that return 1536 numbers, natively or on request: saving sends one test embedding and rejects a model that returns another size, and the model list offers the others greyed out. Alternative – no fixed size and no search index: a machine and its machine model have at most a few thousand indexed passages and pages, which an exact search covers in milliseconds, so any multimodal embedding model could be chosen (ADR 0014, Considered Options). _(refs: CMD-ChangeAiSettings, AGG-AiSettings, AGG-AiIndexEntry)_

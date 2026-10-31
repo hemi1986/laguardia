@@ -33,11 +33,18 @@ everything they did.
 _Avoid_: Login, user, profile
 _UI (de)_: Konto
 
+**Settings**:
+The technicians' page that holds the museum settings and the AI settings, each part saved on its own form.
+_Avoid_: Configuration, admin area, museum settings (for the whole page)
+_UI (de)_: Einstellungen
+
 **Museum settings**:
 How the museum presents itself to visitors: its name, its logo, the privacy notice and the imprint, and whether the
-machines on display are listed for visitors to report a problem. Only technicians change them.
+machines on display are listed for visitors to report a problem. Only technicians change them, on the settings page
+(feature ai-assessment, 2026-10-31: the page is no longer called after them).
 _Avoid_: Configuration, admin settings, museum profile
 _UI (de)_: Museumseinstellungen
+_Note_: ST-104 renames the page to „Einstellungen“ (feature ai-assessment); from then on the museum settings have no page title of their own – their forms „Museum“, „Logo“ and „Rechtstexte“ sit on „Einstellungen“, and this line changes with the catalog.
 
 **Museum details**:
 The part of the museum settings that holds the museum's name and whether the machines on display are listed on the
@@ -300,3 +307,51 @@ _UI (de)_: Fällig / Überfällig
 A record that a maintenance task was carried out on a machine – who, when, done or partially done (only *done* restarts the interval), optional note.
 _Avoid_: Maintenance log, service entry, work log entry (that belongs to a defect)
 _UI (de)_: Wartungseintrag (Erledigt / Teilweise erledigt)
+
+### AI assistance
+
+**AI settings**:
+What lets La Guardia ask an AI for help: the museum's OpenRouter API key, the chat model and the embedding model.
+AI is on exactly while a key and both models are saved; removing the key turns AI off and keeps the AI index. Only
+technicians change them, on the settings page, and the saved key is never shown again – only its last four characters.
+_Avoid_: AI configuration, LLM settings, integration
+_UI (de)_: KI
+
+**Chat model**:
+The AI model, chosen in the AI settings from those OpenRouter offers, that writes AI assessments; it reads text and
+images.
+_Avoid_: LLM, language model, AI (for the model alone)
+_UI (de)_: Chat-Modell
+
+**Embedding model**:
+The AI model, chosen in the AI settings, that turns the files' text and images into what the AI index searches;
+changing it indexes every file again.
+_Avoid_: Vector model, encoder
+_UI (de)_: Embedding-Modell
+
+**AI index**:
+What the AI can search in the machines' and machine models' files: the text and every page of their PDFs, their
+Markdown and text files, and their images, each kept with where it came from (file and page). It follows the files –
+a removed file leaves it in the same step – and is built only while AI is on.
+_Avoid_: Knowledge base, vector database (in domain text), RAG
+_UI (de)_: KI-Erfassung (the overview)
+
+**AI index entry**:
+What the AI index holds of one file and how far it got: indexed with a particular embedding model, or failed with a
+reason. A file without one for the current embedding model is waiting. Indexing a file again replaces its AI index
+entry as a whole.
+_Avoid_: Embedding, vector, chunk, indexing job
+_UI (de)_: Für die KI erfasst / Wartet auf KI-Erfassung / Für die KI nicht lesbar
+
+**AI assessment**:
+An AI's first view of an open defect, asked for by a team member who may work on it: a summary, probable causes, what
+to check first and the references it relied on, written from the defect, its problem reports and work log entries, the
+machine's latest resolved defects, the AI index and what the team member added. It never changes the defect; every AI
+assessment is kept with the defect, also when it failed.
+_Avoid_: Diagnosis, AI analysis, AI triage, suggestion
+_UI (de)_: KI-Einschätzung
+
+**Reference**:
+A place in a machine's or machine model's file that an AI assessment relied on – the file and, for a PDF, the page.
+_Avoid_: Source, citation, hit
+_UI (de)_: Fundstelle

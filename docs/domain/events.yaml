@@ -10,7 +10,13 @@ actors:
   - id: ACT-TeamMember
     name: Team member
     description: Any helper or technician – used where both may act.
-external_systems: []
+external_systems:
+  - id: EXT-OpenRouter
+    name: OpenRouter
+    description: >-
+      The only AI backend (feature ai-assessment, 2026-10-31), paid with the museum's own API key. Writes AI
+      assessments with the chosen chat model and turns files and queries into embeddings with the chosen embedding
+      model; only providers that neither keep nor train on the data are used.
 # Machine status lives in Collection (technician decision; Repair only prompts it via policies).
 # Team accounts, roles and last visit: the generic context BC-Team, not modelled here (no aggregates or events) – see docs/domain/context-map.md (supplier to all contexts).
 # Context relationships: docs/domain/context-map.md. Logical data model: docs/architecture/data-model.md.
@@ -27,6 +33,13 @@ bounded_contexts:
   - id: BC-Maintenance
     name: Maintenance
     purpose: The maintenance plan and keeping every machine's scheduled maintenance up to date
+  - id: BC-AiAssistance
+    name: AI assistance
+    purpose: >-
+      Asking an AI for help with open defects – the AI settings, the AI index of the machines' and machine models'
+      files, and the AI assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of
+      Collection, Repair and Team; the only context that talks to OpenRouter (EXT-OpenRouter), behind an
+      anti-corruption layer
 aggregates:
   - id: AGG-ProblemReport
     name: Problem report
@@ -134,6 +147,52 @@ aggregates:
       - The German privacy notice is never empty; every other legal text is either not provided or not empty
       - There is at most one logo, and it is a PNG, JPEG or WebP image without metadata
       - An English imprint is provided only together with a German one (HS-25)
+  - id: AGG-AiSettings
+    name: AI settings
+    context: BC-AiAssistance
+    description: >-
+      Exactly one, like the museum settings (HS-28, domain-architect 2026-10-31): the OpenRouter API key, the chat
+      model and the embedding model. A singleton without a creating event; until a technician saves anything it holds
+      no key and no models, so AI is off. One part, one version check. It lives in AI assistance, not beside the museum
+      settings in Collection: nothing but AI assistance reads it, and Collection does not know AI. The key is kept only
+      encrypted, with a key from the environment, and is never part of the journal (docs/adr/0014-ai-through-openrouter-with-a-multimodal-index-in-postgresql.md).
+    invariants:
+      - There is exactly one AI settings – never created or removed by a command
+      - AI is on exactly while a key, a chat model and an embedding model are saved
+      - The saved key is never shown or handed out again – only its last four characters
+  - id: AGG-AiIndexEntry
+    name: AI index entry
+    context: BC-AiAssistance
+    description: >-
+      What the AI index holds of one file (HS-28, domain-architect 2026-10-31) – refers to its file by ID and keeps
+      the file's machine or machine model, copied once, because the file's owner never changes (AGG-File) and the
+      search is limited to one machine and its machine model. Small on purpose: one per file, so indexing files in
+      parallel never contends, and replacing what the index holds of one file is one consistency step. A file without
+      an entry for the current embedding model is waiting – waiting is derived, never stored, so a file attached while
+      AI is off or a crash during indexing needs no extra record. A removed file's entry is removed in the same
+      transaction as the file (POL-RemovedFileLeavesAiIndex); indexing and removal of the same file are serialised
+      by the file's removal lock (ADR 0014), so an indexing that started before the removal can never bring the file
+      back into the AI index.
+    invariants:
+      - An AI index entry refers to exactly one file and to that file's machine or machine model, which never change; a file has at most one AI index entry
+      - An AI index entry is either indexed or failed – an indexed one holds the file's passages, page images and images, each with where it came from (file and, for a PDF, page), all made with the one embedding model it names; a failed one holds none of them and exactly one reason
+      - Indexing a file again replaces its AI index entry as a whole – never a mix of two indexings or two embedding models
+  - id: AGG-AiAssessment
+    name: AI assessment
+    context: BC-AiAssistance
+    description: >-
+      One per request, referring to its defect by ID; a defect may have any number of them (HS-28, domain-architect
+      2026-10-31). It belongs to AI assistance, not to the defect in Repair: it never changes the defect, so it is
+      outside the defect's consistency boundary, and the defect's invariants do not depend on it. At most one AI
+      assessment per defect is being written at a time – a set-based rule over the AI assessments of one defect,
+      checked by CMD-RequestAiAssessment and guaranteed by the store (unique among those being written), like the
+      museum number (HS-17, HS-31). The note and photos of the request belong to it, not to the defect.
+    invariants:
+      - An AI assessment refers to exactly one defect, which never changes
+      - An AI assessment is requested, then either written or failed exactly once; a written or failed AI assessment never changes
+      - The note, the photos, who requested it and the chat model it was requested with never change
+      - Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
+      - Every reference names a file of the defect's machine or its machine model and, for a PDF, a page
 events:
   # --- Problem reports ---
   - id: EVT-ProblemReported
@@ -323,6 +382,60 @@ events:
     description: >-
       The texts themselves are not part of the journal – free text stays out of it; the journal names which texts
       changed, who changed them and when.
+
+  # Feature ai-assessment (2026-10-31): AI settings, AI index, AI assessments.
+  - id: EVT-AiSettingsChanged
+    name: AI settings changed
+    aggregate: AGG-AiSettings
+    data: [Changed parts (key saved, key removed, chat model, embedding model), Key (kept encrypted; never in the journal), Last four characters of the key, Chat model, Embedding model, AI on (yes/no), Changed by]
+    description: >-
+      The key itself is never part of the journal – only that it was saved or removed and its last four characters.
+      Turning AI on, or changing the embedding model, starts indexing (POL-AiIndexFollowsTheSettings).
+  - id: EVT-FileIndexedForAi
+    name: File indexed for AI
+    aggregate: AGG-AiIndexEntry
+    data: [File, Machine or machine model of the file, Embedding model, Passages (text, file, page), Page images and images (file, page), Pages indexed, Images indexed, Cost]
+    description: >-
+      The file's text and every page of a PDF (its text layer and the page as an image), or the image file itself, are
+      in the AI index with where each came from (file, page). No OCR – a scanned page is found through its page image.
+      The passages and their embeddings are not part of the journal – it names the file, the embedding model, the
+      counts and the cost.
+  - id: EVT-FileIndexingFailed
+    name: File indexing failed
+    aggregate: AGG-AiIndexEntry
+    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable)]
+    description: The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again.
+  - id: EVT-FileLeftAiIndex
+    name: File left the AI index
+    aggregate: AGG-AiIndexEntry
+    data: [File]
+    description: >-
+      In the same transaction as the file's removal – nothing of it is searched any more (HS-29). Recorded only when the
+      file had an AI index entry.
+  - id: EVT-AiWorkLeftUnfinished
+    name: AI work left unfinished
+    context: BC-AiAssistance
+    origin: time
+    data: [Files waiting to be indexed, AI assessments requested and neither written nor failed]
+    description: >-
+      Noticed once a day – work a crash or a timeout left behind. Like EVT-MaintenanceTaskDue it is derived from stored
+      state, not recorded: files of machines and machine models without an AI index entry for the current embedding
+      model while AI is on, and AI assessments still requested (docs/adr/0015-background-ai-work-with-state-in-the-database.md).
+  - id: EVT-AiAssessmentRequested
+    name: AI assessment requested
+    aggregate: AGG-AiAssessment
+    pivotal: true
+    data: [Defect, Note (optional), Photos (optional), Chat model, Requested by]
+    description: The note and photos are part of the AI assessment, not of the defect; the journal names the request, not the note.
+  - id: EVT-AiAssessmentWritten
+    name: AI assessment written
+    aggregate: AGG-AiAssessment
+    data: [Summary, Probable causes (ranked), What to check first, References (file, page), Files searched, Chat model, Embedding model, Cost]
+    description: In German. The text is not part of the journal – the journal says that it was written and what it cost.
+  - id: EVT-AiAssessmentFailed
+    name: AI assessment failed
+    aggregate: AGG-AiAssessment
+    data: [Reason (key invalid, credit used up, model not available, timed out, OpenRouter not reachable, AI off, answer unusable)]
 commands:
   # --- Problem reports ---
   - id: CMD-ReportProblem
@@ -601,6 +714,77 @@ commands:
       - Whether an English imprint needs a German one – see HS-25
       - "Texts are Markdown; visitors see only headings, paragraphs, bold and italic, lists and links to https and mailto addresses – no HTML, images or tables. Whether other Markdown is rejected on saving or shown as plain text – see HS-26"
       - If someone changed the legal texts meanwhile, the command is rejected (version check of this part only)
+  # Feature ai-assessment (2026-10-31)
+  - id: CMD-ChangeAiSettings
+    name: Change AI settings
+    aggregate: AGG-AiSettings
+    actor: ACT-Technician
+    produces: [EVT-AiSettingsChanged]
+    description: >-
+      The form „KI“ on the settings page. Saving a key, replacing it, removing it and choosing the two models; the
+      model choice is the list OpenRouter offers when the form is opened, with a model ID typed by hand as fallback.
+    rules:
+      - A new key is checked with OpenRouter before it is saved; a key OpenRouter refuses is rejected and nothing is saved
+      - The chat model accepts text and images; the embedding model accepts text and images
+      - The embedding model returns 1536 numbers, natively or on request – checked with one test embedding on saving; another size is rejected (HS-34)
+      - Changing the embedding model is confirmed after a warning that every file is indexed again, with an estimate of the cost
+      - If someone changed the AI settings meanwhile, the command is rejected
+      - A save that changes nothing records no event (as HS-27)
+  - id: CMD-IndexFileForAi
+    name: Index file for AI
+    aggregate: AGG-AiIndexEntry
+    actor: ACT-Technician
+    produces: [EVT-FileIndexedForAi, EVT-FileIndexingFailed]
+    description: >-
+      Run by POL-AiIndexFollowsTheSettings, POL-AttachedFileIsIndexedForAi and POL-UnfinishedAiWorkIsRetried in the
+      background; a technician runs it by hand with „Erneut versuchen“ on a file that failed. The slow part (reading
+      the file, rendering the pages, asking OpenRouter for embeddings) runs outside any transaction; only the
+      replacement of the AI index entry is one short transaction (ADR 0015).
+    rules:
+      - Only while AI is on – checked before every request to OpenRouter; AI turned off meanwhile stops it, nothing more is sent and the file stays waiting without an entry (user, 2026-10-31, story review)
+      - The file is not removed – read from Collection in the transaction that stores the entry, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
+      - PDF, Markdown and text files and images (PNG, JPEG, WebP) are indexed; any other format fails with "format not indexed"
+      - Run by a policy, a file that already has an entry for the current embedding model is skipped; by hand, a technician may run it only on a file that failed
+      - The daily retry indexes again, at most once a day each, only files that failed with "OpenRouter not reachable" or "OpenRouter refused"; "not readable" and "format not indexed" only by hand (HS-32)
+  - id: CMD-RemoveFileFromAiIndex
+    name: Remove file from AI index
+    aggregate: AGG-AiIndexEntry
+    produces: [EVT-FileLeftAiIndex]
+    description: >-
+      Run only by POL-RemovedFileLeavesAiIndex, as the system, in the transaction of Collection's CMD-RemoveFile –
+      also while AI is off. A file without an AI index entry records nothing.
+  - id: CMD-RequestAiAssessment
+    name: Request AI assessment
+    aggregate: AGG-AiAssessment
+    actor: ACT-TeamMember
+    produces: [EVT-AiAssessmentRequested]
+    description: >-
+      On the defect page, „KI-Einschätzung anfordern“. Stores the request only; the writing starts after the response
+      (POL-RequestedAiAssessmentIsWritten, ADR 0015).
+    rules:
+      - AI is on
+      - The defect is open – on hold included; not resolved and not closed on retirement. Read from Repair at command time without a lock – a defect resolved right afterwards does not stop the AI assessment (HS-30), so no lock is needed; a retired machine's defects are closed, so the machine is not read
+      - Technicians may request for any open defect, helpers only for one suitable for helpers – suitable for helpers is read from Repair with the defect's state
+      - Photos as on a work log entry; note and photos are optional
+      - No AI assessment of the defect is still being written – a second request is rejected until it is written or failed (HS-31); one held longer than 15 minutes is written once more by the next run, and failed as "timed out" if that breaks off too (HS-33)
+  - id: CMD-WriteAiAssessment
+    name: Write AI assessment
+    aggregate: AGG-AiAssessment
+    produces: [EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
+    description: >-
+      Run only by POL-RequestedAiAssessmentIsWritten in the background. Sends the chat model the defect (title,
+      priority, hold reason), the descriptions and photos of its problem reports, its work log entries, the machine
+      model (title, manufacturer, year, machine category, technology), the machine's latest resolved defects with
+      their closing notes, the note and photos of the request, and what the AI index finds for the machine and its
+      machine model – searched with the text (the defect title, the descriptions of its problem reports and the note of the request) and with each photo of the request and of its problem reports (user, 2026-10-31, grilling Q21) – with found pages and images as images.
+    rules:
+      - Only the AI index of the defect's machine and its machine model is searched, and only entries made with the current embedding model
+      - A fixed number of hits is sent (text passages and pages or images) – not a setting
+      - A defect resolved or closed on retirement meanwhile does not stop it – the AI assessment is written and kept (HS-30)
+      - What it sends is read from Repair and Collection through their public queries, without a lock and outside the transaction that stores the result; a file removed meanwhile is a reference by its title without link (RM-DefectAiAssessments)
+      - Only an AI assessment still requested is written or failed – a second run on the same AI assessment (a retry after a broken-off write) records nothing once the first has stored its result (version check)
+      - AI turned off meanwhile fails it with reason "AI off"; nothing is sent to OpenRouter then
+      - References to files outside the defect's machine and its machine model are dropped; an answer without a usable summary fails it with reason "answer unusable" (user, 2026-10-31, story review)
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect
@@ -629,6 +813,47 @@ policies:
       tasks are input of the registration step for this policy, not data of EVT-MachineRegistered – Collection knows
       no maintenance tasks (HS-22). The machine and its maintenance tasks are stored together or not at all; a chosen
       task removed in the meantime rejects the registration (user, 2026-10-25; HS-22).
+  # Feature ai-assessment (2026-10-31). Every one but POL-RemovedFileLeavesAiIndex runs in the background, after the
+  # triggering command has committed: the request only starts the AI work, which finds what to do in the stored state
+  # (docs/adr/0015-background-ai-work-with-state-in-the-database.md).
+  - id: POL-AiIndexFollowsTheSettings
+    name: The AI index follows the AI settings
+    when: [EVT-AiSettingsChanged]
+    then: [CMD-IndexFileForAi]
+    description: >-
+      Automatic, in the background: when AI is turned on, every file not yet indexed with the current embedding model
+      is indexed; when the embedding model changes, every file is indexed again with it. Removing the key turns AI off
+      and keeps the AI index. Within AI assistance.
+  - id: POL-AttachedFileIsIndexedForAi
+    name: An attached file is indexed for AI
+    when: [EVT-FileAttached]
+    then: [CMD-IndexFileForAi]
+    description: >-
+      Automatic, in the background, only while AI is on. Collection does not know it: the page that attaches a file
+      starts the AI work after its response, and the AI work finds the new file as waiting – no data passes from
+      Collection's command to AI assistance (ADR 0015).
+  - id: POL-RemovedFileLeavesAiIndex
+    name: A removed file leaves the AI index
+    when: [EVT-FileRemoved]
+    then: [CMD-RemoveFileFromAiIndex]
+    description: >-
+      Automatic, in the same transaction as the removal, also while AI is off (HS-29). AI assistance adds it to
+      Collection's CMD-RemoveFile (withPolicies, ADR 0010 option 3) and exports the composed command, which the file
+      pages use; Collection names no AI. AI assistance is the only module reacting to CMD-RemoveFile, so ADR 0010's
+      option 4 is not triggered.
+  - id: POL-RequestedAiAssessmentIsWritten
+    name: A requested AI assessment is written
+    when: [EVT-AiAssessmentRequested]
+    then: [CMD-WriteAiAssessment]
+    description: Automatic, in the background, started after the request's response – the team member does not wait on the page. Within AI assistance.
+  - id: POL-UnfinishedAiWorkIsRetried
+    name: Unfinished AI work is retried
+    when: [EVT-AiWorkLeftUnfinished]
+    then: [CMD-IndexFileForAi, CMD-WriteAiAssessment]
+    description: >-
+      Automatic, once a day (a scheduled job of the hosting, ADR 0015) – files still waiting are indexed, AI
+      assessments left requested are written or failed. The safety net only: the background work also continues
+      itself when one run's time is up, so a long indexing does not wait for the next day.
   # --- manual routines ---
   - id: POL-TriageProblemReports
     name: New problem reports are triaged
@@ -689,10 +914,10 @@ read_models:
     fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
   - id: RM-MachineRecord
     name: Machine record
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-FileIndexingFailed, EVT-FileIndexedForAi, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
     used_by: [ACT-TeamMember]
     description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
-    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files of the machine and its machine model by file category]
+    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files of the machine and its machine model by file category (with „Für die KI nicht lesbar“ where indexing failed), AI assessments of the defects in the repair history (collapsed)]
   - id: RM-DueMaintenance
     name: Due maintenance
     fed_by: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-MachineMoved, EVT-MachineModelCorrected]
@@ -761,11 +986,31 @@ read_models:
   - id: RM-MuseumSettings
     name: Museum settings
     description: >-
-      The technician's page "Museumseinstellungen" (team area, under „Mehr“) with its three forms – museum, logo,
-      legal texts – each showing the current values and saved on its own.
+      The forms museum, logo and legal texts on the technician's page „Einstellungen“ (team area, under „Mehr“;
+      called „Museumseinstellungen“ until feature ai-assessment, 2026-10-31), each showing the current values and
+      saved on its own.
     fed_by: [EVT-MuseumDetailsChanged, EVT-LogoReplaced, EVT-LogoRemoved, EVT-LegalTextsChanged]
     used_by: [ACT-Technician]
     fields: [Museum name, Machines listed on the welcome page, Logo, Privacy notice (German, English), Imprint (German, English)]
+  - id: RM-AiSettings
+    name: AI settings
+    description: >-
+      The form „KI“ on the settings page „Einstellungen“ (team area, under „Mehr“), technicians only. Says whether AI
+      is on, reminds that a spending limit is set on the key at OpenRouter and that the privacy notice has to mention
+      the AI, and shows the AI index overview with the files that failed and „Erneut versuchen“.
+    fed_by: [EVT-AiSettingsChanged, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileLeftAiIndex, EVT-FileAttached, EVT-FileRemoved]
+    used_by: [ACT-Technician]
+    fields: [AI on, Last four characters of the key, Chat model, Embedding model, Models offered by OpenRouter (name, context size, price per million tokens), Files indexed, Files waiting, Files failed (machine or machine model, title, reason), Cost of indexing so far]
+  - id: RM-DefectAiAssessments
+    name: AI assessments of a defect
+    description: >-
+      The section „KI-Einschätzungen“ on the defect page, for the whole team: one being written on top ("läuft …",
+      the page refreshes itself), otherwise the newest written or failed one, earlier ones collapsed. The action
+      „KI-Einschätzung anfordern“ only for those who may request it, only while AI is on and the defect is open.
+      Without any AI assessment and with AI off the section is not shown.
+    fed_by: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-DefectDetailsChanged, EVT-AiSettingsChanged, EVT-FileRemoved]
+    used_by: [ACT-TeamMember]
+    fields: [State (being written, written, failed with reason), Summary, Probable causes, What to check first, References (file title, page – opening the file; a removed file as its title without link), Note and photos of the request, Requested by, Requested at, Chat model, Cost, May request]
 hotspots:
   # --- Flow: problem report to defect ---
   - id: HS-1
@@ -981,6 +1226,88 @@ hotspots:
     refs: [CMD-ChangeMuseumDetails, CMD-ChangeLegalTexts, EVT-MuseumDetailsChanged, EVT-LegalTextsChanged]
     status: resolved
     resolution: No event and no rejection – the form shows the values as saved (user, 2026-10-31).
+  # --- Feature ai-assessment (event storming, 2026-10-31) ---
+  - id: HS-28
+    question: >-
+      Which context owns the AI settings, the AI index and the AI assessments? Proposal of the event storming – a new
+      supporting context AI assistance; alternatives – AI assessments in Repair (they belong to a defect), the AI
+      index in Collection (it follows the files), the AI settings beside the museum settings in Collection.
+    refs: [BC-AiAssistance, AGG-AiSettings, AGG-AiAssessment, EVT-FileIndexedForAi]
+    status: resolved
+    resolution: >-
+      A new supporting context AI assistance owns all three (domain-architect, 2026-10-31), with the aggregates AI
+      settings, AI index entry (one per file) and AI assessment. Language: it has terms of its own that no other
+      context uses (AI settings, chat model, embedding model, AI index, AI index entry, AI assessment, reference) and
+      it is the only context that talks to OpenRouter – the anti-corruption layer that turns OpenRouter's answers into
+      the domain's reasons sits here. Responsibility: an AI assessment never changes a defect, so it is outside the
+      defect's consistency boundary and Repair's invariants stay as they are; putting it in Repair would make Repair
+      read Collection's files and talk to OpenRouter. The AI index follows the files, but Collection is upstream and
+      must not know AI (ADR 0002, 0010) – AI assistance adds POL-RemovedFileLeavesAiIndex to CMD-RemoveFile and finds
+      attached files as waiting on its own. The AI settings sit on the same settings page as the museum settings, but
+      only AI assistance reads them. AI assistance is downstream of Collection (files, their content, machine and
+      machine model data), Repair (defect state, problem reports, work log entries, latest resolved defects) and Team;
+      nothing is downstream of it – the defect page and the machine record compose its read models in the app.
+      Cross-module work: docs/domain/context-map.md; background work: ADR 0015; the file's removal lock: ADR 0014.
+  - id: HS-29
+    question: >-
+      A removed file has to leave the AI index. In the same transaction as the removal, or afterwards through the
+      policy? Recommendation – in the same step, so an AI assessment never relies on a removed file.
+    refs: [POL-RemovedFileLeavesAiIndex, EVT-FileRemoved, EVT-FileLeftAiIndex]
+    status: resolved
+    resolution: In the same step as the removal – an AI assessment never relies on a removed file (user, 2026-10-31).
+  - id: HS-30
+    question: >-
+      An AI assessment is being written while the defect is resolved (or closed on retirement). Is it still written
+      and kept? Recommendation – yes: it never changes the defect, it was paid for, and it stays in the repair history.
+    refs: [CMD-WriteAiAssessment, EVT-DefectResolved, EVT-AiAssessmentWritten]
+    status: resolved
+    resolution: Yes – it is still written and kept; it never changes the defect and stays in the repair history (user, 2026-10-31).
+  - id: HS-31
+    question: >-
+      Can a second AI assessment be requested for the same defect while one is still being written? Recommendation –
+      no: the request is rejected until the running one is written or failed, so a double tap does not pay twice.
+    refs: [CMD-RequestAiAssessment, AGG-AiAssessment]
+    status: resolved
+    resolution: No – rejected until the running one is written or failed; the action is not offered meanwhile (user, 2026-10-31).
+  # --- Feature ai-assessment (domain-architect, 2026-10-31) ---
+  - id: HS-32
+    question: >-
+      Which failed files does the daily retry (POL-UnfinishedAiWorkIsRetried) index again on its own? A file that
+      failed because OpenRouter was not reachable would otherwise stay "Für die KI nicht lesbar" until a technician
+      taps „Erneut versuchen“. Recommendation – the daily retry indexes again the files that failed with "OpenRouter
+      not reachable" or "OpenRouter refused" (credit used up, a provider down – it may work tomorrow), at most once a
+      day each; files that failed with "not readable" or "format not indexed" are tried again only by hand, because
+      the same file fails the same way and costs every time.
+    refs: [POL-UnfinishedAiWorkIsRetried, CMD-IndexFileForAi, EVT-FileIndexingFailed, AGG-AiIndexEntry]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-10-31): the daily retry indexes again, at most once a day each, the files that failed with "OpenRouter not reachable" or "OpenRouter refused"; "not readable" and "format not indexed" only by hand.
+  - id: HS-33
+    question: >-
+      A write that breaks off (a crash, a deployment, the function's time limit) leaves an AI assessment requested,
+      and HS-31 then rejects every new request for that defect – in the worst case until the daily retry. When does
+      such an AI assessment count as no longer being written? Recommendation – the background work holds an AI
+      assessment for 15 minutes (far longer than a write takes); after that the next run of the background work –
+      started by any request, attached file, continuation or the daily retry, and by the defect page itself when it
+      refreshes and sees one held longer – writes it once more; if that second attempt breaks off too, it is failed
+      as "timed out". The team member never waits for the next day while looking at the defect.
+    refs: [CMD-RequestAiAssessment, CMD-WriteAiAssessment, POL-UnfinishedAiWorkIsRetried, AGG-AiAssessment, RM-DefectAiAssessments]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-10-31): held for 15 minutes; then the next run of the background work – the defect page included – writes it once more; a second break-off fails it as "timed out".
+  - id: HS-34
+    question: >-
+      The AI index stores embeddings of 1536 numbers (user, 2026-10-31 – the default embedding model returns that size
+      on request). An embedding model that cannot return 1536 numbers cannot be searched with the same index. Which
+      embedding models may a technician choose? Recommendation – only those that return 1536 numbers, natively or on
+      request: saving sends one test embedding and rejects a model that returns another size, and the model list
+      offers the others greyed out. Alternative – no fixed size and no search index: a machine and its machine model
+      have at most a few thousand indexed passages and pages, which an exact search covers in milliseconds, so any
+      multimodal embedding model could be chosen (ADR 0014, Considered Options).
+    refs: [CMD-ChangeAiSettings, AGG-AiSettings, AGG-AiIndexEntry]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-10-31): only embedding models that return 1536 numbers, natively or on request; saving checks it with one test embedding and rejects another size; the model list offers the others greyed out.
 
 flows:
   - id: FLOW-ProblemReportTriage
@@ -1019,3 +1346,11 @@ flows:
       whether the machines on display are listed; a visitor on the welcome page taps a machine and reports a problem
       on its visitor machine page as from its QR code.
     sequence: [ACT-Technician, EVT-MuseumDetailsChanged, EVT-LogoReplaced, EVT-LegalTextsChanged, ACT-Visitor, EVT-ProblemReported]
+  - id: FLOW-AiAssessment
+    name: AI assessment of a defect
+    description: >-
+      Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the files of the
+      machines and machine models are indexed for AI in the background. A team member who may work on an open defect
+      asks for an AI assessment with an optional note and photos; it is written in the background and kept with the
+      defect.
+    sequence: [ACT-Technician, EVT-AiSettingsChanged, EVT-FileIndexedForAi, ACT-TeamMember, EVT-AiAssessmentRequested, EXT-OpenRouter, EVT-AiAssessmentWritten]
