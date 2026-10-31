@@ -6,7 +6,8 @@ import nextTs from "eslint-config-next/typescript";
 /** ST-016, ST-099: the S3 SDK belongs to the S3 adapter of the storage seam (`src/platform/storage/s3-storage.ts`). */
 const s3SdkOnlyInTheAdapter = {
   group: ["@aws-sdk/*"],
-  message: "Store content only through the storage seam (src/platform/storage) – its S3 adapter is the one place for the S3 SDK (ST-099)",
+  message:
+    "Store content only through the storage seam (src/platform/storage) – its S3 adapter is the one place for the S3 SDK (ST-099)",
 };
 
 const eslintConfig = defineConfig([
@@ -69,14 +70,26 @@ const eslintConfig = defineConfig([
             },
             {
               // Pending uploads are taken and cleaned up only through the upload module's public interface (ADR 0009).
-              from: { element: { type: ["app", "module", "platform", "ui", "shared", "photo"], fileInternalPath: "!**/*.test.ts" } },
+              from: {
+                element: {
+                  type: ["app", "module", "platform", "ui", "shared", "photo"],
+                  fileInternalPath: "!**/*.test.ts",
+                },
+              },
               disallow: { to: { element: { type: "upload", fileInternalPath: "!{index,browser}.ts" } } },
-              message: "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
+              message:
+                "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
             },
             {
-              from: { element: { type: ["app", "module", "platform", "ui", "shared", "photo"], fileInternalPath: "**/*.test.ts" } },
+              from: {
+                element: {
+                  type: ["app", "module", "platform", "ui", "shared", "photo"],
+                  fileInternalPath: "**/*.test.ts",
+                },
+              },
               disallow: { to: { element: { type: "upload", fileInternalPath: "!{index,browser,*.test-support}.ts" } } },
-              message: "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
+              message:
+                "Import the upload module only through its public interface (src/upload/index.ts, in the browser src/upload/browser.ts) – ST-085",
             },
             {
               from: { element: { type: "module" } },
@@ -85,15 +98,21 @@ const eslintConfig = defineConfig([
             },
             {
               // The photo module (ST-016) is used through its public interface only – one way to store a photo.
-              from: { element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "!**/*.test.ts" } },
+              from: {
+                element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "!**/*.test.ts" },
+              },
               disallow: { to: { element: { type: "photo", fileInternalPath: "!{index,browser}.ts" } } },
-              message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
+              message:
+                "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
             },
             {
               // A test may also use the photo module's test support (its stand-in command), like a module's.
-              from: { element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "**/*.test.ts" } },
+              from: {
+                element: { type: ["app", "module", "platform", "ui", "shared"], fileInternalPath: "**/*.test.ts" },
+              },
               disallow: { to: { element: { type: "photo", fileInternalPath: "!{index,browser,*.test-support}.ts" } } },
-              message: "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
+              message:
+                "Import the photo module only through its public interface (src/photo/index.ts, in the browser src/photo/browser.ts) – ST-016",
             },
             {
               // Test support (src/test-support: builders, the test database, things that exist) is for tests and
@@ -149,6 +168,13 @@ const eslintConfig = defineConfig([
     rules: {
       "no-restricted-imports": ["error", { patterns: [s3SdkOnlyInTheAdapter] }],
     },
+  },
+  {
+    // ST-103, ADR 0013: React escapes output – the legal texts' rendered Markdown is the one HTML set by hand, in the one
+    // component next to the renderer's configuration.
+    files: ["src/**/*.tsx"],
+    ignores: ["src/app/legal-markdown.tsx"],
+    rules: { "react/no-danger": "error" },
   },
   {
     // Architecture review Q10 (ST-073): the Server Action runner in src/app/_actions/ is the only way from a form

@@ -58,7 +58,8 @@ test("ST-064: Visitor opens the privacy notice", async ({ page, browser }) => {
   await expect(phone).toHaveURL(/\/datenschutz$/);
   const german = phone.locator('[lang="de"]');
   await expect(german.getByRole("heading", { level: 1, name: "Datenschutzhinweis" })).toBeVisible();
-  await expect(phone.getByText("Wir erheben keine Kontaktdaten", { exact: false })).toBeVisible();
+  // The text is the museum's, written in the museum settings (ST-103) – whatever it says, it is shown.
+  await expect(german.locator('[data-slot="legal-text"]')).toHaveText(/\S/);
 });
 
 test("ST-064: Legal pages in English", async ({ browser }) => {
@@ -69,7 +70,7 @@ test("ST-064: Legal pages in English", async ({ browser }) => {
   await english.getByRole("link", { name: "Privacy" }).click();
   await expect(phone).toHaveURL(/\/datenschutz$/);
   await expect(english.getByRole("heading", { level: 1, name: "Privacy notice" })).toBeVisible();
-  await expect(english.getByText("We collect no contact data", { exact: false })).toBeVisible();
+  await expect(english.locator('[data-slot="legal-text"]')).toHaveText(/\S/);
 
   // The language switch of a legal page comes back to the same legal page.
   await english.getByRole("button", { name: "Deutsch" }).click();

@@ -2,6 +2,7 @@ import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, u
 import { fileCategories } from "./attach-file";
 import { machineCategories, technologies } from "./create-machine-model";
 import { machineStatuses } from "./register-machine";
+import { DEFAULT_PRIVACY_NOTICE_DE, DEFAULT_PRIVACY_NOTICE_EN } from "./default-legal-texts";
 
 /** AGG-MachineModel – current state (docs/architecture/data-model.md). Its files are AGG-File (ST-037). */
 export const machineModel = pgTable("machine_model", {
@@ -141,6 +142,25 @@ export const museumLogo = pgTable("museum_logo", {
   content: text("content"),
   /** `image/png`, `image/jpeg` or `image/webp` – set together with the content. */
   contentType: text("content_type"),
+  /** Optimistic version check (HS-16) of this part only. */
+  version: integer("version").notNull().default(0),
+});
+
+/**
+ * The legal texts – one of the three parts of AGG-MuseumSettings (ST-103, data model *Museum settings*): the privacy
+ * notice and the imprint, each in German and English, as Markdown (ADR 0013). Versioned on its own, so a save of the
+ * museum details or the logo never rejects a save of the legal texts. Exactly one row, inserted with the defaults – the
+ * placeholder privacy notice and no imprint – by the migration; never created or removed by a command. A text that is
+ * not provided is null.
+ */
+export const legalTexts = pgTable("legal_texts", {
+  id: uuid("id").primaryKey(),
+  /** Never empty (invariant). */
+  privacyNoticeDe: text("privacy_notice_de").notNull().default(DEFAULT_PRIVACY_NOTICE_DE),
+  privacyNoticeEn: text("privacy_notice_en").default(DEFAULT_PRIVACY_NOTICE_EN),
+  imprintDe: text("imprint_de"),
+  /** Only together with a German imprint (invariant, HS-25). */
+  imprintEn: text("imprint_en"),
   /** Optimistic version check (HS-16) of this part only. */
   version: integer("version").notNull().default(0),
 });

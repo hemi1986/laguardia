@@ -1,5 +1,6 @@
 import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
+import { imprintProvided } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { currentVisitorMessages } from "../../../visitor-locale";
 import { VisitorPage } from "../../../visitor-page";
@@ -15,15 +16,23 @@ import { museumNumberOfPage, visitorMachinePage } from "@/app/museum-number-addr
  */
 export default async function ReportProblemPage({ params, searchParams }: PageProps<"/m/[museumNumber]/melden">) {
   const museumNumber = await museumNumberOfPage({ params, searchParams }, visitorMachinePage("melden"));
-  const [{ locale, messages }, machine] = await Promise.all([
+  const db = database();
+  const [{ locale, messages }, machine, imprint] = await Promise.all([
     currentVisitorMessages(),
-    loadReportForm(database(), museumNumber),
+    loadReportForm(db, museumNumber),
+    imprintProvided(db),
   ]);
   if (!machine) notFound();
   const machinePage = `/m/${encodeURIComponent(museumNumber)}`;
 
   return (
-    <VisitorPage title={messages.reportForm.title} locale={locale} messages={messages} back={`${machinePage}/melden`}>
+    <VisitorPage
+      title={messages.reportForm.title}
+      locale={locale}
+      messages={messages}
+      back={`${machinePage}/melden`}
+      imprintProvided={imprint}
+    >
       <p className="text-muted-foreground">
         {machine.machineModelTitle} · {museumNumber}
       </p>

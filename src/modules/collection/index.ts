@@ -29,7 +29,18 @@ export { groupMachines, type MachineGroup } from "./machine-groups";
 export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTeam } from "./machine-models";
 export { changeMuseumDetailsCommand } from "./change-museum-details-command";
 export type { ChangeMuseumDetailsError, ChangeMuseumDetailsInput } from "./change-museum-details";
-export { logoChangedBy, museumLogo, museumName, museumSettings, type MuseumSettings } from "./museum-settings";
+export {
+  imprintProvided,
+  legalPage,
+  logoChangedBy,
+  museumLogo,
+  museumName,
+  museumSettings,
+  type LegalTextKind,
+  type MuseumSettings,
+} from "./museum-settings";
+export { changeLegalTextsCommand } from "./change-legal-texts-command";
+export type { ChangeLegalTextsError, ChangeLegalTextsInput } from "./change-legal-texts";
 export { removeLogoCommand, replaceLogoCommand } from "./replace-logo-command";
 export type { LogoContent, LogoMediaType, RemoveLogoError } from "./replace-logo";
 export { welcomePage, type MachineOnDisplay, type MachinesOnDisplayGroup, type WelcomePage } from "./welcome-page";

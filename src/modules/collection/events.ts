@@ -10,6 +10,7 @@ import type { MachineRegistered } from "./register-machine";
 import type { MachineRetired } from "./retire-machine";
 import type { MuseumDetailsChanged } from "./change-museum-details";
 import type { LogoRemoved, LogoReplaced } from "./replace-logo";
+import type { LegalTextsChanged } from "./change-legal-texts";
 
 /**
  * Collection's event catalogue (ST-079, architecture review 2026-10-17): per event its aggregate and what reaches the
@@ -119,6 +120,16 @@ export const collectionEvents = eventCatalogue({
       aggregateId: event.museumLogoId,
       machineId: null,
       data: { removedLogo: event.removedLogo },
+    }),
+  },
+  "EVT-LegalTextsChanged": {
+    aggregate: "AGG-MuseumSettings",
+    // The legal texts are typed text and stay in the museum settings; the journal names which texts changed – who changed
+    // them is the journal's actor (ST-103).
+    project: (event: LegalTextsChanged) => ({
+      aggregateId: event.legalTextsId,
+      machineId: null,
+      data: { changedTexts: event.changedTexts },
     }),
   },
 });

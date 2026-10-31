@@ -1,4 +1,4 @@
-import { museumName } from "@/modules/collection";
+import { imprintProvided, museumName } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { currentVisitorMessages } from "./visitor-locale";
 import { UnknownAddressView } from "./unknown-address";
@@ -9,6 +9,11 @@ import { UnknownAddressView } from "./unknown-address";
  * Content Security Policy blocks (ST-070).
  */
 export default async function NotFound() {
-  const [{ locale, messages }, name] = await Promise.all([currentVisitorMessages(), museumName(database())]);
-  return <UnknownAddressView museumName={name} locale={locale} messages={messages} />;
+  const db = database();
+  const [{ locale, messages }, name, imprint] = await Promise.all([
+    currentVisitorMessages(),
+    museumName(db),
+    imprintProvided(db),
+  ]);
+  return <UnknownAddressView museumName={name} locale={locale} messages={messages} imprintProvided={imprint} />;
 }

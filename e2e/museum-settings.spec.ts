@@ -27,6 +27,15 @@ test("ST-100: Technicians reach the museum settings under „Mehr“", async ({ 
   await expect(page.getByRole("heading", { level: 1, name: "Museumseinstellungen" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Museum" })).toBeVisible();
   await expect(page.getByLabel("Name des Museums")).not.toBeEmpty();
+  // The legal texts' form is the page's last section (ST-103) – its text areas span the column on a phone.
+  await expect(page.getByRole("heading", { level: 2 }).last()).toHaveText("Rechtstexte");
+  const privacyNotice = page.getByLabel("Datenschutzhinweis (Deutsch)");
+  await expect(privacyNotice).not.toBeEmpty();
+  await expect(page.getByLabel("Impressum (Englisch, freiwillig)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Rechtstexte speichern" })).toBeVisible();
+  const fieldWidth = (await privacyNotice.boundingBox())!.width;
+  expect(fieldWidth).toBeGreaterThan(280);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await page.getByRole("link", { name: "Startseite ansehen" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/\S/);
