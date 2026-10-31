@@ -206,3 +206,37 @@ it("ST-102: A technician removes the logo without being asked", async () => {
   expect(await logoFormsOf(tom).upload(null, await uploaded(await aPng(100, 50)))).toBeNull();
   expect((await museumSettings(db)).logo).toBeDefined();
 });
+
+it("ST-102: The stored logo is scaled down, carries no metadata and keeps its transparency", async () => {
+  // Transparent left half, red right half – and a camera's EXIF data with a location.
+  const pixels = Buffer.alloc(2400 * 1200 * 4);
+  for (let y = 0; y < 1200; y++)
+    for (let x = 1200; x < 2400; x++) pixels.set([200, 0, 0, 255], (y * 2400 + x) * 4);
+  const sent = await sharp(pixels, { raw: { width: 2400, height: 1200, channels: 4 } })
+    .withExif({
+      IFD0: { Make: "Fotokamera", Model: "Museum 1" },
+      IFD3: { GPSLatitudeRef: "N", GPSLatitude: "48/1 9/1 0/1", GPSLongitudeRef: "E", GPSLongitude: "7/1 51/1 0/1" },
+    })
+    .png()
+    .toBuffer();
+  expect((await sharp(sent).metadata()).exif).toBeDefined();
+
+  const state = await logoFormsOf(tom).upload(
+    null,
+    await uploaded(new File([new Uint8Array(sent)], "logo.png", { type: "image/png" })),
+  );
+
+  expect(state).toBeNull();
+  const stored = storage.read((await museumSettings(db)).logo!)!;
+  expect(stored.contentType).toBe("image/png");
+  const meta = await sharp(stored.bytes).metadata();
+  expect(meta).toMatchObject({ format: "png", width: 1000, height: 500, hasAlpha: true });
+  expect(meta.exif).toBeUndefined();
+  expect(meta.icc).toBeUndefined();
+  expect(meta.xmp).toBeUndefined();
+  expect(meta.comments ?? []).toEqual([]);
+  expect(Buffer.from(stored.bytes).includes("Fotokamera")).toBe(false);
+  const { data } = await sharp(stored.bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  expect(data[3]).toBe(0); // top left: still transparent
+  expect(data[(250 * 1000 + 999) * 4 + 3]).toBe(255); // right edge: still opaque
+});
