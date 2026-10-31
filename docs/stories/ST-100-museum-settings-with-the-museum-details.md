@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-MuseumDetailsChanged]
 depends_on: []
 labels: [ui, feature:museum-start-page]
-status: ready
+status: in-progress
 ---
 
 ## Story
