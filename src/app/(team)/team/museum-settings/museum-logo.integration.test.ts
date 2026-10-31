@@ -140,3 +140,69 @@ it("ST-102: A technician uploads the first logo", async () => {
   // Someone else opening the same address gets no confirmation (G3).
   expect(await settingsPage(savedLanding("logo"), eva)).not.toContain("Logo gespeichert.");
 });
+
+/** The museum has a logo – Eva uploaded it; its stored name. */
+async function aLogo() {
+  const state = await logoFormsOf(eva).upload(null, await uploaded(await aPng(400, 200)));
+  if (state) throw new Error(state.error);
+  return (await museumSettings(db)).logo!;
+}
+
+it("ST-102: Without a logo the welcome page shows only the museum name", async () => {
+  const html = await settingsPage();
+
+  expect(html).toMatch(/<h2[^>]*>Logo<\/h2>/);
+  expect(html).toContain("Noch kein Logo. Die Startseite zeigt nur den Namen.");
+  expect(html).toContain("Logo hochladen");
+  expect(html).not.toContain("Logo ersetzen");
+  expect(html).not.toContain("Logo entfernen");
+  expect(html).not.toContain("<img");
+  // The section stands after „Museum“.
+  expect(html).toMatch(/<h2[^>]*>Museum<\/h2>[\s\S]*<h2[^>]*>Logo<\/h2>/);
+  const page = await welcome();
+  expect(page).not.toContain("<img");
+  expect(page).toMatch(/<main[^>]*><h1/);
+});
+
+it("ST-102: A technician replaces the logo", async () => {
+  const previous = await aLogo();
+
+  expect(await logoFormsOf(tom).upload(null, await uploaded(await aWebp()))).toBeNull();
+
+  const { logo } = await museumSettings(db);
+  expect(logo).toMatch(/^logo\/[0-9a-f-]{36}\.webp$/);
+  expect(storage.read(logo!)?.contentType).toBe("image/webp");
+  expect(storage.read(previous)).toBeUndefined();
+  expect(storage.names()).toEqual([logo]);
+  expect(await welcome()).toMatch(logoBeforeName);
+  expect((await museumLogoJournal(db)).at(-1)).toMatchObject({
+    type: "EVT-LogoReplaced",
+    actor: tom,
+    data: { logo, contentType: "image/webp", previousLogo: previous },
+  });
+});
+
+it("ST-102: A technician removes the logo without being asked", async () => {
+  const removed = await aLogo();
+  const { remove, landed } = logoFormsOf(tom);
+
+  expect(await remove(null, await removal())).toBeNull();
+
+  expect(landed).toEqual(["removed"]);
+  expect((await museumSettings(db)).logo).toBeUndefined();
+  expect(storage.read(removed)).toBeUndefined();
+  expect(await welcome()).not.toContain("<img");
+  const html = await settingsPage(savedLanding("logo"));
+  expect(html).toContain("Logo entfernt.");
+  expect(html).toContain("Noch kein Logo. Die Startseite zeigt nur den Namen.");
+  expect(html).toContain("Logo hochladen");
+  expect(html).not.toContain("Logo entfernen");
+  expect((await museumLogoJournal(db)).at(-1)).toMatchObject({
+    type: "EVT-LogoRemoved",
+    actor: tom,
+    data: { removedLogo: removed },
+  });
+  // Upload again.
+  expect(await logoFormsOf(tom).upload(null, await uploaded(await aPng(100, 50)))).toBeNull();
+  expect((await museumSettings(db)).logo).toBeDefined();
+});
