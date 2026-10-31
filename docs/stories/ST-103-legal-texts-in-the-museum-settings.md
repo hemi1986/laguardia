@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-LegalTextsChanged]
 depends_on: [ST-100]
 labels: [ui, visitor, feature:museum-start-page]
-status: in-progress
+status: done
 ---
 
 ## Story
