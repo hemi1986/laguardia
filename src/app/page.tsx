@@ -1,20 +1,13 @@
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { museumName } from "@/modules/collection";
+import { database } from "@/platform/database";
 import { currentVisitorMessages } from "./visitor-locale";
-import { VisitorPage } from "./visitor-page";
+import { WelcomePageView } from "./welcome-page";
 
 /**
- * The start page (ST-078): the museum's name, the way to the team login and the legal links (ST-064). It stays
- * reachable without login and follows the visitor's language (ST-010).
+ * The welcome page (ST-078): the museum's name (ST-100), the way to the team login and the legal links (ST-064). It
+ * stays reachable without login and follows the visitor's language (ST-010).
  */
-export default async function Home() {
-  const { locale, messages } = await currentVisitorMessages();
-  const { home } = messages;
-  return (
-    <VisitorPage title={home.museum} locale={locale} messages={messages} back="/">
-      <Link href="/login" className={buttonVariants({ variant: "link", className: "self-start px-0" })}>
-        {home.teamLogin}
-      </Link>
-    </VisitorPage>
-  );
+export default async function WelcomePage() {
+  const [{ locale, messages }, name] = await Promise.all([currentVisitorMessages(), museumName(database())]);
+  return <WelcomePageView museumName={name} locale={locale} messages={messages} />;
 }

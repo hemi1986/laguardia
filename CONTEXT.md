@@ -33,6 +33,38 @@ everything they did.
 _Avoid_: Login, user, profile
 _UI (de)_: Konto
 
+**Museum settings**:
+How the museum presents itself to visitors: its name, its logo, the privacy notice and the imprint, and whether the
+machines on display are listed for visitors to report a problem. Only technicians change them.
+_Avoid_: Configuration, admin settings, museum profile
+_UI (de)_: Museumseinstellungen
+
+**Museum details**:
+The part of the museum settings that holds the museum's name and whether the machines on display are listed on the
+welcome page; changed together in the form „Museum“, versioned apart from the logo and the legal texts.
+_Avoid_: Museum profile, general settings
+_UI (de)_: Museum (the form's title)
+
+**Logo**:
+The museum's picture on the welcome page; there is at most one, and only technicians replace or remove it in the
+museum settings.
+_Avoid_: Banner, emblem, brand image
+_UI (de)_: Logo
+
+**Legal texts**:
+The privacy notice and the imprint every visitor page links to, kept in the museum settings. The German privacy notice
+always exists; an English one and the imprint are optional – visitors read the German text where no English one is
+provided, and without an imprint no imprint link is offered.
+_Avoid_: Legal notice, terms, disclaimer
+_UI (de)_: Rechtstexte (the technicians' form); „Rechtliches“ heads the legal links on visitor pages (Datenschutz / Impressum)
+
+**Welcome page**:
+The visitor page at La Guardia's root address: the museum's name and logo, and – if the museum settings say so – the
+machines on display, each leading to its visitor machine page to report a problem. The same for everyone, logged in or
+not.
+_Avoid_: Start page (in English text), home, landing page, dashboard
+_UI (de)_: Startseite
+
 **Dashboard**:
 The page a team member lands on after logging in, showing what needs their attention right now; technicians and helpers each have their own.
 _Avoid_: Start page, home, landing page, cockpit

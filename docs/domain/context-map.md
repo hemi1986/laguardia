@@ -1,17 +1,19 @@
 # Context Map
 
-> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-10-25 (per-machine maintenance)
+> Source: `docs/domain/events.yaml` (`bounded_contexts`, `aggregates`, `policies`, `read_models`), `docs/product/vision.md`. Glossary: `CONTEXT.md`. As of: 2026-10-31 (museum settings, feature museum-start-page)
 
 ## Contexts
 
 | Context | Kind | Purpose | Core terms | Owner role | Aggregates |
 |---|---|---|---|---|---|
 | **Repair** (`BC-Repair`) | Core domain | From problem reports via triage to defects that are worked on and resolved – the reason La Guardia exists ("no defect gets lost", traceable repair history) | Problem report, Triage, Defect, Priority, Resolved on the spot, Claim, On hold, Closed on retirement, Work log entry, Repair history | Technician (triage, priority); every team member works on defects | `AGG-ProblemReport`, `AGG-Defect` |
-| **Collection** (`BC-Collection`) | Supporting | Which machines the museum has, what they are, where they stand, whether they are playable, and their files | Machine, Machine model, Machine category, Technology, Museum number, Serial number, Location, Machine status, Registered / Retired machine, File, File category | Technician (registration, machine status, file removal); helpers may set *Out of order* and attach files | `AGG-Machine`, `AGG-MachineModel`, `AGG-File` |
+| **Collection** (`BC-Collection`) | Supporting | Which machines the museum has, what they are, where they stand, whether they are playable, and their files – and how the museum presents itself to visitors (museum settings) | Machine, Machine model, Machine category, Technology, Museum number, Serial number, Location, Machine status, Registered / Retired machine, File, File category; Museum settings, Logo, Legal texts, Welcome page | Technician (registration, machine status, file removal, museum settings); helpers may set *Out of order* and attach files | `AGG-Machine`, `AGG-MachineModel`, `AGG-File`, `AGG-MuseumSettings` |
 | **Maintenance** (`BC-Maintenance`) | Supporting | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance task, Machines of a maintenance task, Maintenance plan, Due / Overdue, Maintenance record, Suitable for helpers | Technician (maintenance plan); every team member records maintenance | `AGG-MaintenancePlan`, `AGG-MaintenanceRecord` |
 | **Team** | Generic, **not modelled** | Team member accounts, roles (helper / technician), signing in and last visit | Team member, Account, Helper, Technician, Last visit | Technician (manages accounts, `docs/product/vision.md`) | – (standard account management, see `docs/adr/0004-team-authentication.md`) |
 
-The **Visitor** is not a context and has no account: visitor pages are a public view onto Collection and Repair (`RM-VisitorMachinePage`) plus the *Report problem* command of Repair.
+The **Visitor** is not a context and has no account: visitor pages are a public view onto Collection and Repair (`RM-VisitorMachinePage`) plus the *Report problem* command of Repair. The welcome page (`RM-WelcomePage`) and the legal pages (`RM-LegalPage`) read Collection only – museum settings, machines and machine models; the hint *Out of order* / *Limited* is the machine status, not Repair data.
+
+**Why museum settings live in Collection (feature museum-start-page, 2026-10-31):** they are a handful of values technicians change rarely, with no language of their own that would clash with another context, and their only domain neighbour is Collection's list of machines on display. A fifth context would add a boundary without a reason; Collection already owns what visitors see of the museum's machines. Repair does not own them either: it reports problems, it does not present the museum.
 
 ## Relationships
 
@@ -26,7 +28,7 @@ flowchart LR
     Team -- "U → D · Conformist" --> Repair
     Team -- "U → D · Conformist" --> Maintenance
 
-    Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, museum number, machine status,<br/>Machine retired" --> Repair
+    Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, museum number, machine status,<br/>Machine retired; museum name and legal texts<br/>for the visitor pages" --> Repair
     Collection -- "U → D · Customer/Supplier + Published Language<br/>machine ID, machine status, Machine registered,<br/>Machine retired; category and technology for choosing" --> Maintenance
 
     Repair -. "prompts status change (manual, same step)<br/>→ Change machine status" .-> Collection
@@ -40,6 +42,7 @@ Solid arrows: upstream (U) supplies, downstream (D) depends. Dotted arrows: the 
 - Published language: the events `EVT-MachineRegistered`, `EVT-MachineStatusChanged`, `EVT-MachineRetired` and the machine reference (machine ID, museum number).
 - Repair reacts **automatically** to `EVT-MachineRetired`: `POL-RetirementClosesDefects` (→ `CMD-CloseDefectOnRetirement`) and `POL-RetirementDismissesProblemReports` (→ `CMD-DismissProblemReport`). Collection does not know them: Repair adds them to Collection's command (ADR 0010).
 - Repair reads from Collection when checking command rules that are not its own invariants: *Report problem* (visitors only for machines on display, nobody for retired machines), *Reopen defect* (machine not retired). These are checks against the current machine state at command time, not invariants – a machine retired in the same second is caught by the retirement policies, because these reads take the machine's retirement lock shared and the retirement takes it exclusively (`docs/adr/0010-cross-module-policies-and-retirement-lock.md`).
+- Repair's visitor pages (the visitor machine page, the report form) read the **museum settings** for what every visitor page shows: the museum name where a page names the museum, and the links to the legal texts – the imprint link only when an imprint is provided. Read-only; only technicians change the museum settings, through Collection's commands (`CMD-ChangeMuseumDetails`, `CMD-ReplaceLogo`, `CMD-RemoveLogo`, `CMD-ChangeLegalTexts`). Collection knows nothing of Repair for it.
 - Repair prompts status changes **manually**: `POL-DefectMayChangeMachineStatus` (new or reopened defect – the technician sets *Limited* / *Out of order* in the same step, HS-3) and `POL-ResolvedDefectsReturnMachineToPlay` (machines without open defects highlighted, the technician decides on *Playable*, HS-6). Both issue Collection's `CMD-ChangeMachineStatus`; the decision stays with the technician.
 
 ### Collection → Maintenance (Customer/Supplier, Published Language)
@@ -74,6 +77,9 @@ Read models compose data from several contexts; they only read, every write goes
 | `RM-TechnicianDashboard` | x | x | x | x |
 | `RM-HelperDashboard` | | x | x | x |
 | `RM-RepairTimes` | | x | | |
+| `RM-WelcomePage` | x | | | |
+| `RM-LegalPage` | x | | | |
+| `RM-MuseumSettings` | x | | | |
 
 ## Open points
-- None affecting a context boundary. HS-22 (registration with chosen maintenance tasks across Collection and Maintenance) is resolved; HS-24 (which maintenance records count for *Last done*) is open but stays inside Maintenance. HS-18 (events for corrections of location, machine model, museum number and defect title – Collection and Repair) and HS-21 (the Team area records the viewer's last visit for *New since last visit*) are both resolved; see `docs/domain/events.yaml`.
+- None affecting a context boundary. HS-25, HS-26 and HS-27 (feature museum-start-page) stay inside the museum settings in Collection. HS-22 (registration with chosen maintenance tasks across Collection and Maintenance) is resolved; HS-24 (which maintenance records count for *Last done*) is open but stays inside Maintenance. HS-18 (events for corrections of location, machine model, museum number and defect title – Collection and Repair) and HS-21 (the Team area records the viewer's last visit for *New since last visit*) are both resolved; see `docs/domain/events.yaml`.

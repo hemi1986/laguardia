@@ -8,6 +8,7 @@ import type { MachineModelCreated } from "./create-machine-model";
 import type { MachineMoved } from "./move-machine";
 import type { MachineRegistered } from "./register-machine";
 import type { MachineRetired } from "./retire-machine";
+import type { MuseumDetailsChanged } from "./change-museum-details";
 
 /**
  * Collection's event catalogue (ST-079, architecture review 2026-10-17): per event its aggregate and what reaches the
@@ -89,6 +90,16 @@ export const collectionEvents = eventCatalogue({
       aggregateId: event.fileId,
       machineId: event.machineId ?? null,
       data: { machineModelId: event.machineModelId ?? null },
+    }),
+  },
+  "EVT-MuseumDetailsChanged": {
+    aggregate: "AGG-MuseumSettings",
+    // The museum name is typed text and stays in the museum settings; the journal names which details changed and the
+    // listing, a yes or no (ST-100).
+    project: (event: MuseumDetailsChanged) => ({
+      aggregateId: event.museumDetailsId,
+      machineId: null,
+      data: { changedDetails: event.changedDetails, machinesListed: event.machinesListed },
     }),
   },
 });

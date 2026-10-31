@@ -1,4 +1,4 @@
-import { bigint, bigserial, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { fileCategories } from "./attach-file";
 import { machineCategories, technologies } from "./create-machine-model";
 import { machineStatuses } from "./register-machine";
@@ -114,3 +114,17 @@ export const file = pgTable(
   },
   (t) => [index("file_machine_idx").on(t.machineId), index("file_machine_model_idx").on(t.machineModelId)],
 );
+
+/**
+ * The museum details – one of the three parts of AGG-MuseumSettings (ST-100, data model *Museum settings*): the museum
+ * name and whether the machines on display are listed on the welcome page. Each part is a record of its own with its
+ * own version, so a save of the logo or the legal texts never rejects a save of the museum details (user, 2026-10-31).
+ * Exactly one row, inserted with the defaults by the migration – never created or removed by a command.
+ */
+export const museumDetails = pgTable("museum_details", {
+  id: uuid("id").primaryKey(),
+  museumName: text("museum_name").notNull(),
+  machinesListed: boolean("machines_listed").notNull(),
+  /** Optimistic version check (HS-16) of this part only. */
+  version: integer("version").notNull().default(0),
+});

@@ -2,7 +2,7 @@
 
 > **Why the name?** In 1942, New York mayor Fiorello La Guardia banned pinball, had thousands of machines confiscated and smashed them with a sledgehammer for the press. La Guardia – the software – does the opposite: it keeps the museum's pinball machines alive.
 
-**The museum:** Flipper- & Arcade Museum Eschbach (user, 2026-09-29) – the name visitors see, e.g. on the start page.
+**The museum:** Flipper- & Arcade Museum Eschbach (user, 2026-09-29) – the name visitors see, e.g. on the welcome page; technicians can change it in the museum settings (user, 2026-10-31).
 
 ## Problem
 Total chaos today:
@@ -46,7 +46,9 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - Spare-parts purchasing and inventory (at most free-text "parts used")
 - Staff scheduling
 - Coin / revenue counting
-- Public website
+- Public website – no opening hours, news, prices or freely designed content. In scope (user, 2026-10-31,
+  `feature:museum-start-page`): the welcome page with the museum's name and logo, the legal texts, and,
+  if the technicians switch it on, the machines on display to report a problem at
 - Offline capability
 - Active notifications (e-mail, push)
 - Counting plays (maintenance intervals are purely time-based)

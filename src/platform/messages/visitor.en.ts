@@ -3,7 +3,6 @@ import type { VisitorMessages } from "./visitor.de";
 /** English texts of the visitor pages – the same keys as `visitor.de.ts`. */
 export const visitorEn: VisitorMessages = {
   home: {
-    museum: "Flipper- & Arcade Museum Eschbach",
     teamLogin: "Team login",
 
     /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */

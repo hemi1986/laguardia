@@ -254,12 +254,25 @@ export const collectionTexts = {
     unchanged: (museumNumber: string, location: string) => `${museumNumber} steht schon in „${location}“.`,
     retired: "Dieses Gerät ist ausgemustert – sein Standort lässt sich nicht mehr ändern.",
   },
+  /** The museum settings (ST-100): how the museum presents itself to visitors, one form per section (G18, G29). */
+  museumSettings: {
+    toWelcomePage: "Startseite ansehen",
+    museum: {
+      title: "Museum",
+      museumName: "Name des Museums",
+      machinesListed: "Geräteliste auf der Startseite anzeigen",
+      save: "Museum speichern",
+      saved: "Museum gespeichert.",
+    },
+  },
 } as const;
 
 /**
  * Texts of Collection's rejected commands, keyed by their kebab-case error code (shared codes: `shared.ts`).
  */
 export const collectionErrors = {
+  /** The form „Museum“ of the museum settings (ST-100). */
+  "museum-name-required": "Bitte einen Namen angeben.",
   /** Registering a machine model (ST-006) and correcting it (ST-036): no correction without a change. */
   "manufacturer-required": "Bitte einen Hersteller angeben.",
   "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",
