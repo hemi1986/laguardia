@@ -6,10 +6,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
-import { museumSettings, welcomePage } from "@/modules/collection";
+import { changeMuseumDetailsCommand, museumSettings, welcomePage } from "@/modules/collection";
 import { museumLogoJournal, withoutLogo } from "@/modules/collection/museum-settings.test-support";
 import { fixedClock } from "@/platform/clock";
-import type { Actor } from "@/platform/command";
+import { executeCommand, type Actor } from "@/platform/command";
 import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -307,4 +307,51 @@ it("ST-102: A logo larger than 2 MB is rejected", async () => {
   expect(commandErrorText(teamMessages, state!.error)).toBe("Das Logo darf höchstens 2 MB groß sein.");
   expect((await museumSettings(db)).logo).toBe(kept);
   expect(storage.names()).toEqual([kept]);
+});
+
+it("ST-102: A logo changed by someone else meanwhile is not overwritten", async () => {
+  await aLogo();
+  const opened = (await museumSettings(db)).logoVersion;
+  expect(await logoFormsOf(eva).remove(null, await removal())).toBeNull();
+  const conflict = "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.";
+
+  const uploading = await logoFormsOf(tom).upload(null, await uploaded(await aWebp(), opened));
+  const removing = await logoFormsOf(tom).remove(null, await removal(opened));
+
+  expect(uploading).toMatchObject({ error: "version-conflict" });
+  expect(commandErrorText(teamMessages, uploading!.error)).toBe(conflict);
+  expect(removing).toMatchObject({ error: "no-logo" });
+  expect(commandErrorText(teamMessages, removing!.error)).toBe(conflict);
+  expect((await museumSettings(db)).logo).toBeUndefined();
+  expect(storage.names()).toEqual([]);
+  const form = renderToStaticMarkup(
+    createElement(LogoFormContent, { version: opened, hasLogo: true, uploadState: uploading, removeState: removing }),
+  );
+  expect(form.split(conflict)).toHaveLength(3);
+});
+
+it("ST-102: Helpers cannot replace or remove the logo", async () => {
+  const kept = await aLogo();
+  const { upload, remove, landed } = logoFormsOf(anna);
+
+  expect(await upload(null, await uploaded(await aWebp()))).toMatchObject({ error: "not-authorized" });
+  expect(await remove(null, await removal())).toMatchObject({ error: "not-authorized" });
+
+  expect(landed).toEqual([]);
+  expect((await museumSettings(db)).logo).toBe(kept);
+  expect(storage.names()).toEqual([kept]);
+});
+
+it("a save of the museum details in between never rejects a change of the logo", async () => {
+  await aLogo();
+  const opened = (await museumSettings(db)).logoVersion;
+  const { museumDetailsVersion, museumName } = await museumSettings(db);
+  const saved = await executeCommand(
+    changeMuseumDetailsCommand,
+    { version: museumDetailsVersion, museumName, machinesListed: true },
+    { actor: eva, db, clock, newId: randomUUID },
+  );
+  expect(saved.ok).toBe(true);
+
+  expect(await logoFormsOf(tom).remove(null, await removal(opened))).toBeNull();
 });
