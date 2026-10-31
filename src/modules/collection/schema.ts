@@ -128,3 +128,19 @@ export const museumDetails = pgTable("museum_details", {
   /** Optimistic version check (HS-16) of this part only. */
   version: integer("version").notNull().default(0),
 });
+
+/**
+ * The logo – one of the three parts of AGG-MuseumSettings (ST-102, data model *Logo content*): at most one, a reference
+ * to its content in the object store (ADR 0012) and its media type, never the file itself. Versioned on its own, so a
+ * save of the museum details or the legal texts never rejects a change of the logo. Exactly one row, inserted without a
+ * logo by the migration – never created or removed by a command.
+ */
+export const museumLogo = pgTable("museum_logo", {
+  id: uuid("id").primaryKey(),
+  /** The content's name in the storage seam – null while the museum has no logo. */
+  content: text("content"),
+  /** `image/png`, `image/jpeg` or `image/webp` – set together with the content. */
+  contentType: text("content_type"),
+  /** Optimistic version check (HS-16) of this part only. */
+  version: integer("version").notNull().default(0),
+});

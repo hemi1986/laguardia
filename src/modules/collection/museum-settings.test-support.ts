@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { journalOf, type Database } from "@/platform/command";
 import { MUSEUM_DETAILS_ID } from "./change-museum-details";
+import { MUSEUM_LOGO_ID } from "./replace-logo";
 
 /** The museum name the migration inserts – the default until a technician changes it (data model, *Museum settings*). */
 export const DEFAULT_MUSEUM_NAME = "Flipper- & Arcade Museum Eschbach";
@@ -18,4 +19,17 @@ export async function withDefaultMuseumDetails(db: Database): Promise<void> {
   await db.execute(
     sql`UPDATE museum_details SET museum_name = ${DEFAULT_MUSEUM_NAME}, machines_listed = false, version = version + 1`,
   );
+}
+
+/** The journal of the logo (ST-102), oldest first – for tests that check what a change of the logo recorded. */
+export function museumLogoJournal(db: Database) {
+  return journalOf(db, { aggregateId: MUSEUM_LOGO_ID });
+}
+
+/**
+ * Puts the logo of an isolated test database back to its default – no logo, as the migration inserts it – so each test
+ * starts from "the museum has no logo". Its version goes on counting, as it would.
+ */
+export async function withoutLogo(db: Database): Promise<void> {
+  await db.execute(sql`UPDATE museum_logo SET content = NULL, content_type = NULL, version = version + 1`);
 }

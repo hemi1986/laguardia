@@ -8,6 +8,8 @@ export const visitorEn: VisitorMessages = {
     machinesOnDisplay: "Something not working? Tap a machine and report the problem.",
     /** The English names of the machine categories in CONTEXT.md (ST-101). */
     machineCategories: { pinball: "Pinball", arcade: "Arcade", other: "Other" },
+    /** The logo above the museum name (ST-102), for screen readers. */
+    logo: "The museum's logo",
 
     /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */
     notFound: "This page does not exist.",

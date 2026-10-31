@@ -1,5 +1,6 @@
-import { entriesOf, type JournalEntry } from "@/platform/command";
+import { entriesOf, lastCommandBy, type Database, type JournalEntry, type TeamMemberId } from "@/platform/command";
 import { collectionEvents } from "./events";
+import { MUSEUM_LOGO_ID } from "./replace-logo";
 import type { MachineStatus } from "./register-machine";
 
 /**
@@ -61,4 +62,16 @@ export function machineModelChangeIn(command: readonly JournalEntry[], machineMo
     created: entries.some((entry) => entry.type === "EVT-MachineModelCreated"),
     corrected: entries.some((entry) => entry.type === "EVT-MachineModelCorrected"),
   };
+}
+
+/**
+ * What the team member's latest change of the logo was (ST-102), for the confirmation on the museum settings page (G3) –
+ * only when the latest command on the logo is theirs. The logo's ID stays inside Collection, like the maintenance plan's.
+ */
+export async function logoChangedBy(db: Database, teamMemberId: TeamMemberId): Promise<"replaced" | "removed" | undefined> {
+  const command = await lastCommandBy(db, { aggregateId: MUSEUM_LOGO_ID }, teamMemberId);
+  const entries = command ? entriesOf(collectionEvents, command) : [];
+  if (entries.some((entry) => entry.type === "EVT-LogoReplaced")) return "replaced";
+  if (entries.some((entry) => entry.type === "EVT-LogoRemoved")) return "removed";
+  return undefined;
 }

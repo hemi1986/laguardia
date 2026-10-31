@@ -253,6 +253,13 @@
       "when": 1793464306382,
       "tag": "0035_museum_details",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793472526535,
+      "tag": "0036_museum_logo",
+      "breakpoints": true
     }
   ]
 }

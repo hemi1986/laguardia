@@ -264,6 +264,17 @@ export const collectionTexts = {
       save: "Museum speichern",
       saved: "Museum gespeichert.",
     },
+    logo: {
+      title: "Logo",
+      none: "Noch kein Logo. Die Startseite zeigt nur den Namen.",
+      current: "Das aktuelle Logo",
+      file: "Bild als PNG, JPEG oder WebP, höchstens 2 MB",
+      upload: "Logo hochladen",
+      replace: "Logo ersetzen",
+      remove: "Logo entfernen",
+      saved: "Logo gespeichert.",
+      removed: "Logo entfernt.",
+    },
   },
 } as const;
 
@@ -273,6 +284,12 @@ export const collectionTexts = {
 export const collectionErrors = {
   /** The form „Museum“ of the museum settings (ST-100). */
   "museum-name-required": "Bitte einen Namen angeben.",
+  /** The form „Logo“ of the museum settings (ST-102): rejections of the image itself – no "choose again" (G8a). */
+  "not-a-logo-image": "Bitte ein Bild als PNG, JPEG oder WebP wählen.",
+  "logo-too-large": "Das Logo darf höchstens 2 MB groß sein.",
+  "logo-not-stored": "Das Logo konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
+  /** Only a page that still showed a logo removes one – someone removed it meanwhile (ST-102). */
+  "no-logo": "Jemand hat das inzwischen geändert. Bitte die Seite neu laden und noch einmal versuchen.",
   /** Registering a machine model (ST-006) and correcting it (ST-036): no correction without a change. */
   "manufacturer-required": "Bitte einen Hersteller angeben.",
   "year-must-be-four-digits": "Bitte ein Baujahr mit vier Ziffern angeben, zum Beispiel 1997.",

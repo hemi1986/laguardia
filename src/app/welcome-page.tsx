@@ -6,7 +6,8 @@ import { visitorMachinePage } from "./museum-number-address";
 import { VisitorPage, type MuseumNamedProps } from "./visitor-page";
 
 /**
- * The welcome page (ST-078, ST-101): the museum's name – from the museum settings, not translated (ST-100) –, the
+ * The welcome page (ST-078, ST-101, ST-102): the museum's logo, if there is one, centred above the name and at most about
+ * a third of the screen's height, so the name stays visible on a phone; the museum's name – from the museum settings, not translated (ST-100) –, the
  * machines on display when the museum settings list them (RM-WelcomePage), each leading to its visitor machine page to
  * report a problem, and at the bottom, set apart, the way to the team login and the legal links (ST-064).
  */
@@ -14,10 +15,16 @@ export function WelcomePageView({
   museumName,
   locale,
   messages,
+  hasLogo,
   machinesOnDisplay,
-}: MuseumNamedProps & { machinesOnDisplay: MachinesOnDisplayGroup[] }) {
+}: MuseumNamedProps & { hasLogo?: boolean; machinesOnDisplay: MachinesOnDisplayGroup[] }) {
+  const logo = hasLogo && (
+    // The public address `/logo` sends the browser on to a short-lived view address of the private store (ST-102).
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo" alt={messages.welcomePage.logo} className="mx-auto max-h-[33dvh] w-auto max-w-full object-contain" />
+  );
   return (
-    <VisitorPage title={museumName} locale={locale} messages={messages} back="/">
+    <VisitorPage title={museumName} locale={locale} messages={messages} back="/" above={logo}>
       {machinesOnDisplay.length > 0 && (
         <>
           <p>{messages.welcomePage.machinesOnDisplay}</p>

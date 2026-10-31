@@ -2,6 +2,7 @@ import "server-only";
 import type { Clock } from "@/platform/clock";
 import type { CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
+import { acceptLogo, type LogoError } from "./accept-logo";
 import { acceptPhoto } from "./accept-photo";
 
 /** Every way a photo can fail – defined once here (ST-016), each with a text in the team and visitor catalogs. */
@@ -53,8 +54,38 @@ export async function withStoredPhotos<Result, Error extends string>(
   const rejected = outcomes.find((outcome) => !outcome.ok);
   if (rejected) return rejected;
   const accepted = outcomes.flatMap((outcome) => (outcome.ok ? [outcome.photo] : []));
+  const toStore = accepted.map((photo) => ({ ...photo, name: `${owner}/${newId()}.jpg` }));
+  const outcome = await storeThenRun(storage, toStore, "photo", run);
+  return outcome === "not-stored" ? { ok: false, error: "not-stored" } : outcome;
+}
 
-  const names = accepted.map(() => `${owner}/${newId()}.jpg`);
+/**
+ * The museum's logo (ST-102): accepted by the logo acceptance – which keeps its format and transparency, unlike a
+ * photo's –, stored under `logo/<newId()>.<format>`, the command run with the stored logo – and deleted again if the
+ * command is rejected or throws. Without a sent file the logo is `not-a-logo-image`: there is nothing to replace with.
+ */
+export async function withStoredLogo<Result, Error extends string>(
+  sent: Uint8Array | undefined,
+  { storage, newId }: PhotoDependencies,
+  run: (logo: StoredPhoto) => Promise<CommandResult<Result, Error>>,
+): Promise<CommandResult<Result, Error> | { ok: false; error: LogoError }> {
+  const accepted = await acceptLogo(sent ?? new Uint8Array());
+  if (!accepted.ok) return accepted;
+  const { bytes, contentType, extension } = accepted.logo;
+  const outcome = await storeThenRun(storage, [{ name: `logo/${newId()}.${extension}`, bytes, contentType }], "logo", (_, [logo]) =>
+    run(logo),
+  );
+  return outcome === "not-stored" ? { ok: false, error: "logo-not-stored" } : outcome;
+}
+
+/** Stores accepted content under its names, runs the command with them, and deletes them when anything fails. */
+async function storeThenRun<Result, Error extends string>(
+  storage: ContentStorage,
+  accepted: readonly { name: string; bytes: Uint8Array; contentType: string }[],
+  what: string,
+  run: (photos: PhotoReference[], stored: StoredPhoto[]) => Promise<CommandResult<Result, Error>>,
+): Promise<CommandResult<Result, Error> | "not-stored"> {
+  const names = accepted.map(({ name }) => name);
   const writes = await Promise.allSettled(
     accepted.map((photo, i) => storage.write(names[i], photo.bytes, photo.contentType)),
   );
@@ -62,12 +93,12 @@ export async function withStoredPhotos<Result, Error extends string>(
   if (failed) {
     // Visible in the function logs (a Blob outage); the photo itself and the person stay out of the log.
     const reason: unknown = failed.reason;
-    console.error("photo not stored:", reason instanceof Error ? reason.message : reason);
+    console.error(`${what} not stored:`, reason instanceof Error ? reason.message : reason);
     await deleteQuietly(
       storage,
       names.filter((_, i) => writes[i].status === "fulfilled"),
     );
-    return { ok: false, error: "not-stored" };
+    return "not-stored";
   }
 
   let outcome: CommandResult<Result, Error>;

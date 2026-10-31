@@ -8,7 +8,11 @@ import {
   type CommandDependencies,
   type CommandError,
 } from "@/platform/command";
-import { withStoredPhotos, type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
+import {
+  withStoredLogo,
+  withStoredPhotos,
+  type LogoError,
+  type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
 import { s3Storage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
 import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
 import { SEEN_FIELD, seenOf } from "./form-parts";
@@ -68,6 +72,19 @@ export type PhotosFormDefinition<Input, Result, Error extends string, Field exte
 > & {
   photos: { field: string; owner: PhotoOwner; atMost: { count: number; error: Error } };
   input: (fields: FormFields<Field>, photos: PhotoReference[]) => Input;
+};
+
+/**
+ * A form with the museum's logo (ST-102) – its file field; the file reaches the server as chosen, without the browser's
+ * photo preparation, and goes through the photo module's logo acceptance (format and transparency kept). The input gets
+ * the stored logo. Its rejections are about the image itself, so none asks to choose it again (G8a).
+ */
+export type LogoFormDefinition<Input, Result, Field extends string> = Omit<
+  FormDefinition<Input, Result, Field>,
+  "input"
+> & {
+  logo: { field: string };
+  input: (fields: FormFields<Field>, logo: StoredPhoto) => Input;
 };
 
 /** After a rejection of a form with a photo: also whether the photo must be chosen again (G8a) – set only then. */
@@ -184,6 +201,8 @@ const isPhotoError = (error: string): error is PhotoError => Object.hasOwn(rejec
  *   the chosen file is still attached for the next send (user, 2026-10-18); then the command runs through the upload
  *   module's `withUploadedContent`: a rejected command, content that is gone or too large leaves no content behind,
  *   and the form state no longer names it – the file must be chosen again.
+ * - **`logo`** (ST-102) – the museum's logo through the photo module's `withStoredLogo`: the same "store, run, delete
+ *   on failure", with the logo's own acceptance;
  * - **`each`** (ST-045) – the command once per chosen item, each in its own transaction: a rejected item does not stop
  *   the others. Nothing chosen is rejected (`nothing-chosen`); when every item is rejected the form stays, with the
  *   one reason they share or each item's own.
@@ -206,6 +225,10 @@ export function formRunner(dependencies: RunnerDependencies) {
   ): FormStateAction<UploadFormState<CommandError<typeof command>, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
+    definition: LogoFormDefinition<Input, Result, Field>,
+  ): FormStateAction<FormState<CommandError<typeof command> | LogoError, Field>>;
+  function formAction<Input, Result, Error extends string, const Field extends string>(
+    command: Command<Input, Result, Error>,
     definition: PhotoFormDefinition<Input, Result, Field>,
   ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
@@ -223,12 +246,14 @@ export function formRunner(dependencies: RunnerDependencies) {
       | PhotoFormDefinition<Input, Result, Field>
       | PhotosFormDefinition<Input, Result, Error, Field>
       | UploadFormDefinition<Input, Result, Field, Error>
+      | LogoFormDefinition<Input, Result, Field>
       | ManyFormDefinition<Input, Result, Field>
       | EachFormDefinition<Input, Result, CommandError<Command<Input, Result, Error>>, Field>,
   ) {
     if ("each" in definition) return eachStep(dependencies, command, definition);
     if ("many" in definition) return manyStep(dependencies, command, definition);
     if ("upload" in definition) return uploadStep(dependencies, command, definition);
+    if ("logo" in definition) return logoStep(dependencies, command, definition);
     if ("photo" in definition) {
       // One photo: only the first file of its field is read – more files are never stored (code review ST-032).
       const { photo, input, ...rest } = definition;
@@ -299,6 +324,27 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
         (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) || outcome.error === atMost?.error;
       return photos.length > 0 && !ofThePhotos ? { ...state, photoAgain: true } : state;
     }
+    await deleteWhatItRemoved(storage, command, outcome.result);
+    await definition.onSuccess(outcome.result);
+    return null;
+  };
+}
+
+function logoStep<Input, Result, Error extends string, Field extends string>(
+  { currentPerson, storage, ...dependencies }: RunnerDependencies,
+  command: Command<Input, Result, Error>,
+  definition: LogoFormDefinition<Input, Result, Field>,
+): FormStateAction<FormState<CommandError<typeof command> | LogoError, Field>> {
+  return async (_previous, formData) => {
+    const fields = fieldsOf(formData, definition.fields);
+    const [file] = postedPhotos(formData, definition.logo.field);
+    const actor = await currentPerson();
+    const outcome = await withStoredLogo(
+      file && new Uint8Array(await file.arrayBuffer()),
+      { storage: storage ?? s3Storage(), newId: dependencies.newId ?? randomUUID },
+      (logo) => executeCommand(command, definition.input(fields, logo), { ...dependencies, actor }),
+    );
+    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;

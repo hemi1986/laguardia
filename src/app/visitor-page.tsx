@@ -16,9 +16,12 @@ export function VisitorPage({
   locale,
   messages,
   back,
+  above,
   children,
 }: {
   title: string;
+  /** What stands above the title – the museum's logo on the welcome page (ST-102). */
+  above?: ReactNode;
   locale: VisitorLocale;
   messages: VisitorMessages;
   /** Where the language switch comes back to – usually the page's own path. */
@@ -27,7 +30,7 @@ export function VisitorPage({
 }) {
   return (
     <div lang={locale}>
-      <Page title={title}>
+      <Page title={title} above={above}>
         <VisitorLanguageSwitch locale={locale} messages={messages} back={back} />
         {children}
         <VisitorLegalLinks messages={messages} />
