@@ -31,8 +31,8 @@ describe("message catalogs", () => {
 
   it("visitor texts exist in German and English with the same keys", () => {
     expect(keysOf(visitorMessages("en")).sort()).toEqual(keysOf(visitorMessages("de")).sort());
-    expect(visitorMessages("de").home.teamLogin).toBe("Anmeldung fürs Team");
-    expect(visitorMessages("en").home.teamLogin).toBe("Team login");
+    expect(visitorMessages("de").welcomePage.teamLogin).toBe("Anmeldung fürs Team");
+    expect(visitorMessages("en").welcomePage.teamLogin).toBe("Team login");
   });
 
   it("every photo error has a text in the team catalog and in both visitor catalogs (ST-016)", () => {

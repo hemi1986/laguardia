@@ -30,6 +30,7 @@ export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTea
 export { changeMuseumDetailsCommand } from "./change-museum-details-command";
 export type { ChangeMuseumDetailsError, ChangeMuseumDetailsInput } from "./change-museum-details";
 export { museumName, museumSettings, type MuseumSettings } from "./museum-settings";
+export { welcomePage, type MachineOnDisplay, type MachinesOnDisplayGroup, type WelcomePage } from "./welcome-page";
 export { moveMachineCommand } from "./move-machine-command";
 export type { MoveMachineError, MoveMachineInput } from "./move-machine";
 export { registerMachineCommand } from "./register-machine-command";

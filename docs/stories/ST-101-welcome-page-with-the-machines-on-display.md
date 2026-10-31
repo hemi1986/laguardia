@@ -9,7 +9,7 @@ risk: low
 events: [EVT-MuseumDetailsChanged, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineMoved, EVT-MachineRetired, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-MachineDetailsCorrected]
 depends_on: [ST-100]
 labels: [ui, visitor, feature:museum-start-page]
-status: ready
+status: done
 ---
 
 ## Story

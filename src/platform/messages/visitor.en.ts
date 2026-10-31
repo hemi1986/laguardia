@@ -2,8 +2,12 @@ import type { VisitorMessages } from "./visitor.de";
 
 /** English texts of the visitor pages – the same keys as `visitor.de.ts`. */
 export const visitorEn: VisitorMessages = {
-  home: {
+  welcomePage: {
     teamLogin: "Team login",
+    /** Above the machines on display (ST-101, user 2026-10-31). */
+    machinesOnDisplay: "Something not working? Tap a machine and report the problem.",
+    /** The English names of the machine categories in CONTEXT.md (ST-101). */
+    machineCategories: { pinball: "Pinball", arcade: "Arcade", other: "Other" },
 
     /** An address that leads nowhere (ST-070: our own page, not Next.js' built-in one). */
     notFound: "This page does not exist.",

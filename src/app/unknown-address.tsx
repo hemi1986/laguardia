@@ -5,7 +5,7 @@ import { VisitorPage, type MuseumNamedProps } from "./visitor-page";
 export function UnknownAddressView({ museumName, locale, messages }: MuseumNamedProps) {
   return (
     <VisitorPage title={museumName} locale={locale} messages={messages} back="/">
-      <p>{messages.home.notFound}</p>
+      <p>{messages.welcomePage.notFound}</p>
       <BackLink href="/">{messages.machinePage.toStart}</BackLink>
     </VisitorPage>
   );
