@@ -237,3 +237,45 @@ it("ST-101: Changes are visible at the next page load", async () => {
 
   expect(text(entryOf(await opened("de"), "Medieval Madness")!).trim()).toBe("Medieval Madness Halle 4 Außer Betrieb");
 });
+
+it("sorts titles ignoring case, „Ä“ with „A“ in German, and machines of one machine model by location, then museum number", async () => {
+  await listingSwitched(true);
+  await aMachine("LG-061", "ätna", "other", "Halle 1");
+  await aMachine("LG-062", "Asteroids", "other", "Halle 1");
+  await aMachine("LG-063", "Bally Hoo", "other", "Halle 1");
+  const model = await executeCommand(
+    createMachineModelCommand,
+    { title: "Addams Family", manufacturer: "Bally", machineCategory: "other" },
+    as(),
+  );
+  if (!model.ok) throw new Error(model.error);
+  for (const [museumNumber, location] of [
+    ["LG-012", "Halle 2"],
+    ["LG-010", "Halle 3"],
+    ["LG-011", "Halle 2"],
+  ]) {
+    const registered = await executeCommand(
+      registerMachineCommand,
+      {
+        machineModelId: model.result.machineModelId,
+        museumNumber,
+        serialNumber: undefined,
+        location,
+        machineStatus: "playable",
+      },
+      as(),
+    );
+    if (!registered.ok) throw new Error(registered.error);
+  }
+
+  const [other] = groups(await opened("de"));
+
+  expect(other.entries.map((entry) => entry.match(/href="\/m\/(LG-\d+)"/)?.[1])).toEqual([
+    "LG-011",
+    "LG-012",
+    "LG-010",
+    "LG-062",
+    "LG-061",
+    "LG-063",
+  ]);
+});
