@@ -1,12 +1,15 @@
 ---
 name: user-stories
-description: Rules, format and splitting patterns for user stories, spikes and tech tasks in docs/stories/ (frontmatter, INVEST, Gherkin, status workflow, local backlog).
+description: Rules, format and splitting patterns for user stories, spikes and tech tasks in docs/stories/ – frontmatter, INVEST, Gherkin, status workflow, and the local mirror when a Jira or GitHub tracker is configured.
 ---
 
 # User Stories
 
-The backlog is local: every story is a Markdown file in `docs/stories/`. There is no external issue tracker.
-`docs/stories/BACKLOG.md` is generated from the story files by a hook – never edit it manually.
+The backlog is **local by default**: every story is a Markdown file in `docs/stories/`, and there is no external
+issue tracker. With `backlog.provider` set to `github` or `jira` in `.claude/project.json`, the tracker is the source
+of truth and `docs/stories/` is its local mirror – the `backlog` skill owns the sync. In both cases the story file is
+the artifact this skill describes, and `docs/stories/BACKLOG.md` is generated from it by a hook – never edit it
+manually.
 
 ## Derivation from the Event Storming
 | Source in `events.yaml` | typically becomes |
@@ -29,21 +32,26 @@ Template: `templates/story-template.md`. Schema: `schema/story.schema.json`.
 | `priority` (`must/should/could/wont`) | yes | product-owner (initially `should`) |
 | `size` (`XS–XL`), `risk`, `depends_on` | before `ready` | lead-dev |
 | `labels` | no | anyone (lowercase, e.g. `mvp`, `feature:<slug>`) |
+| `status` | yes | see workflow |
+| `external` | with a tracker | backlog sync – never by hand |
+
+With `backlog.provider` = `github` or `jira`, `external` holds the tracker key (`external.key`) and URL. The sync writes
+it; a story must have it before it reaches `ready`. `ST-NNN` stays the stable id – never renumber a story to follow an
+issue key, and never use a label that starts with the management prefix (`kataster-` by default).
 
 **No implementation foundation inside a domain story** (user, 2026-10-01). A story describes behaviour a person
 can observe; technical groundwork that several stories need is its own **tech task**, with its own `depends_on`.
 A checklist of files to create, layers to convert or configs to set is an implementation plan, not acceptance
 criteria – it is neither the user's language nor a testable outcome, and it hides the real size of the story.
-*Why this is a rule:* ST-050 carried a seven-item checklist that converted **every command built so far** to an
+*Why this is a rule:* a story once carried a seven-item checklist that converted **every command built so far** to an
 event catalogue. That made an M story an L, put a retrofit nine dependencies deep, and the cost grew with every
-command built before it. The grooming of 2026-10-01 pulled it out as ST-079 and ST-050 went back to M.
+command built before it. The grooming pulled it out as its own tech task and the story went back to M.
 The exception is a tech task or a spike – there a checklist *is* the acceptance criteria.
 
 **The `ui` label** marks every story with a frontend part – a screen, a form, a flow a person walks through.
 `/review-stories` and `/groom-backlog` route those to the `ux-designer`, so a missing label means a story nobody
 reviews from that side. What such a story has to say about the interface (and what it must not) is in the
 `ux-design` skill; the decisions it is measured against are `docs/product/ux-guidelines.md`.
-| `status` | yes | see workflow |
 
 ## Backlog Order
 
@@ -84,11 +92,11 @@ As a <role from CONTEXT.md>, I want <goal>, so that <business benefit>.
 
 ## Context
 Briefly: trigger, preconditions, business rules – from the command's `rules` **and from the `invariants` of its
-aggregate**. Since 2026-10-01 an invariant is stated once, on the aggregate, and a command's `rules` list only what
-it adds beyond them (user's decision; `docs/domain/events.yaml`). So a command with few rules is not a command with
+aggregate**. An invariant is stated once, on the aggregate, and a command's `rules` list only what
+it adds beyond them (`docs/domain/events.yaml`). So a command with few rules is not a command with
 few rules to test: read its aggregate's `invariants` and give every one the command can violate its own rejection
-scenario. "A machine model always has a title, a manufacturer and exactly one machine category" is why
-`CMD-CorrectMachineModel` needs a scenario for an emptied title, although its `rules` do not mention it.
+scenario. "A product always has a name, a price and exactly one category" is why
+`CMD-CorrectProduct` needs a scenario for an emptied name, although its `rules` do not mention it.
 
 ## Acceptance Criteria
 Scenario: <Happy path>
@@ -112,7 +120,7 @@ Tech tasks: `## Task`, `## Acceptance Criteria` (checklist).
 - Gherkin in English (`Given / When / Then / And / But`). At least a happy path + one error/edge case.
 - Scenarios describe **behavior**, not UI details ("clicks the blue button" ✗) and not technology.
 - **At most 10 scenarios** per story – each one is a red → green cycle in `/implement`. Spend them on domain behavior and real rejections. A pattern `docs/product/ux-guidelines.md` already defines (grouping, collapsing, kept choices after a rejection) is a G-number in the Context, tested once where the pattern is built, not restated as scenarios. More left → split (patterns below). The validator warns in `draft` and refuses `review`.
-- Measurable outcomes: "Then the pinball machine has the status 'out of order'" instead of "Then it works".
+- Measurable outcomes: "Then the item has the status 'out of order'" instead of "Then it works".
 - Non-functional requirements as concrete scenarios or checklist items with a number.
 - Terms exactly as in the glossary `CONTEXT.md`; never use an `_Avoid_` synonym.
 
@@ -124,3 +132,7 @@ A hook checks every written story automatically and regenerates `BACKLOG.md`. Fu
 `node .claude/skills/user-stories/scripts/validate-stories.ts`
 After deleting or renaming story files, regenerate the backlog:
 `node .claude/skills/user-stories/scripts/render-backlog.ts`
+
+With a tracker, validation also refuses a `ready`, `in-progress` or `done` story without `external`, and warns about
+labels reserved for the sync. Pull before validating a mirror that may be stale (`/backlog-sync pull`) and push after
+changing it (`/backlog-sync push`).

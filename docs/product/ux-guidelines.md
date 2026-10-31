@@ -7,7 +7,7 @@
 > contradict them until the stories of that day's `/feature` are done.
 
 The yardstick every screen is measured against. **How** we arrive at a decision is the skill `ux-design`; **what**
-the code does with it is `.claude/skills/engineering-conventions/SKILL.md` (the `Page` container, the 360 px rules,
+the code does with it is `docs/engineering/conventions.md` (the `Page` container, the 360 px rules,
 shadcn, `NativeSelect`, where the message catalogs live) – those are not repeated here and not re-decided here.
 
 Short on purpose: read it before writing a page.

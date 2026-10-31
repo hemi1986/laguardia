@@ -5,7 +5,7 @@ Decide only once the event storming and a rough domain model exist. Before that,
 ## Criteria (evaluate each with evidence from `docs/`)
 
 1. **On-site use**: Is work done on a device (phone/tablet)? What is the network coverage (Wi-Fi in the hall)? Offline required?
-2. **Device features**: Camera (photos of defects), QR/barcode scanning, push notifications – is the browser (PWA) enough, or are native apps needed?
+2. **Device features**: Camera, QR/barcode scanning, push notifications, offline use – is the browser (PWA) enough, or are native apps needed?
 3. **User groups & access**: Public reporting (e.g. visitors) vs. internal team, roles, authentication.
 4. **Other consumers**: Are there concrete additional clients or integrations today that justify a standalone API?
 5. **Team & maintenance**: Who develops and runs this long-term? Which languages does the team know?

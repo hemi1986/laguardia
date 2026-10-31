@@ -38,7 +38,7 @@ Feature `per-machine-maintenance` (user, 2026-10-25; `docs/domain/events.yaml` *
 - After sending, the technician lands on the maintenance plan with **„„Wax playfield“ gilt jetzt für 3 Geräte.“** („… für 1 Gerät.“, „… für kein Gerät.“) – also when nothing changed, which is not a rejection (G33).
 - A rejection keeps every tick of a machine still offered, opens every group with a choice in it and names the reason above the button (G8, G27). A machine retired meanwhile: „LG-044 ist inzwischen ausgemustert. Es wurde nichts gespeichert.“ – it is no longer listed afterwards.
 
-**Definition of done** (not a scenario): `.claude/skills/engineering-conventions/SKILL.md` gets a paragraph on versionless set-delta commands on the single maintenance plan aggregate (the form sends the set as seen and the new set, the command applies the difference, no-ops instead of conflicts); the pull request names it (the conventions are approved by the user).
+**Definition of done** (not a scenario): `docs/engineering/conventions.md` gets a paragraph on versionless set-delta commands on the single maintenance plan aggregate (the form sends the set as seen and the new set, the command applies the difference, no-ops instead of conflicts); the pull request names it (the conventions are approved by the user).
 
 ## Acceptance Criteria
 

@@ -212,6 +212,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".claude/**",
+    ".kataster/**",
     "docs/**",
     "drizzle/**",
   ]),

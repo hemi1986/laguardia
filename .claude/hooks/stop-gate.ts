@@ -39,6 +39,16 @@ if (vitest) {
   if (r.status !== 0) failures.push(`Tests related to the changed files failed:\n${tail(r.stdout + r.stderr)}`);
 }
 
+// Project-owned checks from docs/engineering/checks.yaml (boundaries, architecture tests, …).
+const project = spawnSync(process.execPath, [join(ROOT, ".claude", "hooks", "project-check.ts"), "--phase", "stop"], {
+  cwd: ROOT,
+  encoding: "utf8",
+  timeout: 120_000,
+});
+if (project.status !== 0) {
+  failures.push(`Project checks failed:\n${tail(`${project.stdout ?? ""}${project.stderr ?? ""}`)}`);
+}
+
 if (failures.length) {
   process.stderr.write(`Quick gate is red – fix before finishing (or say explicitly why it is red on purpose, e.g. a failing test in the red step):\n\n${failures.join("\n\n")}\n`);
   process.exit(2);

@@ -88,10 +88,10 @@ If a decision is easy to reverse, skip it: you'll just reverse it. If it's not s
 
 ### What qualifies
 
-- **Architectural shape.** "La Guardia is a single deployable PWA." "Repairs are stored as an event history, the machine status is projected from it."
-- **Integration patterns between contexts.** "Defect reporting and the workshop communicate via domain events, not direct calls."
+- **Architectural shape.** "The product is a single deployable PWA." "Cases are stored as an event history; their status is projected from it."
+- **Integration patterns between contexts.** "Ordering and fulfilment communicate via domain events, not direct calls."
 - **Technology choices that carry lock-in.** Database, auth provider, hosting, offline storage. Not every library: just the ones that would take a quarter to swap out.
-- **Boundary and scope decisions.** "Machine master data is owned by the collection context; others reference it by ID only." The explicit no-s are as valuable as the yes-s.
+- **Boundary and scope decisions.** "Product master data is owned by the catalogue context; others reference it by ID only." The explicit no-s are as valuable as the yes-s.
 - **Deliberate deviations from the obvious path.** Anything where a reasonable reader would assume the opposite. These stop the next engineer from "fixing" something that was deliberate.
-- **Constraints not visible in the system.** "Visitors must be able to report without an account." "The exhibition hall has no reliable Wi-Fi."
+- **Constraints not visible in the system.** "Customers must be able to submit without an account." "The warehouse has no reliable Wi-Fi."
 - **Rejected alternatives when the rejection is non-obvious.** Otherwise someone will suggest them again in six months.

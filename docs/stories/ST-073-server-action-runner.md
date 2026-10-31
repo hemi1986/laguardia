@@ -42,7 +42,7 @@ Today the spike's Server Action (`src/app/actions.ts`) calls `executeCommand` wi
 - [x] The runner lives in `src/app/_actions/`; the lint rules treat it as part of the app element (`src/platform/module-boundaries.test.ts`).
 - [x] The converted form is usable at 360 px width: page width ≤ 360 px, error text and input visible without horizontal scrolling (browser test).
 - [x] Converts the existing code (no test weakened); `npm run verify -- --e2e` is green.
-- [x] Updates `.claude/skills/engineering-conventions/SKILL.md` (user approves): "a Server Action only calls the runner", `currentPerson()`, `{ error, values }` with `useActionState`, the per-action input function, the `src/app/_actions/` location, and the seam catalog row for Server Actions.
+- [x] Updates `docs/engineering/conventions.md` (user approves): "a Server Action only calls the runner", `currentPerson()`, `{ error, values }` with `useActionState`, the per-action input function, the `src/app/_actions/` location, and the seam catalog row for Server Actions.
 
 ### Foundation (moved from ST-074 on 2026-09-27 – architecture review Q3, Q5/Q20)
 - [x] A command allowed for `helper` and `technician` only gets a team member with `teamMemberId: TeamMemberId` and `role` in its decision without narrowing (type test); a command that also allows visitors gets the union.

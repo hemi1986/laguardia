@@ -1,6 +1,6 @@
 ---
 name: domain-model
-description: Build and sharpen La Guardia's domain model – the ubiquitous language in CONTEXT.md, bounded contexts, context map, aggregates/invariants and the logical, stack-neutral data model based on docs/domain/events.yaml. Use when discussing domain terminology, writing or editing CONTEXT.md, or modeling contexts, aggregates and data.
+description: Build and sharpen the project's domain model – the ubiquitous language in CONTEXT.md, bounded contexts, context map, aggregates/invariants and the logical, stack-neutral data model based on docs/domain/events.yaml. Use when discussing domain terminology, writing or editing CONTEXT.md, or modeling contexts, aggregates and data.
 ---
 
 # Domain Modeling
@@ -21,13 +21,13 @@ Architecture decisions (ADRs, tech stack) belong to the `architect` skill. The d
 ## 1. Language (during every session)
 
 ### Challenge against the glossary
-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'defect' as X, but you seem to mean Y. Which is it?"
+When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'invoice' as X, but you seem to mean Y. Which is it?"
 
 ### Sharpen fuzzy language
-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'ticket': do you mean the defect report a visitor files, or the repair job a technician works on? Those are different things."
+When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'order': do you mean the customer's request, or the shipment that fulfils it? Those are different things."
 
 ### Discuss concrete scenarios
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts. "A visitor reports 'flipper weak' on a machine that already has an open repair for the same flipper – new defect or the same one?"
+When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts. "A customer reports the same problem on an item that already has an open case – a new case or the same one?"
 
 ### Cross-reference with docs and code
 When the user states how something works, check whether `docs/domain/events.yaml`, the stories (and the code, once it exists) agree. If you find a contradiction, surface it.

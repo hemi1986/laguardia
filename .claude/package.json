@@ -1,7 +1,7 @@
 {
-  "name": "laguardia-discovery-tooling",
+  "name": "kataster-tooling",
   "private": true,
-  "description": "Validators, renderers and hooks for the La Guardia discovery workspace",
+  "description": "Validators, renderers and hooks for the Kataster discovery workflow",
   "type": "module",
   "engines": {
     "node": ">=22.18"

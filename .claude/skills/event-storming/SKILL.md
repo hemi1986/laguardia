@@ -2,26 +2,26 @@
 name: event-storming
 description: Facilitates an interactive event storming with the user (big picture or a single process) and maintains docs/domain/events.yaml and the glossary in CONTEXT.md. Starts by grilling the user on the vision. For domain exploration and new business processes.
 disable-model-invocation: true
-argument-hint: "[process/focus, e.g. 'defect reporting' – empty = big picture]"
+argument-hint: "[process/focus, e.g. 'order fulfilment' – empty = big picture]"
 ---
 
 # Facilitating Event Storming
 
 You are the facilitator, the user is the domain expert. You propose, they decide.
-Focus of this session: **$ARGUMENTS** (empty = big picture across the whole domain).
+Focus of this session: the arguments from the invocation (empty = big picture across the whole domain).
 
 ## Preparation
-1. Call the Skill tool for `grilling` and `domain-model`. Grilling sets how you ask questions; domain-model sets how you guard the language in `CONTEXT.md`.
+1. Call the `skill` tool for `grilling` and `domain-model`. Grilling sets how you ask questions; domain-model sets how you guard the language in `CONTEXT.md`.
 2. Read `docs/product/vision.md`, `CONTEXT.md`, `docs/domain/events.yaml`, `docs/domain/context-map.md`.
 3. Format reference: `templates/events.example.yaml` in this skill folder (unrelated example domain – copy the format only, no content).
 
 ## Facilitation Rules
 - **Ask like the grilling skill**: numbered questions in rounds, each with your recommended answer; a round asks the whole frontier (everything answerable now). Facts you can look up are your job, decisions are the user's.
-- **Events** are business facts in the past tense: "Defect reported", not "Button clicked", and not CRUD ("Ticket saved").
+- **Events** are business facts in the past tense: "Order placed", not "Button clicked", and not CRUD ("Record saved").
 - Uncertainties the user can't settle now, conflicts, "it depends" → capture immediately as a **hotspot** (`HS-n`), don't argue them away.
 - **Language**: challenge terms against `CONTEXT.md`, sharpen fuzzy words, and add resolved terms to `CONTEXT.md` the moment they're settled (domain-model skill).
 - No technology: no tables, endpoints, frameworks, screens.
-- Everything in English. IDs: CamelCase with prefix (`EVT-DefectReported`); names in plain English using the glossary terms ("Defect reported").
+- Write in the artifact language. IDs: CamelCase with prefix (`EVT-OrderPlaced`); names in plain words using the glossary terms ("Order placed").
 - Write `docs/domain/events.yaml` after **every phase**. The hook validates it and renders `docs/domain/event-storming.md`. If it reports errors: fix them immediately. Warnings are normal in early phases.
 - At the end of each phase: a 3–5 line summary + checkpoint ("Continue with phase X?").
 

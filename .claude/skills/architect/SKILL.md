@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Build and sharpen La Guardia's architecture and record decisions as ADRs in docs/adr/ (incl. the tech stack decision). Use when discussing architectural shape, integration between bounded contexts, technology choices, or when recording or editing an ADR.
+description: Build and sharpen the project's architecture and record decisions as ADRs in docs/adr/ (incl. the tech stack decision). Use when discussing architectural shape, integration between bounded contexts, technology choices, or when recording or editing an ADR.
 ---
 
 # Architecture
@@ -39,11 +39,11 @@ Architecture follows documented needs, not taste. Every decision cites its drivi
 
 ### Discuss concrete scenarios
 
-Stress-test decisions with specific scenarios: "A technician is in the basement without Wi-Fi and wants to log a repair – what happens?" "Two people close the same defect at the same time." Force precision about the boundaries where the architecture could break.
+Stress-test decisions with specific scenarios: "A field worker is in a basement without connectivity and wants to record a result – what happens?" "Two people close the same case at the same time." Force precision about the boundaries where the architecture could break.
 
 ### Cross-reference with docs and code
 
-When the user states how something works, check `docs/` (and the code, once it exists) for agreement. Surface contradictions: "The data model has one owner per machine, but you just said machines can be on loan with a second owner. Which is right?"
+When the user states how something works, check `docs/` (and the code, once it exists) for agreement. Surface contradictions: "The data model has one owner per item, but you just said items can be lent with a second owner. Which is right?"
 
 ### Prefer the simplest architecture
 

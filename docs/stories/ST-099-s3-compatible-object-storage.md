@@ -93,7 +93,7 @@ cloud resources and never stores tokens or keys in a file.
 are discarded.
 
 **9. Documentation.** `.env.example`, `README.md`, `docs/architecture/photos.md` and the storage parts of
-`.claude/skills/engineering-conventions/SKILL.md` (the storage seam, files uploaded from the browser – including the
+`docs/engineering/conventions.md` (the storage seam, files uploaded from the browser – including the
 "Blob holds only an upload in one piece to the size limit" paragraph –, the local setup, the content security policy
 and the seam catalog row for code that stores content; the user approves the conventions) say S3 instead of Blob.
 ADR 0012 is the decision; this task edits no ADR.
@@ -202,7 +202,7 @@ Scenario: The content security policy names exactly the bucket's host
       provider, one IAM role per environment limited to its bucket, the environment variables to set on Vercel, and a
       preflight check from a preview. `README.md` and `.env.example` point to it.
 - [x] `.env.example`, `README.md`, `docs/architecture/photos.md` and the storage parts of
-      `.claude/skills/engineering-conventions/SKILL.md` (incl. the seam catalog row) describe S3 instead of Blob; the
+      `docs/engineering/conventions.md` (incl. the seam catalog row) describe S3 instead of Blob; the
       user approves the conventions change.
 - [x] `/security-review` has run on the diff (it touches uploads, signed addresses and the security headers) and its
       findings are fixed or answered in the pull request.

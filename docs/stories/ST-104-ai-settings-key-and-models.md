@@ -101,7 +101,7 @@ secret only as its last four characters with „Ersetzen“ / „Entfernen“ (G
    locally, on previews and in production), and what happens when it is missing or changed (ADR 0014).
 3. The pull request goes through the normal review lane plus `/security-review` – the first secret a person enters in
    La Guardia.
-4. The seam catalog in `.claude/skills/engineering-conventions/SKILL.md` gets the **AI seam** with its in-memory
+4. The seam catalog in `docs/engineering/conventions.md` gets the **AI seam** with its in-memory
    adapter for tests, and how the OpenRouter adapter itself is tested – neither is in the catalog yet. Seams outside
    the catalog this story needs, decided by the user in the test plan: the AI seam, the OpenRouter adapter against a
    fake HTTP server (new), the key encryption (unit test at the pure encrypt/decrypt function).

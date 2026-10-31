@@ -24,7 +24,7 @@ Decided by the user in the `/feature` grilling of 2026-10-25; yardstick `docs/pr
 - Every page still works at 360 px without sideways scrolling.
 - The team navigation already has the wide width; it lines up with every page afterwards.
 
-Definition of done (not a scenario): `.claude/skills/engineering-conventions/SKILL.md`, the paragraph on `Page`, follows G16 – one width for every page; the sentence "A list page passes `wide` … a form page does not" goes. The conventions are approved by the user (CLAUDE.md), so the pull request names the changed paragraph (*Page*).
+Definition of done (not a scenario): `docs/engineering/conventions.md`, the paragraph on `Page`, follows G16 – one width for every page; the sentence "A list page passes `wide` … a form page does not" goes. The conventions are approved by the user (CLAUDE.md), so the pull request names the changed paragraph (*Page*).
 
 ## Acceptance Criteria
 

@@ -116,7 +116,7 @@ Each run of `/implement`:
 
 When a story turns out to be wrong or unclear, `/implement` stops, marks it `[OPEN]`, sets it back to `review` and it goes through discovery again – the code never decides open questions.
 
-The first stories are the foundation: ST-001 (walking skeleton, a spike), ST-002, ST-059 (CI and test harness) and ST-003 (module structure, command layer). After ST-003 the engineering conventions and the seam catalog are written down in `.claude/skills/engineering-conventions/`.
+The first stories are the foundation: ST-001 (walking skeleton, a spike), ST-002, ST-059 (CI and test harness) and ST-003 (module structure, command layer). After ST-003 the engineering conventions and the seam catalog are written down in `docs/engineering/conventions.md`.
 
 Every few stories (after the foundation, when a bounded context is finished, or about every 8–10 stories): `/improve-codebase-architecture` – scans for shallow modules and grills you through the one you pick.
 

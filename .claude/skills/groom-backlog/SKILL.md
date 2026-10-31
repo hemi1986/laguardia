@@ -1,13 +1,13 @@
 ---
 name: groom-backlog
-description: Periodic grooming of the open backlog – challenges whether stories are still worth building, whether dependencies still hold and whether the priorities still match what the museum needs now.
+description: Periodic grooming of the open backlog – challenges whether stories are still worth building, whether dependencies still hold and whether the priorities still match what the product needs now.
 disable-model-invocation: true
 argument-hint: "[BC-Name | ST-IDs, empty = every story that is not done]"
 ---
 
 # Backlog Grooming
 
-Scope: **$ARGUMENTS** (empty → every story that is not `done`; `BC-Collection` → one bounded context; `ST-007 ST-008` → single stories).
+Scope: the arguments from the invocation (empty → every story that is not `done`; `BC-Collection` → one bounded context; `ST-007 ST-008` → single stories).
 
 `/review-stories` asks "is this new story ready to build?". Grooming asks the opposite question about what has been
 lying around: **would we still write this story today?** The backlog was derived in one go from the event storming;
@@ -19,8 +19,11 @@ Do **not** fix anything yourself. Grooming produces a decision for the user and 
 
 ## 1. Mechanical health check
 
+With a tracker (`backlog.provider` ≠ `local`), pull first (`/backlog-sync pull`) – grooming a stale mirror wastes the
+run. Then:
+
 ```
-node .claude/skills/groom-backlog/scripts/backlog-health.ts [$ARGUMENTS]
+node .claude/skills/groom-backlog/scripts/backlog-health.ts <scope>
 ```
 
 Dependency cycles, stories waiting for dropped or non-existent ones, priority inversions, `ready` stories blocked
@@ -74,6 +77,8 @@ A disagreement between PO and lead-dev is a question for the user, not something
   traceable. A story that is wrong rather than unwanted goes back to `status: review` and through `/review-stories`.
 - A `done` story is never reopened – a change to finished behaviour is a new story.
 - New stories from the grooming get `status: draft` and go through `/review-stories` like any other.
+- With a tracker, push the applied changes (`/backlog-sync push`) before the wrap-up, so Jira/GitHub and the mirror
+  agree. A story that is not linked yet stays a local draft until the push creates it.
 
 ## 7. Wrap-up
 

@@ -24,6 +24,16 @@
       "type": "array", "uniqueItems": true,
       "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]*$" }
     },
+    "external": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "key"],
+      "properties": {
+        "provider": { "enum": ["github", "jira"] },
+        "key": { "type": "string", "minLength": 1 },
+        "url": { "type": "string" }
+      }
+    },
     "status": { "enum": ["draft", "review", "ready", "in-progress", "done", "superseded"] }
   }
 }

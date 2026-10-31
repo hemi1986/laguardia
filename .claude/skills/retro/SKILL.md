@@ -8,9 +8,9 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 
 ## Steps
 
-1. Call the Skill tool with `writing-for-agents` for the writing style guide.
+1. Call the `skill` tool with `writing-for-agents` for the writing style guide.
 
-2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine (in La Guardia: the `*.jsonl` files under `~/.claude/projects/` for this repository; sessions run on another machine are not there – ask the user). If the user doesn't specify a session, default to the current one.
+2. Read the primary sources for the session the user specifies. This may mean searching through session history on this machine (the current session, or the OpenCode session store under `~/.local/share/opencode/` when running in OpenCode; sessions run on another machine are not there – ask the user). If the user doesn't specify a session, default to the current one.
 
 3. Look for candidates for improvement in these categories.
 
@@ -22,7 +22,7 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 - **No-ops**: look for instructions in steering files that don't modify the agent's behavior. _Use when_ the steering files are large and unwieldy.
 - **Information access**: look for opportunities to increase the agent's access to information. Teeing dev server logs, readonly access to third-party services. _Use when_ a crucial piece of information was not available to the agent.
 
-4. Present these candidates to the user, in order of severity. In La Guardia, removing or simplifying a rule, check or instruction is a candidate on equal footing with adding one, and "the environment held up, nothing to change" is a complete result. Each candidate names the concrete mistake in the session it would have prevented. The user picks; change nothing before they do.
+4. Present these candidates to the user, in order of severity. Removing or simplifying a rule, check or instruction is a candidate on equal footing with adding one, and "the environment held up, nothing to change" is a complete result. Each candidate names the concrete mistake in the session it would have prevented. The user picks; change nothing before they do.
 
 ## Reference
 
@@ -43,11 +43,11 @@ You have access to several files in the repo:
 - Docs: use docs as references files, pointed to by other files. Look for existing docs before writing new ones.
 - Skills: use skills for docs (since their description goes into the agent's context window), or for user-invoked commands. Follow the advice in the `writing-for-agents` skill.
 
-### In La Guardia
+### In this project
 
 The files above map onto this repository:
 
-- `CLAUDE.md` (with `AGENTS.md` imported) is the always-loaded file.
-- The coding standards are `.claude/skills/engineering-conventions/SKILL.md`; the review agents are `.claude/agents/code-reviewer.md` and `.claude/agents/acceptance-tester.md`.
-- The check command is `node .claude/skills/implement/scripts/verify.ts`; the guardrails are the hooks in `.claude/hooks/` (wired in `.claude/settings.json`) and CI in `.github/workflows/`.
-- The rules in `CLAUDE.md` bind the retro's proposals too, e.g. the follow-up hurdle and tooling in `.claude/` as TypeScript run directly by Node.
+- `AGENTS.md` (or `CLAUDE.md` when Claude Code is also used) is the always-loaded file.
+- The coding standards are `docs/engineering/conventions.md`; the review agents are `.opencode/agents/code-reviewer.md` and `.opencode/agents/acceptance-tester.md`.
+- The check command is `node .claude/skills/implement/scripts/verify.ts`; the guardrails are `.claude/hooks/*.ts`, wired for OpenCode in `.opencode/plugins/kataster/index.ts` (and for Claude Code in `.claude/settings.json`), and CI in `.github/workflows/`.
+- The rules in `AGENTS.md` bind the retro's proposals too, e.g. the follow-up hurdle and tooling in `.claude/` as TypeScript run directly by Node.
