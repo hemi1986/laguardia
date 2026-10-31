@@ -9,7 +9,7 @@ risk: high
 events: []
 depends_on: [ST-085]
 labels: [files, foundation, feature:s3-object-storage]
-status: in-progress
+status: done
 ---
 
 ## Task
@@ -201,7 +201,7 @@ Scenario: The content security policy names exactly the bucket's host
       `https://<project>-*-<team>.vercel.app` with project and team named for previews), the Vercel OIDC identity
       provider, one IAM role per environment limited to its bucket, the environment variables to set on Vercel, and a
       preflight check from a preview. `README.md` and `.env.example` point to it.
-- [ ] `.env.example`, `README.md`, `docs/architecture/photos.md` and the storage parts of
+- [x] `.env.example`, `README.md`, `docs/architecture/photos.md` and the storage parts of
       `.claude/skills/engineering-conventions/SKILL.md` (incl. the seam catalog row) describe S3 instead of Blob; the
       user approves the conventions change.
 - [x] `/security-review` has run on the diff (it touches uploads, signed addresses and the security headers) and its
