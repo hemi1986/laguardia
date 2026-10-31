@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "laguardia-dev",
+      "credentials": [{ "accessKey": "laguardia-dev", "secretKey": "laguardia-dev-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
