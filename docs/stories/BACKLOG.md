@@ -4,15 +4,20 @@
 
 **Progress: 69 of 71 domain stories done** · scenarios 655 of 674
 
-**100 stories** · In Progress: 0 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 87 · Superseded: 11
+**100 stories** · In Progress: 1 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 87 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
 | [ST-103](ST-103-legal-texts-in-the-museum-settings.md) | Privacy notice and imprint written in the museum settings | story | Collection | should | M | medium | ST-100 |
 
 ## Done

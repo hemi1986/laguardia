@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-LogoReplaced, EVT-LogoRemoved]
 depends_on: [ST-100]
 labels: [ui, visitor, feature:museum-start-page]
-status: ready
+status: in-progress
 ---
 
 ## Story
