@@ -4,15 +4,20 @@
 
 **Progress: 76 of 78 domain stories done** · scenarios 720 of 734
 
-**109 stories** · In Progress: 0 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 96 · Superseded: 11
+**109 stories** · In Progress: 1 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 96 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 |
 | [ST-111](ST-111-earlier-ai-assessments.md) | Earlier AI assessments on the defect page and in the repair history | story | AI assistance | should | S | low | ST-107, ST-108 |
 
 ## Done
