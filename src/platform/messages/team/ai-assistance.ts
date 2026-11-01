@@ -33,6 +33,27 @@ export const aiAssistanceTexts = {
     save: "KI speichern",
     saved: "KI gespeichert.",
     keyRemoved: "Schlüssel entfernt. KI ist aus.",
+    /** ST-110 (user, 2026-10-31). */
+    replaceKey: "Ersetzen",
+    newKey: "Neuer API-Schlüssel",
+    keyReplaced: "Schlüssel ersetzt.",
+    keyUnreadable: "Der gespeicherte Schlüssel lässt sich nicht mehr lesen. Bitte den Schlüssel erneut eingeben.",
+  },
+  /** The warning before the embedding model changes (ST-110, G10b's shape without „Endgültig“ and red – G30). */
+  embeddingModelChange: {
+    title: "Embedding-Modell wechseln",
+    /** „Embedding-Modell wechseln? Alle 40 Dateien (1.200 Seiten und Bilder) werden neu …“ (user, 2026-10-31). */
+    question: (files: number, pagesAndImages: number, dollars: string) =>
+      [
+        "Embedding-Modell wechseln?",
+        files === 1
+          ? `Die Datei (${germanCount(pagesAndImages)} Seiten und Bilder) wird neu für die KI erfasst.`
+          : `Alle ${germanCount(files)} Dateien (${germanCount(pagesAndImages)} Seiten und Bilder) werden neu für die KI erfasst.`,
+        `Geschätzte Kosten: etwa ${dollars} $.`,
+        "Bis dahin findet die KI nur die schon neu erfassten Dateien.",
+      ].join(" "),
+    confirm: "Embedding-Modell wechseln",
+    back: "Zurück",
   },
   /** The overview „KI-Erfassung“ in the form „KI“ (RM-AiSettings, ST-109; wording decided by the user on 2026-10-31). */
   aiIndex: {
@@ -114,6 +135,8 @@ export const aiAssistanceErrors = {
     "Dieses Modell liest keine Bilder. Bitte ein Modell wählen, das Text und Bilder liest.",
   "embedding-model-wrong-size":
     "Dieses Embedding-Modell passt nicht zur KI-Erfassung (es liefert keine 1536 Werte). Bitte ein anderes wählen.",
+  "embedding-model-change-unconfirmed":
+    "Bitte den neuen Schlüssel zuerst allein speichern und danach das Embedding-Modell wechseln.",
   "embedding-model-needs-key":
     "Das Embedding-Modell lässt sich nur mit dem API-Schlüssel prüfen. Bitte den Schlüssel mit eingeben.",
   "ai-assessment-ai-off": "Die KI ist ausgeschaltet. Eine KI-Einschätzung gibt es nur, solange KI an ist.",

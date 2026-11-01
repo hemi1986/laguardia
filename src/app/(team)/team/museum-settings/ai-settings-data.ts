@@ -13,10 +13,17 @@ import { machineLabels, machineModelTitles } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { startWhenLeftUnfinished, type LeftUnfinishedStart } from "@/app/ai-work-when-left-unfinished";
 
-/** What the form „KI“ just did (ST-104): a save, or „Entfernen“. */
-export type AiConfirmed = "saved" | "key-removed";
+/** What the form „KI“ just did (ST-104): a save, „Entfernen“, or – ST-110 – „Ersetzen“ saved. */
+export type AiConfirmed = "saved" | "key-removed" | "key-replaced";
 
-const savedParam: Record<AiConfirmed, string> = { saved: "ai", "key-removed": "ai-key-removed" };
+const savedParam: Record<AiConfirmed, string> = {
+  saved: "ai",
+  "key-removed": "ai-key-removed",
+  "key-replaced": "ai-key-replaced",
+};
+
+/** „Ersetzen“ next to the saved key (ST-110): a link, so the field „Neuer API-Schlüssel“ opens without JavaScript. */
+export const REPLACE_KEY_ADDRESS = "/team/museum-settings?replace=key#ki";
 
 /** Where the form „KI“ lands (G3) – what the page reads back. */
 export function aiLanding(confirmed: AiConfirmed): string {
@@ -42,6 +49,10 @@ export type AiSettingsData = {
   overview: ShownAiIndexOverview | undefined;
   /** The file the technician just tried again (G3) – its title. */
   retried: string | undefined;
+  /** „Ersetzen“ was tapped: the form offers the field „Neuer API-Schlüssel“ (ST-110). */
+  replacingKey: boolean;
+  /** The models chosen before the warning, when the technician came back from it (G10b, ST-110). */
+  chosen: { chatModel?: string; embeddingModel?: string };
 };
 
 /** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
@@ -86,8 +97,18 @@ export async function loadAiSettings(
       ? "saved"
       : params.saved === savedParam["key-removed"] && !form.keyLastFour
         ? "key-removed"
-        : undefined;
-  return { form, confirmed, overview: overview && (await shownOverview(db, overview)), retried: retried?.title };
+        : params.saved === savedParam["key-replaced"] && form.keyLastFour
+          ? "key-replaced"
+          : undefined;
+  const chosen = (name: string) => (typeof params[name] === "string" && params[name]) || undefined;
+  return {
+    form,
+    confirmed,
+    overview: overview && (await shownOverview(db, overview)),
+    retried: retried?.title,
+    replacingKey: params.replace === "key" && !!form.keyLastFour,
+    chosen: { chatModel: chosen("chatModel"), embeddingModel: chosen("embeddingModel") },
+  };
 }
 
 /**

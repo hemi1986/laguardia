@@ -33,6 +33,11 @@ export type ChangeAiSettingsInput = {
   embeddingModel?: string;
   /** „Entfernen“: the key is removed, the models stay (data model, lifecycle *On → Off*). */
   removeKey?: true;
+  /**
+   * „Embedding-Modell wechseln“ on the warning (ST-110): the technician saw what indexing every file again costs. A
+   * saved embedding model is changed only with it (rule).
+   */
+  embeddingModelConfirmed?: true;
 };
 
 /** What OpenRouter said about the parts the technician sent – only those that differ from what is saved. */
@@ -65,7 +70,8 @@ export type ChangeAiSettingsError =
   | "embedding-model-unknown"
   | "embedding-model-reads-no-images"
   | "embedding-model-wrong-size"
-  | "embedding-model-needs-key";
+  | "embedding-model-needs-key"
+  | "embedding-model-change-unconfirmed";
 
 /** AI is on exactly while a key, a chat model and an embedding model are saved (invariant). */
 export function aiOn(settings: Pick<AiSettingsState, "key" | "chatModel" | "embeddingModel">): boolean {
@@ -139,6 +145,10 @@ export function changeAiSettings(
   const embeddingModel = changedModel(settings.embeddingModel, input.embeddingModel);
   const embeddingRefusal = embeddingModel ? embeddingModelRefusal(facts.embeddingModel) : undefined;
   if (embeddingRefusal) return rejected(embeddingRefusal);
+  // Changing a saved embedding model indexes every file again – only after the warning with its cost (rule, ST-110).
+  // The first embedding model indexes too, but nothing is indexed with another one yet: no warning.
+  if (embeddingModel && settings.embeddingModel && !input.embeddingModelConfirmed)
+    return rejected("embedding-model-change-unconfirmed");
 
   const parts: AiSettingsPart[] = [
     ...(newKey ? (["key-saved"] as const) : []),

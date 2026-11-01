@@ -12,15 +12,18 @@ export function Section({
   contentClassName,
   children,
   "aria-label": ariaLabel,
+  id,
 }: {
   title: ReactNode;
   /** Classes of the section's content below its title. */
   contentClassName?: string;
   children: ReactNode;
   "aria-label"?: string;
+  /** An anchor a link can jump to – the form „KI“ at the end of a long settings page (ST-110). */
+  id?: string;
 }) {
   return (
-    <section aria-label={ariaLabel}>
+    <section aria-label={ariaLabel} id={id}>
       <Card>
         <CardHeader>
           <CardTitle>{title}</CardTitle>

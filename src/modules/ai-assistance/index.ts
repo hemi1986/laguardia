@@ -10,6 +10,12 @@ export {
   type MissingPart,
 } from "./ai-settings";
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
+export {
+  embeddingModelChange,
+  TOKENS_PER_PAGE_OR_IMAGE,
+  type EmbeddingModelChange,
+  type NoEmbeddingModelChange,
+} from "./embedding-model-change";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export {
   aiIndexOverview,

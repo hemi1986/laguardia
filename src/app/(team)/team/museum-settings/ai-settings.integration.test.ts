@@ -158,7 +158,8 @@ describe("the form „KI“", () => {
     expect(textOf(html)).toContain("KI ist aus. Es fehlen: Chat-Modell, Embedding-Modell.");
     expect(textOf(html)).toContain("Gespeicherter Schlüssel: …a1b2");
     expect(field(html, "key")).toBe("");
-    expect(html).not.toContain("Ersetzen");
+    // ST-104's stopgap ended with ST-110: the saved key is offered „Ersetzen“ (ST-104 Notes, "until ST-110").
+    expect(html).toContain("Ersetzen");
     expect(field(html, "chatModel")).toContain("<select");
     expect(field(html, "embeddingModel")).toContain("<select");
 
