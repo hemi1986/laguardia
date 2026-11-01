@@ -430,8 +430,6 @@ describe("linking to a recently resolved defect", () => {
 
     // Beside the status choice: its description, which the select names.
     const hint = html.match(/id="machineStatus-hint"[^>]*>(.*?)<\/p>/)?.[1];
-    expect(hint).toContain(
-      "Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.",
-    );
+    expect(hint).toContain("Der Status lässt sich nur ändern, wenn ein behobener Defekt gewählt wird – er wird wieder geöffnet.");
   });
 });

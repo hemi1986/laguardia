@@ -83,14 +83,7 @@ export function EditAccountForm({
     <form action={action} className="flex flex-col gap-5">
       <Field data-invalid={marked === "name" || undefined}>
         <FieldLabel htmlFor="name">{accounts.name}</FieldLabel>
-        <Input
-          key={`name-${keptKey(state)}`}
-          id="name"
-          name="name"
-          required
-          defaultValue={kept.name}
-          {...mark("name")}
-        />
+        <Input key={`name-${keptKey(state)}`} id="name" name="name" required defaultValue={kept.name} {...mark("name")} />
       </Field>
       <Field data-invalid={marked === "username" || undefined}>
         <FieldLabel htmlFor="username">{accounts.username}</FieldLabel>

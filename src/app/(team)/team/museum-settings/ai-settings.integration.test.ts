@@ -117,9 +117,7 @@ async function filledIn(
 /** The section „KI“ the technician lands on. */
 async function section(address = "/team/museum-settings", dependencies = openRouterWith()) {
   const params = Object.fromEntries(new URL(address, "http://localhost").searchParams);
-  return renderToStaticMarkup(
-    createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId })),
-  );
+  return renderToStaticMarkup(createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId })));
 }
 
 /** The form „KI“ after a rejection: the page as it is now, and what the action state kept. */
@@ -296,11 +294,7 @@ describe("the form „KI“", () => {
     const readsNoImages = "Dieses Modell liest keine Bilder. Bitte ein Modell wählen, das Text und Bilder liest.";
     const examples = [
       { typed: { chatModel: "text/chat", embeddingModel: geminiEmbedding.id }, at: "chatModel", reason: readsNoImages },
-      {
-        typed: { chatModel: geminiFlash.id, embeddingModel: "text/embedding" },
-        at: "embeddingModel",
-        reason: readsNoImages,
-      },
+      { typed: { chatModel: geminiFlash.id, embeddingModel: "text/embedding" }, at: "embeddingModel", reason: readsNoImages },
       {
         typed: { chatModel: geminiFlash.id, embeddingModel: "small/embedding" },
         at: "embeddingModel",
@@ -311,10 +305,7 @@ describe("the form „KI“", () => {
 
     for (const { typed, at, reason } of examples) {
       await withoutAiSettings(db);
-      const state = await aiFormOf(tom, dependencies).save(
-        null,
-        await filledIn({ key: KEY, ...typed }, { dependencies }),
-      );
+      const state = await aiFormOf(tom, dependencies).save(null, await filledIn({ key: KEY, ...typed }, { dependencies }));
 
       expect(state, typed.embeddingModel).not.toBeNull();
       const html = await formAfter(state, dependencies);

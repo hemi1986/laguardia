@@ -21,10 +21,7 @@ describe("the QR sticker", () => {
 
   it("shows the QR code, the museum number and the prompt in German and English on a sticker", async () => {
     const html = renderToStaticMarkup(
-      createElement(StickerSheet, {
-        sheet: L7160,
-        stickers: [{ museumNumber: "LG-042", qrCode: await qrCodeImage("LG-042") }],
-      }),
+      createElement(StickerSheet, { sheet: L7160, stickers: [{ museumNumber: "LG-042", qrCode: await qrCodeImage("LG-042") }] }),
     );
 
     expect(html).toMatch(/<img[^>]+src="data:image\/png;base64,[^"]+"[^>]*alt="QR-Code LG-042"/);
@@ -35,10 +32,7 @@ describe("the QR sticker", () => {
 
   it("ST-011: Technician prints stickers for several machines on one label sheet", async () => {
     const stickers = await Promise.all(
-      ["LG-042", "LG-043", "LG-044"].map(async (museumNumber) => ({
-        museumNumber,
-        qrCode: await qrCodeImage(museumNumber),
-      })),
+      ["LG-042", "LG-043", "LG-044"].map(async (museumNumber) => ({ museumNumber, qrCode: await qrCodeImage(museumNumber) })),
     );
 
     const html = renderToStaticMarkup(createElement(StickerSheet, { sheet: L7160, stickers }));
@@ -58,10 +52,7 @@ describe("the QR sticker", () => {
 
   it("starts a second A4 page after 21 stickers", async () => {
     const qrCode = await qrCodeImage("LG-001");
-    const stickers = Array.from({ length: 22 }, (_, i) => ({
-      museumNumber: `LG-${String(i + 1).padStart(3, "0")}`,
-      qrCode,
-    }));
+    const stickers = Array.from({ length: 22 }, (_, i) => ({ museumNumber: `LG-${String(i + 1).padStart(3, "0")}`, qrCode }));
 
     const html = renderToStaticMarkup(createElement(StickerSheet, { sheet: L7160, stickers }));
 

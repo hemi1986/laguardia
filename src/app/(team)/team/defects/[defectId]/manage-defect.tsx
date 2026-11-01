@@ -44,7 +44,9 @@ export function ManageDefect({
 
   return (
     <details open={state ? true : undefined} className="mt-2">
-      <summary className="fold text-sm font-medium underline-offset-4 hover:underline">{texts.manage}</summary>
+      <summary className="fold text-sm font-medium underline-offset-4 hover:underline">
+        {texts.manage}
+      </summary>
       <div className="mt-3 flex flex-col items-start gap-3">
         {assignHref && (
           <Link href={assignHref} className={buttonVariants({ variant: "outline" })}>

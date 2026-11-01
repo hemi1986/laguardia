@@ -43,13 +43,7 @@ describe("the machine overview", () => {
   it("labels every machine status count in words – a zero included, so it can still be filtered for", () => {
     const html = rendered({ counts: { playable: 45, limited: 6, "out-of-order": 0, "not-on-display": 5 } });
 
-    for (const count of [
-      "Alle · 56",
-      "Spielbereit · 45",
-      "Eingeschränkt · 6",
-      "Außer Betrieb · 0",
-      "Nicht ausgestellt · 5",
-    ]) {
+    for (const count of ["Alle · 56", "Spielbereit · 45", "Eingeschränkt · 6", "Außer Betrieb · 0", "Nicht ausgestellt · 5"]) {
       expect(html).toContain(count);
     }
     expect(html).toMatch(/href="\/team\/machines\?machineStatus=out-of-order"/);
