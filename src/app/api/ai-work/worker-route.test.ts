@@ -104,7 +104,7 @@ describe("starting the AI work", () => {
 
   it.each([
     ["production: the production domain", { VERCEL_ENV: "production" }, "https://laguardia.example/api/ai-work"],
-    ["a preview: its own deployment", { VERCEL_ENV: "preview" }, "https://laguardia-abc123.vercel.app/api/ai-work"],
+    ["a preview: its own deployment", { VERCEL_ENV: "preview" }, "https://preview-abc123.laguardia.example/api/ai-work"],
     [
       "a server of its own: the address it is given",
       { AI_WORK_ORIGIN: "https://werkstatt.example" },
@@ -116,7 +116,7 @@ describe("starting the AI work", () => {
     await startAiWork({
       env: {
         AI_WORK_SECRET: SECRET,
-        VERCEL_URL: "laguardia-abc123.vercel.app",
+        VERCEL_URL: "preview-abc123.laguardia.example",
         VERCEL_PROJECT_PRODUCTION_URL: "laguardia.example",
         ...env,
       },
