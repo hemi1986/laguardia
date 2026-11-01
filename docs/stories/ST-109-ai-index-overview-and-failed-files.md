@@ -7,7 +7,7 @@ priority: should
 size: M
 risk: medium
 events: [EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-AiWorkLeftUnfinished]
-depends_on: [ST-106, ST-108]
+depends_on: [ST-106]
 labels: [ui, feature:ai-assessment]
 status: ready
 ---
@@ -17,9 +17,11 @@ As a technician, I want to see which files the AI can read, which are still wait
 
 ## Context
 Feature `ai-assessment` (user, 2026-10-31; `docs/domain/events.yaml` **RM-AiSettings**, **RM-MachineRecord**,
-**CMD-IndexFileForAi** (by hand), **EVT-FileIndexedForAi**, **EVT-FileIndexingFailed**,
-**POL-UnfinishedAiWorkIsRetried**, resolved **HS-32**; `docs/architecture/data-model.md`, section *AI index entry*;
-ADR 0015). Revised after the story review `docs/reviews/2026-10-31-ai-assessment-story-review.md` (user, 2026-10-31).
+**CMD-IndexFileForAi** (by hand), **EVT-FileIndexedForAi**, **EVT-FileIndexingFailed**, **EVT-AiWorkLeftUnfinished**,
+**POL-UnfinishedAiWorkFails**, resolved **HS-32**, **HS-35**; `docs/architecture/data-model.md`, section *AI index
+entry*; ADR 0015). Revised after the story review `docs/reviews/2026-10-31-ai-assessment-story-review.md` (user,
+2026-10-31) and after decision D3 of `docs/reviews/2026-11-01-story-review.md` (user, 2026-11-01): no cron job and no
+automatic retry of failed files.
 
 **The overview „KI-Erfassung“ in the form „KI“** on „Einstellungen“ (RM-AiSettings; `CONTEXT.md`: *AI index* –
 „KI-Erfassung“, *AI index entry* – „Für die KI erfasst / Wartet auf KI-Erfassung / Für die KI nicht lesbar“),
@@ -27,20 +29,27 @@ technicians only (G11; helpers do not reach the page, ST-104), below the AI sett
 - how many files are **indexed** (an entry for the current embedding model), **waiting** (no such entry – derived) and
   **failed**, counting only files that are not removed (data model);
 - the **failed files**, each with its machine (museum number) or machine model, its title and its reason
-  (*not readable*, *format not indexed*, *OpenRouter refused*, *OpenRouter not reachable*), and „Erneut versuchen“;
+  (*not readable*, *format not indexed*, *OpenRouter refused*, *OpenRouter not reachable*, *broken off*), and
+  „Erneut versuchen“;
 - the **cost of indexing so far** – everything OpenRouter charged for indexing, replaced entries included (data model).
 
 **„Erneut versuchen“ on a failed file** – CMD-IndexFileForAi run by hand: a technician may run it **only on a file that
 failed** (rule), only while AI is on; the indexing runs in the background (ADR 0015, ST-112), the technician stays on
 the page with a confirmation (G3) and the file counts as waiting until it is indexed or fails again.
 
-**The daily retry of failed files (HS-32):** the daily retry of ST-108 also indexes again the files that failed with
-*OpenRouter not reachable* or *OpenRouter refused*, **at most once a day each**: a failed file is tried again by the
-daily retry only if its last failure is from an earlier calendar day (Europe/Berlin) than the run – so a file that
-fails again during that night's run is not tried again before the next night. A file that failed as *not readable* or
-*format not indexed* is tried again **only by hand** – the same file fails the same way and costs every time. Vercel
-runs the daily retry for production only; the scenarios drive the run function directly with the injected clock
-(ST-112).
+**A failed file stays failed** (HS-32, user 2026-11-01, D3): whatever the reason, it is tried again only by hand with
+„Erneut versuchen“ – or indexed again by a change of the embedding model (ST-110) – and leaves the list when it is
+removed. No run takes it by itself (ST-106).
+
+**A broken-off indexing (POL-UnfinishedAiWorkFails, EVT-AiWorkLeftUnfinished; D3, HS-35):** an indexing cut off with
+its run (a crash, a deployment, the time limit – on Vercel Hobby a PDF of more than ≈ 280 pages) stores nothing. Once
+its hold has run out without a result, the next run – whatever started it – records the file failed with the reason
+*broken off* before it takes new work, reads and sends nothing, and drops the hold (the generic step is ST-112's; this
+story records it for files through CMD-IndexFileForAi). A file removed meanwhile records nothing. Until a run has done
+that, the file counts as waiting. **Opening the form „KI“ starts that run** (HS-35): when a technician opens
+„Einstellungen“ with AI on and a hold of a file has run out without a result, the page calls the start function of
+ST-112 after its response – never otherwise, so opening it does not start work on every load; the file shows as failed
+on the next load. The machine record stays as it is until then.
 
 **On the machine record** (RM-MachineRecord): in the list of files of the machine and its machine model, a file that
 failed is marked „Für die KI nicht lesbar“; indexed and waiting files carry no mark. Shown to the whole team.
@@ -56,14 +65,16 @@ list of failed files.
 **German texts** (user, 2026-10-31, as recommended): heading „KI-Erfassung“; „12 Dateien für die KI erfasst · 3 warten
 auf KI-Erfassung · 2 für die KI nicht lesbar“; „Kosten der KI-Erfassung bisher: 1,23 $“; a failed file „LG-042 ·
 Attract mode.mp4 – Dateiformat wird nicht erfasst“ / „Eight Ball · Eight Ball Schematic – OpenRouter war nicht
-erreichbar“ (not readable „Datei lässt sich nicht lesen“, OpenRouter refused „OpenRouter hat abgelehnt“); empty „Noch
+erreichbar“ (not readable „Datei lässt sich nicht lesen“, OpenRouter refused „OpenRouter hat abgelehnt“, broken off
+„Erfassung abgebrochen“ – the UI word „abgebrochen“ from `CONTEXT.md`, user 2026-11-01); empty „Noch
 keine Datei für die KI erfasst.“; „Erneut versuchen“, confirmation „Eight Ball Schematic wird erneut für die KI
 erfasst.“ (no nested quotes).
 
 **Interface:** German numbers and the cost in German notation (G13).
 
 **Definition of done** (not scenarios): the normal review lane – a command and a new path into `CMD-IndexFileForAi`
-by hand, so not the light lane.
+by hand, so not the light lane – plus `/security-review` (opening „Einstellungen“ may start paid work, as the defect
+page of ST-108 does).
 
 ## Acceptance Criteria
 
@@ -97,17 +108,14 @@ Scenario: Only a failed file can be tried again
   Then nothing is indexed again and no cost is recorded
   And "Eight Ball Manual" is still indexed
 
-Scenario: The daily retry indexes files that failed at OpenRouter again, once a day
-  Given AI is on, "Eight Ball Schematic" failed as OpenRouter not reachable on 30.10.2026 and "Wiring notes" failed as OpenRouter refused on 31.10.2026 at 02:00
-  When the daily retry runs on 31.10.2026 at 03:00 and OpenRouter answers
-  Then "Eight Ball Schematic" is indexed
-  And "Wiring notes" is not tried again before the next night's run
-
-Scenario: Files the AI cannot read are tried again only by hand
-  Given "Attract mode.mp4" failed as format not indexed and "Damaged manual" failed as not readable
-  When the daily retry runs
-  Then neither file is indexed again and no cost is recorded for them
-  And both are still listed as failed
+Scenario: An indexing that broke off shows as failed and can be tried again by hand
+  Given AI is on and the run indexing "Eight Ball Manual" of the machine model "Eight Ball" was cut off
+  And the hold on "Eight Ball Manual" has run out without a result, and no other run has started since
+  When a technician opens „Einstellungen“
+  Then the opening starts a run, which records "Eight Ball Manual" failed as broken off and sends nothing of it to OpenRouter
+  And on the next load the failed files list „Eight Ball · Eight Ball Manual – Erfassung abgebrochen“ with „Erneut versuchen“
+  And no later run indexes "Eight Ball Manual" again until a technician taps „Erneut versuchen“
+  And opening „Einstellungen“ again starts no run, since no hold has run out
 
 Scenario: The machine record marks only files the AI cannot read
   Given "LG-042" has the indexed file "Eight Ball Manual", the waiting file "Wiring notes" and the failed file "Attract mode.mp4"
@@ -139,4 +147,9 @@ Scenario: Helpers cannot try a failed file again
   (`docs/stories/OPEN_QUESTIONS.md`, ST-109).
 
 ## Notes
-- Depends on ST-108 for the daily retry it extends (the cron job is built there).
+- A cut-off indexing and its expired hold are driven with the injected clock and one run of the background work
+  (ST-112's run function, ADR 0015) – no test waits and no test renders a PDF too large for a run.
+- No longer depends on ST-108: the dependency was for the daily retry, removed by D3 (user, 2026-11-01). The generic
+  broken-off step comes from ST-112 through ST-106. Feature order unchanged: ST-108 is built before ST-109.
+- Size M, risk medium – re-checked after D3: two scenarios of the daily retry out, one broken-off scenario with the
+  start from „Einstellungen“ in; 9 scenarios.

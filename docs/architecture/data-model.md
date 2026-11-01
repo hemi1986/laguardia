@@ -40,8 +40,8 @@
 | `EncryptedKey` | The OpenRouter API key, encrypted with a key from the environment; never shown, never journaled (ADR 0014) |
 | `Embedding` | The embedding model's numbers for one passage, page image or image – 1536 of them (user, 2026-10-31; only embedding models that return 1536 numbers – HS-34) |
 | `Cost` | What OpenRouter charged for a request, in OpenRouter's credits (US dollars) as OpenRouter reports it |
-| `IndexingFailureReason` | *not readable* \| *format not indexed* \| *OpenRouter refused* \| *OpenRouter not reachable* |
-| `AssessmentFailureReason` | *key invalid* \| *credit used up* \| *model not available* \| *timed out* \| *OpenRouter not reachable* \| *AI off* \| *answer unusable* |
+| `IndexingFailureReason` | *not readable* \| *format not indexed* \| *OpenRouter refused* \| *OpenRouter not reachable* \| *broken off* (the indexing ended without a result – D3) |
+| `AssessmentFailureReason` | *key invalid* \| *credit used up* \| *model not available* \| *timed out* (OpenRouter did not answer in time) \| *OpenRouter not reachable* \| *AI off* \| *answer unusable* \| *broken off* (the writing ended without a result – HS-33, D3) |
 | `PageNumber` | A page of a PDF, counted from 1 as the PDF shows it |
 | `Text` / `Title` | Free text; `Title` is short and, for defects, understandable for visitors |
 | `Timestamp` / `Date` | Point in time / calendar date |
@@ -521,11 +521,11 @@ Derived: *AI on* (`RM-AiSettings`, `RM-DefectAiAssessments`, every command of AI
 
 **One per file, identified by its file:** the entry's identity is the `FileId`. It copies the file's owner (machine or machine model) once, because the owner never changes (`AGG-File`) and the search is limited to the defect's machine and its machine model.
 
-**Waiting is derived, not stored:** a file that is not removed and has no entry for the current embedding model is *waiting* – just attached, attached while AI was off, indexed with an earlier embedding model, or left by a broken-off indexing. The background work and the daily retry find their work this way (`EVT-AiWorkLeftUnfinished`, ADR 0015); nothing records "waiting". An entry made with an earlier embedding model stays until it is replaced, but is never searched.
+**Waiting is derived, not stored:** a file that is not removed and has no entry for the current embedding model is *waiting* – just attached, attached while AI was off, indexed with an earlier embedding model, or not yet reached by a chain of runs that broke. The background work finds its work this way (ADR 0015); nothing records "waiting". A file whose indexing a run began and that ended without a result is not waiting: once the run's hold has run out, the next run records it *failed* with *broken off* (`EVT-AiWorkLeftUnfinished`, `POL-UnfinishedAiWorkFails`). A failed file is never indexed again automatically – only by hand or with a new embedding model (HS-32, user 2026-11-01, D3). An entry made with an earlier embedding model stays until it is replaced, but is never searched.
 
 **What is indexed (user, 2026-10-31):** a PDF – per page its text layer as a passage and the page rendered as an image (no OCR; a scanned page is found through its image); a Markdown or text file – its text in passages; a PNG, JPEG or WebP image – the image. Video, audio and other formats fail with *format not indexed*. Page images are not kept: when an AI assessment sends a found page, it renders that page again from the file (ADR 0014).
 
-**Removal:** `CMD-RemoveFile` removes the entry and its items – and a PDF's progress record, see below – in the same transaction (`POL-RemovedFileLeavesAiIndex`, HS-29). Storing an entry (or a PDF's progress) and removing its file are serialised by the file's removal lock (ADR 0014), so an indexing that read the file before its removal never stores an entry afterwards.
+**Removal:** `CMD-RemoveFile` removes the entry and its items in the same transaction (`POL-RemovedFileLeavesAiIndex`, HS-29). Storing an entry and removing its file are serialised by the file's removal lock (ADR 0014), so an indexing that read the file before its removal never stores an entry afterwards.
 
 **Lifecycle** – a file without an entry is *waiting* (derived):
 
@@ -535,8 +535,8 @@ stateDiagram-v2
     [*] --> Failed : EVT-FileIndexingFailed
     Indexed --> Indexed : EVT-FileIndexedForAi (indexed again, e.g. new embedding model)
     Indexed --> Failed : EVT-FileIndexingFailed
-    Failed --> Indexed : EVT-FileIndexedForAi („Erneut versuchen“, daily retry – HS-32)
-    Failed --> Failed : EVT-FileIndexingFailed
+    Failed --> Indexed : EVT-FileIndexedForAi („Erneut versuchen“ or a new embedding model – HS-32)
+    Failed --> Failed : EVT-FileIndexingFailed (incl. broken off – POL-UnfinishedAiWorkFails)
     Indexed --> [*] : EVT-FileLeftAiIndex
     Failed --> [*] : EVT-FileLeftAiIndex
 ```
@@ -559,27 +559,7 @@ stateDiagram-v2
 
 Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-AiSettings`) and the per-file state on the machine record (`RM-MachineRecord`) – from the entries and Collection's files that are not removed, counting only entries of the current embedding model as indexed. Passages, page images and embeddings stay out of the journal; `EVT-FileIndexedForAi` names the file, the embedding model, the counts and the cost.
 
-**Technical, not domain (ADR 0015):** while the background work indexes a file or writes an AI assessment it holds that piece of work for a limited time, so two runs do not do – and pay for – the same work; the hold is a short-lived record of the background work (file or AI assessment, held until), like a pending upload. It has no event and no read model and is not part of any aggregate. A hold lasts 15 minutes (HS-33).
-
-**Technical, not domain: the progress record of a PDF (ADR 0015, spike ST-105).** A PDF of more than about 280 pages cannot be indexed within one run on the project's hosting, so its indexing goes on across runs and keeps what it has done so far in a progress record – one per file at most, like the hold a record of the background work, with no event, no read model and not part of any aggregate. It holds:
-
-| Attribute | Type | Purpose |
-|---|---|---|
-| File | `FileId` (unique) | the file being indexed |
-| Embedding model | `ModelId` | the model every stored page was made with |
-| Last page done | `PageNumber` | where the next run continues |
-| Finished pages' items | per page: passage (text) and page image, each with its `Embedding` | become the entry's index items at the end |
-| Cost so far | `Cost` | summed into `EVT-FileIndexedForAi` *Cost* |
-| Last touched | `Timestamp` | when a run last stored pages |
-
-Why the invariants of the AI index entry hold unchanged:
-- **The entry changes only at the end.** When the last page is done, one short transaction replaces the AI index entry as a whole with the record's items (`EVT-FileIndexedForAi`) and drops the record. A failure at any page records `EVT-FileIndexingFailed` and drops the record the same way; a retry starts again at the first page. The file's content never changes (`AGG-File`), so pages stored by different runs are one indexing.
-- **One embedding model.** A run that finds a record of another model than the current one drops it and starts again at the first page.
-- **No second writer.** A run stores pages only while it holds the file and only directly after the record's *last page done* (a conditional write), so two runs can never interleave pages; storing pages renews the hold.
-- **Never for a removed file.** Every transaction that stores pages reads through Collection whether the file is removed, under the file's removal lock taken shared – the same read as for storing the entry (ADR 0014). `CMD-RemoveFile` drops the record in its transaction (`POL-RemovedFileLeavesAiIndex`); a run storing afterwards finds the file removed and records nothing.
-- **Waiting stays derived.** A file with a progress record still has no entry for the current embedding model, so it is *waiting*, and *Files waiting* in `RM-AiSettings` counts it unchanged. The record says how far the work got, not what state the file is in.
-
-When AI is turned off a run stops before its next request to OpenRouter and the record stays, like the AI index itself ("removing the key turns AI off and keeps the AI index"); turned on again with the same embedding model, the indexing continues where it stopped, with another model it starts again. Markdown, text and image files are one piece of work and need no record. Cost spent on a record that is dropped (model changed, file removed) never reaches `EVT-FileIndexedForAi`, so *Cost of indexing so far* leaves it out – at most the cost of one PDF (≈ 0,11 $ for the largest manual).
+**Technical, not domain (ADR 0015):** while the background work indexes a file or writes an AI assessment it holds that piece of work for a limited time, so two runs do not do – and pay for – the same work; the hold is a short-lived record of the background work (file or AI assessment, held until), like a pending upload. It has no event and no read model and is not part of any aggregate. A hold lasts longer than a run's budget and is derived from it (HS-33), so it is never renewed. A file is one piece of work: a run indexes it whole or not at all, and nothing of a cut-off indexing is kept. The hold ends with the piece's result (stored in the same transaction) or when the run gives the piece up on purpose (AI turned off, file removed). A hold that **ran out without a result** is never taken again: it is what `EVT-AiWorkLeftUnfinished` is derived from, and the next run records the piece failed as *broken off* and drops the hold in one transaction (`POL-UnfinishedAiWorkFails`; user, 2026-11-01, D3). Opening the form „KI“ starts such a run when a hold has run out (HS-35, user 2026-11-01).
 
 ---
 
@@ -592,7 +572,7 @@ When AI is turned off a run stops before its next request to OpenRouter and the 
 - Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
 - Every reference names a file of the defect's machine or its machine model and, for a PDF, a page
 
-**Set-based rule (HS-31):** at most one AI assessment of a defect is *requested* (being written) at a time – checked by `CMD-RequestAiAssessment` and guaranteed by the store with a uniqueness among the requested AI assessments of a defect, like the museum number (HS-17). A broken-off write is written once more after its 15-minute hold and failed as "timed out" if that breaks off too (HS-33).
+**Set-based rule (HS-31):** at most one AI assessment of a defect is *requested* (being written) at a time – checked by `CMD-RequestAiAssessment` and guaranteed by the store with a uniqueness among the requested AI assessments of a defect, like the museum number (HS-17). A write that ends without a result is failed as *broken off* by the next run once its hold has run out – the defect page, refreshing itself, starts that run – and is never written again automatically (HS-33, user 2026-11-01, D3).
 
 **Lifecycle**
 
@@ -661,4 +641,4 @@ The dashboards compute their mark line with this rule at display time and never 
 HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the Last visit – where the previous dashboard visit began.
 - Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen; whether removed file content is deleted.
 - Museum settings: HS-25, HS-26 and HS-27 are resolved.
-- AI assistance: HS-28 and HS-32 to HS-34 are resolved (user, 2026-10-31).
+- AI assistance: HS-28 and HS-32 to HS-34 are resolved (user, 2026-10-31; HS-32 and HS-33 changed by D3, 2026-11-01 – no automatic retry, *broken off*). HS-35 is resolved (opening the form „KI“ starts a run).

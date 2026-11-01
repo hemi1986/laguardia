@@ -169,7 +169,8 @@ aggregates:
       search is limited to one machine and its machine model. Small on purpose: one per file, so indexing files in
       parallel never contends, and replacing what the index holds of one file is one consistency step. A file without
       an entry for the current embedding model is waiting – waiting is derived, never stored, so a file attached while
-      AI is off or a crash during indexing needs no extra record. A removed file's entry is removed in the same
+      AI is off needs no extra record. An indexing a crash, a deployment or the time limit cut off is recorded failed
+      as "broken off" by the next run (POL-UnfinishedAiWorkFails). A removed file's entry is removed in the same
       transaction as the file (POL-RemovedFileLeavesAiIndex); indexing and removal of the same file are serialised
       by the file's removal lock (ADR 0014), so an indexing that started before the removal can never bring the file
       back into the AI index.
@@ -403,8 +404,11 @@ events:
   - id: EVT-FileIndexingFailed
     name: File indexing failed
     aggregate: AGG-AiIndexEntry
-    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable)]
-    description: The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again.
+    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable, broken off)]
+    description: >-
+      The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again – only by hand („Erneut
+      versuchen“) or with a new embedding model, never automatically (user, 2026-11-01, D3). "broken off" – the
+      indexing ended without a result (a crash, a deployment, the time limit) and POL-UnfinishedAiWorkFails recorded it.
   - id: EVT-FileLeftAiIndex
     name: File left the AI index
     aggregate: AGG-AiIndexEntry
@@ -416,11 +420,15 @@ events:
     name: AI work left unfinished
     context: BC-AiAssistance
     origin: time
-    data: [Files waiting to be indexed, AI assessments requested and neither written nor failed]
+    data: [File or AI assessment, Held until]
     description: >-
-      Noticed once a day – work a crash or a timeout left behind. Like EVT-MaintenanceTaskDue it is derived from stored
-      state, not recorded: files of machines and machine models without an AI index entry for the current embedding
-      model while AI is on, and AI assessments still requested (docs/adr/0015-background-ai-work-with-state-in-the-database.md).
+      A piece of AI work – the indexing of one file or the writing of one AI assessment – that a run of the background
+      work took and held, and whose hold ran out without a result: a crash, a deployment or the function's time limit
+      cut it off. Like EVT-MaintenanceTaskDue it is derived, not recorded – from the run's expired hold
+      (docs/adr/0015-background-ai-work-with-state-in-the-database.md). Noticed by the next run, whatever started it;
+      POL-UnfinishedAiWorkFails then records it failed as "broken off" (user, 2026-11-01, D3). Files waiting and AI
+      assessments requested that no run has taken yet – also those a broken self-continuation left – are not left
+      unfinished: they are work the next run takes.
   - id: EVT-AiAssessmentRequested
     name: AI assessment requested
     aggregate: AGG-AiAssessment
@@ -435,7 +443,11 @@ events:
   - id: EVT-AiAssessmentFailed
     name: AI assessment failed
     aggregate: AGG-AiAssessment
-    data: [Reason (key invalid, credit used up, model not available, timed out, OpenRouter not reachable, AI off, answer unusable)]
+    data: [Reason (key invalid, credit used up, model not available, timed out, OpenRouter not reachable, AI off, answer unusable, broken off)]
+    description: >-
+      "timed out" – OpenRouter did not answer in time; "broken off" – the writing ended without a result (a crash, a
+      deployment, the time limit) and POL-UnfinishedAiWorkFails recorded it (HS-33, user 2026-11-01, D3). A failed AI
+      assessment is never written again automatically; „Erneut versuchen“ requests a new one.
 commands:
   # --- Problem reports ---
   - id: CMD-ReportProblem
@@ -736,18 +748,19 @@ commands:
     actor: ACT-Technician
     produces: [EVT-FileIndexedForAi, EVT-FileIndexingFailed]
     description: >-
-      Run by POL-AiIndexFollowsTheSettings, POL-AttachedFileIsIndexedForAi and POL-UnfinishedAiWorkIsRetried in the
-      background; a technician runs it by hand with „Erneut versuchen“ on a file that failed. The slow part (reading
-      the file, rendering the pages, asking OpenRouter for embeddings) runs outside any transaction; only the
-      replacement of the AI index entry is one short transaction (ADR 0015). A PDF too long for one run is indexed
-      across several runs; the pages done so far are kept in a technical progress record, not in the AI index entry,
-      which is replaced as a whole only when the last page is done (spike ST-105; docs/architecture/data-model.md).
+      Run by POL-AiIndexFollowsTheSettings and POL-AttachedFileIsIndexedForAi in the background; a technician runs it
+      by hand with „Erneut versuchen“ on a file that failed. The slow part (reading the file, rendering the pages,
+      asking OpenRouter for embeddings) runs outside any transaction; only the replacement of the AI index entry is
+      one short transaction (ADR 0015). A run indexes a whole file or nothing; an indexing cut off stores nothing, and
+      once its hold has run out POL-UnfinishedAiWorkFails records the file failed as "broken off" (user, 2026-11-01, D3).
     rules:
-      - Only while AI is on – checked before every request to OpenRouter; AI turned off meanwhile stops it, nothing more is sent and the file stays waiting without an entry (user, 2026-10-31, story review)
-      - The file is not removed – read from Collection in the transaction that stores the entry, and in each one that stores a PDF's progress, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
+      - A run stores the file's result only while it still holds the file – in the transaction that ends the hold; a late result after the hold ran out (the file recorded broken off meanwhile) records nothing, like CMD-WriteAiAssessment's version check (story review 2026-11-01)
+      - Only while AI is on – checked before every request to OpenRouter; AI turned off meanwhile stops it, nothing more is sent and the file stays waiting without an entry – the run gives the file up, so it is not broken off (user, 2026-10-31, story review)
+      - The file is not removed – read from Collection in the transaction that stores the entry, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
       - PDF, Markdown and text files and images (PNG, JPEG, WebP) are indexed; any other format fails with "format not indexed"
       - Run by a policy, a file that already has an entry for the current embedding model is skipped; by hand, a technician may run it only on a file that failed
-      - The daily retry indexes again, at most once a day each, only files that failed with "OpenRouter not reachable" or "OpenRouter refused"; "not readable" and "format not indexed" only by hand (HS-32)
+      - A failed file – whatever the reason, "broken off" included – is never indexed again automatically; only by hand, or by POL-AiIndexFollowsTheSettings once the embedding model changes (HS-32, user 2026-11-01, D3)
+      - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and records the failure with reason "broken off"; a file removed meanwhile records nothing
   - id: CMD-RemoveFileFromAiIndex
     name: Remove file from AI index
     aggregate: AGG-AiIndexEntry
@@ -768,7 +781,7 @@ commands:
       - The defect is open – on hold included; not resolved and not closed on retirement. Read from Repair at command time without a lock – a defect resolved right afterwards does not stop the AI assessment (HS-30), so no lock is needed; a retired machine's defects are closed, so the machine is not read
       - Technicians may request for any open defect, helpers only for one suitable for helpers – suitable for helpers is read from Repair with the defect's state
       - Photos as on a work log entry; note and photos are optional
-      - No AI assessment of the defect is still being written – a second request is rejected until it is written or failed (HS-31); one held longer than 15 minutes is written once more by the next run, and failed as "timed out" if that breaks off too (HS-33)
+      - No AI assessment of the defect is still being written – a second request is rejected until it is written or failed (HS-31); one whose writing broke off is failed as "broken off" by the next run once its hold has run out – the defect page starts that run – and is not written again (HS-33, user 2026-11-01, D3)
   - id: CMD-WriteAiAssessment
     name: Write AI assessment
     aggregate: AGG-AiAssessment
@@ -784,7 +797,8 @@ commands:
       - A fixed number of hits is sent (text passages and pages or images) – not a setting
       - A defect resolved or closed on retirement meanwhile does not stop it – the AI assessment is written and kept (HS-30)
       - What it sends is read from Repair and Collection through their public queries, without a lock and outside the transaction that stores the result; a file removed meanwhile is a reference by its title without link (RM-DefectAiAssessments)
-      - Only an AI assessment still requested is written or failed – a second run on the same AI assessment (a retry after a broken-off write) records nothing once the first has stored its result (version check)
+      - Only an AI assessment still requested is written or failed – a late result of a run after the AI assessment was failed as "broken off" records nothing (version check)
+      - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and fails the AI assessment with reason "broken off"
       - AI turned off meanwhile fails it with reason "AI off"; nothing is sent to OpenRouter then
       - References to files outside the defect's machine and its machine model are dropped; an answer without a usable summary fails it with reason "answer unusable" (user, 2026-10-31, story review)
 policies:
@@ -848,14 +862,17 @@ policies:
     when: [EVT-AiAssessmentRequested]
     then: [CMD-WriteAiAssessment]
     description: Automatic, in the background, started after the request's response – the team member does not wait on the page. Within AI assistance.
-  - id: POL-UnfinishedAiWorkIsRetried
-    name: Unfinished AI work is retried
+  - id: POL-UnfinishedAiWorkFails
+    name: Unfinished AI work fails as broken off
     when: [EVT-AiWorkLeftUnfinished]
     then: [CMD-IndexFileForAi, CMD-WriteAiAssessment]
     description: >-
-      Automatic, once a day (a scheduled job of the hosting, ADR 0015) – files still waiting are indexed, AI
-      assessments left requested are written or failed. The safety net only: the background work also continues
-      itself when one run's time is up, so a long indexing does not wait for the next day.
+      Automatic, in the next run of the background work, whatever started it (an attached file, a request, saving the
+      AI settings, „Erneut versuchen“, the defect page – ADR 0015), before that run takes new work: a file or an AI
+      assessment whose hold ran out without a result is recorded failed with reason "broken off". It is never taken
+      again automatically, so work that does not fit a run (a too-large PDF on Vercel Hobby) fails once instead of
+      being paid for again and again; it is tried again only by hand (user, 2026-11-01, D3). There is no scheduled
+      job and no automatic retry. Replaces POL-UnfinishedAiWorkIsRetried (the daily retry, removed by D3).
   # --- manual routines ---
   - id: POL-TriageProblemReports
     name: New problem reports are triaged
@@ -1274,29 +1291,33 @@ hotspots:
   # --- Feature ai-assessment (domain-architect, 2026-10-31) ---
   - id: HS-32
     question: >-
-      Which failed files does the daily retry (POL-UnfinishedAiWorkIsRetried) index again on its own? A file that
-      failed because OpenRouter was not reachable would otherwise stay "Für die KI nicht lesbar" until a technician
-      taps „Erneut versuchen“. Recommendation – the daily retry indexes again the files that failed with "OpenRouter
-      not reachable" or "OpenRouter refused" (credit used up, a provider down – it may work tomorrow), at most once a
-      day each; files that failed with "not readable" or "format not indexed" are tried again only by hand, because
-      the same file fails the same way and costs every time.
-    refs: [POL-UnfinishedAiWorkIsRetried, CMD-IndexFileForAi, EVT-FileIndexingFailed, AGG-AiIndexEntry]
+      Which failed files does the background work index again on its own? A file that failed because OpenRouter was
+      not reachable would otherwise stay "Für die KI nicht lesbar" until a technician taps „Erneut versuchen“.
+      Recommendation (2026-10-31) – a daily retry indexes again the files that failed with "OpenRouter not reachable"
+      or "OpenRouter refused", at most once a day each; "not readable" and "format not indexed" only by hand.
+    refs: [CMD-IndexFileForAi, EVT-FileIndexingFailed, AGG-AiIndexEntry, POL-UnfinishedAiWorkFails]
     status: resolved
     resolution: >-
-      Accepted as recommended (user, 2026-10-31): the daily retry indexes again, at most once a day each, the files that failed with "OpenRouter not reachable" or "OpenRouter refused"; "not readable" and "format not indexed" only by hand.
+      None (user, 2026-11-01, D3 – replaces the answer of 2026-10-31, which accepted the daily retry): there is no cron
+      job and no automatic retry. A failed file – whatever the reason, "broken off" included – stays failed until a
+      technician taps „Erneut versuchen“ or removes the file; only a change of the embedding model indexes it again,
+      as it does every file.
   - id: HS-33
     question: >-
       A write that breaks off (a crash, a deployment, the function's time limit) leaves an AI assessment requested,
-      and HS-31 then rejects every new request for that defect – in the worst case until the daily retry. When does
-      such an AI assessment count as no longer being written? Recommendation – the background work holds an AI
-      assessment for 15 minutes (far longer than a write takes); after that the next run of the background work –
-      started by any request, attached file, continuation or the daily retry, and by the defect page itself when it
-      refreshes and sees one held longer – writes it once more; if that second attempt breaks off too, it is failed
-      as "timed out". The team member never waits for the next day while looking at the defect.
-    refs: [CMD-RequestAiAssessment, CMD-WriteAiAssessment, POL-UnfinishedAiWorkIsRetried, AGG-AiAssessment, RM-DefectAiAssessments]
+      and HS-31 then rejects every new request for that defect. When does such an AI assessment count as no longer
+      being written? Recommendation (2026-10-31) – the background work holds an AI assessment for a limited time, far
+      longer than a write takes; after that the next run of the background work – the defect page starts one when it
+      refreshes and sees the hold ran out – writes it once more; a second break-off fails it as "timed out".
+    refs: [CMD-RequestAiAssessment, CMD-WriteAiAssessment, POL-UnfinishedAiWorkFails, AGG-AiAssessment, RM-DefectAiAssessments]
     status: resolved
     resolution: >-
-      Accepted as recommended (user, 2026-10-31): held for 15 minutes; then the next run of the background work – the defect page included – writes it once more; a second break-off fails it as "timed out".
+      The hold as recommended, the second attempt removed (user, 2026-10-31, changed 2026-11-01 by D3): a hold lasts
+      longer than a run's budget and is derived from it (ADR 0015). Once it has run out without a result, the next
+      run – whatever started it; the defect page, refreshing itself while the AI assessment is being written, starts
+      one – fails the AI assessment with reason "broken off" (POL-UnfinishedAiWorkFails). It is not written once more;
+      the team member may request a new one at once („Erneut versuchen“). "timed out" stays the reason for OpenRouter
+      not answering in time.
   - id: HS-34
     question: >-
       The AI index stores embeddings of 1536 numbers (user, 2026-10-31 – the default embedding model returns that size
@@ -1310,6 +1331,24 @@ hotspots:
     status: resolved
     resolution: >-
       Accepted as recommended (user, 2026-10-31): only embedding models that return 1536 numbers, natively or on request; saving checks it with one test embedding and rejects another size; the model list offers the others greyed out.
+  # --- Decision D3, no cron and no automatic retry (domain-architect, 2026-11-01) ---
+  - id: HS-35
+    question: >-
+      A file's indexing breaks off (a too-large PDF on Vercel Hobby, a deployment) and afterwards nothing starts a run
+      – nobody attaches a file, requests an AI assessment or saves the AI settings. Until a run notices the expired
+      hold (POL-UnfinishedAiWorkFails), the file counts as waiting in the AI index overview and on the machine record,
+      not as failed, and „Erneut versuchen“ is not offered for it. For an AI assessment the defect page starts that run
+      itself (HS-33); for a file nothing does. Recommendation – opening the form „KI“ on the settings page starts a run
+      when a hold has run out without a result, like the defect page; the technician sees the file failed ("broken
+      off") on the next load, and the machine record stays as it is until then. Alternative – the read models show a
+      file whose hold ran out as broken off at once, derived from the hold; the hold then feeds read models and is no
+      longer purely technical.
+    refs: [POL-UnfinishedAiWorkFails, EVT-AiWorkLeftUnfinished, RM-AiSettings, RM-MachineRecord, AGG-AiIndexEntry]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-11-01): opening the form „KI“ on the settings page starts a run when a hold
+      has run out without a result, like the defect page; the file shows as failed (*broken off*, UI „abgebrochen“) on
+      the next load. The hold stays purely technical and feeds no read model.
 
 flows:
   - id: FLOW-ProblemReportTriage

@@ -167,7 +167,7 @@ Scenario: While AI is off nothing about AI assessments is offered
 
 ## Out of Scope
 - Failures with their reasons (*answer unusable* included), „Erneut versuchen“, a write that breaks off, a defect
-  resolved meanwhile, a referenced file removed later, the daily retry (ST-108)
+  resolved meanwhile, a referenced file removed later (ST-108)
 - Earlier AI assessments on the defect page and AI assessments in the repair history (ST-111)
 - Follow-up questions, rating an AI assessment, AI in triage, automatic AI assessments, AI for visitors
   (`docs/product/vision.md`, out of the first version)

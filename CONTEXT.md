@@ -350,6 +350,13 @@ assessment is kept with the defect, also when it failed.
 _Avoid_: Diagnosis, AI analysis, AI triage, suggestion
 _UI (de)_: KI-Einschätzung
 
+**Broken off**:
+The reason of an indexing or an AI assessment that ended without a result – cut off by a crash, a deployment or the
+time limit; not to be confused with *timed out*, OpenRouter not answering in time. It counts as failed and, like
+every failure, is tried again only by hand.
+_Avoid_: aborted, crashed
+_UI (de)_: abgebrochen
+
 **Reference**:
 A place in a machine's or machine model's file that an AI assessment relied on – the file and, for a PDF, the page.
 _Avoid_: Source, citation, hit
