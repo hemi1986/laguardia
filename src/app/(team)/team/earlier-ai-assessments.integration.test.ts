@@ -67,7 +67,7 @@ function ai(): AiDependencies {
   return { ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey };
 }
 
-async function changeAi(change: { key: string; chatModel?: string; embeddingModel?: string; removeKey?: boolean }) {
+async function changeAi(change: { key: string; chatModel?: string; embeddingModel?: string; removeKey?: true }) {
   const dependencies = ai();
   const { version } = await aiSettingsForm(db, dependencies);
   const changed = await executeCommand(

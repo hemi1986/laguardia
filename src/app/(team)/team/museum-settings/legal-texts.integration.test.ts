@@ -125,7 +125,12 @@ async function formAfter(state: Awaited<ReturnType<ReturnType<typeof legalTextsF
 const textArea = (html: string, name: string) =>
   html.match(new RegExp(`<textarea[^>]*name="${name}"[^>]*>([\\s\\S]*?)</textarea>`)) ?? undefined;
 const escaped = (text: string) =>
-  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#x27;");
+  text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#x27;");
 
 const imprintLink = /href="\/impressum"/;
 
@@ -221,7 +226,9 @@ it("ST-103: An emptied German privacy notice is rejected", async () => {
   expect(reason).toBeLessThan(form.indexOf('name="privacyNoticeEn"'));
   expect(textArea(form, "imprintDe")?.[1]).toBe("# Anbieter");
   // Kept as the browser sent it.
-  expect(textArea(form, "privacyNoticeEn")?.[1].replaceAll("\r\n", "\n")).toBe(escaped(before.legalTexts.privacyNoticeEn));
+  expect(textArea(form, "privacyNoticeEn")?.[1].replaceAll("\r\n", "\n")).toBe(
+    escaped(before.legalTexts.privacyNoticeEn),
+  );
   expect(await museumSettings(db)).toEqual(before);
 });
 

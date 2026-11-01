@@ -214,7 +214,12 @@ export function retryFileIndexing(
     ok: true,
     state: entry,
     events: [
-      { type: "EVT-FileIndexingRetried", fileId: input.fileId, owner: entry.owner, embeddingModel: entry.embeddingModel },
+      {
+        type: "EVT-FileIndexingRetried",
+        fileId: input.fileId,
+        owner: entry.owner,
+        embeddingModel: entry.embeddingModel,
+      },
     ],
   };
 }

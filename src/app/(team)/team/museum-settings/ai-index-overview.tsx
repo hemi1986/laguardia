@@ -25,13 +25,7 @@ export function AiIndexOverviewView({
     <div className="flex flex-col gap-2">
       <h3 className="font-medium">{texts.title}</h3>
       {retried && <Confirmation>{texts.retrying(retried)}</Confirmation>}
-      {empty ? (
-        <p>{texts.empty}</p>
-      ) : (
-        <p>
-          {texts.counts(overview.indexed, overview.waiting, overview.failed.length)}
-        </p>
-      )}
+      {empty ? <p>{texts.empty}</p> : <p>{texts.counts(overview.indexed, overview.waiting, overview.failed.length)}</p>}
       <p>{texts.cost(dollars.format(overview.cost))}</p>
     </div>
   );

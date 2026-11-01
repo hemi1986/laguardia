@@ -58,7 +58,9 @@ export type AiSettingsData = {
 /** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
 async function shownOverview(db: Database, overview: AiIndexOverview): Promise<ShownAiIndexOverview> {
   const machineIds = overview.failed.flatMap(({ owner }) => ("machineId" in owner ? [owner.machineId] : []));
-  const machineModelIds = overview.failed.flatMap(({ owner }) => ("machineModelId" in owner ? [owner.machineModelId] : []));
+  const machineModelIds = overview.failed.flatMap(({ owner }) =>
+    "machineModelId" in owner ? [owner.machineModelId] : [],
+  );
   const [machines, machineModels] = await Promise.all([
     machineLabels(db, machineIds),
     machineModelTitles(db, machineModelIds),

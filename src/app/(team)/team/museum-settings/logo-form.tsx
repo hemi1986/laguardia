@@ -62,8 +62,7 @@ export function LogoFormContent({
     ? commandErrorText(teamMessages, "logo-too-large")
     : uploadState && commandErrorText(teamMessages, uploadState.error);
   // Only a rejection of the image itself marks the field – not a change made meanwhile or a store that failed.
-  const imageInvalid =
-    tooLarge || uploadState?.error === "not-a-logo-image" || uploadState?.error === "logo-too-large";
+  const imageInvalid = tooLarge || uploadState?.error === "not-a-logo-image" || uploadState?.error === "logo-too-large";
 
   return (
     <div className="flex flex-col gap-4">

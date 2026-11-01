@@ -15,7 +15,13 @@ describe("the forms of a maintenance task", () => {
       createElement(ChangeMaintenanceTaskForm, {
         version: 3,
         removed: false,
-        task: { id: "task-1", name: "Wax playfield", instruction: "Wax it.", intervalMonths: "12", suitableForHelpers: true },
+        task: {
+          id: "task-1",
+          name: "Wax playfield",
+          instruction: "Wax it.",
+          intervalMonths: "12",
+          suitableForHelpers: true,
+        },
       }),
     );
 

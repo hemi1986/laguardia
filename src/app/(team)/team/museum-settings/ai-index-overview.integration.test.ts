@@ -145,10 +145,7 @@ async function run(dependencies: AiDependencies = ai()): Promise<void> {
 }
 
 /** „Einstellungen“ as Tom opens it – the section „KI“ rendered from its data. */
-async function settingsPage(
-  dependencies: AiDependencies = ai(),
-  params: Record<string, string | undefined> = {},
-) {
+async function settingsPage(dependencies: AiDependencies = ai(), params: Record<string, string | undefined> = {}) {
   const data = await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId });
   return { data, html: renderToStaticMarkup(createElement(AiSettingsSection, data)) };
 }

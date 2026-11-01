@@ -1,4 +1,9 @@
-import { aiDependencies, filesTheAiCannotRead, type AiDependencies } from "@/modules/ai-assistance";
+import {
+  aiAssessmentsInRepairHistory,
+  aiDependencies,
+  filesTheAiCannotRead,
+  type AiDependencies,
+} from "@/modules/ai-assistance";
 import {
   correctDetailsRefusal,
   latestStatusChanges,
@@ -18,6 +23,10 @@ import type { Database, Latest } from "@/platform/command";
 import type { Viewer } from "../../claimant";
 import { openDefectReferences, shownOpenDefects, type OpenDefectsItem } from "../../defects/open-defects-data";
 import { named } from "../../named";
+import { photoViewAddresses } from "@/photo";
+import { s3Storage } from "@/platform/storage";
+import type { PhotoSource } from "../../team-photos";
+import { shownAiAssessmentData, type ShownAiAssessmentData } from "../../ai-assessment-data";
 
 /** A status change as the machine record shows it: who changed it by name, not by ID. */
 export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: string };
@@ -83,6 +92,8 @@ export const RECENT_REPAIR_HISTORY_ENTRIES = 3;
 /** An entry of the repair history that has ended, as section 7 shows it – who ended it by name. */
 export type ShownEndedRepairHistoryEntry = Omit<EndedRepairHistoryEntry, "resolvedBy"> & {
   resolvedBy: string;
+  /** A defect's written and failed AI assessments, the newest first – each folded (ST-111); none for a problem. */
+  aiAssessments: ShownAiAssessmentData[];
 };
 
 /**
@@ -99,7 +110,8 @@ export async function loadMachineRecord(
     clock = systemClock,
     viewer,
     ai = aiDependencies(),
-  }: { clock?: Clock; viewer: Viewer; ai?: Pick<AiDependencies, "encryptionKey"> },
+    storage = s3Storage(),
+  }: PhotoSource & { clock?: Clock; viewer: Viewer; ai?: AiDependencies },
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
@@ -115,14 +127,29 @@ export async function loadMachineRecord(
       record.files.map((file) => file.id),
     ),
   ]);
-  const shown = await named(db, openDefectReferences(open), {
-    teamMembers: [
-      ...statusHistory.latest.map((change) => change.changedBy),
-      record.retirement?.retiredBy,
-      ...recent.latest.map((entry) => entry.resolvedBy),
-      ...maintenance.records.latest.map((maintenanceRecord) => maintenanceRecord.recordedBy),
-    ],
-  });
+  // AI assistance's AI assessments of the latest repairs' defects (ST-111) – the page composes (ST-009).
+  const aiAssessments = await aiAssessmentsInRepairHistory(
+    db,
+    recent.latest.flatMap((entry) => (entry.kind === "defect" ? [entry.id] : [])),
+    ai,
+  );
+  const assessments = [...aiAssessments.values()].flat();
+  const [shown, photos] = await Promise.all([
+    named(db, openDefectReferences(open), {
+      teamMembers: [
+        ...statusHistory.latest.map((change) => change.changedBy),
+        record.retirement?.retiredBy,
+        ...recent.latest.map((entry) => entry.resolvedBy),
+        ...maintenance.records.latest.map((maintenanceRecord) => maintenanceRecord.recordedBy),
+        ...assessments.map((assessment) => assessment.requestedBy),
+      ],
+    }),
+    photoViewAddresses(
+      storage,
+      clock,
+      assessments.flatMap((assessment) => assessment.photos),
+    ),
+  ]);
   return {
     ...record,
     files: record.files.map((file) => ({ ...file, unreadableForAi: unreadable.has(file.id) })),
@@ -134,7 +161,13 @@ export async function loadMachineRecord(
     openDefects: shownOpenDefects(clock, open, shown, viewer),
     repairHistory: {
       ...recent,
-      latest: recent.latest.map((entry) => ({ ...entry, resolvedBy: shown.name(entry.resolvedBy) })),
+      latest: recent.latest.map((entry) => ({
+        ...entry,
+        resolvedBy: shown.name(entry.resolvedBy),
+        aiAssessments: (entry.kind === "defect" ? (aiAssessments.get(entry.id) ?? []) : []).map((assessment) =>
+          shownAiAssessmentData(assessment, shown, photos),
+        ),
+      })),
     },
     maintenance: {
       ...maintenance,

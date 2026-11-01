@@ -1,3 +1,4 @@
+import { aiAssessmentsInRepairHistory, aiDependencies, type AiDependencies } from "@/modules/ai-assistance";
 import { machineIdOf } from "@/modules/collection";
 import {
   repairHistory,
@@ -12,6 +13,7 @@ import { s3Storage } from "@/platform/storage";
 import { named } from "../../../named";
 import { byYear } from "../history-by-year";
 import { photoAt, type PhotoSource } from "../../../team-photos";
+import { shownAiAssessmentData, type ShownAiAssessmentData } from "../../../ai-assessment-data";
 
 /** A team member's ID replaced by their name – „unbekannt“ for an account that is gone (`named`). */
 type WithName<Entry, Key extends keyof Entry> = Omit<Entry, Key> & { [K in Key]: string };
@@ -21,6 +23,8 @@ type DefectEntry = Extract<RepairHistoryEntry, { kind: "defect" }>;
 /** An entry of the repair history as its page shows it – who did what by name. */
 export type ShownRepairHistoryEntry =
   | (Omit<DefectEntry, "workLog" | "resolutions" | "reopenings"> & {
+      /** Its written and failed AI assessments, the newest first – each folded (ST-111). */
+      aiAssessments: ShownAiAssessmentData[];
       /** Who logged each entry by name, and its photos at their short-lived addresses (ST-032). */
       workLog: (Omit<WithName<DefectEntry["workLog"][number], "loggedBy">, "photos"> & {
         photos: { address: string }[];
@@ -47,13 +51,18 @@ export type RepairHistoryData = {
  * The repair history's own page (ST-033, user 2026-10-14): Repair's repair history of the machine, grouped by the
  * Berlin calendar year in which each defect was recorded or problem reported, with Collection's machine model title and
  * Team's names – the page composes (ST-009). Undefined when there is no machine with that museum number. The photos of
- * the chosen year's work log entries get addresses valid for 5 minutes from `clock` (ST-032).
+ * the chosen year's work log entries get addresses valid for 5 minutes from `clock` (ST-032). AI assistance adds each
+ * defect's AI assessments (ST-111).
  */
 export async function loadRepairHistory(
   db: Database,
   museumNumber: string,
   chosenYear?: string,
-  { clock = systemClock, storage = s3Storage() }: PhotoSource & { clock?: Clock } = {},
+  {
+    clock = systemClock,
+    storage = s3Storage(),
+    ai = aiDependencies(),
+  }: PhotoSource & { clock?: Clock; ai?: AiDependencies } = {},
 ): Promise<RepairHistoryData | undefined> {
   // A retired machine keeps its repair history (ST-039).
   const machineId = await machineIdOf(db, museumNumber, { retiredToo: true });
@@ -63,24 +72,33 @@ export async function loadRepairHistory(
   const years = byYear(history, (entry) => (entry.kind === "defect" ? entry.recordedAt : entry.reportedAt));
   const chosen = years.find(({ year }) => year === chosenYear)?.entries ?? [];
   const year = chosen.length > 0 ? chosenYear : undefined;
+  const aiAssessments = await aiAssessmentsInRepairHistory(
+    db,
+    chosen.flatMap((entry) => (entry.kind === "defect" ? [entry.id] : [])),
+    ai,
+  );
+  const assessments = [...aiAssessments.values()].flat();
   const [photos, shown] = await Promise.all([
-    photoViewAddresses(
-      storage,
-      clock,
-      chosen.flatMap((entry) => (entry.kind === "defect" ? entry.workLog.flatMap((logged) => logged.photos) : [])),
+    photoViewAddresses(storage, clock, [
+      ...chosen.flatMap((entry) => (entry.kind === "defect" ? entry.workLog.flatMap((logged) => logged.photos) : [])),
+      ...assessments.flatMap((assessment) => assessment.photos),
+    ]),
+    named(
+      db,
+      {
+        machines: [machineId],
+        teamMembers: chosen.flatMap((entry) =>
+          entry.kind === "defect"
+            ? [
+                ...entry.workLog.map((logged) => logged.loggedBy),
+                ...entry.resolutions.map((ended) => ended.resolvedBy),
+                ...entry.reopenings.map((reopened) => reopened.reopenedBy),
+              ]
+            : [entry.resolvedBy],
+        ),
+      },
+      { teamMembers: assessments.map((assessment) => assessment.requestedBy) },
     ),
-    named(db, {
-      machines: [machineId],
-      teamMembers: chosen.flatMap((entry) =>
-        entry.kind === "defect"
-          ? [
-              ...entry.workLog.map((logged) => logged.loggedBy),
-              ...entry.resolutions.map((ended) => ended.resolvedBy),
-              ...entry.reopenings.map((reopened) => reopened.reopenedBy),
-            ]
-          : [entry.resolvedBy],
-      ),
-    }),
   ]);
   return {
     machineModelTitle: shown.label(machineId).machineModelTitle,
@@ -99,6 +117,9 @@ export async function loadRepairHistory(
               step.kind === "resolution"
                 ? { ...step, resolvedBy: shown.name(step.resolvedBy) }
                 : { ...step, reopenedBy: shown.name(step.reopenedBy) },
+            ),
+            aiAssessments: (aiAssessments.get(entry.id) ?? []).map((assessment) =>
+              shownAiAssessmentData(assessment, shown, photos),
             ),
           }
         : { ...entry, resolvedBy: shown.name(entry.resolvedBy) },
