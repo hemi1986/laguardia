@@ -4,11 +4,11 @@
 
 **Progress: 77 of 78 domain stories done** · scenarios 729 of 734
 
-**109 stories** · In Progress: 0 · Ready: 1 · In Review: 0 · Draft: 0 · Done: 97 · Superseded: 11
+**109 stories** · In Progress: 1 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 97 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
-## Ready
+## In Progress
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
