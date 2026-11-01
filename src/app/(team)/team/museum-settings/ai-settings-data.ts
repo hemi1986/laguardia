@@ -2,6 +2,7 @@ import {
   aiDependencies,
   aiIndexOverview,
   aiSettingsForm,
+  FILE_INDEXING_KIND,
   fileIndexingRetriedBy,
   type AiDependencies,
   type AiIndexOverview,
@@ -10,6 +11,7 @@ import {
 } from "@/modules/ai-assistance";
 import { machineLabels, machineModelTitles } from "@/modules/collection";
 import type { Database } from "@/platform/command";
+import { startWhenLeftUnfinished, type LeftUnfinishedStart } from "@/app/ai-work-when-left-unfinished";
 
 /** What the form „KI“ just did (ST-104): a save, or „Entfernen“. */
 export type AiConfirmed = "saved" | "key-removed";
@@ -86,4 +88,13 @@ export async function loadAiSettings(
         ? "key-removed"
         : undefined;
   return { form, confirmed, overview: overview && (await shownOverview(db, overview)), retried: retried?.title };
+}
+
+/**
+ * What opening „Einstellungen“ does (HS-35, ST-109): with AI on – the overview is shown – it starts a run of the AI
+ * work after its response when a file's indexing was left unfinished, never otherwise, so opening it does not start
+ * work on every load. Answers whether it did. The page passes the real start; a test passes its own.
+ */
+export function startAiWorkOnOpening(data: AiSettingsData, starter: LeftUnfinishedStart): Promise<boolean> {
+  return data.overview ? startWhenLeftUnfinished(starter, FILE_INDEXING_KIND) : Promise.resolve(false);
 }

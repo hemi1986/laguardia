@@ -1,12 +1,18 @@
 import type { FormDefinition, FormFields, FormState } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
 import type { RetryFileIndexingInput, retryFileIndexingCommand } from "@/modules/ai-assistance";
-import type { CommandError } from "@/platform/command";
+import { isId, type CommandError } from "@/platform/command";
 
 /** What a rejected „Erneut versuchen“ answers – the command's own reasons and the command layer's. */
 export type RetryFileIndexingFormError = CommandError<ReturnType<typeof retryFileIndexingCommand>>;
 
 export type RetryFileIndexingField = "fileId" | "version";
+
+/**
+ * A posted file that is no ID – an ID no file has, so the command answers `not-found` instead of the database
+ * rejecting the comparison (like `versionSeen`'s version nobody saw).
+ */
+export const NO_FILE = "00000000-0000-0000-0000-000000000000";
 
 export type RetryFileIndexingState = FormState<RetryFileIndexingFormError, RetryFileIndexingField>;
 
@@ -26,7 +32,7 @@ export function retryFileIndexingForm(
   return {
     fields: ["fileId", "version"],
     input: (fields: FormFields<RetryFileIndexingField>) => ({
-      fileId: fields.fileId ?? "",
+      fileId: fields.fileId && isId(fields.fileId) ? fields.fileId : NO_FILE,
       version: versionSeen(fields.version),
     }),
     onSuccess,

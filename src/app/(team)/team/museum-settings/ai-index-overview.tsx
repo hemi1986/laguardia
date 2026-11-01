@@ -1,8 +1,7 @@
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
-import { retryFileIndexingAction } from "./ai-index-actions";
 import type { ShownAiIndexOverview } from "./ai-settings-data";
-import { RetryFileIndexingForm } from "./retry-file-indexing-form";
+import type { FailedFileRow } from "./retry-file-indexing-form";
 
 const { aiIndex: texts } = teamMessages;
 
@@ -10,8 +9,8 @@ const dollars = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maxim
 
 /**
  * The overview „KI-Erfassung“ below the AI settings (ST-109, RM-AiSettings): how many files are indexed, waiting and
- * failed, what indexing has cost so far, and the failed files with what they belong to and why (G7: an empty index
- * says so). German numbers and the cost in German notation (G13).
+ * failed and what indexing has cost so far (G7: an empty index says so). German numbers and the cost in German
+ * notation (G13). The failed files follow in `FailedFiles`, which the section renders in a place of its own.
  */
 export function AiIndexOverviewView({
   overview,
@@ -34,16 +33,15 @@ export function AiIndexOverviewView({
         </p>
       )}
       <p>{texts.cost(dollars.format(overview.cost))}</p>
-      {overview.failed.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {overview.failed.map((file) => (
-            <li key={file.fileId} className="flex flex-col gap-1">
-              <span>{texts.failedFile(file.owner, file.title, texts.failureReasons[file.reason])}</span>
-              <RetryFileIndexingForm action={retryFileIndexingAction} fileId={file.fileId} version={file.version} />
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
+}
+
+/** The failed files' rows: „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“ – none while AI is off. */
+export function failedFileRows(overview: ShownAiIndexOverview | undefined): FailedFileRow[] {
+  return (overview?.failed ?? []).map((file) => ({
+    fileId: file.fileId,
+    version: file.version,
+    text: texts.failedFile(file.owner, file.title, texts.failureReasons[file.reason]),
+  }));
 }

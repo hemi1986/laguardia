@@ -8,14 +8,12 @@ import {
   aiSettingsForm,
   aiWorkLeftUnfinished,
   changeAiSettingsCommand,
-  FILE_INDEXING_KIND,
   fileIndexingWork,
   retryFileIndexingCommand,
   runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
 import { formRunner } from "@/app/_actions/form-runner";
-import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
 import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
 import { geminiEmbedding, geminiFlash, memoryAi } from "@/modules/ai-assistance/ai-seam.test-support";
@@ -24,7 +22,7 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { loadAiSettings } from "./ai-settings-data";
+import { loadAiSettings, startAiWorkOnOpening } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
 import { loadMachineRecord } from "../machines/[museumNumber]/machine-record-data";
 import { MachineRecordView } from "../machines/[museumNumber]/machine-record";
@@ -262,7 +260,7 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
 
     const retried = await retry(await failedOnPage("Eight Ball Schematic"));
 
-    expect(retried).toEqual({ state: null, landed: retriedLanding(schematic), starts: 1 });
+    expect(retried).toEqual({ state: null, landed: `/team/museum-settings?retried=${schematic}`, starts: 1 });
     const landed = await settingsPage(ai(), { retried: schematic });
     expect(landed.html).toContain("Eight Ball Schematic wird erneut für die KI erfasst.");
     // Waiting until the run started after the response has indexed it.
@@ -319,15 +317,12 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     );
     await embeddingStarted;
     const starts: string[] = [];
-    // What „Einstellungen“ does when it is opened with AI on (page.tsx): start a run only when a hold ran out.
-    const openingStartsARun = () =>
-      startWhenLeftUnfinished(
-        {
-          leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
-          start: () => starts.push("run"),
-        },
-        FILE_INDEXING_KIND,
-      );
+    // What „Einstellungen“ does when it is opened – the page's own decision, with a start the test counts.
+    const openingStartsARun = async () =>
+      startAiWorkOnOpening((await settingsPage()).data, {
+        leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
+        start: () => starts.push("run"),
+      });
     // Until the hold has run out the manual is waiting, and opening the page starts nothing.
     expect(await openingStartsARun()).toBe(false);
     expect((await settingsPage()).data.overview).toMatchObject({ waiting: 1, failed: [] });
@@ -388,6 +383,12 @@ describe("the mark on the machine record (ST-109)", () => {
     const record = await machineRecord("LG-042");
 
     expect(settings.data.overview).toBeUndefined();
+    const starts: string[] = [];
+    const opened = await startAiWorkOnOpening(settings.data, {
+      leftUnfinished: async () => true,
+      start: () => starts.push("run"),
+    });
+    expect({ opened, starts }).toEqual({ opened: false, starts: [] });
     expect(settings.html).not.toContain("KI-Erfassung");
     expect(settings.html).not.toContain("Erneut versuchen");
     expect(record.html).not.toContain("Für die KI nicht lesbar");
@@ -422,5 +423,13 @@ describe("helpers (ST-109)", () => {
     expect((await settingsPage()).data.overview?.failed).toMatchObject([{ title: "Eight Ball Schematic" }]);
     // The overview is on „Einstellungen“, which helpers do not reach: the page and its action check
     // `requireTechnician()` – the browser test „ST-104: Helpers do not get the AI settings“ shows it.
+  });
+
+  it("a forged „Erneut versuchen“ with a file that is no ID is answered, not thrown", async () => {
+    await turnAiOn();
+
+    const retried = await retry({ fileId: "../../etc/passwd", version: 0 });
+
+    expect(retried).toMatchObject({ state: { error: "not-found" }, starts: 0 });
   });
 });

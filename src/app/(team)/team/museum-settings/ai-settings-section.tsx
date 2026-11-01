@@ -4,7 +4,9 @@ import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
 import { AiSettingsForm, RemoveAiKeyForm, type AiSettingsFormProps, type ModelField } from "./ai-settings-form";
 import type { AiSettingsData } from "./ai-settings-data";
-import { AiIndexOverviewView } from "./ai-index-overview";
+import { retryFileIndexingAction } from "./ai-index-actions";
+import { AiIndexOverviewView, failedFileRows } from "./ai-index-overview";
+import { FailedFiles } from "./retry-file-indexing-form";
 
 const { aiSettings: texts } = teamMessages;
 
@@ -89,6 +91,8 @@ export function AiSettingsSection({ form, confirmed, overview, retried }: AiSett
       <p className="text-muted-foreground text-sm">{texts.spendingLimit}</p>
       <p className="text-muted-foreground text-sm">{texts.privacyNotice}</p>
       {overview && <AiIndexOverviewView overview={overview} retried={retried} />}
+      {/* Always in this place, so a rejection of „Erneut versuchen“ is said even when the file or the overview is gone. */}
+      <FailedFiles action={retryFileIndexingAction} failed={failedFileRows(overview)} />
     </Section>
   );
 }

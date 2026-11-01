@@ -1,10 +1,9 @@
 import { Page } from "@/components/page";
-import { startAiWorkWhenLeftUnfinished } from "@/app/ai-work";
-import { FILE_INDEXING_KIND } from "@/modules/ai-assistance";
+import { aiWorkStarter } from "@/app/ai-work";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
-import { loadAiSettings } from "./ai-settings-data";
+import { loadAiSettings, startAiWorkOnOpening } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
 import { MuseumSettingsView } from "./museum-settings";
 import { loadMuseumSettings } from "./museum-settings-data";
@@ -25,7 +24,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/team/mu
     loadAiSettings(db, params, { viewer: technician.id }),
   ]);
 
-  if (ai.overview) await startAiWorkWhenLeftUnfinished(FILE_INDEXING_KIND);
+  await startAiWorkOnOpening(ai, aiWorkStarter());
 
   return (
     <Page title={teamMessages.terms.Settings}>
