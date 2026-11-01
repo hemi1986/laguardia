@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { reportProblemAndTriageCommand } from "@/modules/repair";
+import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
 import {
   AI_ASSESSMENT_KIND,
   aiAssessmentRetryRequest,
@@ -425,5 +425,26 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect(late).toMatchObject({ state: "failed", failureReason: "broken-off" });
     expect(late?.summary).toBeUndefined();
     expect(late?.cost).toBeUndefined();
+  });
+
+  it("ST-108: A defect resolved meanwhile does not stop the AI assessment", async () => {
+    const machineId = await aMachine("LG-042");
+    const defectId = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    const before = await defectDetails(db, defectId);
+    if (!before) throw new Error("no defect");
+    const resolved = await executeCommand(
+      resolveDefectCommand,
+      { defectId, version: before.version, closingNote: "Coil replaced" },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!resolved.ok) throw new Error(resolved.error);
+
+    await run();
+
+    expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)?.state).toBe("written");
+    expect((await defectDetails(db, defectId))?.state).toBe("resolved");
+    const { html } = await page(defectId);
+    expect(html).toContain("Der linke Flipperfinger wird schwach.");
   });
 });
