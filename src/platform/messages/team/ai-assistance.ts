@@ -32,6 +32,26 @@ export const aiAssistanceTexts = {
     saved: "KI gespeichert.",
     keyRemoved: "Schlüssel entfernt. KI ist aus.",
   },
+  /** The overview „KI-Erfassung“ in the form „KI“ (RM-AiSettings, ST-109; wording decided by the user on 2026-10-31). */
+  aiIndex: {
+    title: "KI-Erfassung",
+    counts: (indexed: string, waiting: string, failed: string) =>
+      `${indexed} Dateien für die KI erfasst · ${waiting} warten auf KI-Erfassung · ${failed} für die KI nicht lesbar`,
+    cost: (dollars: string) => `Kosten der KI-Erfassung bisher: ${dollars} $`,
+    empty: "Noch keine Datei für die KI erfasst.",
+    failedFile: (owner: string, title: string, reason: string) => `${owner} · ${title} – ${reason}`,
+    failureReasons: {
+      "not readable": "Datei lässt sich nicht lesen",
+      "format not indexed": "Dateiformat wird nicht erfasst",
+      "OpenRouter refused": "OpenRouter hat abgelehnt",
+      "OpenRouter not reachable": "OpenRouter war nicht erreichbar",
+      "broken off": "Erfassung abgebrochen",
+    },
+    retry: "Erneut versuchen",
+    retrying: (title: string) => `${title} wird erneut für die KI erfasst.`,
+    /** The mark on the machine record's list of files (RM-MachineRecord). */
+    unreadable: "Für die KI nicht lesbar",
+  },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
     title: "KI-Einschätzungen",

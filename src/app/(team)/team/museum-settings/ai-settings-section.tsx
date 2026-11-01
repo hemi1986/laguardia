@@ -4,6 +4,7 @@ import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
 import { AiSettingsForm, RemoveAiKeyForm, type AiSettingsFormProps, type ModelField } from "./ai-settings-form";
 import type { AiSettingsData } from "./ai-settings-data";
+import { AiIndexOverviewView } from "./ai-index-overview";
 
 const { aiSettings: texts } = teamMessages;
 
@@ -55,7 +56,7 @@ export function aiSettingsFormProps(form: AiSettingsReadModel): AiSettingsFormPr
  * key as its last four characters with „Entfernen“ (G36), the saved models, the form for what is not saved yet, and the
  * reminders – a spending limit and zero data retention at OpenRouter, the privacy notice.
  */
-export function AiSettingsSection({ form, confirmed }: AiSettingsData) {
+export function AiSettingsSection({ form, confirmed, overview }: AiSettingsData) {
   const props = aiSettingsFormProps(form);
   const state = form.aiOn
     ? texts.on
@@ -87,6 +88,7 @@ export function AiSettingsSection({ form, confirmed }: AiSettingsData) {
       <AiSettingsForm {...props} />
       <p className="text-muted-foreground text-sm">{texts.spendingLimit}</p>
       <p className="text-muted-foreground text-sm">{texts.privacyNotice}</p>
+      {overview && <AiIndexOverviewView overview={overview} />}
     </Section>
   );
 }

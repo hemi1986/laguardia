@@ -58,7 +58,10 @@ export type AiIndexingSettings = {
 };
 
 /** The AI settings as the AI index work reads them – before every request, so turning AI off stops an indexing at once. */
-export async function aiIndexingSettings(db: Database, { encryptionKey }: AiDependencies): Promise<AiIndexingSettings> {
+export async function aiIndexingSettings(
+  db: Database,
+  { encryptionKey }: Pick<AiDependencies, "encryptionKey">,
+): Promise<AiIndexingSettings> {
   const { state } = await storedAiSettings(db);
   const key = usableKey(state, encryptionKey());
   return {
