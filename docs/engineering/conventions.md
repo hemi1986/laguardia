@@ -798,6 +798,19 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. `settings()` is read before every request: a rotated key is used for the next request,
   and a changed embedding model gives the file up so an entry never mixes two models.
+- **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
+  asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
+  `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
+  AI index (`ai-index-search.ts`: only the defect's machine and machine model, only the current embedding model; one
+  text search for the defect title, the problem report descriptions and the note, one image search per photo of the
+  request; each search takes 8 text passages and 4 pages or images, merged and cut to 12 pages and images), renders the
+  found PDF pages again from their file (`renderPdfPage`) and sends everything through the chat seam
+  (`ai.chat`, `openrouter.ts`, `provider: { data_collection: "deny", zdr: true }`). The answer is read as structured
+  data (`parseAiAssessmentAnswer`); references to files outside the defect's machine and its machine model are dropped,
+  and the result is stored through CMD-WriteAiAssessment with only the aggregate still *requested* – a late result of a
+  run records nothing. The note and photos belong to the AI assessment; its photos are stored like a work log entry's
+  (`owner: "ai-assessments"`). The model's name in the read model is read from `ai.model("chat", id)` when the defect
+  page opens – the state keeps only the model's ID (data model *AI assessment*).
 
 ## Read models
 
