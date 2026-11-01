@@ -94,7 +94,8 @@ async function saveAiSettings({
   const { version } = await aiSettingsForm(db, dependencies);
   const saved = await executeCommand(
     changeAiSettingsCommand(dependencies),
-    { version, key: key ?? "", chatModel: geminiFlash.id, embeddingModel },
+    // A change of the saved embedding model is confirmed on the warning (ST-110), as a technician does.
+    { version, key: key ?? "", chatModel: geminiFlash.id, embeddingModel, embeddingModelConfirmed: true },
     { actor: tom, db, clock, newId: randomUUID },
   );
   if (!saved.ok) throw new Error(saved.error);
