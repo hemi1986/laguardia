@@ -187,7 +187,7 @@ export async function chatProbe(model: string, images: number) {
       usage?: unknown;
       provider?: string;
     };
-    answer = { content: body.choices?.[0]?.message?.content, usage: body.usage, provider: body.provider };
+    answer = { content: body.choices?.[0]?.message?.content, usage: body.usage, provider: body.provider, error: (body as { error?: unknown }).error };
   } catch {
     // keep the raw text
   }
