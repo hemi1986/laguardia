@@ -4,15 +4,20 @@
 
 **Progress: 73 of 78 domain stories done** · scenarios 694 of 734
 
-**109 stories** · In Progress: 0 · Ready: 5 · In Review: 0 · Draft: 0 · Done: 93 · Superseded: 11
+**109 stories** · In Progress: 1 · Ready: 4 · In Review: 0 · Draft: 0 · Done: 93 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 |
 | [ST-108](ST-108-failed-and-broken-off-ai-assessments.md) | An AI assessment that fails or breaks off says why and can be tried again | story | AI assistance | should | M | medium | ST-107 |
 | [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106 |
 | [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 |

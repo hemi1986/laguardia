@@ -9,7 +9,7 @@ risk: high
 events: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten]
 depends_on: [ST-106]
 labels: [ui, feature:ai-assessment]
-status: ready
+status: in-progress
 ---
 
 ## Story
