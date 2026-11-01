@@ -62,3 +62,31 @@ definition of done. These hold every turn:
   `review`, never decided in the code.
 - **Subagents don't know the conversation** – pass file paths and a clear task. At most 3 questions at once, except
   in grilling rounds, which ask the whole frontier.
+
+<!-- kataster:repo:begin -->
+<!-- Generated from docs/architecture/repo-map.json by repo-map.ts. Do not edit inside this block. -->
+## Repository map
+
+- **Tooling:** none (single package) · **Packages:** 1 · **Adopted:** 1 of 1
+- **Layout:** `./` (1)
+- **Detail:** `docs/architecture/repo-map.md` – package list, dependency edges, consumers, adoption ranking.
+- **Adopted slices:** root package.
+
+## Commands
+
+| Scope | Command |
+|---|---|
+| Install | `npm install` |
+| Lint | `npm run lint` |
+| Typecheck | `npm run typecheck` |
+| Test | `npm run test` |
+| End-to-end | `npm run test:e2e` |
+| Gate | `node .claude/skills/implement/scripts/verify.ts` |
+
+## Read next
+
+- `docs/architecture/repo-map.md` – where domains and shared libraries live
+- `docs/engineering/conventions.md` – how code is built in this repository
+- `CONTEXT.md` – domain language; this file stays free of domain rules on purpose
+- Package docs: `<package>/AGENTS.md` (loaded when you work there) with `<package>/CLAUDE.md` as the Claude Code entry
+<!-- kataster:repo:end -->

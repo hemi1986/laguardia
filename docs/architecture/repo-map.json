@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "tooling": {
+    "kind": "none",
+    "config": "",
+    "workspaces": [],
+    "manager": "npm",
+    "monorepo": false
+  },
+  "packages": [
+    {
+      "name": "laguardia",
+      "path": ".",
+      "kind": "app",
+      "language": "TypeScript",
+      "manifest": "package.json",
+      "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "eslint",
+        "typecheck": "next typegen && tsc --noEmit",
+        "test": "vitest run",
+        "format": "prettier --write .",
+        "db:generate": "drizzle-kit generate",
+        "db:migrate": "drizzle-kit migrate",
+        "verify": "node .claude/skills/implement/scripts/verify.ts",
+        "db:up": "docker compose up -d --wait db seaweedfs && docker compose run --rm seaweedfs-init",
+        "db:migrate:dev": "node --env-file=.env.development.local node_modules/drizzle-kit/bin.cjs migrate",
+        "test:e2e": "playwright test",
+        "setup:first-technician": "node --env-file-if-exists=.env.development.local --conditions=react-server --import tsx scripts/setup-first-technician.ts"
+      },
+      "entryPoints": [],
+      "internalDeps": [],
+      "externalDeps": 40,
+      "consumers": [],
+      "hasTests": true,
+      "adopted": true,
+      "adoptedAt": "2026-11-01"
+    }
+  ],
+  "ranking": [
+    {
+      "path": ".",
+      "score": 0.7,
+      "reasons": [
+        "2839 changed files in recent history",
+        "app"
+      ]
+    }
+  ]
+}
