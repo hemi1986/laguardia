@@ -34,7 +34,7 @@ export async function loadMachineConfirmation(
   db: Database,
   clock: Clock,
   viewer: TeamMemberId,
-  record: Pick<MachineRecordData, "id" | "files">,
+  record: { id: string; files: readonly Pick<MachineRecordData["files"][number], "id" | "title">[] },
   query: AddressQuery,
 ): Promise<MachineRecordConfirmation | undefined> {
   const triaged = await loadTriageConfirmation(db, clock, viewer, query, record.id);

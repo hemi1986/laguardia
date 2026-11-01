@@ -1,3 +1,4 @@
+import { aiDependencies, filesTheAiCannotRead, type AiDependencies } from "@/modules/ai-assistance";
 import {
   correctDetailsRefusal,
   latestStatusChanges,
@@ -5,6 +6,7 @@ import {
   machineRecord,
   machineStatusesToChangeTo,
   mayRemoveFiles,
+  type FileOfMachine,
   type Retirement,
   retireRefusal,
   type StatusChange,
@@ -21,7 +23,12 @@ import { named } from "../../named";
 export type NamedStatusChange = Omit<StatusChange, "changedBy"> & { changedBy: string };
 
 /** The machine record with names – what the page shows (ST-009). */
-export type MachineRecordData = Omit<MachineRecord, "retirement"> & {
+/** A file of the machine record, marked when the AI cannot read it (RM-MachineRecord, ST-109). */
+export type MarkedFile = FileOfMachine & { unreadableForAi: boolean };
+
+export type MachineRecordData = Omit<MachineRecord, "retirement" | "files"> & {
+  /** Section 8 (ST-037): its files and its machine model's – „Für die KI nicht lesbar“ where indexing failed (ST-109). */
+  files: MarkedFile[];
   /** Section 6 (ST-093): its latest status changes – at most `LATEST_STATUS_CHANGES` –, and how many entries its status history has, the registration included. */
   statusHistory: Latest<NamedStatusChange>;
   retirement?: Omit<Retirement, "retiredBy"> & { retiredBy: string };
@@ -88,15 +95,25 @@ export type ShownEndedRepairHistoryEntry = Omit<EndedRepairHistoryEntry, "resolv
 export async function loadMachineRecord(
   db: Database,
   museumNumber: string,
-  { clock = systemClock, viewer }: { clock?: Clock; viewer: Viewer },
+  {
+    clock = systemClock,
+    viewer,
+    ai = aiDependencies(),
+  }: { clock?: Clock; viewer: Viewer; ai?: Pick<AiDependencies, "encryptionKey"> },
 ): Promise<MachineRecordData | undefined> {
   const record = await machineRecord(db, museumNumber);
   if (!record) return undefined;
-  const [statusHistory, open, recent, maintenance] = await Promise.all([
+  const [statusHistory, open, recent, maintenance, unreadable] = await Promise.all([
     latestStatusChanges(db, record.id, LATEST_STATUS_CHANGES),
     openDefects(db, { machineId: record.id }),
     recentRepairHistory(db, record.id, RECENT_REPAIR_HISTORY_ENTRIES),
     machineMaintenance(db, clock, record.id, { teamMember: viewer, latestRecordCount: LATEST_MAINTENANCE_RECORDS }),
+    // AI assistance's mark – none while AI is off (user, 2026-10-31); the page composes (ST-009).
+    filesTheAiCannotRead(
+      db,
+      ai,
+      record.files.map((file) => file.id),
+    ),
   ]);
   const shown = await named(db, openDefectReferences(open), {
     teamMembers: [
@@ -108,6 +125,7 @@ export async function loadMachineRecord(
   });
   return {
     ...record,
+    files: record.files.map((file) => ({ ...file, unreadableForAi: unreadable.has(file.id) })),
     statusHistory: {
       ...statusHistory,
       latest: statusHistory.latest.map((change) => ({ ...change, changedBy: shown.name(change.changedBy) })),

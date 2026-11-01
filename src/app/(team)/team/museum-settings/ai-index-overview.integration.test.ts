@@ -26,6 +26,8 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadAiSettings } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
+import { loadMachineRecord } from "../machines/[museumNumber]/machine-record-data";
+import { MachineRecordView } from "../machines/[museumNumber]/machine-record";
 import { retriedLanding, retryFileIndexingForm } from "./retry-file-indexing-definition";
 
 /**
@@ -40,6 +42,7 @@ let db: NodePgDatabase;
 const clock = steppingClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const environmentKey = randomBytes(32);
 const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 let eightBall: string;
@@ -55,6 +58,7 @@ beforeEach(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, eva, "Eva");
+  await anExistingTeamMember(db, ben, "Ben");
   clock.set("2026-11-04T10:00:00Z");
   storage = memoryStorage();
   const created = await executeCommand(
@@ -137,6 +141,23 @@ async function settingsPage(
 ) {
   const data = await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId });
   return { data, html: renderToStaticMarkup(createElement(AiSettingsSection, data)) };
+}
+
+/** The machine record as a team member opens it – the whole team sees the mark. */
+async function machineRecord(museumNumber: string, viewer: Actor & { kind: "team-member" } = ben, dependencies = ai()) {
+  const record = await loadMachineRecord(db, museumNumber, {
+    clock,
+    viewer: { id: viewer.teamMemberId, role: viewer.role },
+    ai: dependencies,
+  });
+  return { record, html: renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber })) };
+}
+
+/** The list item of a file on the machine record. */
+function fileItem(html: string, title: string): string {
+  const at = html.indexOf(`>${title}</a>`);
+  if (at < 0) throw new Error(`${title} is not listed`);
+  return html.slice(html.lastIndexOf("<li", at), html.indexOf("</li>", at));
 }
 
 /** What „Erneut versuchen“ did: where it landed and how many runs it started after the response. */
@@ -322,5 +343,23 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     // Opening „Einstellungen“ again starts no run: no hold has run out.
     expect(await openingStartsARun()).toBe(false);
     expect(starts).toEqual(["run"]);
+  });
+});
+
+describe("the mark on the machine record (ST-109)", () => {
+  it("ST-109: The machine record marks only files the AI cannot read", async () => {
+    await turnAiOn();
+    const machineId = await aMachine("LG-042");
+    await attach(machineId, "Eight Ball Manual");
+    await attach(machineId, "Attract mode.mp4", { kind: "video" });
+    await run();
+    await attach(machineId, "Wiring notes");
+
+    const { html } = await machineRecord("LG-042");
+
+    expect(fileItem(html, "Attract mode.mp4")).toContain("Für die KI nicht lesbar");
+    expect(fileItem(html, "Eight Ball Manual")).not.toContain("Für die KI nicht lesbar");
+    expect(fileItem(html, "Wiring notes")).not.toContain("Für die KI nicht lesbar");
+    expect(html.match(/Für die KI nicht lesbar/g)).toHaveLength(1);
   });
 });
