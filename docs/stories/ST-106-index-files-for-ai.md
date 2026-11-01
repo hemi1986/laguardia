@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileLeftAiIndex, EVT-AiSettingsChanged]
 depends_on: [ST-104, ST-112]
 labels: [feature:ai-assessment]
-status: in-progress
+status: done
 ---
 
 ## Story
