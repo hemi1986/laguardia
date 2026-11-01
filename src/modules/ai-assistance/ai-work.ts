@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte, notInArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -68,9 +68,9 @@ const secondsAfter = (instant: Date, seconds: number) => new Date(instant.getTim
 /** One run of the AI work. */
 export async function runAiWork(dependencies: AiWorkDependencies): Promise<void> {
   const { clock, budgetSeconds } = dependencies;
-  const run: Run = { id: randomUUID(), givenUp: new Set() };
+  const run: Run = { id: randomUUID(), givenUp: new Set(), notRecorded: [] };
   const budgetEnds = secondsAfter(clock.now(), budgetSeconds);
-  while (await failOneBrokenOff(dependencies));
+  while (await failOneBrokenOff(dependencies, run));
   while (clock.now() < budgetEnds) {
     const taken = await takeNext(dependencies, run);
     if (!taken) return;
@@ -92,8 +92,11 @@ async function workOn(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKi
   }
 }
 
-/** This run: the ID its holds carry, and the pieces it gave up – it never takes those again. */
-type Run = { id: string; givenUp: Set<string> };
+/**
+ * This run: the ID its holds carry, the pieces it gave up – it never takes those again – and the broken-off pieces
+ * whose recording threw, which it does not try again.
+ */
+type Run = { id: string; givenUp: Set<string>; notRecorded: string[] };
 
 const pieceKey = (kind: string, id: string) => `${kind}:${id}`;
 
@@ -105,28 +108,47 @@ async function waitingFor(dependencies: AiWorkDependencies, run: Run, kind: AiWo
 /**
  * POL-UnfinishedAiWorkFails (EVT-AiWorkLeftUnfinished, derived): one piece whose hold ran out without a result is
  * handed to its kind's broken-off recording, and the hold is dropped in the same transaction. `SKIP LOCKED` lets runs
- * started at the same moment share them, so each piece is recorded exactly once. False when there is none left.
+ * started at the same moment share them, so each piece is recorded exactly once. A recording that throws rolls its
+ * transaction back: the hold stays – so the piece is never taken again – the run logs it, skips it and goes on, and the
+ * next run tries to record it again. False when there is none left.
  */
-async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boolean> {
+async function failOneBrokenOff(dependencies: AiWorkDependencies, run: Run): Promise<boolean> {
   const { db, clock, kinds } = dependencies;
-  return db.transaction(async (tx) => {
-    const [ranOut] = await tx
-      .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId })
-      .from(aiWorkHold)
-      .where(lte(aiWorkHold.heldUntil, clock.now()))
-      .orderBy(asc(aiWorkHold.heldUntil))
-      .limit(1)
-      .for("update", { skipLocked: true });
-    if (!ranOut) return false;
-    const kind = kinds.find((each) => each.kind === ranOut.kind);
-    if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies);
-    // A hold of a kind this deployment does not know cannot be recorded – it is dropped, never kept for ever.
-    else console.error(`AI work: a hold of the unknown kind "${ranOut.kind}" is dropped`);
-    await tx
-      .delete(aiWorkHold)
-      .where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
+  let found: { kind: string; pieceId: string } | undefined;
+  try {
+    return await db.transaction(async (tx) => {
+      const [ranOut] = await tx
+        .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId })
+        .from(aiWorkHold)
+        .where(
+          and(
+            lte(aiWorkHold.heldUntil, clock.now()),
+            run.notRecorded.length > 0 ? notInArray(aiWorkHold.pieceId, run.notRecorded) : undefined,
+          ),
+        )
+        .orderBy(asc(aiWorkHold.heldUntil))
+        .limit(1)
+        .for("update", { skipLocked: true });
+      if (!ranOut) return false;
+      found = ranOut;
+      const kind = kinds.find((each) => each.kind === ranOut.kind);
+      if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies);
+      // A hold of a kind this deployment does not know cannot be recorded – it is dropped, never kept for ever.
+      else console.error(`AI work: a hold of the unknown kind "${ranOut.kind}" is dropped`);
+      await tx
+        .delete(aiWorkHold)
+        .where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
+      return true;
+    });
+  } catch (error) {
+    if (!found) throw error;
+    run.notRecorded.push(found.pieceId);
+    console.error(
+      `AI work: ${found.kind} ${found.pieceId} could not be recorded broken off:`,
+      error instanceof Error ? error.name : error,
+    );
     return true;
-  });
+  }
 }
 
 async function takeNext(dependencies: AiWorkDependencies, run: Run) {

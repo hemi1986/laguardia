@@ -760,7 +760,9 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   hold; the run logs kind and ID only and goes on.
 - **What broke off fails, once** (`POL-UnfinishedAiWorkFails`): before it takes new work, a run takes every hold that
   ran out `FOR UPDATE SKIP LOCKED`, hands the piece to its kind's `recordBrokenOff(tx, id, context)` and deletes the
-  hold in the same transaction. Runs started at the same moment share them; each piece is recorded exactly once.
+  hold in the same transaction. Runs started at the same moment share them; each piece is recorded exactly once. A
+  recording that throws keeps the hold (the piece is never taken again); the run logs kind and ID, skips it and goes
+  on, and the next run tries to record it again.
 - **Budget and continuation**: a run stops taking new work once `budgetSeconds` have passed on its clock and – only if a
   kind still has waiting work it did not give up – calls `continueWork` (the worker route) once before it ends.
 - **A new kind** (ST-106, ST-107) is one `AiWorkKind` in AI assistance, added to `aiWorkKinds` in its place: `kind`

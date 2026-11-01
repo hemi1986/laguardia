@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -25,6 +25,7 @@ beforeAll(async () => {
   db = await isolated.reset();
 });
 afterAll(() => isolated.close());
+afterEach(() => vi.restoreAllMocks());
 beforeEach(async () => {
   await db.execute(sql`DELETE FROM ai_work_hold`);
   clock.set("2026-11-02T10:00:00Z");
@@ -217,5 +218,31 @@ describe("whether work of a kind was left unfinished (EVT-AiWorkLeftUnfinished, 
     await run();
 
     expect(await left("2026-11-02T10:08:20Z")).toBe(false);
+  });
+});
+
+describe("a piece whose broken-off recording throws", () => {
+  it("does not stop the run: other broken-off pieces are recorded, waiting work is taken, and the piece is never taken again", async () => {
+    const [poison] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    const [other] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    standIn.behave(poison, { seconds: 3, outcome: "done" });
+    const [waiting] = await standIn.add(1, { seconds: 3, outcome: "done" });
+    const refusing: AiWorkKind = {
+      ...standIn.kind,
+      recordBrokenOff: (tx, id, context) =>
+        id === poison ? Promise.reject(new Error("a bug in the kind")) : standIn.kind.recordBrokenOff(tx, id, context),
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    clock.set("2026-11-02T10:08:20Z");
+    await run({ kinds: [refusing] });
+    await run({ kinds: [refusing] });
+
+    expect(await standIn.stored(other)).toMatchObject({ state: "broken-off", brokenOff: 1 });
+    expect(await standIn.stored(waiting)).toMatchObject({ state: "done", done: 1 });
+    expect(await standIn.stored(poison)).toMatchObject({ state: "waiting", done: 0, brokenOff: 0 });
+    expect(standIn.started.map((each) => each.id)).toEqual([poison, other, waiting]);
   });
 });
