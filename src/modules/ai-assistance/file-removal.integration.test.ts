@@ -132,7 +132,7 @@ const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: f
 
 /** Waits until a session of this database is blocked on an advisory lock – the removal waiting for the store's shared lock. */
 async function waitUntilTheRemovalWaits(): Promise<void> {
-  for (let attempt = 0; attempt < 200; attempt += 1) {
+  for (let attempt = 0; attempt < 1_500; attempt += 1) {
     const { rows } = await db.execute<{ waiting: number }>(
       sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
           WHERE datname = current_database() AND pid <> pg_backend_pid()

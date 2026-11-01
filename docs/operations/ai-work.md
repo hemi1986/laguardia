@@ -63,6 +63,10 @@ only by hand.
   has run out – noticed by the next run, whatever starts it. A run cut off never calls the worker route for the rest of
   the queue, so that rest waits for the next start too. A technician taps „Erneut versuchen“ on the file; a team
   member requests a new AI assessment.
+- **A crafted file can use a run's whole budget.** A PDF with a very high page count, or one whose pages carry megabytes
+  of text, keeps the worker busy until the 300 s limit cuts the run off (the accepted Hobby limitation, D1); the file
+  then fails as *broken off* and each retry costs again. This is the same limit as a genuine 568-page manual and not a
+  separate cap – a ceiling would stop that manual on a server of its own.
 
 ## PDFs and page images
 
