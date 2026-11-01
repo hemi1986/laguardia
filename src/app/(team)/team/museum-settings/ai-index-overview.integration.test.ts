@@ -6,13 +6,16 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import {
   aiSettingsForm,
+  aiWorkLeftUnfinished,
   changeAiSettingsCommand,
+  FILE_INDEXING_KIND,
   fileIndexingWork,
   retryFileIndexingCommand,
   runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
 import { formRunner } from "@/app/_actions/form-runner";
+import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
 import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
 import { geminiEmbedding, geminiFlash, memoryAi } from "@/modules/ai-assistance/ai-seam.test-support";
@@ -264,5 +267,60 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     expect(await journalOfFile(manual)).toEqual(journalBefore);
     const { data } = await settingsPage();
     expect(data.overview).toMatchObject({ indexed: 1, waiting: 0, failed: [] });
+  });
+
+  it("ST-109: An indexing that broke off shows as failed and can be tried again by hand", async () => {
+    await turnAiOn();
+    await attach(await aMachine("LG-042"), "Eight Ball Manual", { to: "machine-model" });
+    // The run indexing the manual is cut off while it asks for an embedding – a crash, a deployment, the time limit.
+    let embedding!: () => void;
+    const embeddingStarted = new Promise<void>((resolve) => (embedding = resolve));
+    const never = new Promise<never>(() => {});
+    void run(
+      ai({
+        beforeEmbed: async () => {
+          embedding();
+          await never;
+        },
+      }),
+    );
+    await embeddingStarted;
+    const starts: string[] = [];
+    // What „Einstellungen“ does when it is opened with AI on (page.tsx): start a run only when a hold ran out.
+    const openingStartsARun = () =>
+      startWhenLeftUnfinished(
+        {
+          leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
+          start: () => starts.push("run"),
+        },
+        FILE_INDEXING_KIND,
+      );
+    // Until the hold has run out the manual is waiting, and opening the page starts nothing.
+    expect(await openingStartsARun()).toBe(false);
+    expect((await settingsPage()).data.overview).toMatchObject({ waiting: 1, failed: [] });
+
+    // The hold – twice the budget of 250 s – has run out without a result, and no other run has started since.
+    clock.set("2026-11-04T10:08:21Z");
+    expect(await openingStartsARun()).toBe(true);
+    expect(starts).toEqual(["run"]);
+    const started = ai();
+    await run(started);
+
+    expect(started.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
+    const { html } = await settingsPage();
+    expect(html).toContain("Eight Ball · Eight Ball Manual – Erfassung abgebrochen");
+    expect(html).toContain("Erneut versuchen");
+
+    // No later run indexes it again until a technician taps „Erneut versuchen“.
+    const later = ai();
+    clock.set("2026-11-04T10:20:00Z");
+    await run(later);
+    expect(later.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
+    expect((await settingsPage()).data.overview?.failed).toMatchObject([
+      { title: "Eight Ball Manual", reason: "broken off" },
+    ]);
+    // Opening „Einstellungen“ again starts no run: no hold has run out.
+    expect(await openingStartsARun()).toBe(false);
+    expect(starts).toEqual(["run"]);
   });
 });
