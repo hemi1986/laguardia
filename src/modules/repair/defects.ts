@@ -566,6 +566,16 @@ export type DefectForAiAssessment = {
 /** How many of the machine's latest resolved defects an AI assessment is sent (user, 2026-10-31). */
 export const AI_ASSESSMENT_RESOLVED_DEFECTS = 5;
 
+/** The machine of a defect, for a rule that checks its files (ST-107) – undefined for an unknown defect. */
+export async function defectMachineForAiAssessment(
+  db: Database,
+  defectId: string,
+): Promise<{ machineId: string } | undefined> {
+  if (!isId(defectId)) return undefined;
+  const [row] = await db.select({ machineId: defect.machineId }).from(defect).where(eq(defect.id, defectId));
+  return row;
+}
+
 /**
  * Everything CMD-WriteAiAssessment sends about a defect (ST-107): its title, priority, hold reason, problem reports
  * with their photos, work log entries and its machine's latest resolved defects with their closing notes. Read without

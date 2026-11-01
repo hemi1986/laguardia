@@ -89,13 +89,29 @@ function requestRefusal(
   return undefined;
 }
 
+/**
+ * The chat model's name, by its ID – read from OpenRouter once per process and model and then kept. A defect page with
+ * an AI assessment otherwise calls OpenRouter on every opening, and while one is being written the page reloads every
+ * five seconds; a name that was read once is enough, and a model that cannot be named now falls back to its ID.
+ */
+const chatModelNames = new Map<string, string>();
+
+async function chatModelName(dependencies: AiDependencies, modelId: string): Promise<string | undefined> {
+  const known = chatModelNames.get(modelId);
+  if (known) return known;
+  const model = await dependencies.ai.model("chat", modelId);
+  if (typeof model !== "object") return undefined;
+  chatModelNames.set(modelId, model.name);
+  return model.name;
+}
+
 async function shown(
   db: Database,
   assessment: AiAssessmentState,
   dependencies: AiDependencies,
 ): Promise<ShownAiAssessment> {
-  const [model, files] = await Promise.all([
-    dependencies.ai.model("chat", assessment.chatModel),
+  const [modelName, files] = await Promise.all([
+    chatModelName(dependencies, assessment.chatModel),
     filesForAiReferences(
       db,
       (assessment.references ?? []).map((reference) => reference.fileId),
@@ -109,7 +125,7 @@ async function shown(
     requestedBy: assessment.requestedBy,
     requestedAt: assessment.requestedAt,
     chatModel: assessment.chatModel,
-    chatModelName: typeof model === "object" ? model.name : undefined,
+    chatModelName: modelName,
     summary: assessment.summary,
     probableCauses: assessment.probableCauses,
     whatToCheckFirst: assessment.whatToCheckFirst,

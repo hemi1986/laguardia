@@ -7,7 +7,6 @@ import { Rejection } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotosField } from "@/app/photos-field";
 import { photosRejectionText } from "@/app/_actions/rejection-text";
-import { MAX_AI_ASSESSMENT_PHOTOS } from "@/modules/ai-assistance";
 import { commandErrorText, teamMessages, type TeamCommandErrorCode } from "@/platform/messages";
 import { keptKey } from "@/app/_actions/form-parts";
 import type { RequestAiAssessmentState } from "./actions";
@@ -22,10 +21,13 @@ const { aiAssessments: texts } = teamMessages;
 export function RequestAiAssessmentForm({
   action,
   whyNot,
+  maxPhotos,
 }: {
   action: (previous: RequestAiAssessmentState, formData: FormData) => Promise<RequestAiAssessmentState>;
   /** Why CMD-RequestAiAssessment would refuse the viewer now – none when it would not (G11). */
   whyNot: TeamCommandErrorCode | undefined;
+  /** How many photos CMD-RequestAiAssessment takes – the server page passes the command's constant. */
+  maxPhotos: number;
 }) {
   const [state, submit, pending] = useActionState(action, null);
   const [preparing, setPreparing] = useState(false);
@@ -41,11 +43,11 @@ export function RequestAiAssessmentForm({
       </Field>
       <PhotosField
         name="photos"
-        max={MAX_AI_ASSESSMENT_PHOTOS}
+        max={maxPhotos}
         onPreparing={setPreparing}
         texts={{
-          label: texts.photos(MAX_AI_ASSESSMENT_PHOTOS),
-          full: texts.photosField.full(MAX_AI_ASSESSMENT_PHOTOS),
+          label: texts.photos(maxPhotos),
+          full: texts.photosField.full(maxPhotos),
           take: texts.photosField.take,
           choose: texts.photosField.choose,
           remove: texts.photosField.remove,

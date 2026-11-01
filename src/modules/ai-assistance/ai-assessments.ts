@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { aggregateStore, type Database } from "@/platform/command";
+import { aggregateStore, Rejected, type AggregateStore, type Database } from "@/platform/command";
 import type { AiAssessmentState } from "./ai-assessment";
 import { aiAssessment } from "./schema";
 
@@ -30,7 +30,7 @@ function toState(row: typeof aiAssessment.$inferSelect): AiAssessmentState {
   };
 }
 
-export const aiAssessments = aggregateStore({
+const store = aggregateStore({
   type: "AGG-AiAssessment",
   table: aiAssessment,
   toState,
@@ -54,6 +54,31 @@ export const aiAssessments = aggregateStore({
     failureReason: state.failureReason ?? null,
   }),
 });
+
+/**
+ * The store of AGG-AiAssessment – the set-based rule HS-31 is guaranteed here, like the museum number (HS-17): two
+ * requests of one defect at the same moment both pass the sequential facts check, and the partial unique index rejects
+ * the loser. That violation is the domain's *being written* rejection, never a raw 500. The ordinary sequential case is
+ * caught by the command's facts; this is the final guarantee.
+ */
+export const aiAssessments: AggregateStore<AiAssessmentState> = {
+  ...store,
+  async insert(tx, state) {
+    try {
+      await store.insert(tx, state);
+    } catch (error) {
+      if (isBeingWrittenViolation(error)) throw new Rejected("ai-assessment-being-written");
+      throw error;
+    }
+  },
+};
+
+/** A unique violation of the partial index that keeps at most one requested AI assessment per defect (HS-31). */
+function isBeingWrittenViolation(error: unknown): boolean {
+  const cause = (error as { cause?: unknown })?.cause ?? error;
+  const { code, constraint } = (cause ?? {}) as { code?: string; constraint?: string };
+  return code === "23505" && constraint === "ai_assessment_being_written_idx";
+}
 
 /** One AI assessment by its ID – undefined for an unknown one (a stale hold). */
 export async function aiAssessmentById(db: Database, id: string): Promise<AiAssessmentState | undefined> {

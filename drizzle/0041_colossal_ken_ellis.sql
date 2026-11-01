@@ -21,3 +21,6 @@ CREATE TABLE "ai_assessment" (
 --> statement-breakpoint
 CREATE INDEX "ai_assessment_defect_idx" ON "ai_assessment" USING btree ("defect_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "ai_assessment_being_written_idx" ON "ai_assessment" USING btree ("defect_id") WHERE "ai_assessment"."state" = 'requested';
+--> statement-breakpoint
+ALTER TABLE "ai_assessment" ADD CONSTRAINT "ai_assessment_defect_id_fk" FOREIGN KEY ("defect_id") REFERENCES "public"."defect"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_assessment" ADD CONSTRAINT "ai_assessment_requested_by_fk" FOREIGN KEY ("requested_by") REFERENCES "public"."team_member"("id") ON DELETE no action ON UPDATE no action;

@@ -300,4 +300,61 @@ describe("the OpenRouter adapter", () => {
 
     expect(await adapter().embed("k", "x/y", { kind: "text", text: "Flipper" })).toBe("refused");
   });
+
+  it("asks the chat model with text and images, only for providers that keep nothing, and reports the cost", async () => {
+    answers["POST /api/v1/chat/completions"] = {
+      status: 200,
+      body: {
+        choices: [{ message: { content: '{"summary":"Die Spule ist schwach."}' } }],
+        usage: { cost: 0.0412 },
+      },
+    };
+
+    expect(
+      await adapter().chat("k", "google/gemini-2.5-flash", {
+        system: "Antworte nur mit JSON.",
+        text: "Defekt: Left flipper weak",
+        images: [{ bytes: new Uint8Array([1, 2, 3]), contentType: "image/jpeg" }],
+      }),
+    ).toEqual({ content: '{"summary":"Die Spule ist schwach."}', cost: 0.0412 });
+    expect(received[0].authorization).toBe("Bearer k");
+    expect(received[0].body).toMatchObject({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: "Antworte nur mit JSON." },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Defekt: Left flipper weak" },
+            { type: "image_url", image_url: { url: "data:image/jpeg;base64,AQID" } },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+      // The first request that carries visitors' photos must not go to a provider that keeps or trains on them.
+      provider: { data_collection: "deny", zdr: true },
+    });
+  });
+
+  it.each([
+    [401, "key-invalid"],
+    [402, "credit-used-up"],
+    [404, "model-not-available"],
+    [500, "openrouter-not-reachable"],
+  ])(
+    "turns a chat answer with status %i into %s – OpenRouter's own text never reaches the domain",
+    async (status, failure) => {
+      answers["POST /api/v1/chat/completions"] = { status, body: { error: { message: "some provider text" } } };
+
+      expect(await adapter().chat("k", "x/y", { system: "s", text: "t", images: [] })).toEqual({ failure });
+    },
+  );
+
+  it("says the chat model cannot be reached when nothing answers", async () => {
+    const unreachable = openRouter({ baseUrl: "http://127.0.0.1:9/api/v1" });
+
+    expect(await unreachable.chat("k", "x/y", { system: "s", text: "t", images: [] })).toEqual({
+      failure: "openrouter-not-reachable",
+    });
+  });
 });

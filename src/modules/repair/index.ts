@@ -35,6 +35,7 @@ export {
   defectForAction,
   defectForAiAssessment,
   defectForAiAssessmentRequest,
+  defectMachineForAiAssessment,
   defectsToLinkTo,
   defectTitle,
   openDefectCounts,

@@ -17,6 +17,8 @@ export const SEARCH_IMAGE_HITS = 4;
 
 /** One found item, with where it came from. */
 export type AiIndexHit = {
+  /** The AI index item's ID – two passages of one file or page are distinct hits. */
+  id: string;
   fileId: string;
   kind: "passage" | "page-image" | "image";
   page?: number;
@@ -45,6 +47,7 @@ export async function searchAiIndex(
   const kinds: readonly IndexItemKind[] = kind === "text" ? ["passage"] : ["page-image", "image"];
   const rows = await db
     .select({
+      id: aiIndexItem.id,
       fileId: aiIndexItem.fileId,
       kind: aiIndexItem.kind,
       page: aiIndexItem.page,
@@ -63,7 +66,8 @@ export async function searchAiIndex(
     )
     .orderBy(distance)
     .limit(kind === "text" ? SEARCH_TEXT_HITS : SEARCH_IMAGE_HITS);
-  return rows.map(({ fileId, kind: hitKind, page, text }) => ({
+  return rows.map(({ id, fileId, kind: hitKind, page, text }) => ({
+    id,
     fileId,
     kind: hitKind as AiIndexHit["kind"],
     ...(page !== null && { page }),

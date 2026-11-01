@@ -73,7 +73,7 @@ beforeEach(async () => {
 async function machineModel(title: string, manufacturer: string, year: number) {
   const created = await executeCommand(
     createMachineModelCommand,
-    { title, manufacturer, year: String(year), machineCategory: "pinball" },
+    { title, manufacturer, year: String(year), machineCategory: "pinball", technology: "em" },
     { actor: tom, db, clock, newId: randomUUID },
   );
   if (!created.ok) throw new Error(created.error);
@@ -90,15 +90,27 @@ async function aMachine(model: string, museumNumber: string) {
   return registered.result.machineId;
 }
 
-async function saveAiSettings(ai = anAi()) {
+async function saveAiSettings(ai = anAi(), chatModel = CHAT) {
   const dependencies = { ai, encryptionKey: () => environmentKey };
   const { version } = await aiSettingsForm(db, dependencies);
   const saved = await executeCommand(
     changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: CHAT, embeddingModel: EMBEDDING },
+    { version, key: KEY, chatModel, embeddingModel: EMBEDDING },
     { actor: tom, db, clock, newId: randomUUID },
   );
   if (!saved.ok) throw new Error(saved.error);
+}
+
+/** Removes the key – AI is off from then on (data model, AGG-AiSettings). */
+async function removeTheKey() {
+  const dependencies = { ai: anAi(), encryptionKey: () => environmentKey };
+  const { version } = await aiSettingsForm(db, dependencies);
+  const removed = await executeCommand(
+    changeAiSettingsCommand(dependencies),
+    { version, key: "", removeKey: true },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!removed.ok) throw new Error(removed.error);
 }
 
 function anAi(settings: Parameters<typeof memoryAi>[0] = {}) {
@@ -129,9 +141,12 @@ async function anOpenDefect(
   return { defectId: reported.result.defectId, problemReportId: reported.result.problemReportId };
 }
 
-async function aPhoto(): Promise<string> {
+async function aPhoto(padding = 0): Promise<string> {
   const name = `ai-assessments/${randomUUID()}.jpg`;
-  await storage.write(name, await aJpeg(), "image/jpeg");
+  const jpeg = await aJpeg();
+  const bytes = new Uint8Array(jpeg.length + padding);
+  bytes.set(jpeg);
+  await storage.write(name, bytes, "image/jpeg");
   return name;
 }
 
@@ -302,6 +317,8 @@ describe("what an AI assessment does", () => {
     expect(chat.text).toContain("Eight Ball");
     expect(chat.text).toContain("Bally");
     expect(chat.text).toContain("1980");
+    expect(chat.text).toContain("pinball");
+    expect(chat.text).toContain("em");
     expect(chat.text).toContain("Bumper dead");
     expect(chat.text).toContain("Replaced the bumper switch");
     expect(chat.text).toContain("Coil gets hot");
@@ -316,9 +333,12 @@ describe("what an AI assessment does", () => {
   it("ST-107: What is sent to the chat model is capped", async () => {
     const machineId = await aMachine(eightBall, "LG-042");
     const { defectId } = await anOpenDefect(machineId);
-    // 14 problem reports with a photo each – only the 10 newest are sent.
+    // 14 problem reports with a photo each – only the 10 newest are sent. Distinct padding makes each photo
+    // recognizable by its size in what the chat model receives.
+    const reportPhotoSizes = new Map<string, number>();
     for (let number = 1; number <= 14; number++) {
-      const photo = await aPhoto();
+      const photo = await aPhoto(number * 100_000);
+      reportPhotoSizes.set(photo, (await storage.read(photo))!.bytes.length);
       const reported = await executeCommand(
         reportProblemAndTriageCommand,
         { machineId, description: `Meldung ${number}`, photo, triage: { outcome: "linked", defectId } },
@@ -389,10 +409,19 @@ describe("what an AI assessment does", () => {
     expect(chat.images.length).toBe(12 + 10 + 2);
     expect(chat.text).toContain("Fotos der Meldungen (als Bilder mitgeschickt, danach): 10");
     expect(chat.text).toContain("Fotos der Anfrage (als Bilder mitgeschickt, zuletzt): 2");
+    // The 8 distinct passages the text search found are sent – distinct passages of one file are not collapsed.
+    const passages = JSON.parse(chat.text.split("Gefundene Textstellen:\n")[1].split("\n\n")[0]) as { text: string }[];
+    expect(passages).toHaveLength(SEARCH_TEXT_HITS);
+    expect(new Set(passages.map((each) => each.text)).size).toBe(SEARCH_TEXT_HITS);
     expect(chat.text).toContain("Behoben 3");
     expect(chat.text).toContain("Behoben 7");
     expect(chat.text).not.toContain("Behoben 1");
     expect(chat.text).not.toContain("Behoben 2");
+    // The 10 newest report photos are attached, the four oldest are not.
+    const sentSizes = new Set(chat.images.map((image) => image.bytes.length));
+    for (const [index, size] of [...reportPhotoSizes.values()].entries()) {
+      expect(sentSizes.has(size)).toBe(index >= 4);
+    }
     // Each single search takes at most 8 text passages and 4 pages or images (checked at the query's own seam).
     const model = await machineModelOfMachineForAi(db, machineId);
     if (!model) throw new Error("no machine model");
@@ -493,5 +522,56 @@ describe("what an AI assessment does", () => {
     expect(written.summary).toBe("Die Spule ist schwach.");
     expect(written.probableCauses).toEqual(["Die Spule ist verschlissen.", "Der Kontakt ist oxidiert."]);
     expect(written.whatToCheckFirst).toEqual(["Die Spule messen."]);
+  });
+
+  it("rejects one of two requests made at the same moment with the domain's reason (HS-31)", async () => {
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const ask = () =>
+      executeCommand(
+        requestAiAssessmentCommand({ ai: anAi(), encryptionKey: () => environmentKey }),
+        { defectId, note: "", photos: [] },
+        { actor: tom, db, clock, newId: randomUUID },
+      );
+
+    const [first, second] = await Promise.all([ask(), ask()]);
+
+    expect([first, second].filter((answer) => answer.ok)).toHaveLength(1);
+    const refused = [first, second].find((answer) => !answer.ok);
+    expect(refused).toMatchObject({ ok: false, error: "ai-assessment-being-written" });
+    expect(await aiAssessmentBeingWritten(db, defectId)).toBe(true);
+  });
+
+  it("sends nothing more once AI is turned off while it is writing", async () => {
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const id = await request(defectId, { note: "Coil gets hot", photos: [await aPhoto()] });
+    const ai = anAi({
+      beforeEmbed: async (requestNumber) => {
+        if (requestNumber === 1) await removeTheKey();
+      },
+    });
+
+    await run(ai);
+
+    expect(await assessment(id)).toMatchObject({ state: "failed", failureReason: "ai-off" });
+    expect(ai.chatRequests).toHaveLength(0);
+  });
+
+  it("writes with the chat model the assessment was requested with, not the one saved meanwhile", async () => {
+    const otherChat = { ...geminiFlash, id: "other/chat", name: "Other Chat" };
+    const withOther = memoryAi({ acceptedKeys: [KEY], models: [geminiFlash, geminiEmbedding, otherChat] });
+    await saveAiSettings(withOther);
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    // A technician changes the chat model between the request and its writing (ST-110).
+    await saveAiSettings(withOther, otherChat.id);
+    const ai = anAi();
+
+    await run(ai);
+
+    expect(ai.chatRequests[0].model).toBe(CHAT);
+    expect((await assessment(id)).state).toBe("written");
   });
 });

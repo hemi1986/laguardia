@@ -8,7 +8,7 @@ import type { DefectState } from "@/modules/repair";
  * AI assessment, not to the defect, and never change.
  */
 
-/** At most this many photos with a request (as on a work log entry, ST-032). */
+/** At most this many photos with a request – the work log entry's limit (ST-032, "photos as on a work log entry"). */
 export const MAX_AI_ASSESSMENT_PHOTOS = 5;
 
 /** Who may request an AI assessment – every team member; the helper's rule is the decision's. */
@@ -155,27 +155,43 @@ export type AiAssessmentWritten = {
   defectId: string;
   chatModel: string;
   embeddingModel: string;
+  /** The files and pages the AI relied on, and the files whose index was searched – IDs only, never text. */
+  references: AiAssessmentReference[];
+  filesSearched: string[];
   cost: number;
 };
+
+/** What CMD-WriteAiAssessment reads to keep its reference invariant: the files of the defect's machine and model. */
+export type WriteAiAssessmentFacts = { files: readonly string[] };
 
 /**
  * CMD-WriteAiAssessment (ST-107): the AI assessment still requested takes the chat model's answer. A late result – the
  * assessment was failed as broken off meanwhile – records nothing (rule, version check; HS-33). The written text is
- * free text and stays out of the journal; the event names the models and the cost.
+ * free text and stays out of the journal; the event names the models and the cost. The command enforces the aggregate's
+ * invariant itself: a reference to a file outside the defect's machine and its machine model is dropped, and every
+ * reference is kept once.
  */
 export function writeAiAssessment(
   state: AiAssessmentState,
   input: WriteAiAssessmentInput,
   { clock }: DecisionContext,
+  facts: WriteAiAssessmentFacts,
 ): Decision<AiAssessmentState, AiAssessmentWritten, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
+  const allowed = new Set(facts.files);
+  const references = input.references
+    .filter((reference) => allowed.has(reference.fileId))
+    .filter(
+      (reference, index, all) =>
+        all.findIndex((each) => each.fileId === reference.fileId && each.page === reference.page) === index,
+    );
   const written: AiAssessmentState = {
     ...state,
     state: "written",
     summary: input.summary,
     probableCauses: input.probableCauses,
     whatToCheckFirst: input.whatToCheckFirst,
-    references: input.references,
+    references,
     filesSearched: input.filesSearched,
     embeddingModel: input.embeddingModel,
     cost: input.cost,
@@ -191,6 +207,8 @@ export function writeAiAssessment(
         defectId: state.defectId,
         chatModel: state.chatModel,
         embeddingModel: input.embeddingModel,
+        references,
+        filesSearched: input.filesSearched,
         cost: input.cost,
       },
     ],

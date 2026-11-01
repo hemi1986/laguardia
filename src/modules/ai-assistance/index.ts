@@ -12,6 +12,7 @@ export {
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export { aiWorkDependencies } from "./ai-work-dependencies";
+export { AI_ASSESSMENT_KIND } from "./ai-assessment-work";
 export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
 export type {
   AiAssessmentReference,

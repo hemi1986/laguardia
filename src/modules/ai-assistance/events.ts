@@ -83,6 +83,11 @@ export const aiAssistanceEvents = eventCatalogue({
         defectId: event.defectId,
         chatModel: event.chatModel,
         embeddingModel: event.embeddingModel,
+        // IDs only: a reference as "file" or "file#page", never a text (the journal carries references, not prose).
+        references: event.references.map((reference) =>
+          reference.page === undefined ? reference.fileId : `${reference.fileId}#${reference.page}`,
+        ),
+        filesSearched: event.filesSearched,
         cost: event.cost,
       },
     }),

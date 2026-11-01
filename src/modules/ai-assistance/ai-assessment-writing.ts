@@ -32,6 +32,12 @@ export type AiAssessmentAnswer = {
   references: AiAssessmentReference[];
 };
 
+/** The answer is untrusted: these bounds keep one answer from becoming an arbitrarily large stored row (ST-107). */
+const MAX_SUMMARY = 4000;
+const MAX_TEXTS = 20;
+const MAX_TEXT = 500;
+const MAX_REFERENCES = 20;
+
 const systemPrompt = [
   "Du bist die KI-Unterstützung eines Flipper- und Arcade-Museums.",
   "Du bekommst einen offenen Defekt, seine Meldungen und Arbeitsschritte, das Gerätemodell, die zuletzt behobenen Defekte und Fundstellen aus Handbüchern und Schaltplänen.",
@@ -125,20 +131,22 @@ export function parseAiAssessmentAnswer(content: string): AiAssessmentAnswer | u
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
   const answer = parsed as Record<string, unknown>;
-  const summary = typeof answer.summary === "string" ? answer.summary.trim() : "";
+  const summary = typeof answer.summary === "string" ? answer.summary.trim().slice(0, MAX_SUMMARY) : "";
   if (!summary) return undefined;
   return {
     summary,
     probableCauses: textsOf(answer.probableCauses),
     whatToCheckFirst: textsOf(answer.whatToCheckFirst),
-    references: referencesOf(answer.references),
+    references: referencesOf(answer.references).slice(0, MAX_REFERENCES),
   };
 }
 
-/** A list of non-empty texts – anything else in it is left out, and a missing list is empty. */
+/** A list of non-empty texts – anything else in it is left out, a missing list is empty, and the list is bounded. */
 function textsOf(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap((entry) => (typeof entry === "string" && entry.trim() ? [entry.trim()] : []));
+  return value
+    .flatMap((entry) => (typeof entry === "string" && entry.trim() ? [entry.trim().slice(0, MAX_TEXT)] : []))
+    .slice(0, MAX_TEXTS);
 }
 
 /** The references the answer names: a file ID and, for a page, a positive whole number. */

@@ -791,7 +791,7 @@ commands:
       priority, hold reason), the descriptions and photos of its problem reports, its work log entries, the machine
       model (title, manufacturer, year, machine category, technology), the machine's latest resolved defects with
       their closing notes, the note and photos of the request, and what the AI index finds for the machine and its
-      machine model – searched with the text (the defect title, the descriptions of its problem reports and the note of the request) and with each photo of the request and of its problem reports (user, 2026-10-31, grilling Q21) – with found pages and images as images.
+      machine model – searched with the text (the defect title, the descriptions of its problem reports and the note of the request) and with each photo of the request (user, 2026-10-31, grilling Q21; story review: the photos of the problem reports are sent with the prompt but not searched, which keeps one search per request photo) – with found pages and images as images.
     rules:
       - Only the AI index of the defect's machine and its machine model is searched, and only entries made with the current embedding model
       - A fixed number of hits is sent (text passages and pages or images) – not a setting

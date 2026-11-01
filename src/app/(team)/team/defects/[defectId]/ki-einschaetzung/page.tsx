@@ -1,6 +1,6 @@
 import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
-import { aiDependencies, defectAiAssessments } from "@/modules/ai-assistance";
+import { aiDependencies, defectAiAssessments, MAX_AI_ASSESSMENT_PHOTOS } from "@/modules/ai-assistance";
 import { machineLabels } from "@/modules/collection";
 import { defectDetails } from "@/modules/repair";
 import { database } from "@/platform/database";
@@ -41,7 +41,11 @@ export default async function RequestAiAssessmentPage({
               {label.museumNumber} · {label.machineModelTitle}
             </p>
           </div>
-          <RequestAiAssessmentForm action={requestAiAssessmentAction.bind(null, defect.id)} whyNot={section.refusal} />
+          <RequestAiAssessmentForm
+            action={requestAiAssessmentAction.bind(null, defect.id)}
+            whyNot={section.refusal}
+            maxPhotos={MAX_AI_ASSESSMENT_PHOTOS}
+          />
         </>
       )}
       <BackLink href={defect ? `/team/defects/${defect.id}` : "/team/defects"}>

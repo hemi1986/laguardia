@@ -32,10 +32,13 @@ export function AiAssessmentsSection({
       {/* The page refreshes itself until the AI assessment is written – a meta refresh needs no JavaScript (G35). */}
       {current?.state === "requested" && <meta httpEquiv="refresh" content="5" />}
       {current?.state === "requested" ? (
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">{texts.running}</p>
-          <p className="text-muted-foreground text-sm">{texts.runningHint}</p>
-          <RequestLink href={requestHref} offered={false} />
+        <div className="flex flex-col gap-3 [overflow-wrap:anywhere]">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">{texts.running}</p>
+            <p className="text-muted-foreground text-sm">{texts.runningHint}</p>
+          </div>
+          {current.note && <p className="text-sm whitespace-pre-line">{current.note}</p>}
+          <AiAssessmentPhotos photos={current.photos} />
         </div>
       ) : current ? (
         <div className="flex flex-col gap-3 [overflow-wrap:anywhere]">

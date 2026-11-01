@@ -239,15 +239,20 @@ function pdfjsAssets(): (folder: "wasm" | "iccs" | "standard_fonts" | "cmaps") =
 }
 
 /**
- * One PDF page rendered again from its file (ST-107, ADR 0014): an AI assessment sends a page the AI index found as an
- * image, and page images are not kept. Undefined when the page cannot be rendered – the assessment is then written
- * without that image.
+ * The pages an AI assessment sends, rendered again from one PDF file (ST-107, ADR 0014): found pages are sent as
+ * images, and page images are not kept. The file is read and opened once for all its pages; a page that cannot be
+ * rendered is left out, so the assessment is written without it.
  */
-export async function renderPdfPage(bytes: Uint8Array, pageNumber: number): Promise<Uint8Array | undefined> {
+export async function renderPdfPages(
+  bytes: Uint8Array,
+  pageNumbers: readonly number[],
+): Promise<Map<number, Uint8Array>> {
+  const wanted = [...new Set(pageNumbers)].filter((page) => Number.isInteger(page) && page > 0);
+  if (wanted.length === 0) return new Map();
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const assets = pdfjsAssets();
   const loading = pdfjs.getDocument({
-    // pdfjs may transfer the buffer: a copy keeps the caller's bytes usable for the next page of the same file.
+    // pdfjs may transfer the buffer: a copy keeps the caller's bytes untouched.
     data: bytes.slice(),
     useSystemFonts: false,
     wasmUrl: assets("wasm"),
@@ -256,15 +261,23 @@ export async function renderPdfPage(bytes: Uint8Array, pageNumber: number): Prom
     cMapUrl: assets("cmaps"),
     cMapPacked: true,
   });
+  const rendered = new Map<number, Uint8Array>();
   try {
     const pdf = await loading.promise;
-    if (pageNumber < 1 || pageNumber > pdf.numPages) return undefined;
-    return await renderPage((await pdf.getPage(pageNumber)) as unknown as PdfPage);
+    for (const pageNumber of wanted) {
+      if (pageNumber > pdf.numPages) continue;
+      try {
+        rendered.set(pageNumber, await renderPage((await pdf.getPage(pageNumber)) as unknown as PdfPage));
+      } catch {
+        // A page that cannot be rendered is left out – the others are still sent.
+      }
+    }
   } catch {
-    return undefined;
+    // A file that cannot be opened renders no page.
   } finally {
     await loading.destroy().catch(() => undefined);
   }
+  return rendered;
 }
 
 type EmbedAnswer =

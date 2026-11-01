@@ -294,6 +294,16 @@ describe("the AI assessments section on a defect's page", () => {
         { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
       );
       expect(rejected).toEqual({ ok: false, error: "ai-assessment-defect-not-open" });
+      // Nothing was recorded for either.
+      expect(
+        (
+          await defectAiAssessments(db, {
+            defectId,
+            viewer: { teamMemberId: tom.teamMemberId, role: "technician" },
+            dependencies: ai(),
+          })
+        ).current,
+      ).toBeUndefined();
     }
   });
 
@@ -317,5 +327,14 @@ describe("the AI assessments section on a defect's page", () => {
       { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
     );
     expect(rejected).toEqual({ ok: false, error: "ai-assessment-ai-off" });
+    expect(
+      (
+        await defectAiAssessments(db, {
+          defectId: fresh,
+          viewer: { teamMemberId: tom.teamMemberId, role: "technician" },
+          dependencies: ai(),
+        })
+      ).current,
+    ).toBeUndefined();
   });
 });
