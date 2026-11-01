@@ -199,3 +199,14 @@ describe("migration 0032_maintenance_task_machines", () => {
     ]);
   });
 });
+
+describe("migration 0039_ai_work", () => {
+  it("the AI index can store embeddings of 1536 numbers – the vector extension is enabled (ST-112, ADR 0014)", async () => {
+    const db = await isolated.reset();
+
+    const { rows } = await db.execute<{ distance: number }>(
+      sql`SELECT (array_fill(0.5, ARRAY[1536])::vector(1536) <=> array_fill(0.5, ARRAY[1536])::vector(1536)) AS distance`,
+    );
+    expect(rows).toEqual([{ distance: 0 }]);
+  });
+});

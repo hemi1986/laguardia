@@ -19,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      # The repository's docker-compose.yml (ST-099): PostgreSQL on 5433 and SeaweedFS on 8333 with its fixed
-      # development identity – the same store the S3 adapter's integration tests use locally; they never skip here.
+      # The repository's docker-compose.yml (ST-099): PostgreSQL with pgvector on 5433 (`pgvector/pgvector:pg17`, ST-112)
+      # and SeaweedFS on 8333 with its fixed development identity – the same store the S3 adapter's integration tests
+      # use locally; they never skip here.
       TEST_DATABASE_URL: postgres://laguardia:laguardia@localhost:5433/laguardia_test
       TEST_S3_ENDPOINT: http://localhost:8333
       TEST_S3_REGION: us-east-1

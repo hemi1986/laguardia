@@ -60,10 +60,13 @@ async function main() {
 /**
  * AI (ST-104): the browser tests never reach OpenRouter – its address points where nothing answers, so the form „KI“
  * shows that the model list could not be loaded. The encryption key is a fixed one for this throwaway database only.
+ * The AI work (ST-112) calls this server's own worker route, with a worker secret fixed for these runs only.
  */
 const E2E_AI = {
   OPENROUTER_BASE_URL: "http://127.0.0.1:9/api/v1",
   AI_SETTINGS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+  AI_WORK_SECRET: "e2e-worker-secret-only-for-local-browser-tests",
+  AI_WORK_ORIGIN: `http://localhost:${E2E_PORT}`,
 };
 
 /** SeaweedFS not running fails here with what to do – not as an SDK error in the middle of the cleanup. */

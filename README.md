@@ -58,6 +58,8 @@ Set in the Vercel dashboard (Project → Settings → Environment Variables), pe
 | `BETTER_AUTH_SECRET` | a random secret per environment | by hand, `openssl rand -base64 32` |
 | `S3_BUCKET`, `S3_REGION`, `AWS_ROLE_ARN` | the environment's bucket and IAM role | by hand, `docs/operations/aws-s3-setup.md` (ST-099, ADR 0012) |
 | `AI_SETTINGS_ENCRYPTION_KEY` | 32 random bytes, base64, per environment | by hand, `docs/operations/ai-settings-encryption-key.md` (ST-104, ADR 0014) |
+| `AI_WORK_SECRET` | at least 32 random characters per environment | by hand, `docs/operations/ai-work.md` (ST-112, ADR 0015) |
+| `AI_WORK_BUDGET_SECONDS` | optional – 250 on Vercel Hobby (the default) | `docs/operations/ai-work.md` |
 | `BETTER_AUTH_URL` | optional – derived from the Vercel URL | – |
 
 The first technician of a Vercel database: `DATABASE_URL=… npm run setup:first-technician` with that environment's

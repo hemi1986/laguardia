@@ -10,3 +10,5 @@ export {
   type MissingPart,
 } from "./ai-settings";
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
+export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
+export { aiWorkDependencies } from "./ai-work-dependencies";

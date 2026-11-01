@@ -13,7 +13,8 @@ src/
     repair/         BC-Repair – problem reports, defects
     maintenance/    BC-Maintenance – maintenance plan, maintenance records
     team/           BC-Team – team members, roles
-    ai-assistance/  BC-AiAssistance – AI settings (ST-104); the AI seam and its OpenRouter adapter (ADR 0014)
+    ai-assistance/  BC-AiAssistance – AI settings (ST-104); the AI seam and its OpenRouter adapter (ADR 0014); the
+                    background work (ST-112, ADR 0015)
   components/       shared UI (ST-076): `page.tsx` (the 360 px page container), `ui/` the shadcn components
   lib/              `cn` re-export, the alias shadcn's components import
   platform/         shared kernel: command layer, event journal, clock, time convention, database, message catalogs,
@@ -727,6 +728,56 @@ Collection's own tests keep using Collection's `registerMachineCommand`. A rejec
 subjects – rejects the whole step, so the form says it as it would on the policy's own page (`withRemovedNamed`,
 `tasksRejectionText` in `src/app/(team)/team/machines/`).
 
+## Background work (ST-112, ADR 0015)
+
+The AI work – indexing files (ST-106) and writing AI assessments (ST-107) – is the only work that runs outside a
+request. Everything else stays synchronous (ADR 0002). There is **no scheduled job and no automatic retry**.
+
+- **The work is found, not sent.** A run asks each **kind of work** (`AiWorkKind`, `src/modules/ai-assistance/ai-work.ts`)
+  what is left – AI assessments still requested, files without an AI index entry for the current embedding model – in
+  the order of `aiWorkKinds` (`ai-work-dependencies.ts`): AI assessments first, because a person is waiting. Nothing
+  is written in the triggering command for the work's sake.
+- **The worker route** `/api/ai-work` (`src/app/api/ai-work/`) does every run. It is `workerRoute(dependencies)` like
+  `uploadRoute`: it accepts only `Authorization: Bearer <AI_WORK_SECRET>` (compared as digests in constant time; a
+  deployment without a secret of at least 32 characters refuses everything), answers 202 at once and runs in its own
+  `after()`. `maxDuration` is the literal `300` in `route.ts` (static route config, Vercel Hobby); only the budget is a
+  setting (`AI_WORK_BUDGET_SECONDS`, default 250, `docs/operations/ai-work.md`).
+- **Starting it**: `startAiWorkAfterResponse()` (`src/app/ai-work.ts`) – a Server Action whose command made work calls
+  it once the command has committed (in `onSuccess`, never before the commit); a page that shows AI work calls
+  `startAiWorkWhenLeftUnfinished(kind, pieceIds?)`, which starts a run only when a hold of that kind ran out without a
+  result (`aiWorkLeftUnfinished`), so a refreshing page never starts work on every load. Both go through
+  `startAiWork({ env, fetch })`, which calls the deployment's own address from its environment (never a request's
+  Host – it would receive the secret) and never throws: a failed call is logged and the chain waits for the next start.
+- **Holds.** A run takes **one piece at a time** (a whole file or a whole AI assessment) by inserting its hold
+  (`ai_work_hold`: kind, piece, the run, held until; technical, not domain state) in a short transaction – the hold's
+  primary key decides between two runs (`ON CONFLICT DO NOTHING`), and the kind's `isWaiting` is asked again in the same
+  transaction, so a piece done or broken off a moment earlier is not taken. A hold lasts **twice the budget**
+  (`holdSeconds`) and is never renewed. No transaction is open while a kind works.
+- **Storing a result**: the kind's `work(id, piece, context)` ends with `piece.storeResult((tx) => …)` – the aggregate's
+  own command in the transaction that deletes the hold, only while this run still holds it and the hold has not run out
+  (else `"no-longer-held"` and nothing is stored) – or `piece.giveUp()` (AI turned off meanwhile): the hold ends without
+  a result or failure, the piece is waiting again, and this run does not take it again. A kind that throws keeps its
+  hold; the run logs kind and ID only and goes on.
+- **What broke off fails, once** (`POL-UnfinishedAiWorkFails`): before it takes new work, a run takes every hold that
+  ran out `FOR UPDATE SKIP LOCKED`, hands the piece to its kind's `recordBrokenOff(tx, id, context)` and deletes the
+  hold in the same transaction. Runs started at the same moment share them; each piece is recorded exactly once. A
+  recording that throws keeps the hold (the piece is never taken again) for another hold's length – so neither a run
+  nor a page comes back to it before then –, and the run logs kind and ID and goes on.
+- **Budget and continuation**: a run stops taking new work once `budgetSeconds` have passed on its clock and – only if a
+  kind still has waiting work it did not give up – calls `continueWork` (the worker route) once before it ends.
+- **A new kind** (ST-106, ST-107) is one `AiWorkKind` in AI assistance, added to `aiWorkKinds` in its place: `kind`
+  (its name in the holds – never renamed once deployed), `waiting`, `isWaiting`, `work` (reads and asks OpenRouter
+  outside any transaction, stores through `storeResult` with its command's usual checks) and `recordBrokenOff` (its
+  command with the reason *broken off*). Inside `storeResult` and `recordBrokenOff` the kind runs its command as the
+  system on the given transaction (`executeCommand(command, input, { actor: system, db: tx, … })`); a command that
+  rejects the result still ends the hold, and the run takes no piece twice – so a rejected result is never paid for
+  again in the same run, and the kind's `waiting` must leave out what its command will not take.
+- **Testing a run**: drive `runAiWork({ db, clock, budgetSeconds, ai, storage, continueWork, kinds })` directly in an
+  isolated database (the holds are one set) with a `steppingClock` the kind moves forward, `memoryAi`, `memoryStorage`
+  and a counting `continueWork`; a cut-off run is one whose kind never returns (`aRunCutOffAtTheNextPiece` in
+  `ai-work.integration.test.ts`). The stand-in kind (`ai-work-stand-in.test-support.ts`) shows the shape. Never wait
+  for a real background run.
+
 ## Read models
 
 A read model (`RM-…`) is a query function in the owning module, exported via `index.ts`, e.g. `problemReportsOfMachine(db, machineId)`. It takes a `Database`, returns plain data for the page and selects only what the page shows. Read models are computed on read – no projections (ADR 0002).
@@ -796,6 +847,9 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 ## Security
 
 - Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts upload-completion callbacks from the store.
+- **The worker route** `/api/ai-work` (ST-112) runs no command of a person and checks neither Origin nor session: its
+  only key is the worker secret, which never leaves the server – sent only by `startAiWork` to the deployment's own
+  address from its environment (see *Background work*).
 - Authorization lives in the command layer, never only in the proxy or a page (ADR 0001).
 - React escapes output; `dangerouslySetInnerHTML` is not used – **one named exception** (ST-103, ADR 0013): the legal
   texts' Markdown, rendered on the server only through `LegalMarkdown` / `legalTextHtml` (`src/app/legal-markdown.tsx`,
@@ -901,6 +955,8 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Code that stores content (ST-016, user 2026-10-04; uploads ST-085): the photo module's store-run-delete, a form with a photo, a page that shows a photo; the upload address, attaching uploaded content, the cleanup of abandoned uploads | `withStoredPhoto` / `formRunner({ …, storage: memoryStorage() })` with a `photo` step / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. Uploads: `grantUploadAddress` with `memoryStorage().upload(address, …)` playing the browser (it refuses what S3 refuses: another length or media type, a second upload, a late one), `withUploadedContent` with the stand-in `src/upload/attach-stand-in.test-support.ts`, `cleanUpAbandonedUploads` with `fixedClock` in an isolated database; the route as `uploadRoute({ … })` with real requests and a real login. The S3 adapter itself against SeaweedFS (`s3Storage({ settings, clock })` with `testStoreSettings()`, a plain `fetch` playing the browser, expiry by signing with a `fixedClock` in the past; always in CI), the browser-side `uploadFile` in the route's test (global `fetch` passed to `uploadRoute`) and in the browser tests on the attaching form | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts`, `src/upload/*.integration.test.ts`, `src/app/api/uploads/upload-route.integration.test.ts`, `src/platform/storage/s3-storage.integration.test.ts`, `e2e/file-upload.spec.ts` |
 | Code that talks to OpenRouter (ST-104, user 2026-11-01, ADR 0014): a command or read model of AI assistance | the **AI seam** with its in-memory adapter `memoryAi({ models, acceptedKeys, listsUnavailable, unreachable })` (`src/modules/ai-assistance/ai-seam.test-support.ts`), passed in `AiDependencies` with a random encryption key – never OpenRouter itself; observed through read models and `journalOf`, and – for the key only, which no interface shows – the stored row (`storedAiSettingsRow`), to prove the plain key is stored nowhere | integration | `src/app/(team)/team/museum-settings/ai-settings.integration.test.ts` |
 | The OpenRouter adapter itself (ST-104) | `openRouter({ baseUrl })` against a fake HTTP server (`node:http` on a free port) that answers like OpenRouter's API – the requests it sends (paths, `Authorization`, `provider` options) and how it turns answers into the domain's words; never the real API, also not in CI | unit | `src/modules/ai-assistance/openrouter.test.ts` |
+| The run of the AI work (ST-112, user 2026-11-01): holds, budget, continuation, broken-off work, a kind's work | `runAiWork({ db, clock: steppingClock(…), budgetSeconds, ai: { ai: memoryAi(), … }, storage: memoryStorage(), continueWork, kinds })` driven directly against an **isolated** database, the kind a stand-in (`ai-work-stand-in.test-support.ts`) or the real one; observed through the kind's read models (stand-in: its table) and the calls of `continueWork` – never a real background run | integration | `src/modules/ai-assistance/ai-work.integration.test.ts` |
+| The worker route and starting the AI work (ST-112, user 2026-11-01) | `workerRoute({ secret, run, afterResponse })` with real requests, the run a recording stand-in and `after()` collected; `startAiWork({ env, fetch })` with its `fetch` handing the request to the route | unit | `src/app/api/ai-work/worker-route.test.ts` |
 | Encryption of a stored secret (ST-104, the OpenRouter key) | the pure `encryptKey` / `decryptKey` / `encryptionKeyOf` | unit | `src/modules/ai-assistance/key-encryption.test.ts` |
 | Message catalogs, module boundaries | catalog objects / ESLint API | unit | `src/platform/messages/messages.test.ts`, `src/platform/module-boundaries.test.ts` |
 | Login, session, throttling, first technician | the Team module's interface (`logIn`, `currentPerson`, `logOut`, `setUpFirstTechnician`) against real PostgreSQL; time moved with `vi.useFakeTimers({ toFake: ["Date"] })` (Better Auth reads the global clock) | integration | `src/modules/team/login.integration.test.ts`, `first-technician.integration.test.ts` |

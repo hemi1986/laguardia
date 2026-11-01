@@ -1,0 +1,53 @@
+# Acceptance – ST-112: Background work for AI – worker route, holds, run budget and continuation
+Date: 2026-11-01 · Tests run: `npx vitest run --project integration src/modules/ai-assistance/ai-work.integration.test.ts src/platform/migrations.integration.test.ts` → 17 passed, 0 failed; `npx vitest run src/app/api/ai-work/` → 15 passed, 0 failed · Preview: none (local Docker, `pgvector/pgvector:pg17` running)
+
+Tech task: no Gherkin scenarios; each checklist item needs evidence. The last item (review lane, /code-review, /security-review) is in progress and not counted.
+
+## Checklist items
+| Item | Evidence | Really proves it? | Result |
+|---|---|---|---|
+| ADR 0015 accepted; ST-105 result in Notes | ADR 0015 `status: accepted`; Notes quote the ST-105 result (Hobby, ≈250 s budget) | yes | OK |
+| Image `pgvector/pgvector:pg17`, migration enables `vector` | `docker-compose.yml`, `ci.yml` (comment; CI uses the compose database), `drizzle/0039_ai_work.sql` (`CREATE EXTENSION IF NOT EXISTS vector`), migration test casts a 1536-number vector and computes `<=>` | yes. Neon support is not testable locally (see remarks) | OK |
+| Worker route `/api/ai-work`, `maxDuration = 300` literal, secret check, answers at once, run in `after()` | `route.ts` (literal 300, `after(work)`), `worker-route.ts`; `worker-route.test.ts` with real `Request`s: 202 with the run not yet started, run only after `afterTheResponse()`; 401 and no run for no header, wrong secret, no `Bearer`, secret plus a suffix, empty bearer; 401 for missing, empty and short deployment secret | yes. Constant-time digest comparison. The `route.ts` wiring (`process.env.AI_WORK_SECRET`, `after`) is not covered by a test, only by reading | OK |
+| One start function; secret never reaches the browser; query "hold ran out" | `start-ai-work.ts`, `src/app/ai-work.ts` (`server-only`); tests: secret from env goes into the `Authorization` header of a POST, the origin comes from the environment only (production / preview / `AI_WORK_ORIGIN`), no secret means no call, never throws; `aiWorkLeftUnfinished` test with the injected clock: false at 10:08:19, true at 10:08:20, other kind false, `pieceIds` filter, false again after a run recorded it | yes | OK |
+| Holds: one piece at a time, short transaction, never the same piece twice, length derived from budget, never renewed, no connection during the slow part, result ends the hold in the same transaction, injected-clock test | `takeNext` (insert with PK conflict, `isWaiting` asked again in the same transaction), `holdSeconds = 2 × budget`, `storeResult` deletes the hold and stores in one transaction, only while `heldUntil > now`. Tests: "a piece held by a run that was cut off is not taken … neither before nor after" (runs at 10:08:19 and 10:08:21, `started` = the one piece); "late result … stores nothing" returns `no-longer-held`; three concurrent runs record once | yes. Wording difference: the story says taking uses `FOR UPDATE SKIP LOCKED`. The code uses `INSERT … ON CONFLICT DO NOTHING` on the primary key, and `SKIP LOCKED` only in the broken-off step. The effect (two runs never take the same piece) is the same and is documented in the conventions | OK |
+| Broken-off step: exactly once, also concurrently, before waiting work, then never again | "the next run records … exactly once, before it takes any waiting piece": the stand-in's `nextStart` hook reads the state when the waiting piece starts, and `brokenOffBeforeTheWaitingPiece` is `true` (hold was `ran out` at exactly 10:08:20, so the `<=` bound is tested too), `brokenOff: 1`, `started` = `[cutOff, waiting]`. "two runs starting at the same moment": `Promise.all` of three runs, then a later run at 10:30; `brokenOff: 1`, `done: 0`, `started` = `[cutOff]` (the piece is rigged to succeed if wrongly taken, so a re-take would fail the test). `failOneBrokenOff` uses `FOR UPDATE SKIP LOCKED` and deletes the hold in the same transaction | yes. With a stand-in `recordBrokenOff` that is an UPDATE, the "exactly once" under concurrency is proven for the hold/delete logic, which is where it lives | OK |
+| Give-up on purpose | "is waiting again without a failure, and a later run takes it and does not treat it as broken off": `started` = `[piece, piece]`, `done: 1`, `brokenOff: 0`; second test: the run does not call the worker route for a given-up piece (`calls` = 0) | yes | OK |
+| Budget: 10 s, 6 pieces of 3 s, starts at 0/3/6/9, no fifth, one call | test "stops taking new work once its budget is used …": the `at` values are literals `10:00:00/03/06/09`, `calls` = 1 after the first run. The run does not start a fifth because `started` is checked after the second run in full (see next row) and the clock was 12 s after the first | yes. The "no fifth piece" is only shown indirectly (4 start times; stored state of all 6 only after run 2). Acceptable, since 4 literal start times with `toEqual` forbid a fifth | OK |
+| Continuation: remaining 2 taken, no call, each piece exactly once, no work left means no call | same test: second `run` → `started` ids `toEqual(pieces)` (6, in order, each once), `calls` still 1, each stored `done: 1`; "ends without calling … when no work is left" | yes. The second run is driven directly, not through the `continueWork` call (as the story/ADR require: "never waits for a real background run") | OK |
+| One injectable run function | `runAiWork(AiWorkDependencies)`: clock, budget, db, ai, storage, `continueWork`, kinds all injected; tests drive it directly | yes | OK |
+| Conventions: section *Background work* + two seam rows | `docs/engineering/conventions.md`: section covers route, starting, holds, storing a result, broken-off, budget/continuation, how to add a kind, how to test a run, order of kinds; Security bullet for the route; two seam rows (run function, worker route and start function) with the test files | yes. The doc says `ON CONFLICT DO NOTHING` for taking, consistent with the code | OK |
+| `docs/operations/ai-work.md` | secret creation per environment (local, e2e, preview, production, own server), budget setting, missing-secret behaviour, no scheduled job stated, broken chain, rotation; `.env.example` and README table updated | yes | OK |
+| Review lane, /code-review, /security-review | in progress | not counted | – |
+
+## Definition of done
+| Item | Applies | Evidence | OK? |
+|---|---|---|---|
+| Tests green, lint/typecheck | yes | story tests green (above); not re-run: full gate | OK for the story tests |
+| Usable at design size / lists fast | no (no UI, no list) | – | n/a |
+| Every command writes its journal entry | no (no command; hold records are technical, not domain state, `data-model.md`) | `aiWorkHold` documented as technical; broken-off recording belongs to the kinds (ST-108/109) | n/a |
+| Texts from message catalogs | no (no user-facing text; logs are English developer messages) | – | n/a |
+| No personal data in logs | yes | run logs kind and ID and `error.name` only; `startAiWork` logs `error.message` of a failed fetch (network errors, no secret in the message: the secret is in a header) | OK |
+| Secret handling | yes | secret only in the server environment and an `Authorization` header to the deployment's own address, derived from the environment, never from a request Host; constant-time compare; refuses everything when secret is missing or under 32 chars | OK |
+| Security advisories | no change of stack | – | n/a |
+| Migration | yes | hand-written `0039_ai_work.sql` plus snapshot and journal; `ai_work_hold` PK (kind, piece_id) | OK |
+
+## Edge cases not covered by the story
+| Case | Expected by a rule? (cite) | Recommendation |
+|---|---|---|
+| `recordBrokenOff` of a kind throws: the whole transaction rolls back, `runAiWork` rejects, and every later run fails at the same place before taking any work. One broken piece can block all AI work until fixed (a poison piece). `workOn` shields a throwing `work`, but `failOneBrokenOff` has no such guard | not stated. ADR/Notes say a run "goes on" only for throwing `work` | question for ST-108/ST-109, which write the real `recordBrokenOff`: a recording that cannot fail (or a guard that logs and drops the hold). Not a new story |
+| `kinds` is the empty list in production until ST-106/107; a hold of an unknown kind is dropped with a log. If a later deployment removes or renames a kind, its holds are silently dropped, and its pieces never recorded as broken off | "never renamed once deployed" is in the conventions | acceptable; question only |
+| A piece that takes longer than the remaining hold: a piece taken at budget-1 s with a 2 × budget hold may run until the platform kills it. Whether it finishes inside its hold depends on the kind; a late result is refused (`no-longer-held`) and the piece then breaks off | story Notes (accepted limitation, D1) | none |
+| `giveUp` ignores the case where the hold was already recorded broken off by another run (delete matches nothing); harmless | – | none |
+| `storeResult` on a hold whose `heldUntil` has just passed but which no run has recorded yet: refuses, then the next run records broken off; consistent with the Notes ("a late result … records nothing") | story Notes | none |
+| The take query asks `waiting()` for all pieces for each taken piece (a list per iteration); with a large queue (hundreds of files) this is O(n) reads per piece | not stated | question for ST-106 (give `waiting` a limit if lists get long) |
+| Several runs running at once (one per trigger) would each make their own `continueWork` call at the end if work is left, so chains can multiply; the holds keep it safe, but it costs extra calls | not stated | question, no action |
+| Worker route on a preview protected by Vercel: the call is refused (documented, D2) | story Notes | none |
+| Neon `CREATE EXTENSION vector` on previews and production is claimed by the checklist but cannot be checked locally; a failing migration would show on the first preview build | story item says "it runs on Neon" | question: confirm on the first preview deployment (ADR 0014) |
+
+## Remarks
+1. Wording difference between story and code: taking a piece is `INSERT … ON CONFLICT DO NOTHING`, not `FOR UPDATE SKIP LOCKED` (that is used only for the broken-off step). Behaviour as required is tested, and the conventions describe the real mechanism. No change needed.
+2. `route.ts` wiring (env, `after`) has no automated test; it is trivial and covered by reading.
+3. The "poison piece" in `failOneBrokenOff` is passed to ST-108/ST-109 as a design point (see the table); it does not reach the hurdle for a new story (no data loss, ST-108/109 can take it).
+
+Verdict: **accepted with remarks**
