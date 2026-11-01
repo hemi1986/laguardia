@@ -23,6 +23,18 @@ const nextConfig: NextConfig = {
     // 2 MB per photo – leave room for multipart overhead, below Vercel's 4.5 MB request body.
     serverActions: { bodySizeLimit: "4mb" },
   },
+  // Indexing a file for AI (ST-106) parses PDFs with pdfjs and renders pages with a native canvas – both kept as
+  // packages of their own, and pdfjs' wasm decoders, ICC profiles, fonts and CMaps traced into the worker's function
+  // (ST-105: without them a scanned page renders blank without an error).
+  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
+  outputFileTracingIncludes: {
+    "/api/ai-work": [
+      "./node_modules/pdfjs-dist/wasm/**",
+      "./node_modules/pdfjs-dist/iccs/**",
+      "./node_modules/pdfjs-dist/standard_fonts/**",
+      "./node_modules/pdfjs-dist/cmaps/**",
+    ],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

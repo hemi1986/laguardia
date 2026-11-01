@@ -1,4 +1,11 @@
-import { EMBEDDING_SIZE, type AiSeam, type ModelKind, type OfferedModel, type TestEmbedding } from "./ai-seam";
+import {
+  EMBEDDING_SIZE,
+  type AiSeam,
+  type EmbedResult,
+  type ModelKind,
+  type OfferedModel,
+  type TestEmbedding,
+} from "./ai-seam";
 
 /**
  * The OpenRouter adapter of the AI seam (ADR 0014): the only code that talks to OpenRouter – over its HTTP API with
@@ -17,6 +24,8 @@ type ApiModel = {
 
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 const TIMEOUT_MS = 10_000;
+/** Embedding a page image takes longer than reading a model list: the request itself may take this long (ST-105). */
+const EMBED_TIMEOUT_MS = 60_000;
 
 /** What OpenRouter's lists name the output of each kind. */
 const outputOf: Record<ModelKind, string> = { chat: "text", embedding: "embeddings" };
@@ -73,10 +82,10 @@ function configuredBaseUrl(): string {
 
 export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string } = {}): AiSeam {
   /** A request – undefined when OpenRouter cannot be reached at all. */
-  async function request(path: string, init: RequestInit = {}): Promise<Response | undefined> {
+  async function request(path: string, init: RequestInit = {}, timeoutMs = TIMEOUT_MS): Promise<Response | undefined> {
     try {
       // A redirect is never followed – a request may carry the key.
-      return await fetch(`${baseUrl}${path}`, { ...init, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) });
+      return await fetch(`${baseUrl}${path}`, { ...init, redirect: "manual", signal: AbortSignal.timeout(timeoutMs) });
     } catch {
       return undefined;
     }
@@ -141,6 +150,54 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
         return Array.isArray(embedding) ? { size: embedding.length } : "unreachable";
       } catch {
         return "unreachable";
+      }
+    },
+
+    async embed(key, model, input): Promise<EmbedResult> {
+      const response = await request(
+        "/embeddings",
+        {
+          method: "POST",
+          headers: { ...bearer(key), "content-type": "application/json" },
+          body: JSON.stringify({
+            model,
+            // One item per request: OpenRouter routes several inputs to an endpoint without zero data retention (ST-105).
+            input:
+              input.kind === "text"
+                ? input.text
+                : [
+                    {
+                      content: [
+                        {
+                          type: "image_url",
+                          image_url: {
+                            url: `data:${input.contentType};base64,${Buffer.from(input.bytes).toString("base64")}`,
+                          },
+                        },
+                      ],
+                    },
+                  ],
+            dimensions: EMBEDDING_SIZE,
+            encoding_format: "float",
+            provider: { data_collection: "deny", zdr: true },
+          }),
+        },
+        EMBED_TIMEOUT_MS,
+      );
+      if (!response) return "unreachable";
+      // A refusal – the key, the credits, the model or a provider that keeps nothing – stores nothing of the file.
+      if (!response.ok) return "refused";
+      try {
+        const { data, usage } = (await response.json()) as {
+          data: { embedding: number[] }[];
+          usage?: { cost?: number };
+        };
+        const embedding = data[0]?.embedding;
+        if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_SIZE) return "refused";
+        const cost = usage?.cost;
+        return { embedding, cost: typeof cost === "number" && Number.isFinite(cost) ? cost : 0 };
+      } catch {
+        return "refused";
       }
     },
   };

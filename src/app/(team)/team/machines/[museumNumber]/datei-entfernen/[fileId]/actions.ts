@@ -2,19 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { machineFile, machineForTeamForm, removeFileCommand } from "@/modules/collection";
+import { machineFile, machineForTeamForm } from "@/modules/collection";
+import { removeFileCommandWithAiIndex } from "@/modules/ai-assistance";
 import { formAction, type FormState } from "@/app/_actions/form-action";
 import type { CommandError } from "@/platform/command";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../../../team-session";
 import { removeFileForm, type RemoveFileField } from "./remove-file-form";
 
-export type RemoveFileState = FormState<CommandError<typeof removeFileCommand>, RemoveFileField>;
+export type RemoveFileState = FormState<CommandError<typeof removeFileCommandWithAiIndex>, RemoveFileField>;
 
 /**
  * CMD-RemoveFile from „Endgültig entfernen“ (ST-038) – through the Server Action runner (ST-073), which deletes the
- * content from the storage after the commit. Afterwards the technician is back on the machine record, which names the
- * removed file (G3). The page binds the machine's museum number and the file.
+ * content from the storage after the commit. It is Collection's command with AI assistance's policy added (ST-106):
+ * the file leaves the AI index in the same transaction. Afterwards the technician is back on the machine record, which
+ * names the removed file (G3). The page binds the machine's museum number and the file.
  */
 export async function removeFileAction(
   museumNumber: string,
@@ -30,7 +32,7 @@ export async function removeFileAction(
     return { error: "not-found", values: { version: "" } };
   const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
   return formAction(
-    removeFileCommand,
+    removeFileCommandWithAiIndex,
     removeFileForm(fileId, async () => {
       // A file of the machine model leaves every machine record of that model.
       revalidatePath("/team/machines/[museumNumber]", "page");

@@ -7,6 +7,7 @@ import {
   type FileCategory,
   type FileState,
 } from "./attach-file";
+import { fileRemovalLock } from "./file-removal-lock";
 import { opensInBrowser } from "./open-file";
 import { file, machine, machineModel } from "./schema";
 
@@ -139,4 +140,71 @@ export async function machineFile(
 /** The files of a machine and those of its machine model – what its machine record shows. */
 function ofMachineOrModel({ machineId, machineModelId }: { machineId: string; machineModelId: string }) {
   return or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId));
+}
+
+/** A file as AI assistance reads it to index it (ST-106) – only a file that is not removed. */
+export type FileForIndexing = {
+  id: string;
+  owner: { machineId: string } | { machineModelId: string };
+  title: string;
+  content: { name: string; size: number; contentType: string };
+};
+
+const fileForIndexingColumns = {
+  id: file.id,
+  machineId: file.machineId,
+  machineModelId: file.machineModelId,
+  title: file.title,
+  content: file.content,
+  size: file.size,
+  contentType: file.contentType,
+};
+
+function fileForIndexingOf(row: {
+  id: string;
+  machineId: string | null;
+  machineModelId: string | null;
+  title: string;
+  content: string;
+  size: number;
+  contentType: string;
+}): FileForIndexing {
+  return {
+    id: row.id,
+    owner: row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! },
+    title: row.title,
+    content: { name: row.content, size: row.size, contentType: row.contentType },
+  };
+}
+
+/** The files of every machine and machine model that are not removed – what the AI index can hold (ST-106). */
+export async function filesForIndexing(db: Database): Promise<FileForIndexing[]> {
+  const rows = await db
+    .select(fileForIndexingColumns)
+    .from(file)
+    .where(isNull(file.removedAt))
+    .orderBy(asc(file.attachedAt));
+  return rows.map(fileForIndexingOf);
+}
+
+/**
+ * One file as indexing reads it – none for an unknown or removed file. The slow part of an indexing reads it this way;
+ * the transaction that stores the result reads it again under the file's removal lock (`fileForIndexingWhileStoring`).
+ */
+export async function fileForIndexing(db: Database, fileId: string): Promise<FileForIndexing | undefined> {
+  const [row] = await db
+    .select(fileForIndexingColumns)
+    .from(file)
+    .where(and(eq(file.id, fileId), isNull(file.removedAt)));
+  return row && fileForIndexingOf(row);
+}
+
+/**
+ * The file as the AI index's storing transaction reads it: under the file's removal lock taken shared (ADR 0014), so
+ * a removal waits for the store and an indexing that read the file before its removal never brings it back. None when
+ * the file was removed meanwhile – the transaction then stores nothing.
+ */
+export async function fileForIndexingWhileStoring(tx: Database, fileId: string): Promise<FileForIndexing | undefined> {
+  await fileRemovalLock(tx, fileId, "shared");
+  return fileForIndexing(tx, fileId);
 }

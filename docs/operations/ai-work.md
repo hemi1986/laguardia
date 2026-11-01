@@ -64,6 +64,14 @@ only by hand.
   the queue, so that rest waits for the next start too. A technician taps „Erneut versuchen“ on the file; a team
   member requests a new AI assessment.
 
+## PDFs and page images
+
+Indexing a PDF (ST-106) parses it with `pdfjs-dist` and renders each page with `@napi-rs/canvas` – both kept as server
+packages of their own (`next.config.ts`). pdfjs' **wasm** decoders (JBIG2, JPEG 2000), **ICC** profiles, standard fonts
+and CMaps are traced into the worker route's function; without them a scanned page renders blank and only logs a
+warning (ST-105). Both packages come as prebuilt binaries – no system library is needed locally or on Vercel, and the
+function stays within its size limit (ST-105 measured pdfjs 35 MB, the Linux canvas binary 36 MB).
+
 ## Rotating the secret
 
 Set a new value and redeploy. A run in flight during the deployment is cut off like any other run.

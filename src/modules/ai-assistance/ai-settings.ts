@@ -47,6 +47,27 @@ function usableKey(state: AiSettingsState, encryptionKey: Buffer | undefined): s
   return state.key && encryptionKey ? decryptKey(encryptionKey, state.key.encrypted) : undefined;
 }
 
+/** What the AI index work needs from the AI settings (ST-106): whether AI is on, the key to send with, the model. */
+export type AiIndexingSettings = {
+  /** Key, chat model and embedding model all saved – and the key decryptable with this environment's key. */
+  aiOn: boolean;
+  /** The key, decrypted – undefined when there is none or it cannot be decrypted. */
+  key: string | undefined;
+  /** The embedding model the index is built with – also while AI is off (the models stay when the key is removed). */
+  embeddingModel: string | undefined;
+};
+
+/** The AI settings as the AI index work reads them – before every request, so turning AI off stops an indexing at once. */
+export async function aiIndexingSettings(db: Database, { encryptionKey }: AiDependencies): Promise<AiIndexingSettings> {
+  const { state } = await storedAiSettings(db);
+  const key = usableKey(state, encryptionKey());
+  return {
+    aiOn: !!key && !!state.chatModel && !!state.embeddingModel,
+    key,
+    embeddingModel: state.embeddingModel,
+  };
+}
+
 /**
  * What OpenRouter says about the parts the technician sent (CMD-ChangeAiSettings): the new key checked – and encrypted
  * when accepted –, a model that differs from the saved one looked up, and a new embedding model tried with one test

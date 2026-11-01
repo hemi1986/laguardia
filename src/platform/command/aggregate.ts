@@ -5,6 +5,7 @@ import type { Database } from "../database";
 import { NotFound, VersionConflict } from "./errors";
 import type { Entities } from "./entities";
 import type { History } from "./history";
+import type { Replaces } from "./replaces";
 import type { StoredList } from "./stored-list";
 import type { Actor, ActorOf, AllowedActor, Command, CommandContext, JournalEvent } from "./index";
 
@@ -23,6 +24,8 @@ export type AggregateStore<State extends { id: string }> = {
   insert(tx: Database, state: State): Promise<void>;
   /** Saves at the expected version and increments it; false when the stored version differs. */
   update(tx: Database, state: State, expectedVersion: number): Promise<boolean>;
+  /** Removes the aggregate's row – what a command that ends the aggregate does (ST-106, a file leaving the AI index). */
+  remove?(tx: Database, id: string): Promise<void>;
 };
 
 type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
@@ -31,33 +34,43 @@ type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
 type EntryOf<List> = List extends (infer Entry extends { id: string })[] ? Entry : never;
 
 /**
- * A module's store of one kind of aggregate: its row, versioned, its histories (Q13; architecture review 2026-10-11)
- * and its lists of entities (ST-040) – each a list in the state under the name it has here. Loading reads them into
- * the state, the oldest entry first; saving – after the row was saved at the expected version – inserts the history
- * entries not stored yet, and inserts new entities and changes stored ones. Nothing is ever deleted.
+ * A module's store of one kind of aggregate: its row, versioned, its histories (Q13; architecture review 2026-10-11),
+ * its lists of entities (ST-040) and replaced lists (ST-106) – each a list in the state under the name it has here.
+ * Loading reads them into the state, the oldest entry first; saving – after the row was saved at the expected version –
+ * inserts the history entries not stored yet, inserts new entities and changes stored ones, and replaces a replaced list
+ * as a whole. Nothing of a history or a list of entities is ever deleted.
  */
 export function aggregateStore<
   State extends { id: string },
   T extends VersionedTable,
   Names extends keyof State & string = never,
   EntityNames extends keyof State & string = never,
+  ReplacedNames extends keyof State & string = never,
 >(definition: {
   type: `AGG-${string}`;
   table: T;
+  /**
+   * The aggregate's row is inserted or replaced when one with its ID exists (its version + 1) – for an aggregate
+   * identified from outside itself and replaced as a whole (ST-106: one AI index entry per file).
+   */
+  insertReplaces?: boolean;
   /** The histories of the aggregate, by the name of their list in the state. */
   histories?: { [Name in Names]: History<EntryOf<State[Name]>> };
   /** The lists of entities of the aggregate, by the name of their list in the state. */
   entities?: { [Name in EntityNames]: Entities<EntryOf<State[Name]>> };
-  toState: (row: T["$inferSelect"], lists: Pick<State, Names | EntityNames>) => State;
+  /** The lists the aggregate replaces as a whole, by the name of their list in the state. */
+  replaces?: { [Name in ReplacedNames]: Replaces<EntryOf<State[Name]>> };
+  toState: (row: T["$inferSelect"], lists: Pick<State, Names | EntityNames | ReplacedNames>) => State;
   /** The row without its version – the store sets the version. The lists are saved by the store itself. */
   toRow: (state: State) => Omit<T["$inferInsert"], "version">;
 }): AggregateStore<State> {
-  const { type, table, toState, toRow } = definition;
-  // A history and a list of entities are loaded and saved alike; each knows how it saves.
-  const lists = [...Object.entries(definition.histories ?? {}), ...Object.entries(definition.entities ?? {})] as [
-    Names | EntityNames,
-    StoredList<{ id: string }>,
-  ][];
+  const { type, table, toState, toRow, insertReplaces } = definition;
+  // A history, a list of entities and a replaced list are loaded and saved alike; each knows how it saves.
+  const lists = [
+    ...Object.entries(definition.histories ?? {}),
+    ...Object.entries(definition.entities ?? {}),
+    ...Object.entries(definition.replaces ?? {}),
+  ] as [Names | EntityNames | ReplacedNames, StoredList<{ id: string }>][];
   const saveLists = async (tx: Database, state: State) => {
     for (const [name, list] of lists) await list.save(tx, state.id, state[name] as { id: string }[]);
   };
@@ -74,12 +87,22 @@ export function aggregateStore<
       const loaded: Record<string, unknown[]> = {};
       for (const [name, list] of lists) loaded[name] = (await list.load(tx, [id])).get(id) ?? [];
       return {
-        state: toState(row as T["$inferSelect"], loaded as Pick<State, Names | EntityNames>),
+        state: toState(row as T["$inferSelect"], loaded as Pick<State, Names | EntityNames | ReplacedNames>),
         version: (row as { version: number }).version,
       };
     },
     async insert(tx, state) {
-      await tx.insert(table).values({ ...toRow(state), version: 0 } as never);
+      const values = { ...toRow(state), version: 0 };
+      if (!insertReplaces) {
+        await tx.insert(table).values(values as never);
+        await saveLists(tx, state);
+        return;
+      }
+      // Replacing a row keeps its history: the version goes on counting, as a change of it would.
+      await tx
+        .insert(table)
+        .values(values as never)
+        .onConflictDoUpdate({ target: table.id, set: { ...values, version: sql`${table.version} + 1` } as never });
       await saveLists(tx, state);
     },
     async update(tx, state, expectedVersion) {
@@ -91,6 +114,10 @@ export function aggregateStore<
       if (updated.length === 0) return false;
       await saveLists(tx, state);
       return true;
+    },
+    async remove(tx, id) {
+      // The lists go with it: a replaced list's rows have a foreign key to the aggregate's row.
+      await tx.delete(table).where(eq(table.id, id));
     },
   };
 }
@@ -165,6 +192,11 @@ type Common<
   result: (state: State, events: Event[], input: Input) => Result;
   /** The stored content the command removed on purpose, named by its result – deleted after the commit (`Command`). */
   removesContent?: (result: Result) => string | undefined;
+  /**
+   * The command ends its aggregate: the stored row is removed instead of changed (ST-106: a file leaving the AI
+   * index). Like every command it still journals its event, and its `runs` and policies still run.
+   */
+  removes?: (state: State, events: Event[], input: Input) => boolean;
   /**
    * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
    * A rejection of one rejects the whole command; its errors are part of this command's result type.
@@ -323,8 +355,11 @@ export function aggregateCommand<
         return { ok: true, result: definition.result(decision.state, decision.events, input), events: [] };
 
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
-      for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
-      if (expectedVersion === undefined) await store.insert(tx, decision.state);
+      const removes = expectedVersion !== undefined && definition.removes?.(decision.state, decision.events, input);
+      if (removes && !store.remove) throw new Error(`${definition.id}: its aggregate cannot be removed by this store`);
+      for (const c of removes ? [] : (decision.created ?? [])) await c.store.insert(tx, c.state);
+      if (removes) await store.remove!(tx, decision.state.id);
+      else if (expectedVersion === undefined) await store.insert(tx, decision.state);
       else if (!(await store.update(tx, decision.state, expectedVersion))) {
         // Someone changed the aggregate since it was seen – often by committing the same decision a moment earlier.
         // The domain's reason wins over the conflict (Q11, ST-018): decide again on what is stored now.

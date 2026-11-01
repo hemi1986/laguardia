@@ -1,4 +1,17 @@
-import { integer, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigserial,
+  doublePrecision,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+  vector,
+} from "drizzle-orm/pg-core";
+import { EMBEDDING_SIZE } from "./ai-seam";
+import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
 
 /**
  * AGG-AiSettings (ST-104, data model *AI settings*): the museum's OpenRouter key – only encrypted, with its last four
@@ -35,4 +48,60 @@ export const aiWorkHold = pgTable(
     heldUntil: timestamp("held_until", { withTimezone: true }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.kind, table.pieceId] })],
+);
+
+/**
+ * AGG-AiIndexEntry (ST-106, data model *AI index entry*): what the AI index holds of one file and how far it got –
+ * indexed with one embedding model, or failed with exactly one reason. Its ID is the file's ID, so a file has at most
+ * one entry; it copies the file's owner (machine or machine model) because the owner never changes. Waiting is derived,
+ * never stored: a file without an entry for the current embedding model waits.
+ */
+export const aiIndexEntry = pgTable(
+  "ai_index_entry",
+  {
+    /** The file's ID – the aggregate's identity. */
+    id: uuid("id").primaryKey(),
+    /** Exactly one of the two, copied from the file (check constraint in the migration). */
+    machineId: uuid("machine_id"),
+    machineModelId: uuid("machine_model_id"),
+    state: text("state", { enum: ["indexed", "failed"] }).notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    /** Indexed or failed at. */
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull(),
+    /** Exactly one when failed, none when indexed (check constraint). */
+    failureReason: text("failure_reason", { enum: indexingFailureReasons }),
+    /** A PDF's page count, and its page images plus image files – only when indexed. */
+    pagesIndexed: integer("pages_indexed"),
+    imagesIndexed: integer("images_indexed"),
+    /** What OpenRouter charged, in US dollars – only when indexed. */
+    cost: doublePrecision("cost"),
+    /** Optimistic version check (HS-16): indexing a file again replaces the entry as a whole. */
+    version: integer("version").notNull().default(0),
+  },
+  (table) => [index("ai_index_entry_embedding_model_idx").on(table.embeddingModel)],
+);
+
+/**
+ * The index items of an AI index entry (ST-106, data model *Index item*): passages, PDF page images and images, each
+ * with where it came from (file, page) and its embedding. They are never journaled and replaced as a whole with the
+ * entry – a failed entry holds none.
+ */
+export const aiIndexItem = pgTable(
+  "ai_index_item",
+  {
+    /** The item's ID from the command's ID generator. */
+    id: uuid("id").primaryKey(),
+    position: bigserial("position", { mode: "number" }).notNull(),
+    /** The entry's – and therefore the file's – ID. */
+    fileId: uuid("file_id")
+      .notNull()
+      .references(() => aiIndexEntry.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: indexItemKinds }).notNull(),
+    /** The PDF page, for a page's text passage and its page image. */
+    page: integer("page"),
+    /** The passage's text – what an AI assessment sends of a text hit; none for an image. */
+    text: text("text"),
+    embedding: vector("embedding", { dimensions: EMBEDDING_SIZE }).notNull(),
+  },
+  (table) => [index("ai_index_item_file_idx").on(table.fileId)],
 );

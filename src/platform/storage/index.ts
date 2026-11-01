@@ -31,7 +31,14 @@ export type ContentStorage = {
    * the one the store keeps, not what a form claims (ST-037).
    */
   details(name: string): Promise<ContentDetails | undefined>;
+  /**
+   * The content stored under a name, with the media type the store keeps – undefined when nothing is stored there.
+   * The server reads a file with it to index it for AI (ST-106); no page hands the content to the browser this way.
+   */
+  readContent(name: string): Promise<StoredContent | undefined>;
 };
+
+export type StoredContent = { bytes: Uint8Array; contentType: string };
 
 export type ContentDetails = { size: number; contentType: string };
 

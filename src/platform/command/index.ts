@@ -38,6 +38,7 @@ export { Rejected } from "./errors";
 export { policy, withPolicies, withPolicyInput, type Policy } from "./policies";
 export { lastCommandBy } from "./last-command";
 export { entities, type Entities } from "./entities";
+export { replaces, type Replaces } from "./replaces";
 export {
   entriesOf,
   eventCatalogue,

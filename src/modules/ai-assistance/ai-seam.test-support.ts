@@ -1,4 +1,4 @@
-import type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
+import { EMBEDDING_SIZE, type AiSeam, type EmbedInput, type ModelKind, type OfferedModel } from "./ai-seam";
 
 /** A model the in-memory OpenRouter offers – with the size of the embeddings it returns, for an embedding model. */
 export type MemoryModel = OfferedModel & { kind: ModelKind; embeddingSize?: number };
@@ -30,16 +30,31 @@ export type MemoryAiSettings = {
   listsUnavailable?: boolean;
   /** Nothing answers. */
   unreachable?: boolean;
+  /** What one embedding request costs – the AI index records the sum (ST-106). */
+  embeddingCost?: number;
+  /** How many embedding requests it answers before failing – and with what ("after the first 2 pages"). */
+  embedFailsAfter?: { requests: number; with: "refused" | "unreachable" };
+  /** Called before each embedding request is answered – a test can change things meanwhile (turning AI off, ST-106). */
+  beforeEmbed?: (requestNumber: number, input: EmbedInput) => Promise<void> | void;
 };
 
 /**
  * The AI seam in memory (ADR 0014, ST-104) – what every scenario test uses instead of OpenRouter. `requests` lists
- * what was asked, by kind, never the key.
+ * what was asked, by kind, never the key; `costs` is what it reported for each embedding, summed – the number the AI
+ * index records (ST-106).
  */
-export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & { requests: string[] } {
+export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & {
+  requests: string[];
+  embedInputs: EmbedInput[];
+  reportedCost: number;
+  embeddingRequests: number;
+} {
   const models = settings.models ?? [geminiFlash, geminiEmbedding];
   const accepted = new Set(settings.acceptedKeys ?? []);
   const requests: string[] = [];
+  const embedInputs: EmbedInput[] = [];
+  let reportedCost = 0;
+  let embeddingRequests = 0;
   const offered = (model: MemoryModel): OfferedModel => ({
     id: model.id,
     name: model.name,
@@ -49,6 +64,13 @@ export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & { requests: 
   });
   return {
     requests,
+    embedInputs,
+    get reportedCost() {
+      return reportedCost;
+    },
+    get embeddingRequests() {
+      return embeddingRequests;
+    },
     async offeredModels(kind) {
       requests.push(`models:${kind}`);
       if (settings.unreachable || settings.listsUnavailable) return "unavailable";
@@ -71,6 +93,26 @@ export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & { requests: 
       if (!accepted.has(key)) return "refused";
       const model = models.find((candidate) => candidate.kind === "embedding" && candidate.id === id);
       return model ? { size: model.embeddingSize ?? 1536 } : "unknown";
+    },
+    async embed(key, id, input) {
+      requests.push(`embed:${id}:${input.kind}`);
+      embedInputs.push(input);
+      embeddingRequests += 1;
+      await settings.beforeEmbed?.(embeddingRequests, input);
+      if (settings.unreachable) return "unreachable";
+      const fails = settings.embedFailsAfter;
+      if (fails && embeddingRequests > fails.requests) return fails.with;
+      if (!accepted.has(key)) return "refused";
+      const model = models.find((candidate) => candidate.kind === "embedding" && candidate.id === id);
+      if (!model) return "refused";
+      // A vector that is the same every time and differs by item: enough to tell entries apart in a test.
+      const seed = requests.length;
+      const cost = settings.embeddingCost ?? 0.0001;
+      reportedCost += cost;
+      return {
+        embedding: Array.from({ length: EMBEDDING_SIZE }, (_, index) => ((seed * 31 + index) % 1000) / 1000),
+        cost,
+      };
     },
   };
 }
