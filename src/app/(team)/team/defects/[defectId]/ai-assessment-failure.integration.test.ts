@@ -3,7 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
 import {
   AI_ASSESSMENT_KIND,
@@ -13,13 +13,15 @@ import {
   aiSettingsForm,
   aiWorkLeftUnfinished,
   changeAiSettingsCommand,
+  removeFileCommandWithAiIndex,
   requestAiAssessmentCommand,
   runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
 import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
+import { writeAiAssessmentForTest } from "@/modules/ai-assistance/ai-assessment.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
-import { aJpeg } from "@/modules/ai-assistance/file-indexing.test-support";
+import { aJpeg, aPdfOfText } from "@/modules/ai-assistance/file-indexing.test-support";
 import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -128,6 +130,24 @@ async function aPhoto(): Promise<string> {
   const name = `ai-assessments/${randomUUID()}.jpg`;
   await storage.write(name, Uint8Array.from(await aJpeg()), "image/jpeg");
   return name;
+}
+
+async function attach(machineId: string, title: string, bytes: Uint8Array): Promise<string> {
+  const name = `files/${randomUUID()}`;
+  await storage.write(name, bytes, "application/pdf");
+  const attached = await executeCommand(
+    attachFileCommand,
+    {
+      machineId,
+      attachTo: "machine",
+      title,
+      fileCategory: "manual",
+      content: { name, size: bytes.length, contentType: "application/pdf" },
+    },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!attached.ok) throw new Error(attached.error);
+  return attached.result.fileId;
 }
 
 async function request(defectId: string, note = "", photos: string[] = []) {
@@ -446,5 +466,29 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect((await defectDetails(db, defectId))?.state).toBe("resolved");
     const { html } = await page(defectId);
     expect(html).toContain("Der linke Flipperfinger wird schwach.");
+  });
+
+  it("ST-108: A referenced file removed later stays a reference without a link", async () => {
+    const machineId = await aMachine("LG-042");
+    const defectId = await anOpenDefect(machineId);
+    const manual = await attach(machineId, "Eight Ball Manual", await aPdfOfText(["Page 12"]));
+    const id = await request(defectId);
+    await writeAiAssessmentForTest(db, id, {
+      summary: "Die Spule ist schwach.",
+      references: [{ fileId: manual, page: 12 }],
+      embeddingModel: EMBEDDING,
+      at: clock,
+    });
+
+    const removed = await executeCommand(
+      removeFileCommandWithAiIndex,
+      { fileId: manual, version: 0 },
+      { actor: tom, db, clock },
+    );
+    if (!removed.ok) throw new Error(removed.error);
+
+    const { html } = await page(defectId);
+    expect(html).toContain("Eight Ball Manual, S. 12");
+    expect(html).not.toContain(`/team/dateien/${manual}`);
   });
 });
