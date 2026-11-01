@@ -147,6 +147,8 @@ export type AiSettingsForm = {
   missing: MissingPart[];
   /** The saved key's last four characters – never the key; none when it cannot be decrypted (ADR 0014). */
   keyLastFour: string | undefined;
+  /** A key is saved but cannot be decrypted with this environment's key – it counts as none (ADR 0014, ST-110). */
+  keyUnreadable: boolean;
   /** The saved models, with their names when OpenRouter's list has them. */
   chatModel: { id: string; name: string | undefined } | undefined;
   embeddingModel: { id: string; name: string | undefined } | undefined;
@@ -191,6 +193,7 @@ export async function aiSettingsForm(db: Database, { ai, encryptionKey }: AiDepe
     aiOn: missing.length === 0,
     missing,
     keyLastFour: keyUsable ? state.key?.lastFour : undefined,
+    keyUnreadable: !!state.key && !keyUsable,
     chatModel: named(state.chatModel, chat),
     embeddingModel: named(state.embeddingModel, embedding),
     offered,

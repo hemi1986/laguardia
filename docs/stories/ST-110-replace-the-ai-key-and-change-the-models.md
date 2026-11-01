@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-AiSettingsChanged, EVT-FileIndexedForAi]
 depends_on: [ST-104, ST-106]
 labels: [ui, feature:ai-assessment]
-status: ready
+status: done
 ---
 
 ## Story
