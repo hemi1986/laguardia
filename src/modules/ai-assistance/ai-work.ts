@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, lte } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -180,4 +180,30 @@ function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id:
       await db.delete(aiWorkHold).where(thisHold);
     },
   };
+}
+
+/**
+ * Whether a piece of this kind – or of these pieces – was left unfinished (EVT-AiWorkLeftUnfinished, derived): its
+ * hold ran out without a result and no run has recorded it broken off yet. A page that shows such work (the defect
+ * page, ST-108; the form „KI“, ST-109) starts a run only then, so refreshing it never starts work on every load.
+ */
+export async function aiWorkLeftUnfinished(
+  db: Database,
+  clock: Clock,
+  kind: string,
+  pieceIds?: readonly string[],
+): Promise<boolean> {
+  if (pieceIds?.length === 0) return false;
+  const [found] = await db
+    .select({ pieceId: aiWorkHold.pieceId })
+    .from(aiWorkHold)
+    .where(
+      and(
+        eq(aiWorkHold.kind, kind),
+        lte(aiWorkHold.heldUntil, clock.now()),
+        pieceIds ? inArray(aiWorkHold.pieceId, [...pieceIds]) : undefined,
+      ),
+    )
+    .limit(1);
+  return !!found;
 }

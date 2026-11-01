@@ -1,10 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { fixedClock } from "@/platform/clock";
 import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { memoryAi } from "./ai-seam.test-support";
-import { runAiWork, type AiWorkKind, type HeldPiece } from "./ai-work";
+import { aiWorkLeftUnfinished, runAiWork, type AiWorkKind, type HeldPiece } from "./ai-work";
 import { standInWork, steppingClock } from "./ai-work-stand-in.test-support";
 
 /**
@@ -196,5 +198,24 @@ describe("a piece whose work throws", () => {
 
     expect(await standIn.stored(next)).toMatchObject({ state: "done", done: 1 });
     expect(await standIn.stored(throws)).toMatchObject({ state: "broken-off", brokenOff: 1, done: 0 });
+  });
+});
+
+describe("whether work of a kind was left unfinished (EVT-AiWorkLeftUnfinished, for the pages)", () => {
+  it("says so only once a hold of that kind has run out without a result, and no longer once a run recorded it", async () => {
+    const [piece] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    const left = (at: string, kind = "stand-in") => aiWorkLeftUnfinished(db, fixedClock(at), kind);
+
+    expect(await left("2026-11-02T10:08:19Z")).toBe(false);
+    expect(await left("2026-11-02T10:08:20Z")).toBe(true);
+    expect(await left("2026-11-02T10:08:20Z", "another kind")).toBe(false);
+    expect(await aiWorkLeftUnfinished(db, fixedClock("2026-11-02T10:08:20Z"), "stand-in", [piece])).toBe(true);
+    expect(await aiWorkLeftUnfinished(db, fixedClock("2026-11-02T10:08:20Z"), "stand-in", [randomUUID()])).toBe(false);
+
+    clock.set("2026-11-02T10:08:20Z");
+    await run();
+
+    expect(await left("2026-11-02T10:08:20Z")).toBe(false);
   });
 });
