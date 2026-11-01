@@ -3,7 +3,7 @@ import { after, type NextRequest } from "next/server";
 import { chatProbe, filesBySize, measure, probe, readResult, startRunId } from "./measure";
 
 /** ST-105 spike – THROW-AWAY measuring route, never merged. Only off production, only with the spike's token. */
-export const maxDuration = 800;
+export const maxDuration = 300; // Hobby plan: 300 s at most (ADR 0015 assumed Pro, 800 s)
 export const dynamic = "force-dynamic";
 
 function allowed(request: NextRequest): boolean {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         concurrency: Number(q.get("concurrency") ?? 4),
         maxPages: q.get("maxPages") ? Number(q.get("maxPages")) : undefined,
         embed: q.get("embed") !== "0",
-        stopAfterSeconds: Number(q.get("stopAfter") ?? 700),
+        stopAfterSeconds: Number(q.get("stopAfter") ?? 250),
       };
       after(() => measure(runId, options));
       return Response.json({ runId, options });
