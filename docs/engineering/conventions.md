@@ -794,7 +794,10 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   time, batches of pages) and stores through CMD-IndexFileForAi with `insertReplaces`. The command's own `facts` re-read
   the file through Collection's `fileForIndexingWhileStoring` – the file's removal lock taken shared (ADR 0014) – and
   reject with `file-removed` for a file removed meanwhile, so nothing is recorded and the hold still ends. The command
-  is the rule's only place; ST-109's „Erneut versuchen“ runs the same command. `recordBrokenOff` records nothing while
+  is the rule's only place and runs as the system only. ST-109's „Erneut versuchen“ is CMD-IndexFileForAi run by hand
+  (`retryFileIndexingCommand`, technicians only, at the entry's version): it removes the failed entry and records
+  EVT-FileIndexingRetried, so the file waits again (derived); its Server Action starts the work after the response.
+  „Einstellungen“ opened with AI on starts a run only when a file's hold ran out (`startAiWorkWhenLeftUnfinished`, HS-35). `recordBrokenOff` records nothing while
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. `settings()` is read before every request: a rotated key is used for the next request,
   and a changed embedding model gives the file up so an entry never mixes two models.
