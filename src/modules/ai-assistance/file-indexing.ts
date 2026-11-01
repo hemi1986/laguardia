@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { createCanvas } from "@napi-rs/canvas";
+import sharp from "sharp";
 import type { AiSeam, EmbedInput } from "./ai-seam";
 import type { AiIndexItem, IndexingFailureReason } from "./ai-index-entry";
 
@@ -20,6 +21,11 @@ const PARALLEL_REQUESTS = 4;
 const PAGES_PER_BATCH = 2;
 /** A text or Markdown passage is at most this long; longer paragraphs are split (ADR 0014: passages, not whole files). */
 const MAX_PASSAGE_LENGTH = 2000;
+/**
+ * An image file above this many pixels is refused before it is decoded – a decompression bomb must not exhaust the
+ * worker's memory (a museum photo or scan is far below it; the page images this story makes are ~0.8 megapixels).
+ */
+const MAX_IMAGE_PIXELS = 100_000_000;
 
 /** What indexing one file ended in. */
 export type IndexingOutcome =
@@ -82,9 +88,11 @@ export async function indexFileContent({
     return indexItems(itemsToEmbed, { ai, embeddingModel, settings }, { pagesIndexed: 0, imagesIndexed: 0 });
   }
   if (isImage(contentType)) {
-    // A damaged image is a file that cannot be read – decode it before asking OpenRouter (ST-106, "not readable").
+    // A damaged image – or one whose pixel count is absurd – is a file that cannot be read (ST-106, "not readable").
+    // sharp reads the header only and refuses too many pixels before decoding, so it cannot exhaust the worker.
     try {
-      await loadImage(Buffer.from(bytes));
+      const info = await sharp(Buffer.from(bytes), { limitInputPixels: MAX_IMAGE_PIXELS }).metadata();
+      if (!info.width || !info.height) return { outcome: "failed", reason: "not readable" };
     } catch {
       return { outcome: "failed", reason: "not readable" };
     }
@@ -193,7 +201,7 @@ async function indexPdf({
       embedded.push(...answer.embedded);
     }
   } finally {
-    await loading.destroy();
+    await loading.destroy().catch(() => undefined);
   }
   return {
     outcome: "indexed",

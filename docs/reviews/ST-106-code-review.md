@@ -80,3 +80,150 @@ either fixable in this story within about an hour or a line for the main session
 majors should be fixed in this story as well (all well under an hour; none needs a new story).
 Most important after the blocker: finding 2 – the broad PDF `catch` turns a transient settings/embedding error into
 a permanent *"not readable"* failure, which D3 then never retries.
+
+---
+
+## Pass 3 – bug-focused (fix commit `0cf991a`)
+
+Re-read `git diff main...HEAD` (47 files) and the fix diff `1c3364d..0cf991a` (20 files). Ran
+`npx vitest run src/modules/ai-assistance/file-indexing.integration.test.ts
+src/modules/ai-assistance/file-removal.integration.test.ts src/platform/command/replaces.integration.test.ts` –
+3 files, 18 passed – and the removal file five times in a row (4 passed each), stable in isolation.
+`check-language.ts`: the two new `source` warnings are gone (the remaining ones are the pre-existing `PhotoSource`
+and `ai`/`embedding` false positives).
+
+### The findings of Pass 1, one by one
+
+| # | Finding (short) | State | Note |
+|---|---|---|---|
+| 1 | Photo page never starts the AI work | **fixed** | `foto-anhaengen/actions.ts:24` calls `startAiWorkAfterResponse()`. No test asserts the trigger (the scenario tests drive the kind directly); a three-line action test would close it – see P3.4. |
+| 2 | PDF `catch` turned transient errors into "not readable" | **fixed** | The `try` now wraps only the page loop (`file-indexing.ts:170-188`); `embedItems` sits outside it and a throw reaches `workOn`, which keeps the hold. `loading.destroy()` is also called on the `getDocument` rejection (line 162). Residual: see P3.1. |
+| 3 | More than four embedding requests in parallel | **fixed** | `embedItems` slices by `PARALLEL_REQUESTS` (`file-indexing.ts:248-277`); the page batch no longer decides the concurrency. |
+| 4 | `recordBrokenOff` recorded *broken off* while AI was off | **fixed** | `!settings.aiOn \|\| !settings.embeddingModel` (`file-indexing-work.ts:72`); the hold is still dropped by `failOneBrokenOff`, so the file waits. Not tested – see P3.5. |
+| 5 | The removed-file rule lived only in the kind | **fixed** | `facts: fileForIndexingWhileStoring` (`index-file-for-ai-command.ts:20`), the owner comes from the facts, `file-removed` rejects. Safe inside `storeResult` – see below. Test gap – see P3.3. |
+| 6 | The removal lock had no concurrency test | **partly fixed** | The new test proves the outcome; its readiness check is porous – see P3.2. |
+| 7 | Failure reasons are prose, not kebab-case | **open** | Unchanged (`ai-index-entry.ts:12-19`). Stays minor. |
+| 8 | `source` (`indexSources`/`embedSources`) | **fixed** | Renamed `indexItems`/`embedItems`; the new warnings are gone. |
+| 9 | `readContent` returned an unused `contentType` | **fixed** | Returns `Uint8Array \| undefined`; the storage test and the S3 test follow. |
+| 10 | `removes` on a creating command silently ignored | **fixed** | Moved to `Changing` (`aggregate.ts:274-279`); a removing command that creates others throws (line 367). |
+| 11 | `store.remove` trusted an untyped cascade | **fixed** | Throws for a store with histories/entities (`aggregate.ts:118-124`). No existing store is affected (only `removes` user is the AI policy, whose store has only `replaces`). |
+| 12 | No platform-level proof of `replaces`/`insertReplaces`/`removes` | **fixed** | `replaces.integration.test.ts` proves replace-as-a-whole (version 0 → 1), the empty replace, removal with cascade and `not-found`; literals, no tautology. Two new throw branches untested – see P3.8. |
+| 13 | Duplicated entry queries and owner mappings | **fixed** | One `entryIds` query, `ownerOf`/`ownerColumns`. |
+| 14 | Stale key and model during a long indexing | **fixed** | `settings()` is read per request; a rotated key is used, a changed model gives up before the request, so no entry mixes two models. |
+| 15 | Speculative public exports | **fixed** | The module index keeps only `removeFileCommandWithAiIndex`; `aiIndexingSettings` (which returns the decrypted key) no longer crosses the module boundary – a security improvement too. |
+| 16 | Text media types exclude `application/octet-stream` | **open** | `isText` unchanged (`file-indexing.ts:66-67`). Stays minor; the acceptance review's edge-case table has it too. |
+
+### The questions of this pass, answered
+
+- **Is the `file-removed` rejection safe inside `storeResult`?** Yes. `storeResult` deletes the hold in the outer
+  transaction first (`ai-work.ts`), then runs the command through `executeCommand(…, { db: tx })`, which opens a
+  **savepoint** on the given transaction. `runInTransaction` throws `Rejected` for a decision rejection, the
+  savepoint rolls back, `executeCommand` catches it and returns `{ ok: false }` **without rethrowing**; the outer
+  transaction keeps the hold deletion and commits. So a removed file's piece ends its hold and records nothing –
+  it is not recorded *broken off* later. Two residual notes: `storeResult` still answers `"stored"` (misleading but
+  unused), and no test asserts the hold is gone (P3.3).
+- **Does `recordBrokenOff` still work?** Yes: it now only builds the input; the command's facts read the file under
+  the shared lock and the decision takes the owner from them. The new test "a file whose indexing broke off is
+  recorded failed as broken off" proves the whole path (a run cut off at the first embedding, the next run recording
+  it, and no later run taking it).
+- **`loading.destroy()` on every path?** Yes on the `getDocument` rejection (explicit `catch`), on every normal and
+  early return (the `finally`), and on a thrown `embedItems`/page error (the `finally`). The only hole is a
+  rejecting `destroy()` itself (P3.1).
+- **Do `embedItems` errors propagate and keep the hold?** Yes: `embedItems` is called inside the `try` that has only
+  a `finally`, so a throw leaves `indexPdf`, reaches `workOn`'s `catch`, the hold stays and the piece is recorded
+  *broken off* after its hold ran out. (The image path's only `catch` wraps `loadImage`; the text path has none.)
+- **Can an entry still mix two embedding models?** No. Every request uses the model the run started with
+  (`ai.embed(now.key, embeddingModel, …)`), and a change of the model makes the *next* request give up before it is
+  sent; a given-up run stores nothing. An entry is only stored when no request saw another model, and it names that
+  one model.
+- **Can a rotated key be used safely?** Yes: `settings()` is re-read before every request and `now.key` is what the
+  request carries; the old key is never reused. A key removed between the read and the request's completion can
+  still complete one in-flight request (unavoidable; the rule says "checked before every request").
+- **Does the removal test prove the exclusive lock blocks behind the shared one?** The production path is correct
+  (the shared `pg_advisory_xact_lock_shared` in the facts is held to the outer commit, the removal's
+  `pg_advisory_xact_lock` waits, then its policy removes the new entry), and the test exercises exactly that. But
+  its readiness check is cluster-wide (P3.2), so it can also pass if the lock were removed.
+
+### New findings
+
+| # | Severity | Area | File:line | Finding | Source | Suggested direction |
+|---|---|---|---|---|---|---|
+| P3.1 | minor | Error handling | `src/modules/ai-assistance/file-indexing.ts:195-196` | `finally { await loading.destroy(); }` is not guarded: a rejecting `destroy()` replaces the return value, so a fully indexed (and fully paid) PDF ends as a thrown error and the piece is recorded *broken off* later – the exact class finding 2 removed. The `getDocument` branch (line 162) already guards it. | ADR 0015 (what breaks off fails), consistency with line 162 | `await loading.destroy().catch(() => undefined);` in the `finally` too. |
+| P3.2 | minor | Test quality | `src/modules/ai-assistance/file-removal.integration.test.ts:133-143` | `waitUntilTheRemovalWaits` polls `pg_stat_activity` **cluster-wide** (`datname` is not filtered); the isolated test databases live in the same PostgreSQL cluster and Vitest runs test files in parallel, so another file's advisory wait (museum number, retirement, another removal) satisfies the poll. The test can then pass even if `fileRemovalLock` were removed: the removal may commit before the store (then the store writes the entry afterwards → the final assertion would fail) or after it (then it deletes the entry → the test passes). It is not deterministic proof of the lock. | ADR 0014 (the lock); seam catalog (concurrency against real PostgreSQL); tdd | Filter `datname = current_database()` and `pid <> pg_backend_pid()` (or poll `pg_locks` for a not-granted advisory lock of this database); then a missing lock makes the helper throw after its 4 s and the test red. |
+| P3.3 | minor | Test gap | `file-removal.integration.test.ts:159-176` | The "removed while it is indexed" test asserts the outcome but not that the `file-removed` rejection **ended the hold**: if `storeResult`'s rollback behaviour regressed, the hold would stay and the file would be recorded *broken off* by a later run. | ADR 0015 ("the hold ends with the piece's result … or when the run gives it up"); CMD-IndexFileForAi rule | After the run, assert `ai_work_hold` is empty for the piece and that a further run adds no `EVT-FileIndexingFailed`. |
+| P3.4 | minor | Test gap | `file-indexing.integration.test.ts` (foto action) | Finding 1's fix (`startAiWorkAfterResponse` on the photo page) is untested, like the upload page's before it; the scenario tests start the kinds directly, so a future removal of either call would stay green. | `POL-AttachedFileIsIndexedForAi`; conventions *Background work* | One action-seam test per attach page (the success callback can record the start, as ST-112's route tests do), or a browser test. |
+| P3.5 | minor | Test gap | `src/modules/ai-assistance/file-indexing-work.ts:70-78` | The AI-off skip in `recordBrokenOff` (fix of finding 4) has no test: a crashed hold plus a removed key must record nothing and leave the file waiting (a later run with the key again indexes it). | CMD-IndexFileForAi rules; conventions *Indexing a file*; story scenario 6 | One test: cut-off hold, `removeTheKey()`, run → no entry; then turn AI on, run → indexed. |
+| P3.6 | minor | Broken-off model | `src/modules/ai-assistance/file-indexing-work.ts:75` | `recordBrokenOff` names the **current** embedding model. A hold that broke off under model A and is recorded after a change to B creates a failed entry for B, so ST-110 ("index every file again with the new model") would leave it out; the file is never automatically indexed with B. (Already in the acceptance review's edge cases.) | `CMD-IndexFileForAi` / POL-AiIndexFollowsTheSettings; HS-32 | Record the model the broken work belonged to (the hold would have to carry it) or skip the recording when the model changed; decide with ST-110, not a new story by the hurdle. |
+| P3.7 | minor | Version check on removal | `src/platform/command/aggregate.ts:362-370` | A `removes` command skips `store.update`, so the version check is skipped: a removing command run by a **person** at a stale version would delete a newer aggregate. Safe today – the only user is the system policy loaded `FOR UPDATE` – but the capability does not say so. | conventions *Version check* (HS-16); codebase-design (interface invariants) | `DELETE … WHERE id = ? AND version = ?` (and `version-conflict` otherwise), or document `removes` as system-only. |
+| P3.8 | minor | Test gap – new guards | `src/platform/command/replaces.integration.test.ts` | The two guards the fix added are untested: `store.remove` throwing for a store with histories/entities (`aggregate.ts:121-122`) and a removing command that returns `created` (`aggregate.ts:367-368`). | conventions *Seam catalog* (command layer); tdd | One short test each next to the existing ones (a store with an `entities` list; a removing decision with `created`). |
+| P3.9 | minor | Docs / conventions | `docs/engineering/conventions.md:788-794`, `:465-472` | The conventions were not updated with the fix: *Indexing a file* still says "with no embedding model saved (AI off) `recordBrokenOff` records nothing" (now AI off in full) and describes the re-read as the store transaction's own (it is the command's `facts` now); the replace-list paragraph does not say `remove` throws for histories/entities nor that `removes` is for changing commands with no `created`. | conventions *Background work*, *Writing a command* | One sentence in each bullet. (Also `docs/reviews/ST-106-acceptance.md` still says "no code review exists … branch not pushed" and marks DoD 4 unproven – stale after this commit; update before the PR.) |
+| P3.10 | minor | Test quality – weak assertions | `src/modules/ai-assistance/file-indexing.integration.test.ts:307`, `:399-400` | The new "indexed again" test asserts `after.at >= before.at`, but the stepping clock never advances in the test, so the two instants are equal – the line is vacuous. (In the "broken off" test `requestsBefore` holds an embedding model, not requests – naming only.) | tdd (tautological assertion) | `clock.advance(…)` between the two saves and assert a strictly later instant, or drop the line. |
+
+Test isolation is now sound: both files `DELETE FROM file` in `beforeEach`, the AI index and holds are reset, and
+each test attaches its own files. The "broken off" test leaves one run pending forever (`void run(...)`); it holds
+no transaction or connection while it waits, so it is harmless – just don't copy the pattern into a test that stops
+mid-transaction.
+
+---
+
+## Pass 4 – security-focused (uploaded PDFs/images parsed in a run, key decrypted in a run)
+
+### Checked and holds
+
+- **The worker route** (`src/app/api/ai-work/worker-route.ts`, unchanged): only a request carrying
+  `Authorization: Bearer <AI_WORK_SECRET>` starts a run; the secret is compared as SHA-256 digests in constant time
+  (length and prefix do not leak), a missing or shorter-than-32 secret refuses everything, the answer is 202 and the
+  run happens in `after()`. No session and no Origin by design (documented); the secret is `server-only`, never
+  reaches a browser or a log, and the start call uses `redirect: "error"` (ST-112). The new triggers
+  (`foto-anhaengen`, `datei-anhaengen`, `saveAiSettings`) only add calls to it – no new exposure.
+- **The key**: decrypted only inside the run (`aiIndexingSettings`, now *not* exported from the module's public
+  interface – the fix removed the one function that handed the decrypted key across a boundary). Sent only in the
+  `Authorization` header of a request with `redirect: "manual"` (a 3xx is answered "refused", the key is never
+  forwarded). Never journaled (`EVT-AiSettingsChanged` carries only the last four), never logged, never in a read
+  model or a page.
+- **No SSRF**: the PDF is handed to pdfjs as **bytes** (`data`, never a URL) and pdfjs does not fetch resources
+  named inside a PDF; the `wasmUrl`/`iccUrl`/`standardFontDataUrl`/`cMapUrl` roots are fixed local paths derived
+  from `require.resolve("pdfjs-dist/package.json")`, not input; the OpenRouter base URL is the fixed production
+  host (the env override is ignored on production) and redirects are not followed.
+- **No path traversal**: the storage key (`file.content.name`) is server-generated (`files/<uuid>` by the upload
+  route, `<owner>/<uuid>.jpg` by the photo module); the browser never chooses it and `withUploadedContent` matches
+  it against a pending-upload row. `readContent` is reachable only from the background kind – no page or route
+  hands content to the browser through it.
+- **What reaches OpenRouter**: only the file's content (one item per request); no other museum data is sent. The
+  provider rule is on **every** embedding request – `provider: { data_collection: "deny", zdr: true }` – for text
+  and for images (tested). No chat completion is sent in this story, so no prompt/context exfiltration surface.
+- **Journal and logs**: `EVT-FileIndexedForAi` carries the model, the counts and the cost – no passages, no
+  embeddings, no file title, no person; `EVT-FileIndexingFailed` only the reason. The run logs kind + piece ID and
+  an error *name* (never content, never the key), including for a throwing kind.
+- **Data at rest and deletion**: passages live in `ai_index_item` (needed to send a hit later), embeddings in the
+  vector column; both are removed with the file by `ON DELETE CASCADE` in the same transaction as the removal, also
+  while AI is off – HS-29's privacy guarantee holds, and the fix makes `remove` unable to orphan a list.
+- **Authorization of the commands**: `CMD-IndexFileForAi` allows `technician`/`system`; the manual retry's rule
+  ("only a file that failed") belongs to ST-109, which will call the same command and must add it.
+
+### Findings
+
+| # | Severity | Area | File:line | Finding | Source | Suggested direction |
+|---|---|---|---|---|---|---|
+| S1 | minor | Resource exhaustion – image decode | `src/modules/ai-assistance/file-indexing.ts:84-92`; `src/modules/ai-assistance/openrouter.ts:174` | An attached image file (up to the upload limit of 100 MB) is (a) copied with `Buffer.from`, (b) **fully decoded** by `loadImage` just to test readability, (c) base64-encoded (≈ +33 %) for the request. A "decompression bomb" PNG/WebP with small bytes but huge dimensions allocates `width × height × 4` bytes in the worker and OOMs it: the run is cut off, the file is later recorded *broken off*, and each manual retry repeats it. Reachable by any team member (helpers may attach files; a camera photo is already bounded by the photo module, this is the file-upload path); each invocation is isolated, so the impact is one worker and its cost, not the application. | ADR 0014 ("images as they are"); DoD 4 (`/security-review`); ADR 0015 (the hold survives a cut-off) | Read the dimensions from the PNG/JPEG/WebP header and reject absurd images before decoding (a new reason or "not readable" – decide), and/or downscale to the page-image bound; this is <1 h, so it stays a line, but the user may prefer a new story for a documented limit. |
+| S2 | minor | Resource exhaustion – PDF work | `src/modules/ai-assistance/file-indexing.ts:165-194` | `pages = pdf.numPages` is unbounded and the run budget is only checked **between pieces** (ADR 0015), so a crafted PDF with a huge `/Count` – or one page with megabytes of text turned into thousands of passages – keeps the worker busy until the 300 s kill and pays for every embedding reached; the file is then *broken off* and is paid for again on each retry. This is the accepted D1 limitation ("does not fit one run") applied to a crafted file; a cap would contradict the self-hosting target (the 568-page manual must finish). | ADR 0015 *Accepted limitation on Vercel Hobby*, D1; conventions *Background work* | Document it in `docs/operations/ai-work.md` (a crafted file can consume a run's whole budget); a page/byte ceiling is a product decision, not a fix here. |
+| S3 | minor | Hardening – pdfjs | `src/modules/ai-assistance/file-indexing.ts:148-156` | `getDocument` leaves `isEvalSupported` at its default (`true`), where pdfjs compiles data from the untrusted document with `new Function` for speed. `enableXfa` is off by default and `useSystemFonts: false` is set. Not a known vulnerability, but eval of attacker-controlled input is avoidable. | DoD 4 (`/security-review`: untrusted PDFs); least privilege | Pass `isEvalSupported: false` (and `enableXfa: false` explicitly, so a pdfjs default change cannot enable it). |
+| S4 | minor | Input validation – embeddings | `src/modules/ai-assistance/openrouter.ts:196-200` | An embedding answer is accepted when `Array.isArray` and the length is 1536; the elements are not checked. A malformed answer can store non-finite/foreign values in `ai_index_item.embedding` (or make the insert throw later, turning a paid request into *broken off*), degrading the search ST-107 will build. | ADR 0014 (a fixed 1536-number embedding); HS-34 | Reject unless every element is a finite number (`refused`); cheap, one predicate. |
+
+**Deployment caveat (not a finding):** `next.config.ts`'s `outputFileTracingIncludes` for `/api/ai-work` is the
+only guarantee the wasm/ICC/font/CMap assets reach the function, and a wrong key fails **silently** (blank scanned
+pages, ST-105's failure mode). Nothing tests it – the acceptance review's caveat that scenario 1's "scan" is an
+embedded PNG is right. Check it once on a preview/deployment (`pdfjs` logs a warning when an asset is missing).
+
+---
+
+## Verdict after the fix commit (supersedes the Pass-1 verdict)
+
+**ready to merge** – the blocker (finding 1) is fixed and the five majors are addressed (finding 6's test exists but
+its readiness check is porous – P3.2); the platform capabilities are proven at their own seam; the security pass
+found no blocker. The remaining findings are minors: the most important is
+**P3.2** – the removal-lock test's cluster-wide `pg_stat_activity` poll can be satisfied by another test file, so the
+story's central guarantee is not yet proven deterministically. The security-relevant line to decide with the user is
+**S1** (unbounded image decode before the request).
+No new finding passes the follow-up hurdle: S1 is a guard of under an hour, S2 is a product decision (a cap against
+D1, not a data-loss risk), and P3.1–P3.10 are lines in this file.

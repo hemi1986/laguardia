@@ -130,11 +130,13 @@ async function remove(fileId: string): Promise<void> {
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);
 
-/** Waits until a session is blocked on an advisory lock – the removal waiting for the store's shared removal lock. */
+/** Waits until a session of this database is blocked on an advisory lock – the removal waiting for the store's shared lock. */
 async function waitUntilTheRemovalWaits(): Promise<void> {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const { rows } = await db.execute<{ waiting: number }>(
-      sql`SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND wait_event = 'advisory'`,
+      sql`SELECT count(*)::int AS waiting FROM pg_stat_activity
+          WHERE datname = current_database() AND pid <> pg_backend_pid()
+            AND wait_event_type = 'Lock' AND wait_event = 'advisory'`,
     );
     if (rows[0].waiting > 0) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -173,6 +175,11 @@ describe("a removed file and the AI index", () => {
     expect(events).toContain("EVT-FileRemoved");
     expect(events).not.toContain("EVT-FileIndexedForAi");
     expect(events).not.toContain("EVT-FileIndexingFailed");
+    // The `file-removed` rejection ended the hold – the file is not recorded broken off by a later run.
+    const { rows: holds } = await db.execute(sql`SELECT 1 FROM ai_work_hold WHERE piece_id = ${fileId}`);
+    expect(holds).toHaveLength(0);
+    await run();
+    expect(await eventsOf(fileId)).not.toContain("EVT-FileIndexingFailed");
   });
 
   it("a removal that starts while the entry is being stored waits for the shared removal lock, then removes it", async () => {

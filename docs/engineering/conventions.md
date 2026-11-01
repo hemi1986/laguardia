@@ -469,7 +469,9 @@ hand for a history. A history table has its own `id` (the entry's ID, no databas
   outside itself and replaced as a whole (the AI index entry, whose ID is the file's) also sets `insertReplaces: true`
   on its store: its creating command inserts or replaces the row and counts the version on. A command that **ends** its
   aggregate declares `removes` and the store's `remove` deletes the row (ST-106: a file leaving the AI index); its lists
-  go with it by foreign key.
+  go with it by foreign key. Only a changing command can remove its aggregate – it checks the version the person saw
+  like every other change and cannot create others in the same step –, and `remove` refuses a store with histories or
+  entities, whose rows would be orphaned.
 - **A list of values inside a history entry** (the photos of a work log entry, ST-032, user 2026-10-25) is an array
   column of the entry's row: saved with the entry once and never written again, like every other column of it – so
   nothing can be added to the list later. A list of entries that have their own fields would be a history of its own,
@@ -788,11 +790,14 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
 - **Indexing a file** (ST-106) is the first real kind (`file-indexing-work.ts`, `kind: "file-indexing"`): `waiting` asks
   Collection's `filesForIndexing` and leaves out every file with an entry for the current embedding model; `work` reads
   the content through the storage seam (`readContent`), turns it into passages and page images (`file-indexing.ts`:
-  pdfjs with `wasmUrl`/`iccUrl`, `@napi-rs/canvas` at 1024 px/JPEG 75, one item per embedding request, batches of
-  pages) and stores through CMD-IndexFileForAi with `insertReplaces`. The store transaction re-reads the file through
-  Collection's `fileForIndexingWhileStoring` – the file's removal lock taken shared (ADR 0014) – and records nothing for
-  a file removed meanwhile. With no embedding model saved (AI off) `recordBrokenOff` records nothing, so the file stays
-  waiting instead of failing because someone turned AI off after a crash.
+  pdfjs with `wasmUrl`/`iccUrl`, `@napi-rs/canvas` at 1024 px/JPEG 75, one item per embedding request at most four at a
+  time, batches of pages) and stores through CMD-IndexFileForAi with `insertReplaces`. The command's own `facts` re-read
+  the file through Collection's `fileForIndexingWhileStoring` – the file's removal lock taken shared (ADR 0014) – and
+  reject with `file-removed` for a file removed meanwhile, so nothing is recorded and the hold still ends. The command
+  is the rule's only place; ST-109's „Erneut versuchen“ runs the same command. `recordBrokenOff` records nothing while
+  AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
+  turned AI off after a crash. `settings()` is read before every request: a rotated key is used for the next request,
+  and a changed embedding model gives the file up so an entry never mixes two models.
 
 ## Read models
 

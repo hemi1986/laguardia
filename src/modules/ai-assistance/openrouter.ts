@@ -193,7 +193,12 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
           usage?: { cost?: number };
         };
         const embedding = data[0]?.embedding;
-        if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_SIZE) return "refused";
+        if (
+          !Array.isArray(embedding) ||
+          embedding.length !== EMBEDDING_SIZE ||
+          !embedding.every((value) => typeof value === "number" && Number.isFinite(value))
+        )
+          return "refused";
         const cost = usage?.cost;
         return { embedding, cost: typeof cost === "number" && Number.isFinite(cost) ? cost : 0 };
       } catch {

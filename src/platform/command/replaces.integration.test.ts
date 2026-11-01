@@ -4,7 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { bigserial, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
-import { aggregateCommand, aggregateStore, executeCommand, replaces, type Database } from ".";
+import { aggregateCommand, aggregateStore, created, entities, executeCommand, replaces, type Database } from ".";
 
 /**
  * The three command-layer capabilities ST-106 introduced, proven on a stand-in aggregate of their own (the seam
@@ -126,7 +126,9 @@ describe("a replaced list", () => {
   it("a creating command inserts the row once and replaces it with everything it holds on the next run", async () => {
     const basketId = randomUUID();
 
-    expect(await executeCommand(fill, { basketId, labels: ["apple", "pear"] }, asTechnician())).toMatchObject({ ok: true });
+    expect(await executeCommand(fill, { basketId, labels: ["apple", "pear"] }, asTechnician())).toMatchObject({
+      ok: true,
+    });
     expect(await labelsOf(db, basketId)).toEqual(["apple", "pear"]);
     expect(await versionOf(basketId)).toBe(0);
 
@@ -163,5 +165,59 @@ describe("a command that removes its aggregate", () => {
       ok: false,
       error: "not-found",
     });
+  });
+
+  it("checks the version the person saw like every other change", async () => {
+    const basketId = randomUUID();
+    await executeCommand(fill, { basketId, labels: ["apple"] }, asTechnician());
+    await executeCommand(fill, { basketId, labels: ["pear"] }, asTechnician()); // version 1
+
+    expect(await executeCommand(empty, { basketId, version: 0 }, asTechnician())).toEqual({
+      ok: false,
+      error: "version-conflict",
+    });
+    expect(await rowExists(basketId)).toBe(true);
+  });
+
+  it("refuses a removing command that also creates an aggregate", async () => {
+    const removingAndCreating = aggregateCommand({
+      id: "CMD-TestEmptyAndCreate",
+      allowedActors: ["technician"],
+      store: baskets,
+      target: (input: { basketId: string; version: number }) => ({ id: input.basketId, version: input.version }),
+      decide: (state, _input, { newId }) => ({
+        ok: true as const,
+        state,
+        events: [{ type: "EVT-TestBasketChanged" as const }],
+        created: [created(baskets, { id: newId(), items: [] })],
+      }),
+      removes: () => true,
+      journal,
+      result: () => ({}),
+    });
+    const basketId = randomUUID();
+    await executeCommand(fill, { basketId, labels: ["apple"] }, asTechnician());
+
+    await expect(executeCommand(removingAndCreating, { basketId, version: 0 }, asTechnician())).rejects.toThrow(
+      /cannot create others/,
+    );
+  });
+
+  it("refuses to remove a store that has a history or a list of entities", async () => {
+    const entityItems = entities({
+      table: basketItem,
+      owner: "basketId",
+      toEntity: (row): Item => ({ id: row.id, label: row.label }),
+      toRow: (item) => item,
+    });
+    const withEntities = aggregateStore({
+      type: "AGG-TestBasketEntities",
+      table: basket,
+      entities: { items: entityItems },
+      toState: (row, lists): Basket => ({ id: row.id, items: lists.items }),
+      toRow: (state: Basket) => ({ id: state.id }),
+    });
+
+    await expect(withEntities.remove!(db, randomUUID())).rejects.toThrow(/histories or entities/);
   });
 });

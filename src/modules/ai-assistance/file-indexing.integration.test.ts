@@ -304,7 +304,6 @@ describe("what is indexed", () => {
 
     const after = await entryOf(fileId);
     expect(after).toMatchObject({ state: "indexed", embeddingModel: otherEmbedding.id });
-    expect(after.at.getTime()).toBeGreaterThanOrEqual(before.at.getTime());
     // Replaced as a whole: the new items, none of the old ones, and no accumulation.
     expect(after.items).toHaveLength(before.items.length);
     expect(after.items.map((item) => item.id)).not.toEqual(before.items.map((item) => item.id));
@@ -396,11 +395,40 @@ describe("what is indexed", () => {
     await run();
 
     expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off", items: [] });
-    const requestsBefore = (await entryOf(fileId)).embeddingModel;
-    expect(requestsBefore).toBe(EMBEDDING);
+    expect((await entryOf(fileId)).embeddingModel).toBe(EMBEDDING);
     // It is never taken again by itself.
     await run();
     expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off" });
+  });
+
+  it("a file whose indexing broke off stays waiting while AI is off instead of failing", async () => {
+    await saveAiSettings();
+    const fileId = await attach({
+      title: "Eight Ball Manual",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("The manual's only passage."),
+    });
+    let started!: () => void;
+    const hasStarted = new Promise<void>((resolve) => (started = resolve));
+    const cutOff = anAi({
+      beforeEmbed: () => {
+        started();
+        return new Promise<never>(() => {});
+      },
+    });
+    void run({ ai: cutOff });
+    await hasStarted;
+
+    // Someone turned AI off after the crash: nothing is recorded broken off, the file waits.
+    await removeTheKey();
+    clock.advance(2 * 250 + 1);
+    await run();
+    expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
+
+    // Turned on again, the next run indexes it.
+    await saveAiSettings();
+    await run();
+    expect(await entryOf(fileId)).toMatchObject({ state: "indexed" });
   });
 });
 

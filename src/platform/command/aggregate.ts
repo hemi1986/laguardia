@@ -25,7 +25,7 @@ export type AggregateStore<State extends { id: string }> = {
   /** Saves at the expected version and increments it; false when the stored version differs. */
   update(tx: Database, state: State, expectedVersion: number): Promise<boolean>;
   /** Removes the aggregate's row – what a command that ends the aggregate does (ST-106, a file leaving the AI index). */
-  remove?(tx: Database, id: string): Promise<void>;
+  remove?(tx: Database, id: string, expectedVersion?: number): Promise<boolean>;
 };
 
 type VersionedTable = PgTable & { id: PgColumn; version: PgColumn };
@@ -115,12 +115,19 @@ export function aggregateStore<
       await saveLists(tx, state);
       return true;
     },
-    async remove(tx, id) {
+    async remove(tx, id, expectedVersion) {
       // Only a store whose lists are replaced lists can remove its aggregate: its rows cascade (ON DELETE cascade). A
       // history or a list of entities would leave orphans – removing such an aggregate is not supported.
       if (Object.keys(definition.histories ?? {}).length || Object.keys(definition.entities ?? {}).length)
         throw new Error(`${type}: an aggregate with histories or entities cannot be removed`);
-      await tx.delete(table).where(eq(table.id, id));
+      // The version the acting person saw is checked like every other change (HS-16): a stale removal deletes nothing.
+      const removed = await tx
+        .delete(table)
+        .where(
+          expectedVersion === undefined ? eq(table.id, id) : and(eq(table.id, id), eq(table.version, expectedVersion)),
+        )
+        .returning({ id: table.id });
+      return removed.length > 0;
     },
   };
 }
@@ -367,7 +374,7 @@ export function aggregateCommand<
         if (decision.created?.length)
           throw new Error(`${definition.id}: a command that removes its aggregate cannot create others`);
         if (!store.remove) throw new Error(`${definition.id}: its aggregate cannot be removed by this store`);
-        await store.remove(tx, decision.state.id);
+        if (!(await store.remove(tx, decision.state.id, expectedVersion))) throw new VersionConflict();
       } else {
         for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
         if (expectedVersion === undefined) await store.insert(tx, decision.state);
