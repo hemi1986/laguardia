@@ -60,3 +60,7 @@ Most important: the warning page confirms a hidden chat-model change and never n
 - **#3 partly fixed** – the rejection is said at the key field. The text and the code stay; the German text goes to the user at the merge checkpoint.
 - **#6 fixed** – the test checks the key field is empty and the typed key is nowhere in the form.
 - **Skipped minors:** #4 (file count leaves out waiting/failed files; „Alle 0 Dateien“) – the estimate follows the story's stated rule (pages and images of the current AI index entries); asked in the PR. #5 (no browser test for the warning without JavaScript) – the e2e environment has no OpenRouter stand-in, so AI can never be on there; the page is plain links and a form post. #7–#12 code smells – revisit at the next architecture review.
+
+## User decisions (2026-11-01, at the merge checkpoint)
+
+1a – the rejection text for a new key typed together with a change of the embedding model stays as built. 2a – the singular wording for one file stays. 3a – the estimate keeps counting only files indexed with the current embedding model (the story's rule); no new story.
