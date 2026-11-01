@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileIndexedForAi]
 depends_on: []
 labels: [feature:ai-assessment]
-status: ready
+status: in-progress
 ---
 
 ## Question
