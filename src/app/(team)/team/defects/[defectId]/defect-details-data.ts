@@ -4,7 +4,6 @@ import {
   defectAiAssessments,
   type AiDependencies,
   type DefectAiAssessments,
-  type ShownAiAssessment,
 } from "@/modules/ai-assistance";
 import {
   defectActions,
@@ -25,6 +24,7 @@ import { photoAt, type PhotoSource } from "../../team-photos";
 import { shownReporter, type ShownReporter } from "../../reporter";
 import { shownClaimant, type ShownClaimant, type Viewer } from "../../claimant";
 import { named } from "../../named";
+import { shownAiAssessmentData, type ShownAiAssessmentData } from "../../ai-assessment-data";
 
 /** A problem report on the defect's page, its reporter named. */
 export type ShownDefectProblemReport = {
@@ -107,15 +107,10 @@ export type ShownWorkLogEntry = {
   loggedAt: Date;
 };
 
-/** The newest AI assessment on the defect's page (ST-107) – its requester named, its photos at their addresses. */
-export type ShownAiAssessmentData = Omit<ShownAiAssessment, "photos"> & {
-  requestedByName: string;
-  photos: { address: string }[];
-};
-
-/** The section „KI-Einschätzungen“ of the defect's page – RM-DefectAiAssessments (ST-107). */
-export type DefectAiAssessmentsData = Omit<DefectAiAssessments, "current"> & {
+/** The section „KI-Einschätzungen“ of the defect's page – RM-DefectAiAssessments (ST-107, ST-111). */
+export type DefectAiAssessmentsData = Omit<DefectAiAssessments, "current" | "earlier"> & {
   current: ShownAiAssessmentData | undefined;
+  earlier: ShownAiAssessmentData[];
 };
 
 /**
@@ -166,12 +161,14 @@ export async function loadDefectDetails(
         ...defect.reopenings.map((reopening) => reopening.reopenedBy),
         ...defect.workLog.map((entry) => entry.loggedBy),
         aiAssessments.current?.requestedBy,
+        ...aiAssessments.earlier.map((assessment) => assessment.requestedBy),
       ],
     }),
     photoViewAddresses(storage, clock, [
       ...defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
       ...defect.workLog.flatMap((entry) => entry.photos),
       ...(aiAssessments.current?.photos ?? []),
+      ...aiAssessments.earlier.flatMap((assessment) => assessment.photos),
     ]),
   ]);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
@@ -228,11 +225,8 @@ export async function loadDefectDetails(
       .reverse(),
     aiAssessments: {
       ...aiAssessments,
-      current: aiAssessments.current && {
-        ...aiAssessments.current,
-        requestedByName: shown.name(aiAssessments.current.requestedBy),
-        photos: aiAssessments.current.photos.flatMap((photo) => photoAt(photos, photo) ?? []),
-      },
+      current: aiAssessments.current && shownAiAssessmentData(aiAssessments.current, shown, photos),
+      earlier: aiAssessments.earlier.map((assessment) => shownAiAssessmentData(assessment, shown, photos)),
     },
   };
 }

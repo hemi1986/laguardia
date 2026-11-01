@@ -100,6 +100,8 @@ export const aiAssistanceTexts = {
     line: (model: string, at: string, by: string, cost: string) =>
       `KI-Einschätzung · ${model} · ${at} · angefordert von ${by} · ${cost}`,
     failed: (reason: string) => `KI-Einschätzung fehlgeschlagen: ${reason}`,
+    /** The header of an earlier AI assessment's fold (ST-111, G39): „KI-Einschätzung vom 31.10.2026“. */
+    earlier: (date: string) => `KI-Einschätzung vom ${date}`,
     retry: "Erneut versuchen",
     photoAlt: "Foto der KI-Einschätzung",
     photosField: {

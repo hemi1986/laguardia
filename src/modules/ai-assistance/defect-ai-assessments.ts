@@ -8,12 +8,12 @@ import type {
   RequestAiAssessmentError,
   RequestAiAssessmentInput,
 } from "./ai-assessment";
-import { aiAssessmentBeingWritten, aiAssessmentsOfDefect, newestAiAssessmentOf } from "./ai-assessments";
+import { aiAssessmentBeingWritten, aiAssessmentsOfDefect, endedAiAssessmentsOfDefects } from "./ai-assessments";
 import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
 
 /**
- * RM-DefectAiAssessments (ST-107): the section „KI-Einschätzungen“ of a defect's page. It shows the newest AI assessment
- * (being written, otherwise the newest written or failed) and whether the team member looking at the page may request
+ * RM-DefectAiAssessments (ST-107, ST-111): the section „KI-Einschätzungen“ of a defect's page. It shows the newest AI
+ * assessment (being written, otherwise the newest written or failed) open, the earlier ones folded, and whether the team member looking at the page may request
  * one. The section is shown only when they may request – AI on, defect open, technician or a defect suitable for
  * helpers, and none being written (G11) – or the defect has at least one, which stays readable while AI is off (G37).
  */
@@ -55,6 +55,8 @@ export type DefectAiAssessments = {
   refusal: RequestAiAssessmentError | undefined;
   /** The newest AI assessment; while it is being written the page refreshes itself. */
   current: ShownAiAssessment | undefined;
+  /** The earlier ones, the newest first – each folded (ST-111). */
+  earlier: ShownAiAssessment[];
 };
 
 /** Who looks at the page – the rule for helpers is the request command's own (G11). */
@@ -68,15 +70,36 @@ export async function defectAiAssessments(
     dependencies,
   }: { defectId: string; viewer: AiAssessmentViewer | undefined; dependencies: AiDependencies },
 ): Promise<DefectAiAssessments> {
-  const [settings, defect, beingWritten, newest] = await Promise.all([
+  const [settings, defect, beingWritten, all] = await Promise.all([
     aiAssessmentSettings(db, dependencies),
     defectForAiAssessmentRequest(db, defectId),
     aiAssessmentBeingWritten(db, defectId),
-    newestAiAssessmentOf(db, defectId),
+    aiAssessmentsOfDefect(db, defectId),
   ]);
   const refusal = requestRefusal(settings, defect, viewer, beingWritten);
-  const current = newest && (await shown(db, newest, dependencies));
-  return { shown: !refusal || !!newest, mayRequest: !refusal, refusal, current };
+  const [current, ...earlier] = await shownAll(db, all, dependencies);
+  return { shown: !refusal || all.length > 0, mayRequest: !refusal, refusal, current, earlier };
+}
+
+/**
+ * The AI assessments in a machine's repair history (RM-MachineRecord, ST-111): each defect's written and failed ones,
+ * the newest first – shown folded under the defect, also while AI is off (G37). A defect without any is not in the map.
+ */
+export async function aiAssessmentsInRepairHistory(
+  db: Database,
+  defectIds: string[],
+  dependencies: AiDependencies,
+): Promise<Map<string, ShownAiAssessment[]>> {
+  const byDefect = await endedAiAssessmentsOfDefects(db, defectIds);
+  const shownById = new Map(
+    (await shownAll(db, [...byDefect.values()].flat(), dependencies)).map((each) => [each.id, each]),
+  );
+  return new Map(
+    [...byDefect].map(([defectId, assessments]) => [
+      defectId,
+      assessments.map((assessment) => shownById.get(assessment.id)!),
+    ]),
+  );
 }
 
 /**
@@ -123,18 +146,30 @@ async function chatModelName(dependencies: AiDependencies, modelId: string): Pro
   return model.name;
 }
 
-async function shown(
+/** The AI assessments as a page shows them, in the same order – the files' titles read once for all of them. */
+async function shownAll(
   db: Database,
-  assessment: AiAssessmentState,
+  assessments: AiAssessmentState[],
   dependencies: AiDependencies,
-): Promise<ShownAiAssessment> {
-  const [modelName, files] = await Promise.all([
-    chatModelName(dependencies, assessment.chatModel),
+): Promise<ShownAiAssessment[]> {
+  if (assessments.length === 0) return [];
+  const models = [...new Set(assessments.map((assessment) => assessment.chatModel))];
+  const [modelNames, files] = await Promise.all([
+    Promise.all(models.map((model) => chatModelName(dependencies, model))),
     filesForAiReferences(
       db,
-      (assessment.references ?? []).map((reference) => reference.fileId),
+      assessments.flatMap((assessment) => (assessment.references ?? []).map((reference) => reference.fileId)),
     ),
   ]);
+  const names = new Map(models.map((model, index) => [model, modelNames[index]]));
+  return assessments.map((assessment) => shown(assessment, names.get(assessment.chatModel), files));
+}
+
+function shown(
+  assessment: AiAssessmentState,
+  modelName: string | undefined,
+  files: Awaited<ReturnType<typeof filesForAiReferences>>,
+): ShownAiAssessment {
   return {
     id: assessment.id,
     state: assessment.state,

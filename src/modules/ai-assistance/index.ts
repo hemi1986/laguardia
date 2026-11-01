@@ -46,6 +46,7 @@ export type {
 export { requestAiAssessmentCommand } from "./request-ai-assessment-command";
 export {
   aiAssessmentRetryRequest,
+  aiAssessmentsInRepairHistory,
   defectAiAssessments,
   type AiAssessmentViewer,
   type DefectAiAssessments,

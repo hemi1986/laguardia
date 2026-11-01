@@ -2,22 +2,20 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import { teamMessages } from "@/platform/messages";
-import { formatDateTime } from "@/platform/time";
 import { AiAssessmentPhotos } from "../../team-photos";
+import { AiAssessmentContent, AiAssessmentFolds } from "../../ai-assessment-view";
 import type { DefectAiAssessmentsData } from "./defect-details-data";
 import { RetryAiAssessmentForm } from "./ki-einschaetzung/retry-ai-assessment-form";
 import type { RetryAiAssessmentState } from "./ki-einschaetzung/retry-ai-assessment-definition";
 
 const { aiAssessments: texts } = teamMessages;
 
-/** How a cost is written for the team: German decimal comma, at least cents – e.g. "0,04 $". */
-const costFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
-
 /**
  * The section „KI-Einschätzungen“ on a defect's page (ST-107, RM-DefectAiAssessments): right below the defect's
  * actions, above its problem reports and work log entries. It shows the newest AI assessment – being written, written
- * or failed – and „KI-Einschätzung anfordern“ only where the person may request it. While one is being written the
- * page carries a meta refresh, which works without JavaScript too. With none and AI off the section is not shown.
+ * or failed – open, the earlier ones below it folded, the newest first (ST-111), and „KI-Einschätzung anfordern“ only
+ * where the person may request it. While one is being written the page carries a meta refresh, which works without
+ * JavaScript too. With none and AI off the section is not shown.
  */
 export function AiAssessmentsSection({
   data,
@@ -46,70 +44,11 @@ export function AiAssessmentsSection({
           <AiAssessmentPhotos photos={current.photos} />
         </div>
       ) : current ? (
-        <div className="flex flex-col gap-3 [overflow-wrap:anywhere]">
-          {current.state === "written" ? (
-            <>
-              <div>
-                <h3 className="text-sm font-medium">{texts.summary}</h3>
-                <p className="text-sm whitespace-pre-line">{current.summary}</p>
-              </div>
-              {current.probableCauses && current.probableCauses.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium">{texts.probableCauses}</h3>
-                  <ol className="list-decimal pl-5 text-sm">
-                    {current.probableCauses.map((cause, index) => (
-                      <li key={index}>{cause}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-              {current.whatToCheckFirst && current.whatToCheckFirst.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium">{texts.whatToCheckFirst}</h3>
-                  <ol className="list-decimal pl-5 text-sm">
-                    {current.whatToCheckFirst.map((step, index) => (
-                      <li key={index}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-              {current.references.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium">{texts.references}</h3>
-                  <ul className="list-disc pl-5 text-sm">
-                    {current.references.map((reference) => (
-                      <li key={`${reference.fileId}-${reference.page ?? ""}`}>
-                        {reference.removed ? (
-                          referenceLabel(reference.title, reference.page)
-                        ) : (
-                          <Link href={`/team/dateien/${reference.fileId}`} className="underline">
-                            {referenceLabel(reference.title, reference.page)}
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium">
-                {texts.failed(current.failureReason ? texts.failureReasons[current.failureReason] : "")}
-              </p>
-              {retryAction && <RetryAiAssessmentForm action={retryAction} offered={data.mayRequest} />}
-            </>
-          )}
-          {current.note && <p className="text-sm whitespace-pre-line">{current.note}</p>}
-          <AiAssessmentPhotos photos={current.photos} />
-          <p className="text-muted-foreground text-sm">
-            {texts.line(
-              current.chatModelName ?? current.chatModel,
-              current.changedAt ? formatDateTime(current.changedAt) : formatDateTime(current.requestedAt),
-              current.requestedByName,
-              `${costFormat.format(current.cost ?? 0)} $`,
-            )}
-          </p>
+        <div className="flex flex-col gap-3">
+          <AiAssessmentContent
+            assessment={current}
+            afterFailure={retryAction && <RetryAiAssessmentForm action={retryAction} offered={data.mayRequest} />}
+          />
           {current.state !== "failed" && <RequestLink href={requestHref} offered={data.mayRequest} />}
         </div>
       ) : (
@@ -118,6 +57,7 @@ export function AiAssessmentsSection({
           <RequestLink href={requestHref} offered={data.mayRequest} />
         </div>
       )}
+      <AiAssessmentFolds assessments={data.earlier} />
     </Section>
   );
 }
@@ -129,8 +69,4 @@ function RequestLink({ href, offered }: { href: string; offered: boolean }) {
       {texts.request}
     </Link>
   );
-}
-
-function referenceLabel(title: string, page: number | undefined): string {
-  return page ? texts.referenceWithPage(title, page) : title;
 }

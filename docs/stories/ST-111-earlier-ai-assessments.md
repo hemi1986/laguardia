@@ -9,7 +9,7 @@ risk: low
 events: [EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
 depends_on: [ST-107, ST-108]
 labels: [ui, feature:ai-assessment]
-status: ready
+status: done
 ---
 
 ## Story

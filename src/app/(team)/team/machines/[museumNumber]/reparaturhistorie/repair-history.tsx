@@ -4,6 +4,7 @@ import { teamMachinePage } from "@/app/museum-number-address";
 import { MachineHistoryFrame } from "../machine-history";
 import { Section } from "@/components/ui/section";
 import { WorkLogPhotos } from "../../../team-photos";
+import { AiAssessmentFolds } from "../../../ai-assessment-view";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import type { RepairHistoryData, ShownRepairHistoryEntry } from "./repair-history-data";
@@ -13,7 +14,7 @@ const { repairHistory: texts, machineHistory, machineRecord, defects, terms } = 
 /**
  * The repair history's own page (ST-033, G4a): the years with how many entries each has, the newest first; a chosen
  * year shows its entries, the newest first – every defect with its closing note and its work log entries, the newest
- * first like on the defect's page, and every problem resolved on the spot. Plain GET links, so it works without
+ * first like on the defect's page, its AI assessments folded (ST-111), and every problem resolved on the spot. Plain GET links, so it works without
  * JavaScript. Texts are plain text: React escapes them. Photos of work log entries follow with ST-032.
  */
 export function RepairHistoryView({
@@ -121,6 +122,8 @@ function Entry({ entry }: { entry: ShownRepairHistoryEntry }) {
           </ol>
         </div>
       )}
+      {/* Its AI assessments, folded – also those of a defect resolved or closed on retirement (ST-111, HS-30). */}
+      <AiAssessmentFolds assessments={entry.aiAssessments} />
     </article>
   );
 }

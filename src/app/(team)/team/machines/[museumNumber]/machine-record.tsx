@@ -14,6 +14,7 @@ import { MachineMaintenanceSection } from "./machine-maintenance";
 import { StatusChangeList } from "./status-changes";
 import { LatestWithAll } from "./latest-with-all";
 import { teamMachinePage } from "@/app/museum-number-address";
+import { AiAssessmentFolds } from "../../ai-assessment-view";
 
 const { machineRecord: texts, machines, machineModels, terms } = teamMessages;
 
@@ -272,7 +273,10 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
   }
 }
 
-/** A repair that has ended: what it was, its closing note or note, who ended it and when. Texts are plain text. */
+/**
+ * A repair that has ended: what it was, its closing note or note, who ended it and when, and a defect's AI assessments
+ * folded (ST-111). Texts are plain text.
+ */
 function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) {
   return (
     <article className="flex flex-col gap-1 text-sm">
@@ -288,6 +292,8 @@ function EndedEntry({ entry: repair }: { entry: ShownEndedRepairHistoryEntry }) 
       </p>
       <p className="whitespace-pre-line">{repair.note}</p>
       <p className="text-muted-foreground">{texts.whoAndWhen(repair.resolvedBy, formatDateTime(repair.resolvedAt))}</p>
+      {/* A defect's AI assessments, folded (ST-111). */}
+      <AiAssessmentFolds assessments={repair.aiAssessments} />
     </article>
   );
 }
