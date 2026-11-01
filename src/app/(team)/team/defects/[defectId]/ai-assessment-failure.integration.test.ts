@@ -6,15 +6,18 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { reportProblemAndTriageCommand } from "@/modules/repair";
 import {
+  AI_ASSESSMENT_KIND,
   aiAssessmentRetryRequest,
   aiAssessmentWork,
   aiAssessmentsOfDefect,
   aiSettingsForm,
+  aiWorkLeftUnfinished,
   changeAiSettingsCommand,
   requestAiAssessmentCommand,
   runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
+import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
 import { aJpeg } from "@/modules/ai-assistance/file-indexing.test-support";
 import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
@@ -329,5 +332,62 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect(details.aiAssessments.mayRequest).toBe(false);
     expect(html).toContain("KI-Einschätzung fehlgeschlagen: Die KI wurde inzwischen ausgeschaltet.");
     expect(html).not.toContain("Erneut versuchen");
+  });
+
+  it("ST-108: A write whose hold ran out without a result fails as broken off and is not written again", async () => {
+    const machineId = await aMachine("LG-042");
+    const defectId = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    // A run is cut off while it writes the AI assessment – it never ends (a crash, a deployment, the time limit).
+    let writing!: () => void;
+    const writingStarted = new Promise<void>((resolve) => (writing = resolve));
+    const never = new Promise<never>(() => {});
+    const cutOff = memoryAi({
+      acceptedKeys: [KEY],
+      beforeChat: async () => {
+        writing();
+        await never;
+      },
+    });
+    void runWith({ ai: cutOff, encryptionKey: () => environmentKey });
+    await writingStarted;
+
+    // A refresh of the page before the hold ran out starts no run.
+    const starts: string[] = [];
+    const pageStartsARun = () =>
+      startWhenLeftUnfinished(
+        {
+          leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
+          start: () => starts.push("run"),
+        },
+        AI_ASSESSMENT_KIND,
+        [id],
+      );
+    expect(await pageStartsARun()).toBe(false);
+    expect(starts).toEqual([]);
+
+    // The hold has run out: the page's refresh starts the run that records the break-off.
+    clock.set("2026-11-03T10:08:21Z");
+    expect(await pageStartsARun()).toBe(true);
+    expect(starts).toEqual(["run"]);
+    const recording = memoryAi({ acceptedKeys: [KEY] });
+    await runWith({ ai: recording, encryptionKey: () => environmentKey });
+
+    expect(recording.requests).toEqual([]);
+    expect(recording.chatRequests).toEqual([]);
+    const { html } = await page(defectId);
+    expect(html).toContain("KI-Einschätzung fehlgeschlagen: Die Arbeit daran wurde abgebrochen, bevor sie fertig war.");
+    expect(html).toContain("Erneut versuchen");
+
+    // No later run writes that AI assessment again.
+    const later = memoryAi({ acceptedKeys: [KEY] });
+    clock.set("2026-11-03T10:20:00Z");
+    await runWith({ ai: later, encryptionKey: () => environmentKey });
+
+    expect(later.chatRequests).toEqual([]);
+    expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)).toMatchObject({
+      state: "failed",
+      failureReason: "broken-off",
+    });
   });
 });
