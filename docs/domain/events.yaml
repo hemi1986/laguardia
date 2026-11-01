@@ -409,6 +409,14 @@ events:
       The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again – only by hand („Erneut
       versuchen“) or with a new embedding model, never automatically (user, 2026-11-01, D3). "broken off" – the
       indexing ended without a result (a crash, a deployment, the time limit) and POL-UnfinishedAiWorkFails recorded it.
+  - id: EVT-FileIndexingRetried
+    name: File indexing retried
+    aggregate: AGG-AiIndexEntry
+    data: [File, Machine or machine model of the file, Embedding model]
+    description: >-
+      A technician tapped „Erneut versuchen“ on a file that failed (ST-109): its failed AI index entry is removed in the
+      same step, so the file is waiting again (derived) until the background work indexes it or it fails again (user,
+      2026-11-01, during /implement ST-109 – the step that makes a failed file waiting had no event).
   - id: EVT-FileLeftAiIndex
     name: File left the AI index
     aggregate: AGG-AiIndexEntry
@@ -746,7 +754,7 @@ commands:
     name: Index file for AI
     aggregate: AGG-AiIndexEntry
     actor: ACT-Technician
-    produces: [EVT-FileIndexedForAi, EVT-FileIndexingFailed]
+    produces: [EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried]
     description: >-
       Run by POL-AiIndexFollowsTheSettings and POL-AttachedFileIsIndexedForAi in the background; a technician runs it
       by hand with „Erneut versuchen“ on a file that failed. The slow part (reading the file, rendering the pages,
@@ -759,6 +767,7 @@ commands:
       - The file is not removed – read from Collection in the transaction that stores the entry, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
       - PDF, Markdown and text files and images (PNG, JPEG, WebP) are indexed; any other format fails with "format not indexed"
       - Run by a policy, a file that already has an entry for the current embedding model is skipped; by hand, a technician may run it only on a file that failed
+      - By hand („Erneut versuchen“, ST-109) it only removes the failed entry and records EVT-FileIndexingRetried – the file is waiting again and the background work, started after the response, indexes it as the system; it is rejected for a file that is not failed, a removed file and while AI is off (user, 2026-11-01)
       - A failed file – whatever the reason, "broken off" included – is never indexed again automatically; only by hand, or by POL-AiIndexFollowsTheSettings once the embedding model changes (HS-32, user 2026-11-01, D3)
       - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and records the failure with reason "broken off"; a file removed meanwhile records nothing
   - id: CMD-RemoveFileFromAiIndex
@@ -933,7 +942,7 @@ read_models:
     fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
   - id: RM-MachineRecord
     name: Machine record
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-FileIndexingFailed, EVT-FileIndexedForAi, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileIndexedForAi, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
     used_by: [ACT-TeamMember]
     description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
     fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files of the machine and its machine model by file category (with „Für die KI nicht lesbar“ where indexing failed), AI assessments of the defects in the repair history (collapsed)]
@@ -1017,7 +1026,7 @@ read_models:
       The form „KI“ on the settings page „Einstellungen“ (team area, under „Mehr“), technicians only. Says whether AI
       is on, reminds that a spending limit is set on the key at OpenRouter and that the privacy notice has to mention
       the AI, and shows the AI index overview with the files that failed and „Erneut versuchen“.
-    fed_by: [EVT-AiSettingsChanged, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileLeftAiIndex, EVT-FileAttached, EVT-FileRemoved]
+    fed_by: [EVT-AiSettingsChanged, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileLeftAiIndex, EVT-FileAttached, EVT-FileRemoved]
     used_by: [ACT-Technician]
     fields: [AI on, Last four characters of the key, Chat model, Embedding model, Models offered by OpenRouter (name, context size, price per million tokens), Files indexed, Files waiting, Files failed (machine or machine model, title, reason), Cost of indexing so far]
   - id: RM-DefectAiAssessments

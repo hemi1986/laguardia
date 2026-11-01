@@ -36,6 +36,9 @@ technicians only (G11; helpers do not reach the page, ST-104), below the AI sett
 **„Erneut versuchen“ on a failed file** – CMD-IndexFileForAi run by hand: a technician may run it **only on a file that
 failed** (rule), only while AI is on; the indexing runs in the background (ADR 0015, ST-112), the technician stays on
 the page with a confirmation (G3) and the file counts as waiting until it is indexed or fails again.
+The step itself removes the failed AI index entry and records **EVT-FileIndexingRetried** (user, 2026-11-01, during
+`/implement`: the step that makes a failed file waiting had no event); the background work then indexes the file as the
+system.
 
 **A failed file stays failed** (HS-32, user 2026-11-01, D3): whatever the reason, it is tried again only by hand with
 „Erneut versuchen“ – or indexed again by a change of the embedding model (ST-110) – and leaves the list when it is
