@@ -1,27 +1,25 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
 import {
   AI_ASSESSMENT_KIND,
   aiAssessmentRetryRequest,
   aiAssessmentWork,
   aiAssessmentsOfDefect,
-  aiSettingsForm,
   aiWorkLeftUnfinished,
-  changeAiSettingsCommand,
   removeFileCommandWithAiIndex,
   requestAiAssessmentCommand,
-  runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
 import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
 import { writeAiAssessmentForTest } from "@/modules/ai-assistance/ai-assessment.test-support";
+import { aiScenario, type ScenarioOpenRouter } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
-import { aJpeg, aPdfOfText } from "@/modules/ai-assistance/file-indexing.test-support";
+import { aPdfOfText } from "@/modules/ai-assistance/file-indexing.test-support";
 import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -48,8 +46,6 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const tomViewer = { id: tom.teamMemberId, role: "technician" } as const;
 const benViewer = { id: ben.teamMemberId, role: "helper" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const EMBEDDING = geminiEmbedding.id;
 const CHAT = geminiFlash.id;
 const NOW = "2026-11-03T10:00:00Z";
@@ -80,20 +76,9 @@ beforeEach(async () => {
   await saveAiSettings();
 });
 
-function ai(settings: Parameters<typeof memoryAi>[0] = {}): AiDependencies {
-  return { ai: memoryAi({ acceptedKeys: [KEY], ...settings }), encryptionKey: () => environmentKey };
-}
-
-async function saveAiSettings() {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: CHAT, embeddingModel: EMBEDDING },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const { ai, openRouter, removeTheKey, aPhoto } = scenario;
+const saveAiSettings = () => scenario.turnAiOn({ chatModel: CHAT, embeddingModel: EMBEDDING });
 
 async function aMachine(museumNumber: string) {
   const registered = await executeCommand(
@@ -126,68 +111,16 @@ async function anOpenDefect(machineId: string, suitableForHelpers = false) {
   return reported.result.defectId;
 }
 
-async function aPhoto(): Promise<string> {
-  const name = `ai-assessments/${randomUUID()}.jpg`;
-  await storage.write(name, Uint8Array.from(await aJpeg()), "image/jpeg");
-  return name;
-}
+const attach = (machineId: string, title: string, bytes: Uint8Array) =>
+  scenario.attachFile(machineId, { title, bytes, contentType: "application/pdf" });
 
-async function attach(machineId: string, title: string, bytes: Uint8Array): Promise<string> {
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, "application/pdf");
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType: "application/pdf" },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
-}
-
-async function request(defectId: string, note = "", photos: string[] = []) {
-  const asked = await executeCommand(
-    requestAiAssessmentCommand(ai()),
-    { defectId, note, photos },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!asked.ok) throw new Error(asked.error);
-  return asked.result.aiAssessmentId;
-}
+const request = (defectId: string, note = "", photos: string[] = []) =>
+  scenario.requestAiAssessment(defectId, { note, photos });
 
 /** One run of the real AI assessment kind – the background work as the worker route starts it. */
-function runWith(dependencies: AiDependencies) {
-  return runAiWork({
-    db,
-    clock,
-    budgetSeconds: 250,
-    ai: dependencies,
-    storage,
-    continueWork: async () => undefined,
-    kinds: [aiAssessmentWork],
-  });
-}
-
-function run(settings: Parameters<typeof memoryAi>[0] = {}) {
-  return runWith(ai(settings));
-}
-
-/** Removes the key – AI is off from then on (AGG-AiSettings). */
-async function removeTheKey() {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
+const runWith = (dependencies: AiDependencies | ScenarioOpenRouter) =>
+  scenario.run({ kinds: [aiAssessmentWork], with: dependencies });
+const run = (settings: Parameters<typeof memoryAi>[0] = {}) => runWith(ai(settings));
 
 async function page(defectId: string, viewer: { id: string; role: "helper" | "technician" } = tomViewer) {
   const details = await loadDefectDetails(db, fixedClock(NOW), defectId, { viewer, storage, ai: ai() });
@@ -345,9 +278,9 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     const id = await request(defectId);
     // A technician removes the key before the writing has started.
     await removeTheKey();
-    const off = memoryAi({ acceptedKeys: [KEY] });
+    const off = openRouter();
 
-    await runWith({ ai: off, encryptionKey: () => environmentKey });
+    await runWith(off);
 
     expect(off.requests).toEqual([]);
     expect(off.chatRequests).toEqual([]);
@@ -369,14 +302,13 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     let writing!: () => void;
     const writingStarted = new Promise<void>((resolve) => (writing = resolve));
     const never = new Promise<never>(() => {});
-    const cutOff = memoryAi({
-      acceptedKeys: [KEY],
+    const cutOff = openRouter({
       beforeChat: async () => {
         writing();
         await never;
       },
     });
-    void runWith({ ai: cutOff, encryptionKey: () => environmentKey });
+    void runWith(cutOff);
     await writingStarted;
 
     // A refresh of the page before the hold ran out starts no run.
@@ -397,8 +329,8 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     clock.set("2026-11-03T10:08:21Z");
     expect(await pageStartsARun()).toBe(true);
     expect(starts).toEqual(["run"]);
-    const recording = memoryAi({ acceptedKeys: [KEY] });
-    await runWith({ ai: recording, encryptionKey: () => environmentKey });
+    const recording = openRouter();
+    await runWith(recording);
 
     expect(recording.requests).toEqual([]);
     expect(recording.chatRequests).toEqual([]);
@@ -407,9 +339,9 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect(html).toContain("Erneut versuchen");
 
     // No later run writes that AI assessment again.
-    const later = memoryAi({ acceptedKeys: [KEY] });
+    const later = openRouter();
     clock.set("2026-11-03T10:20:00Z");
-    await runWith({ ai: later, encryptionKey: () => environmentKey });
+    await runWith(later);
 
     expect(later.chatRequests).toEqual([]);
     expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)).toMatchObject({
@@ -427,18 +359,17 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     const writingStarted = new Promise<void>((resolve) => (writing = resolve));
     let finish!: () => void;
     const finishes = new Promise<void>((resolve) => (finish = resolve));
-    const lateAi = memoryAi({
-      acceptedKeys: [KEY],
+    const lateAi = openRouter({
       beforeChat: async () => {
         writing();
         await finishes;
       },
     });
-    const lateRun = runWith({ ai: lateAi, encryptionKey: () => environmentKey });
+    const lateRun = runWith(lateAi);
     await writingStarted;
 
     clock.set("2026-11-03T10:08:21Z");
-    await runWith({ ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey });
+    await runWith(openRouter());
     expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)).toMatchObject({
       state: "failed",
       failureReason: "broken-off",

@@ -1,19 +1,14 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
-import {
-  aiSettingsForm,
-  changeAiSettingsCommand,
-  requestAiAssessmentCommand,
-  type AiDependencies,
-} from "@/modules/ai-assistance";
 import { failAiAssessmentForTest, writeAiAssessmentForTest } from "@/modules/ai-assistance/ai-assessment.test-support";
-import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
+import { geminiEmbedding } from "@/modules/ai-assistance/ai-seam.test-support";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -37,8 +32,6 @@ const isolated = isolatedTestDatabase("earlier_ai_assessments");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const tomViewer = { id: tom.teamMemberId, role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const NOW = "2026-11-01T12:00:00Z";
 let eightBall: string;
 let storage: ReturnType<typeof memoryStorage>;
@@ -60,23 +53,11 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   await withoutMachines(db);
   storage = memoryStorage();
-  await changeAi({ key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id });
+  await scenario.turnAiOn();
 });
 
-function ai(): AiDependencies {
-  return { ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey };
-}
-
-async function changeAi(change: { key: string; chatModel?: string; embeddingModel?: string; removeKey?: true }) {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const changed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, ...change },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!changed.ok) throw new Error(changed.error);
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock: fixedClock(NOW), technician: tom });
+const ai = () => scenario.ai();
 
 async function aMachine(museumNumber: string) {
   const registered = await executeCommand(
@@ -120,35 +101,14 @@ async function resolve(defectId: string) {
   if (!resolved.ok) throw new Error(resolved.error);
 }
 
-async function request(defectId: string, at: string, note = "") {
-  const asked = await executeCommand(
-    requestAiAssessmentCommand(ai()),
-    { defectId, note, photos: [] },
-    { actor: tom, db, clock: fixedClock(at), newId: randomUUID },
-  );
-  if (!asked.ok) throw new Error(asked.error);
-  return asked.result.aiAssessmentId;
-}
+const request = (defectId: string, at: string, note = "") =>
+  scenario.requestAiAssessment(defectId, { note, at: fixedClock(at) });
 
 async function attach(defectId: string, title: string) {
   const defect = await defectDetails(db, defectId);
   if (!defect) throw new Error("no defect");
   const bytes = new TextEncoder().encode("manual");
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, "application/pdf");
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId: defect.machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType: "application/pdf" },
-    },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
+  return scenario.attachFile(defect.machineId, { title, bytes, contentType: "application/pdf" });
 }
 
 /** An AI assessment requested and written on that day (Berlin noon), with its summary and an optional reference. */
@@ -308,7 +268,7 @@ describe("earlier AI assessments (ST-111)", () => {
     const defectId = await anOpenDefect(machineId, "Left flipper weak");
     await written(defectId, "2026-10-29", "Die Spule ist schwach.");
     await written(defectId, "2026-10-31", "Der Kontakt ist oxidiert.");
-    await changeAi({ key: "", removeKey: true });
+    await scenario.removeTheKey();
 
     const defect = aiSection(await defectPage(defectId));
     expect(defect).toContain("Der Kontakt ist oxidiert.");

@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -6,14 +6,14 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { aiSettingsForm, changeAiSettingsCommand, removeFileCommandWithAiIndex, type AiDependencies } from ".";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { removeFileCommandWithAiIndex } from ".";
 import { aiIndexEntryOf } from "./ai-index-entries";
 import { withoutAiSettings } from "./ai-settings.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
 import { indexFileForAiCommand } from "./index-file-for-ai-command";
-import { runAiWork } from "./ai-work";
-import { memoryAi, geminiEmbedding, geminiFlash } from "./ai-seam.test-support";
+import { geminiEmbedding } from "./ai-seam.test-support";
+import { aiScenario } from "./ai-scenario.test-support";
 import { steppingClock } from "./ai-work-stand-in.test-support";
 import { aPdfWithAScanInTheMiddle } from "./file-indexing.test-support";
 import { aiWorkHold } from "./schema";
@@ -27,8 +27,6 @@ const isolated = isolatedTestDatabase("ai_file_removal");
 let db: NodePgDatabase;
 const clock = steppingClock("2026-11-02T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 
 let machineId: string;
 let storage: MemoryStorage;
@@ -67,61 +65,14 @@ beforeEach(async () => {
   storage = memoryStorage();
 });
 
-function anAi(settings: Parameters<typeof memoryAi>[0] = {}) {
-  return memoryAi({ acceptedKeys: [KEY], ...settings });
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const { openRouter: anAi, removeTheKey } = scenario;
+const saveAiSettings = () => scenario.turnAiOn();
 
-async function saveAiSettings(): Promise<void> {
-  const dependencies: AiDependencies = { ai: anAi(), encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
+const attach = (title: string, bytes: Uint8Array, contentType = "application/pdf") =>
+  scenario.attachFile(machineId, { title, bytes, contentType });
 
-async function removeTheKey(): Promise<void> {
-  const dependencies: AiDependencies = { ai: anAi(), encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
-
-async function attach(title: string, bytes: Uint8Array, contentType = "application/pdf"): Promise<string> {
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, contentType);
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
-}
-
-function run(ai = anAi()) {
-  return runAiWork({
-    db,
-    clock,
-    budgetSeconds: 250,
-    ai: { ai, encryptionKey: () => environmentKey },
-    storage,
-    continueWork: async () => {},
-    kinds: [fileIndexingWork],
-  });
-}
+const run = (ai = anAi()) => scenario.run({ kinds: [fileIndexingWork], with: ai });
 
 async function remove(fileId: string): Promise<void> {
   const removed = await executeCommand(removeFileCommandWithAiIndex, { fileId, version: 0 }, { actor: tom, db, clock });

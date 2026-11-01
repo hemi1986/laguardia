@@ -1,14 +1,9 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  attachFileCommand,
-  createMachineModelCommand,
-  machineForTeamForm,
-  registerMachineCommand,
-} from "@/modules/collection";
+import { createMachineModelCommand, machineForTeamForm, registerMachineCommand } from "@/modules/collection";
 import {
   defectDetails,
   putDefectOnHoldCommand,
@@ -16,15 +11,10 @@ import {
   resolveDefectCommand,
   retireMachineCommand,
 } from "@/modules/repair";
-import {
-  aiSettingsForm,
-  changeAiSettingsCommand,
-  defectAiAssessments,
-  requestAiAssessmentCommand,
-  type AiDependencies,
-} from "@/modules/ai-assistance";
+import { defectAiAssessments, requestAiAssessmentCommand } from "@/modules/ai-assistance";
 import { writeAiAssessmentForTest } from "@/modules/ai-assistance/ai-assessment.test-support";
-import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
+import { geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
@@ -45,8 +35,6 @@ const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const tomViewer = { id: tom.teamMemberId, role: "technician" } as const;
 const benViewer = { id: ben.teamMemberId, role: "helper" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const EMBEDDING = geminiEmbedding.id;
 const CHAT = geminiFlash.id;
 const NOW = "2026-11-03T12:00:00Z";
@@ -74,32 +62,11 @@ beforeEach(async () => {
   await saveAiSettings();
 });
 
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock: fixedClock(NOW), technician: tom });
 /** The AI seam in tests – only the chat model's name is read here; nothing is written in this file's scenarios. */
-function ai(): AiDependencies {
-  return { ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey };
-}
-
-async function saveAiSettings() {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: CHAT, embeddingModel: EMBEDDING },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
-
-async function turnAiOff() {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
+const ai = () => scenario.ai();
+const saveAiSettings = () => scenario.turnAiOn({ chatModel: CHAT, embeddingModel: EMBEDDING });
+const turnAiOff = scenario.removeTheKey;
 
 async function aMachine(museumNumber: string) {
   const registered = await executeCommand(
@@ -132,15 +99,8 @@ async function anOpenDefect(machineId: string, title: string, suitableForHelpers
   return reported.result.defectId;
 }
 
-async function request(defectId: string, actor: Actor = tom, note = "", photos: string[] = []) {
-  const asked = await executeCommand(
-    requestAiAssessmentCommand(ai()),
-    { defectId, note, photos },
-    { actor, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!asked.ok) throw new Error(asked.error);
-  return asked.result.aiAssessmentId;
-}
+const request = (defectId: string, actor: Actor = tom, note = "", photos: string[] = []) =>
+  scenario.requestAiAssessment(defectId, { note, photos, by: actor });
 
 async function writtenAssessment(defectId: string, summary = "Die Spule ist schwach.") {
   const id = await request(defectId, tom);
@@ -161,21 +121,7 @@ async function attach(defectId: string, title: string) {
   const defect = await defectDetails(db, defectId);
   if (!defect) throw new Error("no defect");
   const bytes = new TextEncoder().encode("manual");
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, "application/pdf");
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId: defect.machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType: "application/pdf" },
-    },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
+  return scenario.attachFile(defect.machineId, { title, bytes, contentType: "application/pdf" });
 }
 
 async function page(

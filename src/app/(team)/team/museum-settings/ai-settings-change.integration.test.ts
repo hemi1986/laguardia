@@ -14,16 +14,17 @@ import { aiIndexOf, anIndexedFile } from "@/modules/ai-assistance/ai-index.test-
 import {
   geminiEmbedding,
   geminiFlash,
-  memoryAi,
   type MemoryAiSettings,
   type MemoryModel,
 } from "@/modules/ai-assistance/ai-seam.test-support";
+import { aiScenario, SCENARIO_KEY as KEY } from "@/modules/ai-assistance/ai-scenario.test-support";
+import { field, labelOf, selectedOf, textOf } from "@/test-support/html";
 import {
   aiSettingsJournal,
   storedAiSettingsRow,
   withoutAiSettings,
 } from "@/modules/ai-assistance/ai-settings.test-support";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { reportProblemAndTriageCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
@@ -53,9 +54,6 @@ const isolated = isolatedTestDatabase("ai_settings_change_page");
 let db: NodePgDatabase;
 const clock = fixedClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const OTHER_KEY = "sk-or-v1-fedcba9876543210fedcba9876543210c3d4";
 const REFUSED_KEY = "sk-or-v1-refused000000000000000000000000dead";
 
@@ -108,28 +106,20 @@ beforeEach(async () => {
   journalBefore = (await aiSettingsJournal(db)).length;
 });
 
+const scenario = aiScenario({ db: () => db, clock, technician: tom });
+
 function openRouterWith(settings: MemoryAiSettings = {}): AiDependencies {
-  return {
-    ai: memoryAi({
+  return scenario.ai(
+    scenario.openRouter({
       acceptedKeys: [KEY, OTHER_KEY],
       models: [geminiFlash, geminiEmbedding, otherEmbedding],
       ...settings,
     }),
-    encryptionKey: () => environmentKey,
-  };
+  );
 }
 
 /** AI on with the key ending in "a1b2", Gemini 2.5 Flash and Gemini Embedding 2. */
-async function turnAiOn() {
-  const dependencies = openRouterWith();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
+const turnAiOn = () => scenario.turnAiOn({ with: openRouterWith() });
 
 /** The form „KI“ and the warning's confirmation as Tom sends them; `landed` names where each save went. */
 function formsOf(actor: Actor, dependencies = openRouterWith()) {
@@ -187,34 +177,15 @@ async function warning(address: string, tokensPerPageOrImage = 2500) {
 }
 
 async function attachedAndIndexed(title: string, pages: number): Promise<string> {
-  const file = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name: `files/${randomUUID()}`, size: 1000, contentType: "application/pdf" },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!file.ok) throw new Error(file.error);
-  await anIndexedFile(db, clock, file.result.fileId, { embeddingModel: geminiEmbedding.id, pages });
-  attached.push(file.result.fileId);
-  return file.result.fileId;
+  const fileId = await scenario.attachFile(machineId, {
+    title,
+    bytes: new Uint8Array(1000),
+    contentType: "application/pdf",
+  });
+  await anIndexedFile(db, clock, fileId, { embeddingModel: geminiEmbedding.id, pages });
+  attached.push(fileId);
+  return fileId;
 }
-
-const field = (html: string, name: string) =>
-  html.match(new RegExp(`<(input|select)[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
-const labelOf = (html: string, id: string) =>
-  html.match(new RegExp(`<label[^>]*for="${id}"[^>]*>([^<]*)</label>`))?.[1];
-const selectedOf = (html: string, name: string) =>
-  html
-    .match(new RegExp(`<select[^>]*name="${name}"[^>]*>(.*?)</select>`))?.[1]
-    ?.match(/<option[^>]*selected=""[^>]*value="([^"]*)"|<option[^>]*value="([^"]*)"[^>]*selected=""/)
-    ?.slice(1)
-    .find(Boolean);
-const textOf = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("replacing the key", () => {
   it("ST-110: A technician replaces the key", async () => {
