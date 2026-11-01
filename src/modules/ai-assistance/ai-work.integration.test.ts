@@ -71,3 +71,26 @@ describe("a run's budget and its continuation", () => {
     expect(calls).toBe(0);
   });
 });
+
+/** Starts a run that is cut off while it works on the next piece – like a deployment or the time limit – and never ends. */
+async function aRunCutOffAtTheNextPiece(): Promise<void> {
+  const started = standIn.nextStart();
+  void run();
+  await started;
+}
+
+describe("holds", () => {
+  it("a piece held by a run that was cut off is not taken by another run, neither before nor after its hold ran out", async () => {
+    const [piece] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    standIn.behave(piece, { seconds: 3, outcome: "done" });
+
+    clock.set("2026-11-02T10:08:19Z"); // the hold of 2 × 250 s runs until 10:08:20
+    await run();
+    clock.set("2026-11-02T10:08:21Z");
+    await run();
+
+    expect(standIn.started.map((each) => each.id)).toEqual([piece]);
+    expect(await standIn.stored(piece)).toMatchObject({ done: 0 });
+  });
+});
