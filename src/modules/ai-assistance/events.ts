@@ -1,7 +1,13 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
-import { ownerColumns, type FileIndexedForAi, type FileIndexingFailed, type FileLeftAiIndex } from "./ai-index-entry";
+import {
+  ownerColumns,
+  type FileIndexedForAi,
+  type FileIndexingFailed,
+  type FileIndexingRetried,
+  type FileLeftAiIndex,
+} from "./ai-index-entry";
 
 /**
  * AI assistance's event catalogue (ST-079): per event its aggregate and what reaches the journal. The OpenRouter key is
@@ -55,6 +61,13 @@ export const aiAssistanceEvents = eventCatalogue({
         machineId,
         data: { machineModelId, embeddingModel: event.embeddingModel, reason: event.reason },
       };
+    },
+  },
+  "EVT-FileIndexingRetried": {
+    aggregate: "AGG-AiIndexEntry",
+    project: (event: FileIndexingRetried) => {
+      const { machineId, machineModelId } = ownerData(event.owner);
+      return { aggregateId: event.fileId, machineId, data: { machineModelId, embeddingModel: event.embeddingModel } };
     },
   },
   "EVT-FileLeftAiIndex": {

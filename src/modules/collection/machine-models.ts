@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { aggregateStore, history, isId, type Database } from "@/platform/command";
 import type { CategoryChange, MachineModel, MachineModelState } from "./create-machine-model";
 import { machine, machineModel, machineModelCategoryChange } from "./schema";
@@ -130,4 +130,18 @@ export async function machineModelForTeam(
   const { version, ...model } = row;
   const machineCount = await db.$count(machine, eq(machine.machineModelId, machineModelId));
   return { model: toMachineModel(model), version, machineCount };
+}
+
+/**
+ * The titles of these machine models, by ID (ST-109): what the AI index overview names a file of a machine model by –
+ * the page composes, like `machineLabels` for machines. Unknown IDs are left out.
+ */
+export async function machineModelTitles(db: Database, machineModelIds: readonly string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(machineModelIds)];
+  if (unique.length === 0) return new Map();
+  const rows = await db
+    .select({ id: machineModel.id, title: machineModel.title })
+    .from(machineModel)
+    .where(inArray(machineModel.id, unique));
+  return new Map(rows.map(({ id, title }) => [id, title]));
 }

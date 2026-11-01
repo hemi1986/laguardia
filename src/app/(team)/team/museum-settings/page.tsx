@@ -1,8 +1,9 @@
 import { Page } from "@/components/page";
+import { aiWorkStarter } from "@/app/ai-work";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
-import { loadAiSettings } from "./ai-settings-data";
+import { loadAiSettings, startAiWorkOnOpening } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
 import { MuseumSettingsView } from "./museum-settings";
 import { loadMuseumSettings } from "./museum-settings-data";
@@ -10,6 +11,9 @@ import { loadMuseumSettings } from "./museum-settings-data";
 /**
  * „Einstellungen“ (ST-100, renamed in ST-104) – technicians only (G11, G19: behind „Mehr“ after „Teammitglieder“): the
  * museum settings' forms „Museum“, „Logo“, „Rechtstexte“ and, last, the AI settings' form „KI“, each saved on its own.
+ * Opened with AI on, it starts a run of the AI work after its response when a file's indexing was left unfinished
+ * (HS-35, ST-109) – never otherwise, so opening it does not start work on every load; the file shows as failed
+ * (*broken off*) on the next load.
  */
 export default async function SettingsPage({ searchParams }: PageProps<"/team/museum-settings">) {
   const technician = await requireTechnician();
@@ -17,8 +21,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/team/mu
   const db = database();
   const [museum, ai] = await Promise.all([
     loadMuseumSettings(db, params, { viewer: technician.id }),
-    loadAiSettings(db, params),
+    loadAiSettings(db, params, { viewer: technician.id }),
   ]);
+
+  await startAiWorkOnOpening(ai, aiWorkStarter());
 
   return (
     <Page title={teamMessages.terms.Settings}>

@@ -11,8 +11,23 @@ export {
 } from "./ai-settings";
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
+export {
+  aiIndexOverview,
+  fileIndexingRetriedBy,
+  filesTheAiCannotRead,
+  type AiIndexOverview,
+  type FailedFile,
+} from "./ai-index-overview";
+export type {
+  FileOwner,
+  IndexingFailureReason,
+  RetryFileIndexingError,
+  RetryFileIndexingInput,
+} from "./ai-index-entry";
+export { retryFileIndexingCommand } from "./index-file-for-ai-command";
 export { aiWorkDependencies } from "./ai-work-dependencies";
 export { AI_ASSESSMENT_KIND, aiAssessmentWork } from "./ai-assessment-work";
+export { FILE_INDEXING_KIND, fileIndexingWork } from "./file-indexing-work";
 export { aiAssessmentsOfDefect } from "./ai-assessments";
 export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
 export type {

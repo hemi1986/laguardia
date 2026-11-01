@@ -117,7 +117,7 @@ async function filledIn(
 /** The section „KI“ the technician lands on. */
 async function section(address = "/team/museum-settings", dependencies = openRouterWith()) {
   const params = Object.fromEntries(new URL(address, "http://localhost").searchParams);
-  return renderToStaticMarkup(createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies })));
+  return renderToStaticMarkup(createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId })));
 }
 
 /** The form „KI“ after a rejection: the page as it is now, and what the action state kept. */

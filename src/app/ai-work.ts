@@ -4,7 +4,7 @@ import { aiWorkLeftUnfinished } from "@/modules/ai-assistance";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { startAiWork } from "./api/ai-work/start-ai-work";
-import { startWhenLeftUnfinished } from "./ai-work-when-left-unfinished";
+import { startWhenLeftUnfinished, type LeftUnfinishedStart } from "./ai-work-when-left-unfinished";
 
 /**
  * Starts the AI work after the response (ST-112, ADR 0015) – for a Server Action whose command made work (saving the
@@ -21,12 +21,13 @@ export function startAiWorkAfterResponse(): void {
  * every load (HS-33, HS-35).
  */
 export async function startAiWorkWhenLeftUnfinished(kind: string, pieceIds?: readonly string[]): Promise<void> {
-  await startWhenLeftUnfinished(
-    {
-      leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(database(), systemClock, kind, pieceIds),
-      start: startAiWorkAfterResponse,
-    },
-    kind,
-    pieceIds,
-  );
+  await startWhenLeftUnfinished(aiWorkStarter(), kind, pieceIds);
+}
+
+/** The real database read and start, for a page whose decision lives in its data module (the form „KI“, ST-109). */
+export function aiWorkStarter(): LeftUnfinishedStart {
+  return {
+    leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(database(), systemClock, kind, pieceIds),
+    start: startAiWorkAfterResponse,
+  };
 }

@@ -43,6 +43,7 @@ export {
   machineModelForTeam,
   machineModelsToChooseFrom,
   machineModelOfMachineForAi,
+  machineModelTitles,
   type MachineModelForTeam,
   type MachineModelOfMachine,
 } from "./machine-models";

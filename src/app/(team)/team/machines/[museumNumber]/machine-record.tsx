@@ -190,6 +190,9 @@ export function MachineRecordView({
                         {file.ofMachineModel && (
                           <span className="text-muted-foreground"> · {texts.ofMachineModel}</span>
                         )}
+                        {file.unreadableForAi && (
+                          <span className="text-muted-foreground"> · {teamMessages.aiIndex.unreadable}</span>
+                        )}
                       </span>
                       {/* A way to the question, so the shape of any other secondary button – not red (G30). */}
                       {actions.removeFile && (

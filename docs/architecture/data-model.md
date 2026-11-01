@@ -535,7 +535,8 @@ stateDiagram-v2
     [*] --> Failed : EVT-FileIndexingFailed
     Indexed --> Indexed : EVT-FileIndexedForAi (indexed again, e.g. new embedding model)
     Indexed --> Failed : EVT-FileIndexingFailed
-    Failed --> Indexed : EVT-FileIndexedForAi („Erneut versuchen“ or a new embedding model – HS-32)
+    Failed --> Indexed : EVT-FileIndexedForAi (a new embedding model – HS-32)
+    Failed --> [*] : EVT-FileIndexingRetried („Erneut versuchen“ – the file waits again, ST-109)
     Failed --> Failed : EVT-FileIndexingFailed (incl. broken off – POL-UnfinishedAiWorkFails)
     Indexed --> [*] : EVT-FileLeftAiIndex
     Failed --> [*] : EVT-FileLeftAiIndex

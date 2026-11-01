@@ -2,6 +2,8 @@
  * German texts of AI assistance's pages (ST-104: the form „KI“ on „Einstellungen“; wording decided by the user on
  * 2026-10-31 and 2026-11-01).
  */
+const germanCount = (count: number) => new Intl.NumberFormat("de-DE").format(count);
+
 export const aiAssistanceTexts = {
   /** The form „KI“ (RM-AiSettings). */
   aiSettings: {
@@ -31,6 +33,31 @@ export const aiAssistanceTexts = {
     save: "KI speichern",
     saved: "KI gespeichert.",
     keyRemoved: "Schlüssel entfernt. KI ist aus.",
+  },
+  /** The overview „KI-Erfassung“ in the form „KI“ (RM-AiSettings, ST-109; wording decided by the user on 2026-10-31). */
+  aiIndex: {
+    title: "KI-Erfassung",
+    /** „12 Dateien für die KI erfasst · 3 warten auf KI-Erfassung · 2 für die KI nicht lesbar“ – German numbers (G13). */
+    counts: (indexed: number, waiting: number, failed: number) =>
+      [
+        `${germanCount(indexed)} ${indexed === 1 ? "Datei" : "Dateien"} für die KI erfasst`,
+        `${germanCount(waiting)} ${waiting === 1 ? "wartet" : "warten"} auf KI-Erfassung`,
+        `${germanCount(failed)} für die KI nicht lesbar`,
+      ].join(" · "),
+    cost: (dollars: string) => `Kosten der KI-Erfassung bisher: ${dollars} $`,
+    empty: "Noch keine Datei für die KI erfasst.",
+    failedFile: (owner: string, title: string, reason: string) => `${owner} · ${title} – ${reason}`,
+    failureReasons: {
+      "not readable": "Datei lässt sich nicht lesen",
+      "format not indexed": "Dateiformat wird nicht erfasst",
+      "OpenRouter refused": "OpenRouter hat abgelehnt",
+      "OpenRouter not reachable": "OpenRouter war nicht erreichbar",
+      "broken off": "Erfassung abgebrochen",
+    },
+    retry: "Erneut versuchen",
+    retrying: (title: string) => `${title} wird erneut für die KI erfasst.`,
+    /** The mark on the machine record's list of files (RM-MachineRecord). */
+    unreadable: "Für die KI nicht lesbar",
   },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
@@ -95,4 +122,6 @@ export const aiAssistanceErrors = {
     "Diese KI-Einschätzung ist nur für Techniker:innen – der Defekt ist nicht für Helfer:innen geeignet.",
   "ai-assessment-being-written": "Für diesen Defekt läuft schon eine KI-Einschätzung.",
   "ai-assessment-too-many-photos": "Bitte höchstens 5 Fotos mitschicken.",
+  "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
+  "file-indexing-not-failed": "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",
 } as const;
