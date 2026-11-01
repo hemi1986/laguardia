@@ -404,11 +404,14 @@ events:
   - id: EVT-FileIndexingFailed
     name: File indexing failed
     aggregate: AGG-AiIndexEntry
-    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable, broken off)]
+    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable, broken off), Cost]
     description: >-
       The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again – only by hand („Erneut
       versuchen“) or with a new embedding model, never automatically (user, 2026-11-01, D3). "broken off" – the
       indexing ended without a result (a crash, a deployment, the time limit) and POL-UnfinishedAiWorkFails recorded it.
+      Cost – what OpenRouter charged for the requests it answered before the failure; for "broken off" what the run had
+      recorded with its hold; it counts in "Cost of indexing so far" (user, 2026-11-01, OPEN_QUESTIONS ST-109). A page
+      whose image pdfjs cannot decode makes the file "not readable" – it is never indexed blank (2026-11-01).
   - id: EVT-FileIndexingRetried
     name: File indexing retried
     aggregate: AGG-AiIndexEntry

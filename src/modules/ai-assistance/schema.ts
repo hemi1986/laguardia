@@ -50,6 +50,8 @@ export const aiWorkHold = pgTable(
     /** The run holding it – only that run may store the piece's result or give it up. */
     heldBy: uuid("held_by").notNull(),
     heldUntil: timestamp("held_until", { withTimezone: true }).notNull(),
+    /** What OpenRouter has charged for the piece so far – recorded with it when it is recorded broken off. */
+    spent: doublePrecision("spent").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.kind, table.pieceId] })],
 );

@@ -53,7 +53,7 @@ export const aiIndexEntries = aggregateStore({
     failureReason: state.state === "failed" ? (state.failureReason ?? null) : null,
     pagesIndexed: state.state === "indexed" ? state.pagesIndexed : null,
     imagesIndexed: state.state === "indexed" ? state.imagesIndexed : null,
-    cost: state.state === "indexed" ? state.cost : null,
+    cost: state.cost,
   }),
 });
 

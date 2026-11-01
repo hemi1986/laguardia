@@ -59,7 +59,7 @@ export const aiAssistanceEvents = eventCatalogue({
       return {
         aggregateId: event.fileId,
         machineId,
-        data: { machineModelId, embeddingModel: event.embeddingModel, reason: event.reason },
+        data: { machineModelId, embeddingModel: event.embeddingModel, reason: event.reason, cost: event.cost },
       };
     },
   },

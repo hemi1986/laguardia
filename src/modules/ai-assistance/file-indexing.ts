@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import sharp from "sharp";
@@ -35,8 +36,11 @@ export type IndexingOutcome =
       imagesIndexed: number;
       cost: number;
     }
-  /** The file cannot be read or its format is not indexed, or OpenRouter refused or did not answer. */
-  | { outcome: "failed"; reason: IndexingFailureReason }
+  /**
+   * The file cannot be read or its format is not indexed, or OpenRouter refused or did not answer – with what OpenRouter
+   * charged for the requests it answered before (OPEN_QUESTIONS ST-109, user 2026-11-01).
+   */
+  | { outcome: "failed"; reason: IndexingFailureReason; cost: number }
   /** AI was turned off meanwhile (or the key or model changed): nothing is stored, the file stays waiting. */
   | { outcome: "given-up" };
 
@@ -51,7 +55,12 @@ export type IndexFileOptions = {
   embeddingModel: string;
   /** Asked before every request to OpenRouter: AI off, a rotated key or a changed model stops the indexing at once. */
   settings: () => Promise<IndexingSettings>;
+  /** Told what OpenRouter charged after every few requests – the run keeps it in case the indexing breaks off. */
+  spent?: (cost: number) => Promise<void>;
 };
+
+/** How embedding is done for one file – the seam, the model, the settings asked before each request, the cost told. */
+type Embedding = Pick<IndexFileOptions, "ai" | "embeddingModel" | "settings" | "spent">;
 
 /** One thing to embed, with where it came from. */
 type ItemToEmbed = {
@@ -79,40 +88,43 @@ export async function indexFileContent({
   ai,
   embeddingModel,
   settings,
+  spent,
 }: IndexFileOptions): Promise<IndexingOutcome> {
-  if (isPdf(contentType)) return indexPdf({ bytes, ai, embeddingModel, settings });
+  const embedding: Embedding = { ai, embeddingModel, settings, spent };
+  if (isPdf(contentType)) return indexPdf(bytes, embedding);
   if (isText(contentType)) {
     const text = new TextDecoder().decode(bytes);
     const itemsToEmbed: ItemToEmbed[] = passagesOf(text).map((passage) => ({ kind: "passage", text: passage }));
-    return indexItems(itemsToEmbed, { ai, embeddingModel, settings }, { pagesIndexed: 0, imagesIndexed: 0 });
+    return indexItems(itemsToEmbed, embedding, { pagesIndexed: 0, imagesIndexed: 0 });
   }
   if (isImage(contentType)) {
     // A damaged image – or one whose pixel count is absurd – is a file that cannot be read (ST-106, "not readable").
     // sharp reads the header only and refuses too many pixels before decoding, so it cannot exhaust the worker.
     try {
       const info = await sharp(Buffer.from(bytes), { limitInputPixels: MAX_IMAGE_PIXELS }).metadata();
-      if (!info.width || !info.height) return { outcome: "failed", reason: "not readable" };
+      if (!info.width || !info.height) return { outcome: "failed", reason: "not readable", cost: 0 };
     } catch {
-      return { outcome: "failed", reason: "not readable" };
+      return { outcome: "failed", reason: "not readable", cost: 0 };
     }
     const itemsToEmbed: ItemToEmbed[] = [{ kind: "image", bytes, contentType: mediaTypesOf(contentType) }];
-    return indexItems(itemsToEmbed, { ai, embeddingModel, settings }, { pagesIndexed: 0, imagesIndexed: 1 });
+    return indexItems(itemsToEmbed, embedding, { pagesIndexed: 0, imagesIndexed: 1 });
   }
-  return { outcome: "failed", reason: "format not indexed" };
+  return { outcome: "failed", reason: "format not indexed", cost: 0 };
 }
 
 /** A text, Markdown or image file: its items embedded, no page count. */
 async function indexItems(
   itemsToEmbed: ItemToEmbed[],
-  embedding: { ai: AiSeam; embeddingModel: string; settings: () => Promise<IndexingSettings> },
+  embedding: Embedding,
   counts: { pagesIndexed: number; imagesIndexed: number },
 ): Promise<IndexingOutcome> {
   const answer = await embedItems(itemsToEmbed, embedding);
-  if (answer.outcome !== "embedded") return answer;
+  if (answer.outcome === "given-up") return answer;
+  if (answer.outcome === "failed") return { outcome: "failed", reason: answer.reason, cost: costOf(answer.embedded) };
   return {
     outcome: "indexed",
     items: answer.embedded.map((each) => each.item),
-    cost: answer.embedded.reduce((sum, each) => sum + each.cost, 0),
+    cost: costOf(answer.embedded),
     ...counts,
   };
 }
@@ -144,12 +156,7 @@ function splitLong(text: string): string[] {
 }
 
 /** Renders every page, batches of pages rendered before their text and page image are embedded (ST-105). */
-async function indexPdf({
-  bytes,
-  ai,
-  embeddingModel,
-  settings,
-}: Omit<IndexFileOptions, "contentType">): Promise<IndexingOutcome> {
+async function indexPdf(bytes: Uint8Array, embedding: Embedding): Promise<IndexingOutcome> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const assets = pdfjsAssets();
   const loading = pdfjs.getDocument({
@@ -167,7 +174,7 @@ async function indexPdf({
   } catch {
     // A damaged, password-protected or empty PDF, or content that is no PDF at all (ST-105).
     await loading.destroy().catch(() => undefined);
-    return { outcome: "failed", reason: "not readable" };
+    return { outcome: "failed", reason: "not readable", cost: 0 };
   }
   const pages = pdf.numPages;
   const embedded: Embedded[] = [];
@@ -190,13 +197,16 @@ async function indexPdf({
           itemsToEmbed.push({ kind: "page-image", page: number, bytes: image, contentType: "image/jpeg" });
         }
       } catch {
-        // A page that pdfjs cannot read or render: the whole file fails and nothing of it is kept.
-        return { outcome: "failed", reason: "not readable" };
+        // A page that pdfjs cannot read or render: the whole file fails and nothing of it is kept – but what the pages
+        // before it cost is still its cost.
+        return { outcome: "failed", reason: "not readable", cost: costOf(embedded) };
       }
       // Embedding errors are not the file's: they propagate, so the run keeps its hold and the file is recorded broken
       // off later instead of failing permanently as "not readable" (D3 never retries a failed file).
-      const answer = await embedItems(itemsToEmbed, { ai, embeddingModel, settings });
-      if (answer.outcome !== "embedded") return answer;
+      const answer = await embedItems(itemsToEmbed, embedding);
+      if (answer.outcome === "given-up") return answer;
+      if (answer.outcome === "failed")
+        return { outcome: "failed", reason: answer.reason, cost: costOf([...embedded, ...answer.embedded]) };
       embedded.push(...answer.embedded);
     }
   } finally {
@@ -208,17 +218,27 @@ async function indexPdf({
     pagesIndexed: pages,
     // Every page is a page image; a PDF has no separate image files.
     imagesIndexed: pages,
-    cost: embedded.reduce((sum, each) => sum + each.cost, 0),
+    cost: costOf(embedded),
   };
 }
 
-/** What rendering one PDF page needs – pdfjs' page, narrowed to the two calls (its types want a DOM canvas). */
+const costOf = (embedded: readonly Embedded[]) => embedded.reduce((sum, each) => sum + each.cost, 0);
+
+/** What rendering one PDF page needs – pdfjs' page, narrowed to the calls used (its types want a DOM canvas). */
 type PdfPage = {
   getViewport(params: { scale: number }): { width: number; height: number };
   render(params: { canvasContext: unknown; viewport: unknown; canvas: unknown }): { promise: Promise<void> };
+  getOperatorList(): Promise<{ fnArray: number[]; argsArray: unknown[][] }>;
+  objs: PdfObjects;
+  commonObjs: PdfObjects;
 };
+type PdfObjects = { has(id: string): boolean; get(id: string): unknown };
 
-/** One page rendered to a JPEG of bounded size – 1024 px on its long edge (ST-105). */
+/**
+ * One page rendered to a JPEG of bounded size – 1024 px on its long edge (ST-105). An image of the page that pdfjs could
+ * not decode – broken data, or a JBIG2 or JPEG 2000 decoder it could not load – throws: pdfjs itself only warns and
+ * draws the page without it, and a blank scan must not be indexed or sent as if it were the page.
+ */
 async function renderPage(page: PdfPage): Promise<Uint8Array> {
   const original = page.getViewport({ scale: 1 });
   const scale = Math.min(PAGE_IMAGE_LONG_EDGE / Math.max(original.width, original.height), 2);
@@ -226,7 +246,21 @@ async function renderPage(page: PdfPage): Promise<Uint8Array> {
   const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
   const context = canvas.getContext("2d");
   await page.render({ canvasContext: context, viewport, canvas }).promise;
+  if (await hasUndecodedImage(page)) throw new Error("An image of the page could not be decoded");
   return canvas.encode("jpeg", PAGE_IMAGE_QUALITY);
+}
+
+/** Whether pdfjs drew an image of the page without its data – it records an image it failed to decode as null. */
+async function hasUndecodedImage(page: PdfPage): Promise<boolean> {
+  const { OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const { fnArray, argsArray } = await page.getOperatorList();
+  return fnArray.some((operator, at) => {
+    if (operator !== OPS.paintImageXObject && operator !== OPS.paintImageXObjectRepeat) return false;
+    const id = argsArray[at]?.[0];
+    if (typeof id !== "string") return false;
+    const objects = id.startsWith("g_") ? page.commonObjs : page.objs;
+    return objects.has(id) && objects.get(id) === null;
+  });
 }
 
 /**
@@ -238,6 +272,10 @@ async function renderPage(page: PdfPage): Promise<Uint8Array> {
  */
 function pdfjsAssets(): (folder: "wasm" | "iccs" | "standard_fonts" | "cmaps") => string {
   const root = join(process.cwd(), "node_modules", "pdfjs-dist");
+  // Without its decoders every scanned page would fail as "not readable" – the deployment's fault, not the file's: the
+  // run stops on it, says why in the log, and the file is recorded broken off and can be tried again once it is fixed.
+  if (!existsSync(join(root, "wasm", "jbig2.wasm")))
+    throw new Error(`pdfjs' decoders are missing at ${join(root, "wasm")} – check outputFileTracingIncludes`);
   // pdfjs expects a folder URL; a local path with a trailing slash works locally and in the traced function alike.
   return (folder) => `${join(root, folder)}/`;
 }
@@ -284,10 +322,11 @@ export async function renderPdfPages(
   return rendered;
 }
 
+/** A failure keeps what was embedded before it – its cost is the file's (the items themselves are not kept). */
 type EmbedAnswer =
   | { outcome: "embedded"; embedded: Embedded[] }
   | { outcome: "given-up" }
-  | { outcome: "failed"; reason: IndexingFailureReason };
+  | { outcome: "failed"; reason: IndexingFailureReason; embedded: Embedded[] };
 
 /**
  * Embeds the items at most four requests at a time – one item per request. Before every request the settings are read:
@@ -296,7 +335,7 @@ type EmbedAnswer =
  */
 async function embedItems(
   itemsToEmbed: ItemToEmbed[],
-  { ai, embeddingModel, settings }: { ai: AiSeam; embeddingModel: string; settings: () => Promise<IndexingSettings> },
+  { ai, embeddingModel, settings, spent }: Embedding,
 ): Promise<EmbedAnswer> {
   const embedded: Embedded[] = [];
   for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {
@@ -324,10 +363,12 @@ async function embedItems(
           };
         }),
     );
+    const answered = answers.filter((answer): answer is Embedded => typeof answer === "object");
+    await spent?.(costOf(answered));
     if (answers.includes("given-up")) return { outcome: "given-up" };
     const failure = answers.find((answer): answer is IndexingFailureReason => typeof answer === "string");
-    if (failure) return { outcome: "failed", reason: failure };
-    embedded.push(...(answers as Embedded[]));
+    if (failure) return { outcome: "failed", reason: failure, embedded: [...embedded, ...answered] };
+    embedded.push(...answered);
   }
   return { outcome: "embedded", embedded };
 }

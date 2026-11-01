@@ -552,7 +552,7 @@ stateDiagram-v2
 | | | Failure reason | `IndexingFailureReason` | when failed | EVT-FileIndexingFailed; *Files failed* in RM-AiSettings |
 | | | Pages indexed | Count | when indexed | EVT-FileIndexedForAi; the cost estimate of `CMD-ChangeAiSettings` |
 | | | Images indexed | Count | when indexed | EVT-FileIndexedForAi; the cost estimate of `CMD-ChangeAiSettings` |
-| | | Cost | `Cost` | when indexed | EVT-FileIndexedForAi; *Cost of indexing so far* in RM-AiSettings (summed from the journal, replaced entries included) |
+| | | Cost | `Cost` | when indexed; when failed, what it cost before (none for entries failed before 2026-11-01) | EVT-FileIndexedForAi, EVT-FileIndexingFailed; *Cost of indexing so far* in RM-AiSettings (summed from the journal, replaced and failed entries included) |
 | Index item | Entity | Kind | *passage* \| *page image* \| *image* | yes | EVT-FileIndexedForAi (*Passages*, *Page images and images*) |
 | | | Page | `PageNumber` | for a PDF | EVT-FileIndexedForAi; *References (file, page)* in RM-DefectAiAssessments |
 | | | Text | `Text` | for a passage | EVT-FileIndexedForAi (*Passages*) – what an AI assessment sends of a text hit |
