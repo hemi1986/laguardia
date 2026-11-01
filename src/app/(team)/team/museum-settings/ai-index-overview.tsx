@@ -1,5 +1,7 @@
 import { teamMessages } from "@/platform/messages";
+import { retryFileIndexingAction } from "./ai-index-actions";
 import type { ShownAiIndexOverview } from "./ai-settings-data";
+import { RetryFileIndexingForm } from "./retry-file-indexing-form";
 
 const { aiIndex: texts } = teamMessages;
 
@@ -29,6 +31,7 @@ export function AiIndexOverviewView({ overview }: { overview: ShownAiIndexOvervi
           {overview.failed.map((file) => (
             <li key={file.fileId} className="flex flex-col gap-1">
               <span>{texts.failedFile(file.owner, file.title, texts.failureReasons[file.reason])}</span>
+              <RetryFileIndexingForm action={retryFileIndexingAction} fileId={file.fileId} version={file.version} />
             </li>
           ))}
         </ul>

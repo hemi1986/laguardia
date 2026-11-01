@@ -21,7 +21,13 @@ export function aiLanding(confirmed: AiConfirmed): string {
 }
 
 /** A failed file as the overview lists it: what it belongs to – a museum number or a machine model's title – and why. */
-export type ShownFailedFile = { fileId: string; owner: string; title: string; reason: IndexingFailureReason };
+export type ShownFailedFile = {
+  fileId: string;
+  owner: string;
+  title: string;
+  reason: IndexingFailureReason;
+  version: number;
+};
 
 /** The overview „KI-Erfassung“ (ST-109) with its failed files named. */
 export type ShownAiIndexOverview = Omit<AiIndexOverview, "failed"> & { failed: ShownFailedFile[] };
@@ -50,12 +56,7 @@ async function shownOverview(db: Database, overview: AiIndexOverview): Promise<S
   };
   return {
     ...overview,
-    failed: overview.failed.map(({ fileId, owner, title, reason }) => ({
-      fileId,
-      owner: ownerOf(owner),
-      title,
-      reason,
-    })),
+    failed: overview.failed.map(({ owner, ...file }) => ({ ...file, owner: ownerOf(owner) })),
   };
 }
 

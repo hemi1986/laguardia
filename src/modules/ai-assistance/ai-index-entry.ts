@@ -177,3 +177,44 @@ export function removeFileFromAiIndex(entry: AiIndexEntryState): Decision<AiInde
     events: [{ type: "EVT-FileLeftAiIndex", fileId: entry.id, owner: entry.owner }],
   };
 }
+
+/**
+ * CMD-IndexFileForAi run by hand – „Erneut versuchen“ on a file that failed (ST-109): the failed AI index entry is
+ * removed and EVT-FileIndexingRetried recorded, so the file is waiting again (derived) and the background work, started
+ * after the response, indexes it as the system (user, 2026-11-01). The entry's version is the one the technician's page
+ * showed; the rule is decided first, so a page opened while the file had failed explains a change made since.
+ */
+export type RetryFileIndexingInput = { fileId: string; version: number };
+
+export type FileIndexingRetried = {
+  type: "EVT-FileIndexingRetried";
+  fileId: string;
+  owner: FileOwner;
+  embeddingModel: string;
+};
+
+/** What the retry must know besides the entry: whether AI is on and with which embedding model. */
+export type RetryFileIndexingFacts = { aiOn: boolean; embeddingModel: string | undefined };
+
+/** AI is off – nothing is indexed (user, 2026-10-31); the file is not failed with the current embedding model. */
+export type RetryFileIndexingError = "file-indexing-ai-off" | "file-indexing-not-failed";
+
+export function retryFileIndexing(
+  entry: AiIndexEntryState,
+  input: RetryFileIndexingInput,
+  _context: DecisionContext,
+  facts: RetryFileIndexingFacts,
+): Decision<AiIndexEntryState, FileIndexingRetried, RetryFileIndexingError> {
+  if (!facts.aiOn || !facts.embeddingModel) return { ok: false, error: "file-indexing-ai-off" };
+  // Only a file that failed with the current embedding model – one of an earlier model is waiting already.
+  if (entry.state !== "failed" || entry.embeddingModel !== facts.embeddingModel) {
+    return { ok: false, error: "file-indexing-not-failed" };
+  }
+  return {
+    ok: true,
+    state: entry,
+    events: [
+      { type: "EVT-FileIndexingRetried", fileId: input.fileId, owner: entry.owner, embeddingModel: entry.embeddingModel },
+    ],
+  };
+}

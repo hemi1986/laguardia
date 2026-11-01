@@ -7,7 +7,14 @@ import { aiAssistanceEvents } from "./events";
 import { aiIndexEntry } from "./schema";
 
 /** A file the AI cannot read (RM-AiSettings, *Files failed*): what it belongs to, its title and why. */
-export type FailedFile = { fileId: string; title: string; owner: FileOwner; reason: IndexingFailureReason };
+export type FailedFile = {
+  fileId: string;
+  title: string;
+  owner: FileOwner;
+  reason: IndexingFailureReason;
+  /** The AI index entry's version – what „Erneut versuchen“ posts (CMD-IndexFileForAi by hand). */
+  version: number;
+};
 
 /**
  * The AI index overview „KI-Erfassung“ (RM-AiSettings, ST-109): how many files that are not removed are indexed with
@@ -16,7 +23,11 @@ export type FailedFile = { fileId: string; title: string; owner: FileOwner; reas
  */
 export type AiIndexOverview = { indexed: number; waiting: number; failed: FailedFile[]; cost: number };
 
-type EntryOfCurrentModel = { state: "indexed" | "failed"; failureReason: IndexingFailureReason | null };
+type EntryOfCurrentModel = {
+  state: "indexed" | "failed";
+  failureReason: IndexingFailureReason | null;
+  version: number;
+};
 
 /** The AI index entries made with this embedding model, by file – of these files only, when given. */
 async function entriesFor(
@@ -25,7 +36,12 @@ async function entriesFor(
   fileIds?: readonly string[],
 ): Promise<Map<string, EntryOfCurrentModel>> {
   const rows = await db
-    .select({ id: aiIndexEntry.id, state: aiIndexEntry.state, failureReason: aiIndexEntry.failureReason })
+    .select({
+      id: aiIndexEntry.id,
+      state: aiIndexEntry.state,
+      failureReason: aiIndexEntry.failureReason,
+      version: aiIndexEntry.version,
+    })
     .from(aiIndexEntry)
     .where(
       and(
@@ -62,7 +78,15 @@ export async function aiIndexOverview(
     const entry = entries.get(file.id);
     if (!entry) overview.waiting += 1;
     else if (entry.state === "indexed") overview.indexed += 1;
-    else overview.failed.push({ fileId: file.id, title: file.title, owner: file.owner, reason: entry.failureReason! });
+    else {
+      overview.failed.push({
+        fileId: file.id,
+        title: file.title,
+        owner: file.owner,
+        reason: entry.failureReason!,
+        version: entry.version,
+      });
+    }
   }
   return overview;
 }

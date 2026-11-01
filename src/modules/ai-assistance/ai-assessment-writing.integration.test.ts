@@ -210,7 +210,8 @@ async function index(
         cost: 0.0001,
       },
     },
-    { actor: tom, db, clock, newId: randomUUID },
+    // The background work stores an indexing as the system – a technician runs it only by retrying (ST-109).
+    { actor: { kind: "system" }, db, clock, newId: randomUUID },
   );
   if (!indexed.ok) throw new Error(indexed.error);
 }

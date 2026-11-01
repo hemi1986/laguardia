@@ -144,4 +144,29 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     expect(html).toContain("12 Dateien für die KI erfasst · 3 warten auf KI-Erfassung · 2 für die KI nicht lesbar");
     expect(html).toContain("Kosten der KI-Erfassung bisher: 1,23 $");
   });
+
+  it("ST-109: Failed files are listed with what they belong to and why", async () => {
+    await turnAiOn();
+    const machineId = await aMachine("LG-042");
+    const attract = await attach(machineId, "Attract mode.mp4", { kind: "video" });
+    await run();
+    const schematic = await attach(machineId, "Eight Ball Schematic", { to: "machine-model" });
+    await run(ai({ unreachable: true }));
+
+    const { data, html } = await settingsPage();
+
+    expect(data.overview?.failed).toEqual([
+      { fileId: attract, owner: "LG-042", title: "Attract mode.mp4", reason: "format not indexed", version: 0 },
+      {
+        fileId: schematic,
+        owner: "Eight Ball",
+        title: "Eight Ball Schematic",
+        reason: "OpenRouter not reachable",
+        version: 0,
+      },
+    ]);
+    expect(html).toContain("LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst");
+    expect(html).toContain("Eight Ball · Eight Ball Schematic – OpenRouter war nicht erreichbar");
+    expect(html.match(/Erneut versuchen/g)).toHaveLength(2);
+  });
 });

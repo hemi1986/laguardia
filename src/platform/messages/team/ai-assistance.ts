@@ -115,4 +115,6 @@ export const aiAssistanceErrors = {
     "Diese KI-Einschätzung ist nur für Techniker:innen – der Defekt ist nicht für Helfer:innen geeignet.",
   "ai-assessment-being-written": "Für diesen Defekt läuft schon eine KI-Einschätzung.",
   "ai-assessment-too-many-photos": "Bitte höchstens 5 Fotos mitschicken.",
+  "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
+  "file-indexing-not-failed": "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",
 } as const;
