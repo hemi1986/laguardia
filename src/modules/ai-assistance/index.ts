@@ -12,7 +12,8 @@ export {
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export { aiWorkDependencies } from "./ai-work-dependencies";
-export { AI_ASSESSMENT_KIND } from "./ai-assessment-work";
+export { AI_ASSESSMENT_KIND, aiAssessmentWork } from "./ai-assessment-work";
+export { aiAssessmentsOfDefect } from "./ai-assessments";
 export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
 export type {
   AiAssessmentReference,
@@ -23,6 +24,7 @@ export type {
 } from "./ai-assessment";
 export { requestAiAssessmentCommand } from "./request-ai-assessment-command";
 export {
+  aiAssessmentRetryRequest,
   defectAiAssessments,
   type AiAssessmentViewer,
   type DefectAiAssessments,

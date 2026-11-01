@@ -16,6 +16,7 @@ import { ManageDefect } from "./manage-defect";
 import { defectActionPages, defectFormAddress } from "./defect-action-pages";
 import type { DefectDetailsData } from "./defect-details-data";
 import { AiAssessmentsSection } from "./ai-assessments";
+import type { RetryAiAssessmentState } from "./ki-einschaetzung/retry-ai-assessment-definition";
 import { ProblemReportPhoto, WorkLogPhotos } from "../../team-photos";
 
 const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
@@ -44,6 +45,7 @@ export function DefectDetailsView({
   claimAction,
   releaseAction,
   resumeAction,
+  retryAiAssessmentAction,
 }: {
   details: DefectDetailsData | undefined;
   /** CMD-ClaimDefect for this defect (ST-025) – none where the page is only looked at (e.g. a test of its data). */
@@ -52,6 +54,8 @@ export function DefectDetailsView({
   releaseAction?: (previous: ReleaseClaimState, formData: FormData) => Promise<ReleaseClaimState>;
   /** CMD-ResumeDefect for this defect (ST-029) – one tap, in the place of „Pausieren“; none where the page is only looked at. */
   resumeAction?: (previous: ResumeDefectState, formData: FormData) => Promise<ResumeDefectState>;
+  /** „Erneut versuchen“ for a failed AI assessment (ST-108) – none where the page is only looked at. */
+  retryAiAssessmentAction?: (previous: RetryAiAssessmentState, formData: FormData) => Promise<RetryAiAssessmentState>;
 }) {
   if (!details) {
     return (
@@ -174,7 +178,11 @@ export function DefectDetailsView({
         />
       </div>
       {/* Right below the actions, above the records of what happened (ST-107, RM-DefectAiAssessments). */}
-      <AiAssessmentsSection data={details.aiAssessments} requestHref={`/team/defects/${details.id}/ki-einschaetzung`} />
+      <AiAssessmentsSection
+        data={details.aiAssessments}
+        requestHref={`/team/defects/${details.id}/ki-einschaetzung`}
+        retryAction={retryAiAssessmentAction}
+      />
       {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
       {details.resolutionsAndReopenings.map((step, index, steps) => {
         // A resolved defect offers only reopening, at the end of its last closing note (G22, G29).
