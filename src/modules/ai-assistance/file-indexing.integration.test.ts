@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -6,14 +6,13 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { aiSettingsForm, changeAiSettingsCommand, type AiDependencies } from ".";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { aiIndexEntryOf } from "./ai-index-entries";
 import { aiIndexOverview } from "./ai-index-overview";
 import { withoutAiSettings } from "./ai-settings.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
-import { runAiWork } from "./ai-work";
-import { memoryAi, geminiEmbedding, geminiFlash, type MemoryAiSettings } from "./ai-seam.test-support";
+import { geminiEmbedding, geminiFlash } from "./ai-seam.test-support";
+import { aiScenario, type ScenarioOpenRouter } from "./ai-scenario.test-support";
 import { steppingClock } from "./ai-work-stand-in.test-support";
 import {
   aPng,
@@ -36,8 +35,6 @@ const isolated = isolatedTestDatabase("ai_file_indexing");
 let db: NodePgDatabase;
 const clock = steppingClock("2026-11-02T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const EMBEDDING = geminiEmbedding.id;
 
 let machineId: string;
@@ -81,42 +78,19 @@ beforeEach(async () => {
   continueCalls = 0;
 });
 
-/** The AI seam of a run – by default it accepts KEY and offers the Gemini models. */
-function anAi(settings: MemoryAiSettings = {}) {
-  return memoryAi({ acceptedKeys: [KEY], ...settings });
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const anAi = scenario.openRouter;
 
-/** AI settings saved through CMD-ChangeAiSettings, the way a technician saves them. */
-async function saveAiSettings({
-  ai = anAi(),
-  key = KEY as string | undefined,
+/** AI settings saved the way a technician saves them – the key, the chat model and an embedding model. */
+const saveAiSettings = ({
+  ai,
   embeddingModel = EMBEDDING,
-}: { ai?: ReturnType<typeof memoryAi>; key?: string; embeddingModel?: string } = {}): Promise<void> {
-  const dependencies: AiDependencies = { ai, encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    // A change of the saved embedding model is confirmed on the warning (ST-110), as a technician does.
-    { version, key: key ?? "", chatModel: geminiFlash.id, embeddingModel, embeddingModelConfirmed: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
+}: { ai?: ScenarioOpenRouter; embeddingModel?: string } = {}) => scenario.turnAiOn({ with: ai, embeddingModel });
 
-/** The key removed – AI is off from then on (data model, lifecycle *On → Off*). */
-async function removeTheKey(): Promise<void> {
-  const dependencies: AiDependencies = { ai: anAi(), encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
+const removeTheKey = scenario.removeTheKey;
 
-/** A file attached through CMD-AttachFile, with its content already in the store (ST-037, upload module). */
-async function attach({
+/** A file attached to the test's machine or to its machine model. */
+const attach = ({
   title,
   contentType,
   bytes,
@@ -126,38 +100,18 @@ async function attach({
   contentType: string;
   bytes: Uint8Array;
   to?: "machine" | "machine-model";
-}): Promise<string> {
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, contentType);
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: to,
-      title,
-      fileCategory: "other",
-      content: { name, size: bytes.length, contentType },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
-}
+}) => scenario.attachFile(machineId, { title, contentType, bytes, to, fileCategory: "other" });
 
-/** One run of the background work, with this test's storage and AI. */
-function run({ ai = anAi(), budgetSeconds = 250 }: { ai?: ReturnType<typeof memoryAi>; budgetSeconds?: number } = {}) {
-  return runAiWork({
-    db,
-    clock,
+/** One run of the background work, counting the calls of the worker route that continue it. */
+const run = ({ ai = anAi(), budgetSeconds = 250 }: { ai?: ScenarioOpenRouter; budgetSeconds?: number } = {}) =>
+  scenario.run({
+    kinds: [fileIndexingWork],
+    with: ai,
     budgetSeconds,
-    ai: { ai, encryptionKey: () => environmentKey },
-    storage,
     continueWork: async () => {
       continueCalls += 1;
     },
-    kinds: [fileIndexingWork],
   });
-}
 
 /** What the AI index holds of a file, failing loudly when it has no entry. */
 async function entryOf(fileId: string) {
@@ -176,7 +130,7 @@ async function itemCount(fileId: string): Promise<number> {
 
 /** „Kosten der KI-Erfassung bisher“ of the overview (ST-109). */
 async function costOfIndexingSoFar(): Promise<number> {
-  return (await aiIndexOverview(db, { encryptionKey: () => environmentKey }))?.cost ?? 0;
+  return (await aiIndexOverview(db, { encryptionKey: scenario.ai().encryptionKey }))?.cost ?? 0;
 }
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);

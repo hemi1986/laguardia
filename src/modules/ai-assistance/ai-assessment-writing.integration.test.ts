@@ -1,12 +1,7 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  attachFileCommand,
-  createMachineModelCommand,
-  machineModelOfMachineForAi,
-  registerMachineCommand,
-} from "@/modules/collection";
+import { createMachineModelCommand, machineModelOfMachineForAi, registerMachineCommand } from "@/modules/collection";
 import {
   defectDetails,
   linkProblemReportToDefectCommand,
@@ -21,16 +16,16 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { withoutMachines } from "@/modules/collection/machines.test-support";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { aiSettingsForm, changeAiSettingsCommand, requestAiAssessmentCommand } from ".";
+import { requestAiAssessmentCommand } from ".";
 import { aiAssessmentById, aiAssessmentBeingWritten } from "./ai-assessments";
 import { aiAssessmentWork } from "./ai-assessment-work";
 import type { AiAssessmentState } from "./ai-assessment";
-import { runAiWork } from "./ai-work";
 import { searchAiIndex, SEARCH_IMAGE_HITS, SEARCH_TEXT_HITS } from "./ai-index-search";
 import { indexFileForAiCommand } from "./index-file-for-ai-command";
-import { memoryAi, geminiEmbedding, geminiFlash } from "./ai-seam.test-support";
+import { geminiEmbedding, geminiFlash } from "./ai-seam.test-support";
+import { aiScenario } from "./ai-scenario.test-support";
 import { steppingClock } from "./ai-work-stand-in.test-support";
-import { aJpeg, aPdfOfText } from "./file-indexing.test-support";
+import { aPdfOfText } from "./file-indexing.test-support";
 
 /**
  * ST-107: what an AI assessment sends the chat model and what comes back. Every scenario drives one run of the
@@ -41,8 +36,6 @@ const isolated = isolatedTestDatabase("ai_assessment_writing");
 let db: NodePgDatabase;
 const clock = steppingClock("2026-11-03T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const EMBEDDING = geminiEmbedding.id;
 const CHAT = geminiFlash.id;
 
@@ -90,32 +83,10 @@ async function aMachine(model: string, museumNumber: string) {
   return registered.result.machineId;
 }
 
-async function saveAiSettings(ai = anAi(), chatModel = CHAT) {
-  const dependencies = { ai, encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel, embeddingModel: EMBEDDING },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
-
-/** Removes the key – AI is off from then on (data model, AGG-AiSettings). */
-async function removeTheKey() {
-  const dependencies = { ai: anAi(), encryptionKey: () => environmentKey };
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
-
-function anAi(settings: Parameters<typeof memoryAi>[0] = {}) {
-  return memoryAi({ acceptedKeys: [KEY], ...settings });
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const { openRouter: anAi, removeTheKey } = scenario;
+const saveAiSettings = (ai = anAi(), chatModel = CHAT) =>
+  scenario.turnAiOn({ with: ai, chatModel, embeddingModel: EMBEDDING });
 
 async function anOpenDefect(
   machineId: string,
@@ -141,16 +112,9 @@ async function anOpenDefect(
   return { defectId: reported.result.defectId, problemReportId: reported.result.problemReportId };
 }
 
-async function aPhoto(padding = 0): Promise<string> {
-  const name = `ai-assessments/${randomUUID()}.jpg`;
-  const jpeg = await aJpeg();
-  const bytes = new Uint8Array(jpeg.length + padding);
-  bytes.set(jpeg);
-  await storage.write(name, bytes, "image/jpeg");
-  return name;
-}
+const aPhoto = (padding = 0) => scenario.aPhoto({ padding });
 
-async function attach({
+const attach = ({
   machineId,
   to = "machine",
   title,
@@ -162,23 +126,7 @@ async function attach({
   title: string;
   contentType: string;
   bytes: Uint8Array;
-}): Promise<string> {
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, bytes, contentType);
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: to,
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
-}
+}) => scenario.attachFile(machineId, { title, contentType, bytes, to });
 
 /** An AI index entry with one chunk per item – passages or pages/images, all with the same embedding. */
 /** The embedding `memoryAi` returns for the seed of a request – so a test can make a hit the nearest of one search. */
@@ -216,28 +164,8 @@ async function index(
   if (!indexed.ok) throw new Error(indexed.error);
 }
 
-async function request(defectId: string, { note = "", photos = [] }: { note?: string; photos?: string[] } = {}) {
-  const ai = anAi();
-  const asked = await executeCommand(
-    requestAiAssessmentCommand({ ai, encryptionKey: () => environmentKey }),
-    { defectId, note, photos },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!asked.ok) throw new Error(asked.error);
-  return asked.result.aiAssessmentId;
-}
-
-function run(ai = anAi()) {
-  return runAiWork({
-    db,
-    clock,
-    budgetSeconds: 250,
-    ai: { ai, encryptionKey: () => environmentKey },
-    storage,
-    continueWork: async () => undefined,
-    kinds: [aiAssessmentWork],
-  });
-}
+const request = scenario.requestAiAssessment;
+const run = (ai = anAi()) => scenario.run({ kinds: [aiAssessmentWork], with: ai });
 
 async function assessment(id: string): Promise<AiAssessmentState> {
   const found = await aiAssessmentById(db, id);
@@ -530,7 +458,7 @@ describe("what an AI assessment does", () => {
     const { defectId } = await anOpenDefect(machineId);
     const ask = () =>
       executeCommand(
-        requestAiAssessmentCommand({ ai: anAi(), encryptionKey: () => environmentKey }),
+        requestAiAssessmentCommand(scenario.ai()),
         { defectId, note: "", photos: [] },
         { actor: tom, db, clock, newId: randomUUID },
       );
@@ -561,7 +489,7 @@ describe("what an AI assessment does", () => {
 
   it("writes with the chat model the assessment was requested with, not the one saved meanwhile", async () => {
     const otherChat = { ...geminiFlash, id: "other/chat", name: "Other Chat" };
-    const withOther = memoryAi({ acceptedKeys: [KEY], models: [geminiFlash, geminiEmbedding, otherChat] });
+    const withOther = anAi({ models: [geminiFlash, geminiEmbedding, otherChat] });
     await saveAiSettings(withOther);
     const machineId = await aMachine(eightBall, "LG-042");
     const { defectId } = await anOpenDefect(machineId);

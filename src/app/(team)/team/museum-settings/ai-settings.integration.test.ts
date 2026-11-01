@@ -8,10 +8,12 @@ import { aiSettingsForm, changeAiSettingsCommand, type AiDependencies } from "@/
 import {
   geminiEmbedding,
   geminiFlash,
-  memoryAi,
   type MemoryAiSettings,
   type MemoryModel,
 } from "@/modules/ai-assistance/ai-seam.test-support";
+import { aiScenario, SCENARIO_KEY as KEY, type ScenarioAi } from "@/modules/ai-assistance/ai-scenario.test-support";
+import { memoryStorage } from "@/platform/storage";
+import { field, optionOf, selectedOf, textOf } from "@/test-support/html";
 import {
   aiSettingsJournal,
   storedAiSettingsRow,
@@ -39,9 +41,7 @@ const clock = fixedClock("2026-11-01T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const helga = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
-const environmentKey = randomBytes(32);
 
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const OTHER_KEY = "sk-or-v1-fedcba9876543210fedcba9876543210c3d4";
 const REFUSED_KEY = "sk-or-v1-refused000000000000000000000000dead";
 
@@ -77,11 +77,10 @@ beforeEach(async () => {
 });
 
 /** OpenRouter as the test needs it – by default it offers Gemini 2.5 Flash and Gemini Embedding 2 and accepts KEY. */
-function openRouterWith(settings: MemoryAiSettings = {}): AiDependencies & { ai: ReturnType<typeof memoryAi> } {
-  return {
-    ai: memoryAi({ acceptedKeys: [KEY, OTHER_KEY], ...settings }),
-    encryptionKey: () => environmentKey,
-  };
+const scenario = aiScenario({ db: () => db, storage: () => memoryStorage(), clock, technician: tom });
+
+function openRouterWith(settings: MemoryAiSettings = {}): ScenarioAi {
+  return scenario.ai(scenario.openRouter({ acceptedKeys: [KEY, OTHER_KEY], ...settings }));
 }
 
 /** The form „KI“ as the actor sends it; `landed` names where each successful save went. */
@@ -117,7 +116,9 @@ async function filledIn(
 /** The section „KI“ the technician lands on. */
 async function section(address = "/team/museum-settings", dependencies = openRouterWith()) {
   const params = Object.fromEntries(new URL(address, "http://localhost").searchParams);
-  return renderToStaticMarkup(createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId })));
+  return renderToStaticMarkup(
+    createElement(AiSettingsSection, await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId })),
+  );
 }
 
 /** The form „KI“ after a rejection: the page as it is now, and what the action state kept. */
@@ -128,20 +129,6 @@ async function formAfter(
   const props = aiSettingsFormProps(await aiSettingsForm(db, dependencies));
   return renderToStaticMarkup(createElement(AiSettingsFormContent, { ...props, state }));
 }
-
-const field = (html: string, name: string) =>
-  html.match(new RegExp(`<(input|select)[^>]*name="${name}"[^>]*>`))?.[0] ?? "";
-const selectedOf = (html: string, name: string) =>
-  html
-    .match(new RegExp(`<select[^>]*name="${name}"[^>]*>(.*?)</select>`))?.[1]
-    ?.match(/<option[^>]*selected=""[^>]*value="([^"]*)"|<option[^>]*value="([^"]*)"[^>]*selected=""/)
-    ?.slice(1)
-    .find(Boolean);
-const optionOf = (html: string, name: string, value: string) =>
-  html.match(
-    new RegExp(`<select[^>]*name="${name}"[^>]*>.*?(<option[^>]*value="${value}"[^>]*>[^<]*</option>)`),
-  )?.[1] ?? "";
-const textOf = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("the form „KI“", () => {
   it("ST-104: With nothing saved AI is off, and a missing part can still be added", async () => {
@@ -294,7 +281,11 @@ describe("the form „KI“", () => {
     const readsNoImages = "Dieses Modell liest keine Bilder. Bitte ein Modell wählen, das Text und Bilder liest.";
     const examples = [
       { typed: { chatModel: "text/chat", embeddingModel: geminiEmbedding.id }, at: "chatModel", reason: readsNoImages },
-      { typed: { chatModel: geminiFlash.id, embeddingModel: "text/embedding" }, at: "embeddingModel", reason: readsNoImages },
+      {
+        typed: { chatModel: geminiFlash.id, embeddingModel: "text/embedding" },
+        at: "embeddingModel",
+        reason: readsNoImages,
+      },
       {
         typed: { chatModel: geminiFlash.id, embeddingModel: "small/embedding" },
         at: "embeddingModel",
@@ -305,7 +296,10 @@ describe("the form „KI“", () => {
 
     for (const { typed, at, reason } of examples) {
       await withoutAiSettings(db);
-      const state = await aiFormOf(tom, dependencies).save(null, await filledIn({ key: KEY, ...typed }, { dependencies }));
+      const state = await aiFormOf(tom, dependencies).save(
+        null,
+        await filledIn({ key: KEY, ...typed }, { dependencies }),
+      );
 
       expect(state, typed.embeddingModel).not.toBeNull();
       const html = await formAfter(state, dependencies);

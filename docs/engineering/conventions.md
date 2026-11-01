@@ -787,6 +787,13 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   and a counting `continueWork`; a cut-off run is one whose kind never returns (`aRunCutOffAtTheNextPiece` in
   `ai-work.integration.test.ts`). The stand-in kind (`ai-work-stand-in.test-support.ts`) shows the shape. Never wait
   for a real background run.
+- **AI scenarios** (architecture review 2026-11-01): a test of a real kind or of an AI page binds
+  `aiScenario({ db, storage, clock, technician })` (`ai-scenario.test-support.ts`) once and takes its steps from it –
+  `openRouter(settings)` (a `memoryAi` that accepts `SCENARIO_KEY`), `ai(…)` (the `AiDependencies` with the scenario's
+  encryption key), `turnAiOn`, `removeTheKey`, `attachFile`, `aPhoto`, `requestAiAssessment` and `run({ kinds, with })`
+  – through the real commands; it does not copy them. A test that is about CMD-ChangeAiSettings itself still runs the
+  command. Reading a rendered page – `field`, `selectedOf`, `optionOf`, `labelOf`, `textOf` – comes from
+  `src/test-support/html.ts`.
 - **Indexing a file** (ST-106) is the first real kind (`file-indexing-work.ts`, `kind: "file-indexing"`): `waiting` asks
   Collection's `filesForIndexing` and leaves out every file with an entry for the current embedding model; `work` reads
   the content through the storage seam (`readContent`), turns it into passages and page images (`file-indexing.ts`:

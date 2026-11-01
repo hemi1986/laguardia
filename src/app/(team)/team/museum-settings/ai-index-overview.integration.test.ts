@@ -1,23 +1,20 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import {
-  aiSettingsForm,
   aiWorkLeftUnfinished,
-  changeAiSettingsCommand,
   fileIndexingWork,
   retryFileIndexingCommand,
-  runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
 import { formRunner } from "@/app/_actions/form-runner";
 import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
-import { geminiEmbedding, geminiFlash, memoryAi } from "@/modules/ai-assistance/ai-seam.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -41,8 +38,6 @@ const clock = steppingClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 let eightBall: string;
 let storage: MemoryStorage;
 
@@ -68,34 +63,8 @@ beforeEach(async () => {
   eightBall = created.result.machineModelId;
 });
 
-/** The AI seam – by default it accepts KEY, offers the Gemini models and charges what a test says per embedding. */
-function ai(settings: Parameters<typeof memoryAi>[0] = {}): AiDependencies & { ai: ReturnType<typeof memoryAi> } {
-  return { ai: memoryAi({ acceptedKeys: [KEY], ...settings }), encryptionKey: () => environmentKey };
-}
-
-/** AI turned on through CMD-ChangeAiSettings, the way a technician saves it. */
-async function turnAiOn(): Promise<void> {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
-
-/** The key removed through CMD-ChangeAiSettings – AI is off, the AI index is kept. */
-async function removeTheKey(): Promise<void> {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const removed = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: "", removeKey: true },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!removed.ok) throw new Error(removed.error);
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const { ai, turnAiOn, removeTheKey } = scenario;
 
 async function aMachine(museumNumber: string): Promise<string> {
   const registered = await executeCommand(
@@ -112,43 +81,21 @@ const kinds = {
   video: { contentType: "video/mp4", bytes: () => new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]) },
 } as const;
 
-/** A file attached through CMD-AttachFile to the machine or to its machine model, its content already in the store. */
-async function attach(
+/** A file attached to the machine or to its machine model – a text file by default. */
+function attach(
   machineId: string,
   title: string,
   { kind = "text", to = "machine" }: { kind?: keyof typeof kinds; to?: "machine" | "machine-model" } = {},
 ): Promise<string> {
   const { contentType, bytes } = kinds[kind];
-  const content = bytes();
-  const name = `files/${randomUUID()}`;
-  await storage.write(name, content, contentType);
-  const attached = await executeCommand(
-    attachFileCommand,
-    { machineId, attachTo: to, title, fileCategory: "other", content: { name, size: content.length, contentType } },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
+  return scenario.attachFile(machineId, { title, bytes: bytes(), contentType, to, fileCategory: "other" });
 }
 
 /** One run of the background work with the real file kind. */
-async function run(dependencies: AiDependencies = ai()): Promise<void> {
-  await runAiWork({
-    db,
-    clock,
-    budgetSeconds: 250,
-    ai: dependencies,
-    storage,
-    continueWork: async () => {},
-    kinds: [fileIndexingWork],
-  });
-}
+const run = (dependencies: AiDependencies = ai()) => scenario.run({ kinds: [fileIndexingWork], with: dependencies });
 
 /** „Einstellungen“ as Tom opens it – the section „KI“ rendered from its data. */
-async function settingsPage(
-  dependencies: AiDependencies = ai(),
-  params: Record<string, string | undefined> = {},
-) {
+async function settingsPage(dependencies: AiDependencies = ai(), params: Record<string, string | undefined> = {}) {
   const data = await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId });
   return { data, html: renderToStaticMarkup(createElement(AiSettingsSection, data)) };
 }

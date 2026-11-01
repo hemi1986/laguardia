@@ -1,18 +1,13 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { defectDetails, reportProblemAndTriageCommand } from "@/modules/repair";
-import {
-  aiSettingsForm,
-  changeAiSettingsCommand,
-  defectAiAssessments,
-  requestAiAssessmentCommand,
-  type AiDependencies,
-} from "@/modules/ai-assistance";
-import { memoryAi, geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
+import { defectAiAssessments, requestAiAssessmentCommand } from "@/modules/ai-assistance";
+import { geminiEmbedding, geminiFlash } from "@/modules/ai-assistance/ai-seam.test-support";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { aJpeg } from "@/modules/ai-assistance/file-indexing.test-support";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
@@ -39,8 +34,6 @@ import { formRunner } from "./form-runner";
 const isolated = isolatedTestDatabase("ai_assessment_request");
 let db: NodePgDatabase;
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 const EMBEDDING = geminiEmbedding.id;
 const CHAT = geminiFlash.id;
 const NOW = "2026-11-03T12:00:00Z";
@@ -67,20 +60,9 @@ beforeEach(async () => {
   await saveAiSettings();
 });
 
-function ai(): AiDependencies {
-  return { ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey };
-}
-
-async function saveAiSettings() {
-  const dependencies = ai();
-  const { version } = await aiSettingsForm(db, dependencies);
-  const saved = await executeCommand(
-    changeAiSettingsCommand(dependencies),
-    { version, key: KEY, chatModel: CHAT, embeddingModel: EMBEDDING },
-    { actor: tom, db, clock: fixedClock(NOW), newId: randomUUID },
-  );
-  if (!saved.ok) throw new Error(saved.error);
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock: fixedClock(NOW), technician: tom });
+const ai = () => scenario.ai();
+const saveAiSettings = () => scenario.turnAiOn({ chatModel: CHAT, embeddingModel: EMBEDDING });
 
 async function anOpenDefect(): Promise<string> {
   const registered = await executeCommand(

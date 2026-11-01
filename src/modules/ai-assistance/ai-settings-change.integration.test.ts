@@ -1,7 +1,7 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
+import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { reportProblemAndTriageCommand } from "@/modules/repair";
 import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
@@ -12,7 +12,6 @@ import {
   aiSettingsForm,
   changeAiSettingsCommand,
   requestAiAssessmentCommand,
-  type AiDependencies,
   type ChangeAiSettingsInput,
 } from ".";
 import { aiAssessmentById } from "./ai-assessments";
@@ -20,15 +19,10 @@ import { embeddingModelChange } from "./embedding-model-change";
 import { aiAssessmentWork } from "./ai-assessment-work";
 import { aiIndexOf, anIndexedFile } from "./ai-index.test-support";
 import { aiIndexEntryOf } from "./ai-index-entries";
-import {
-  geminiEmbedding,
-  geminiFlash,
-  memoryAi,
-  type MemoryAiSettings,
-  type MemoryModel,
-} from "./ai-seam.test-support";
+import { geminiEmbedding, geminiFlash, type MemoryAiSettings, type MemoryModel } from "./ai-seam.test-support";
 import { withoutAiSettings } from "./ai-settings.test-support";
-import { runAiWork, type AiWorkKind } from "./ai-work";
+import { type AiWorkKind } from "./ai-work";
+import { aiScenario, SCENARIO_KEY as KEY } from "./ai-scenario.test-support";
 import { steppingClock } from "./ai-work-stand-in.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
 
@@ -41,8 +35,6 @@ const isolated = isolatedTestDatabase("ai_settings_change");
 let db: NodePgDatabase;
 const clock = steppingClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const environmentKey = randomBytes(32);
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 
 const claudeSonnet: MemoryModel = {
   ...geminiFlash,
@@ -97,16 +89,13 @@ beforeEach(async () => {
   await change({ key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id });
 });
 
-/** OpenRouter in memory: it accepts KEY and offers both chat models and both embedding models. */
-function anAi(settings: MemoryAiSettings = {}) {
-  return memoryAi({
-    acceptedKeys: [KEY],
-    models: [geminiFlash, claudeSonnet, geminiEmbedding, otherEmbedding],
-    ...settings,
-  });
-}
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
 
-const dependencies = (ai = anAi()): AiDependencies => ({ ai, encryptionKey: () => environmentKey });
+/** OpenRouter in memory: it accepts the key and offers both chat models and both embedding models. */
+const anAi = (settings: MemoryAiSettings = {}) =>
+  scenario.openRouter({ models: [geminiFlash, claudeSonnet, geminiEmbedding, otherEmbedding], ...settings });
+
+const dependencies = (ai = anAi()) => scenario.ai(ai);
 
 /** CMD-ChangeAiSettings as Tom saves it, at the version stored now. */
 async function change(input: Omit<ChangeAiSettingsInput, "version" | "key"> & { key?: string }) {
@@ -122,36 +111,10 @@ async function change(input: Omit<ChangeAiSettingsInput, "version" | "key"> & { 
 /** „Embedding-Modell wechseln“ on the warning – the change confirmed. */
 const confirmOtherEmbedding = () => change({ embeddingModel: otherEmbedding.id, embeddingModelConfirmed: true });
 
-async function attachText(title: string, text: string): Promise<string> {
-  const name = `files/${randomUUID()}`;
-  const bytes = new TextEncoder().encode(text);
-  await storage.write(name, bytes, "text/plain");
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: "machine",
-      title,
-      fileCategory: "manual",
-      content: { name, size: bytes.length, contentType: "text/plain" },
-    },
-    { actor: tom, db, clock, newId: randomUUID },
-  );
-  if (!attached.ok) throw new Error(attached.error);
-  return attached.result.fileId;
-}
+const attachText = (title: string, text: string) =>
+  scenario.attachFile(machineId, { title, bytes: new TextEncoder().encode(text), contentType: "text/plain" });
 
-function run(kinds: AiWorkKind[], ai = anAi()) {
-  return runAiWork({
-    db,
-    clock,
-    budgetSeconds: 250,
-    ai: dependencies(ai),
-    storage,
-    continueWork: async () => undefined,
-    kinds,
-  });
-}
+const run = (kinds: AiWorkKind[], ai = anAi()) => scenario.run({ kinds, with: ai });
 
 async function anOpenDefect(): Promise<string> {
   const reported = await executeCommand(
