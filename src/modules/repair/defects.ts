@@ -528,6 +528,88 @@ async function loadDefect(db: Database, defectId: string) {
   return isId(defectId) ? defects.load(db, defectId) : undefined;
 }
 
+/** What CMD-RequestAiAssessment reads from Repair (ST-107): the defect's state and whether helpers may take it. */
+export type DefectForAiAssessmentRequest = { state: DefectState; suitableForHelpers: boolean };
+
+/**
+ * The facts of CMD-RequestAiAssessment – read from Repair without a lock, in the command's transaction (context map:
+ * AI assistance is downstream of Repair). A defect resolved right afterwards does not stop the AI assessment (HS-30).
+ */
+export async function defectForAiAssessmentRequest(
+  db: Database,
+  defectId: string,
+): Promise<DefectForAiAssessmentRequest | undefined> {
+  if (!isId(defectId)) return undefined;
+  const [row] = await db
+    .select({ state: defect.state, suitableForHelpers: defect.suitableForHelpers })
+    .from(defect)
+    .where(eq(defect.id, defectId));
+  return row;
+}
+
+/** What CMD-WriteAiAssessment is sent about the defect (ST-107) – read from Repair through this public query. */
+export type DefectForAiAssessment = {
+  id: string;
+  machineId: string;
+  title: string;
+  priority: Priority;
+  /** Why it waits, if it is on hold – the note stays out. */
+  holdReason: HoldReason | undefined;
+  /** Its problem reports, the originating one first, each with the photo it was reported with. */
+  problemReports: { description: string; photo: string | undefined; reportedAt: Date }[];
+  /** Its work log entries, the oldest first. */
+  workLog: { whatWasDone: string; partsUsed: string | undefined }[];
+  /** Its machine's latest resolved defects with their closing notes – the 5 most recently resolved. */
+  latestResolved: { title: string; closingNote: string }[];
+};
+
+/** How many of the machine's latest resolved defects an AI assessment is sent (user, 2026-10-31). */
+export const AI_ASSESSMENT_RESOLVED_DEFECTS = 5;
+
+/**
+ * Everything CMD-WriteAiAssessment sends about a defect (ST-107): its title, priority, hold reason, problem reports
+ * with their photos, work log entries and its machine's latest resolved defects with their closing notes. Read without
+ * a lock, before the writing starts – a defect resolved meanwhile does not stop it (HS-30). The written text and the
+ * note stay out of the journal; this query is read, never stored.
+ */
+export async function defectForAiAssessment(
+  db: Database,
+  defectId: string,
+): Promise<DefectForAiAssessment | undefined> {
+  const loaded = await loadDefect(db, defectId);
+  if (!loaded) return undefined;
+  const stored = loaded.state;
+  const [problemReports, resolutions] = await Promise.all([
+    problemReportsOfDefect(db, stored),
+    db
+      .select({
+        defectId: defect.id,
+        title: defect.title,
+        closingNote: defectResolution.closingNote,
+        resolvedAt: defectResolution.resolvedAt,
+      })
+      .from(defect)
+      .innerJoin(defectResolution, eq(defectResolution.defectId, defect.id))
+      .where(and(eq(defect.machineId, stored.machineId), eq(defect.state, "resolved")))
+      .orderBy(desc(defectResolution.resolvedAt), desc(defectResolution.position)),
+  ]);
+  // A defect resolved more than once (reopened and resolved again) counts with its latest closing note.
+  const latestResolved = resolutions
+    .filter((row, index) => resolutions.findIndex((each) => each.defectId === row.defectId) === index)
+    .slice(0, AI_ASSESSMENT_RESOLVED_DEFECTS)
+    .map(({ title, closingNote }) => ({ title, closingNote }));
+  return {
+    id: stored.id,
+    machineId: stored.machineId,
+    title: stored.title,
+    priority: stored.priority,
+    holdReason: stored.hold?.reason,
+    problemReports: problemReports.map(({ description, photo, reportedAt }) => ({ description, photo, reportedAt })),
+    workLog: stored.workLog.map(({ whatWasDone, partsUsed }) => ({ whatWasDone, partsUsed })),
+    latestResolved,
+  };
+}
+
 /**
  * The facts of CMD-LinkProblemReportToDefect (ST-022): the chosen defect's machine and state – and when it was last
  * resolved, for "recently resolved" (ST-053) –, read in the command's

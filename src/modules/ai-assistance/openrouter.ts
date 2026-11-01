@@ -1,6 +1,8 @@
 import {
   EMBEDDING_SIZE,
   type AiSeam,
+  type ChatAnswer,
+  type ChatInput,
   type EmbedResult,
   type ModelKind,
   type OfferedModel,
@@ -26,6 +28,8 @@ const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
 const TIMEOUT_MS = 10_000;
 /** Embedding a page image takes longer than reading a model list: the request itself may take this long (ST-105). */
 const EMBED_TIMEOUT_MS = 60_000;
+/** Writing an AI assessment sends photos and page images and takes minutes – it must end within a run's budget (ST-107). */
+const CHAT_TIMEOUT_MS = 120_000;
 
 /** What OpenRouter's lists name the output of each kind. */
 const outputOf: Record<ModelKind, string> = { chat: "text", embedding: "embeddings" };
@@ -203,6 +207,63 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
         return { embedding, cost: typeof cost === "number" && Number.isFinite(cost) ? cost : 0 };
       } catch {
         return "refused";
+      }
+    },
+
+    async chat(key, model, input: ChatInput): Promise<ChatAnswer> {
+      let response: Response;
+      try {
+        response = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { ...bearer(key), "content-type": "application/json" },
+          // A redirect is never followed – the request carries the key.
+          redirect: "manual",
+          signal: AbortSignal.timeout(CHAT_TIMEOUT_MS),
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: input.system },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: input.text },
+                  ...input.images.map((image) => ({
+                    type: "image_url",
+                    image_url: {
+                      url: `data:${image.contentType};base64,${Buffer.from(image.bytes).toString("base64")}`,
+                    },
+                  })),
+                ],
+              },
+            ],
+            // The answer is read as an AI assessment, not as prose (ST-107: the structured-answer parser).
+            response_format: { type: "json_object" },
+            // Never a provider that keeps or trains on the data (ADR 0014) – a model without one fails as not available.
+            provider: { data_collection: "deny", zdr: true },
+          }),
+        });
+      } catch (error) {
+        return {
+          failure: error instanceof Error && error.name === "TimeoutError" ? "timed-out" : "openrouter-not-reachable",
+        };
+      }
+      if (response.status === 401 || response.status === 403) return { failure: "key-invalid" };
+      if (response.status === 402) return { failure: "credit-used-up" };
+      if (response.status === 400 || response.status === 404) return { failure: "model-not-available" };
+      if (!response.ok) return { failure: "openrouter-not-reachable" };
+      try {
+        const { choices, usage } = (await response.json()) as {
+          choices?: { message?: { content?: unknown } }[];
+          usage?: { cost?: number };
+        };
+        const content = choices?.[0]?.message?.content;
+        const cost = usage?.cost;
+        return {
+          content: typeof content === "string" ? content : "",
+          cost: typeof cost === "number" && Number.isFinite(cost) ? cost : 0,
+        };
+      } catch {
+        return { failure: "openrouter-not-reachable" };
       }
     },
   };

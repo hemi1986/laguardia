@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
+import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import { ownerColumns, type FileIndexedForAi, type FileIndexingFailed, type FileLeftAiIndex } from "./ai-index-entry";
 
 /**
@@ -62,5 +63,36 @@ export const aiAssistanceEvents = eventCatalogue({
       const { machineId, machineModelId } = ownerData(event.owner);
       return { aggregateId: event.fileId, machineId, data: { machineModelId } };
     },
+  },
+  // An AI assessment never changes a defect, so its journal entries name no machine. The note and the written text
+  // stay out of the journal – only that it was requested or written, with the models and the cost (ST-107).
+  "EVT-AiAssessmentRequested": {
+    aggregate: "AGG-AiAssessment",
+    project: (event: AiAssessmentRequested) => ({
+      aggregateId: event.aiAssessmentId,
+      machineId: null,
+      data: { defectId: event.defectId, requestedBy: event.requestedBy, chatModel: event.chatModel },
+    }),
+  },
+  "EVT-AiAssessmentWritten": {
+    aggregate: "AGG-AiAssessment",
+    project: (event: AiAssessmentWritten) => ({
+      aggregateId: event.aiAssessmentId,
+      machineId: null,
+      data: {
+        defectId: event.defectId,
+        chatModel: event.chatModel,
+        embeddingModel: event.embeddingModel,
+        cost: event.cost,
+      },
+    }),
+  },
+  "EVT-AiAssessmentFailed": {
+    aggregate: "AGG-AiAssessment",
+    project: (event: AiAssessmentFailed) => ({
+      aggregateId: event.aiAssessmentId,
+      machineId: null,
+      data: { defectId: event.defectId, reason: event.reason },
+    }),
   },
 });

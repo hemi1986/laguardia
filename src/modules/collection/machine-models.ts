@@ -80,6 +80,34 @@ export type MachineModelForTeam = {
   machineCount: number;
 };
 
+/** The machine model of a machine, as an AI assessment sends it (ST-107) – read from Collection on demand. */
+export type MachineModelOfMachine = MachineModel & { machineId: string };
+
+/**
+ * The machine model details an AI assessment sends about a defect's machine (ST-107): title, manufacturer, year,
+ * machine category and technology. Undefined for an unknown machine – the AI assessment cannot be written then.
+ */
+export async function machineModelOfMachineForAi(
+  db: Database,
+  machineId: string,
+): Promise<MachineModelOfMachine | undefined> {
+  if (!isId(machineId)) return undefined;
+  const [row] = await db
+    .select({
+      machineId: machine.id,
+      id: machineModel.id,
+      title: machineModel.title,
+      manufacturer: machineModel.manufacturer,
+      year: machineModel.year,
+      machineCategory: machineModel.machineCategory,
+      technology: machineModel.technology,
+    })
+    .from(machine)
+    .innerJoin(machineModel, eq(machineModel.id, machine.machineModelId))
+    .where(eq(machine.id, machineId));
+  return row && { ...toMachineModel(row), machineId: row.machineId };
+}
+
 /** The machine model by its ID, with its machine count (ST-036). Undefined for an unknown one or an address that is no ID. */
 export async function machineModelForTeam(
   db: Database,

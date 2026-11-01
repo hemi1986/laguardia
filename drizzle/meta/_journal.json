@@ -288,6 +288,13 @@
       "when": 1793539136998,
       "tag": "0040_ai_index",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793542464362,
+      "tag": "0041_colossal_ken_ellis",
+      "breakpoints": true
     }
   ]
 }

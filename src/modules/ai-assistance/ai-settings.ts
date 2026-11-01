@@ -68,6 +68,29 @@ export async function aiIndexingSettings(db: Database, { encryptionKey }: AiDepe
   };
 }
 
+/** What writing an AI assessment needs from the AI settings (ST-107): AI on, the key to send with, both models. */
+export type AiAssessmentSettings = {
+  aiOn: boolean;
+  key: string | undefined;
+  chatModel: string | undefined;
+  embeddingModel: string | undefined;
+};
+
+/** The AI settings as the AI assessment work reads them – before it starts, and again before it stores. */
+export async function aiAssessmentSettings(
+  db: Database,
+  { encryptionKey }: AiDependencies,
+): Promise<AiAssessmentSettings> {
+  const { state } = await storedAiSettings(db);
+  const key = usableKey(state, encryptionKey());
+  return {
+    aiOn: !!key && !!state.chatModel && !!state.embeddingModel,
+    key,
+    chatModel: state.chatModel,
+    embeddingModel: state.embeddingModel,
+  };
+}
+
 /**
  * What OpenRouter says about the parts the technician sent (CMD-ChangeAiSettings): the new key checked – and encrypted
  * when accepted –, a model that differs from the saved one looked up, and a new embedding model tried with one test

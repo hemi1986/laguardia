@@ -238,6 +238,35 @@ function pdfjsAssets(): (folder: "wasm" | "iccs" | "standard_fonts" | "cmaps") =
   return (folder) => `${join(root, folder)}/`;
 }
 
+/**
+ * One PDF page rendered again from its file (ST-107, ADR 0014): an AI assessment sends a page the AI index found as an
+ * image, and page images are not kept. Undefined when the page cannot be rendered – the assessment is then written
+ * without that image.
+ */
+export async function renderPdfPage(bytes: Uint8Array, pageNumber: number): Promise<Uint8Array | undefined> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const assets = pdfjsAssets();
+  const loading = pdfjs.getDocument({
+    // pdfjs may transfer the buffer: a copy keeps the caller's bytes usable for the next page of the same file.
+    data: bytes.slice(),
+    useSystemFonts: false,
+    wasmUrl: assets("wasm"),
+    iccUrl: assets("iccs"),
+    standardFontDataUrl: assets("standard_fonts"),
+    cMapUrl: assets("cmaps"),
+    cMapPacked: true,
+  });
+  try {
+    const pdf = await loading.promise;
+    if (pageNumber < 1 || pageNumber > pdf.numPages) return undefined;
+    return await renderPage((await pdf.getPage(pageNumber)) as unknown as PdfPage);
+  } catch {
+    return undefined;
+  } finally {
+    await loading.destroy().catch(() => undefined);
+  }
+}
+
 type EmbedAnswer =
   | { outcome: "embedded"; embedded: Embedded[] }
   | { outcome: "given-up" }

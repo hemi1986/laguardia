@@ -12,6 +12,22 @@ export {
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export { aiWorkDependencies } from "./ai-work-dependencies";
+export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
+export type {
+  AiAssessmentReference,
+  AiAssessmentState,
+  AssessmentFailureReason,
+  RequestAiAssessmentError,
+  RequestAiAssessmentInput,
+} from "./ai-assessment";
+export { requestAiAssessmentCommand } from "./request-ai-assessment-command";
+export {
+  defectAiAssessments,
+  type AiAssessmentViewer,
+  type DefectAiAssessments,
+  type ShownAiAssessment,
+  type ShownAiAssessmentReference,
+} from "./defect-ai-assessments";
 /**
  * Collection's CMD-RemoveFile with POL-RemovedFileLeavesAiIndex added – what the file pages run (ST-106). The command
  * and its policy stay inside the module; only the composed command is exported for the page.

@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 import { aggregateStore, type Database } from "@/platform/command";
 import {
   fileCategories,
@@ -207,4 +207,72 @@ export async function fileForIndexing(db: Database, fileId: string): Promise<Fil
 export async function fileForIndexingWhileStoring(tx: Database, fileId: string): Promise<FileForIndexing | undefined> {
   await fileRemovalLock(tx, fileId, "shared");
   return fileForIndexing(tx, fileId);
+}
+
+/** A file as an AI assessment's reference needs it (ST-107): its title, whether it was removed, and its owner. */
+export type FileForAiReference = {
+  title: string;
+  removed: boolean;
+  machineId: string | null;
+  machineModelId: string | null;
+};
+
+/**
+ * The files an AI assessment's references name, removed or not (ST-107): a removed file keeps its title and is shown
+ * without a link (RM-DefectAiAssessments). The owner lets AI assistance drop a reference to a file of another machine
+ * or another machine model – the aggregate's invariant.
+ */
+export async function filesForAiReferences(
+  db: Database,
+  fileIds: readonly string[],
+): Promise<Map<string, FileForAiReference>> {
+  if (fileIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: file.id,
+      title: file.title,
+      removedAt: file.removedAt,
+      machineId: file.machineId,
+      machineModelId: file.machineModelId,
+    })
+    .from(file)
+    .where(inArray(file.id, [...new Set(fileIds)]));
+  return new Map(
+    rows.map(({ id, title, removedAt, machineId, machineModelId }) => [
+      id,
+      { title, removed: removedAt !== null, machineId, machineModelId },
+    ]),
+  );
+}
+
+/** A file of the defect's machine or its machine model, as an AI assessment sends and checks it (ST-107). */
+export type FileOfAiAssessmentMachine = FileForAiReference & { id: string };
+
+/**
+ * Every file of the defect's machine and of its machine model, removed ones included (a reference to a removed file is
+ * kept by its title, ST-108): the candidate files a chat answer may name. Only such a file may be referenced – a
+ * reference to any other file is dropped (CMD-WriteAiAssessment rule).
+ */
+export async function filesOfMachineAndModelForAi(
+  db: Database,
+  { machineId, machineModelId }: { machineId: string; machineModelId: string },
+): Promise<FileOfAiAssessmentMachine[]> {
+  const rows = await db
+    .select({
+      id: file.id,
+      title: file.title,
+      removedAt: file.removedAt,
+      machineId: file.machineId,
+      machineModelId: file.machineModelId,
+    })
+    .from(file)
+    .where(or(eq(file.machineId, machineId), eq(file.machineModelId, machineModelId)))
+    .orderBy(asc(file.title), asc(file.attachedAt));
+  return rows.map(({ id, title, removedAt, machineId: ofMachine, machineModelId: ofModel }) => ({
+    id,
+    title,
+    removed: removedAt !== null,
+    machineId: ofMachine,
+    machineModelId: ofModel,
+  }));
 }
