@@ -225,4 +225,71 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
       failureReason: "credit-used-up",
     });
   });
+
+  it("ST-108: A failed AI assessment says why in German and offers „Erneut versuchen“", async () => {
+    const examples: {
+      what: string;
+      settings: Parameters<typeof memoryAi>[0];
+      reason: string;
+      /** A text of OpenRouter's answer that must never reach the page. */
+      raw?: string;
+    }[] = [
+      {
+        what: "OpenRouter refusing the key",
+        settings: { acceptedKeys: [] },
+        reason: "OpenRouter hat den API-Schlüssel abgelehnt. Techniker:innen können ihn unter Einstellungen ersetzen.",
+      },
+      {
+        what: "OpenRouter saying the credit is used up",
+        settings: { chatAnswer: { failure: "credit-used-up" } },
+        reason: "Das Guthaben bei OpenRouter ist aufgebraucht.",
+      },
+      {
+        what: "no provider that neither keeps nor trains on the data has the model",
+        settings: { chatAnswer: { failure: "model-not-available" } },
+        reason: "Das Chat-Modell ist bei OpenRouter gerade nicht ohne Datenspeicherung verfügbar.",
+      },
+      {
+        what: "OpenRouter reachable but not answering in time",
+        settings: { chatAnswer: { failure: "timed-out" } },
+        reason: "Die KI hat nicht rechtzeitig geantwortet.",
+      },
+      {
+        what: "OpenRouter not answering, because it cannot be reached",
+        settings: { unreachable: true },
+        reason: "OpenRouter war nicht erreichbar.",
+      },
+      {
+        what: "an empty answer of the chat model",
+        settings: { chatAnswer: { content: "", cost: 0 } },
+        reason: "Die Antwort der KI war unbrauchbar.",
+      },
+      {
+        what: "an answer of the chat model that has no usable summary",
+        settings: {
+          chatAnswer: {
+            content: JSON.stringify({ summary: "", probableCauses: ["Das ist keine Einschätzung"] }),
+            cost: 0,
+          },
+        },
+        reason: "Die Antwort der KI war unbrauchbar.",
+        raw: "Das ist keine Einschätzung",
+      },
+    ];
+
+    for (const [index, example] of examples.entries()) {
+      const machineId = await aMachine(`LG-${100 + index}`);
+      const defectId = await anOpenDefect(machineId);
+      const id = await request(defectId);
+      await run(example.settings);
+
+      const failed = (await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id);
+      expect(failed?.state, example.what).toBe("failed");
+      const { html } = await page(defectId);
+      expect(html, example.what).toContain(`KI-Einschätzung fehlgeschlagen: ${example.reason}`);
+      expect(html, example.what).toContain("Erneut versuchen");
+      // Never OpenRouter's own words – the anti-corruption layer turns every answer into one of the fixed reasons.
+      if (example.raw) expect(html, example.what).not.toContain(example.raw);
+    }
+  });
 });
