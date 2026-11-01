@@ -19,16 +19,17 @@ test("ST-100: Technicians reach the museum settings under „Mehr“", async ({ 
   await openMore(page);
   const more = page.getByRole("navigation").getByRole("listitem");
   await expect(more.nth(3)).toHaveText("Teammitglieder");
-  await expect(more.nth(4)).toHaveText("Museumseinstellungen");
+  await expect(more.nth(4)).toHaveText("Einstellungen");
   await expect(more.nth(5)).toHaveText("Passwort ändern");
-  await page.getByRole("navigation").getByRole("link", { name: "Museumseinstellungen" }).click();
+  await page.getByRole("navigation").getByRole("link", { name: "Einstellungen" }).click();
 
   await expect(page).toHaveURL(/\/team\/museum-settings$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Museumseinstellungen" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Einstellungen" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Museum" })).toBeVisible();
   await expect(page.getByLabel("Name des Museums")).not.toBeEmpty();
-  // The legal texts' form is the page's last section (ST-103) – its text areas span the column on a phone.
-  await expect(page.getByRole("heading", { level: 2 }).last()).toHaveText("Rechtstexte");
+  // The legal texts' form (ST-103) – its text areas span the column on a phone. It was the page's last section until
+  // ST-104 added „KI“ after it (the order is checked by ST-104's test).
+  await expect(page.getByRole("heading", { level: 2, name: "Rechtstexte" })).toBeVisible();
   const privacyNotice = page.getByLabel("Datenschutzhinweis (Deutsch)");
   await expect(privacyNotice).not.toBeEmpty();
   await expect(page.getByLabel("Impressum (Englisch, freiwillig)")).toBeVisible();
@@ -49,7 +50,7 @@ test("ST-100: Helpers do not get the museum settings", async ({ page, browser })
   await logIn(helperPhone, helper);
 
   await openMore(helperPhone);
-  await expect(helperPhone.getByRole("navigation").getByRole("link", { name: "Museumseinstellungen" })).toHaveCount(0);
+  await expect(helperPhone.getByRole("navigation").getByRole("link", { name: "Einstellungen" })).toHaveCount(0);
   await helperPhone.goto("/team/museum-settings");
   await expect(helperPhone).toHaveURL(/\/team$/);
 

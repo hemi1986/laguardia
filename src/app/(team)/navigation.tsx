@@ -15,7 +15,7 @@ const link = "text-sm font-medium underline-offset-4 hover:underline";
 /**
  * The one navigation of the team area (ST-076), decided for the whole MVP in ST-008 (UX guideline G19, user
  * 2026-10-02): the daily destinations in one line – Übersicht, Geräte, Sichtung (everyone since 2026-10-03), Defekte, Wartung –,
- * everything that manages behind "Mehr" – Wartungsplan, Reparaturzeiten, Modelle, Teammitglieder, Museumseinstellungen (technicians, ST-100), Passwort ändern,
+ * everything that manages behind "Mehr" – Wartungsplan, Reparaturzeiten, Modelle, Teammitglieder, Einstellungen (technicians, ST-100; „Museumseinstellungen“ until ST-104), Passwort ändern,
  * the design switch (ST-090, „Helles Design“ / „Dunkles Design“ – the design it switches to), Abmelden. A destination appears with the story that builds it (Sichtung ST-017, Defekte ST-021, Wartung ST-043,
  * Wartungsplan ST-040, Reparaturzeiten ST-051), at its place in this order. "Mehr" is a native `<details>`, so it opens without JavaScript.
  * Technician-only destinations are hidden from helpers; the pages and the modules check the role again (G11).
@@ -66,7 +66,7 @@ export function TeamNavigation({ role, design }: { role: Role; design: Design })
                 </li>
                 <li>
                   <Link href="/team/museum-settings" className={link}>
-                    {team.museumSettings}
+                    {team.settings}
                   </Link>
                 </li>
               </>

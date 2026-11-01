@@ -42,6 +42,11 @@ export type FormDefinition<Input, Result, Field extends string> = {
   input: (fields: FormFields<Field>) => Input;
   /** After the command succeeded, e.g. `revalidatePath` and `redirect` (which ends the action). */
   onSuccess: (result: Result) => Promise<void>;
+  /**
+   * Fields that hold a secret (the OpenRouter key, ST-104): read like the others, but never sent back after a
+   * rejection – their value in the state is empty, so the field is empty again (G36).
+   */
+  secret?: readonly Field[];
 };
 
 /** `storage`: where a form's photo is stored (ST-016) or removed content deleted (ST-020, ST-038) – Vercel Blob unless a test injects another. */
@@ -288,7 +293,7 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
       ...dependencies,
       actor: await currentPerson(),
     });
-    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
+    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields, definition.secret) };
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
@@ -472,8 +477,16 @@ function fieldsOf<Field extends string>(formData: FormData, names: readonly Fiel
   ) as FormFields<Field>;
 }
 
-function valuesOf<Field extends string>(fields: FormFields<Field>): { readonly [F in Field]: string } {
-  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, value ?? ""])) as {
+function valuesOf<Field extends string>(
+  fields: FormFields<Field>,
+  secret: readonly Field[] = [],
+): { readonly [F in Field]: string } {
+  return Object.fromEntries(
+    Object.entries<string | undefined>(fields).map(([name, value]) => [
+      name,
+      secret.includes(name as Field) ? "" : (value ?? ""),
+    ]),
+  ) as {
     readonly [F in Field]: string;
   };
 }
