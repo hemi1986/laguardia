@@ -3,7 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { attachFileCommand, type FileCategory } from "@/modules/collection";
 import type { Clock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
-import type { MemoryStorage } from "@/platform/storage";
+import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { aiSettingsForm, type AiDependencies } from "./ai-settings";
 import { changeAiSettingsCommand } from "./change-ai-settings-command";
 import { requestAiAssessmentCommand } from "./request-ai-assessment-command";
@@ -26,7 +26,8 @@ export type ScenarioAi = AiDependencies & { ai: ScenarioOpenRouter };
  * assessment requested, and one run of the background work driven directly (ADR 0015, the seam catalog's run seam).
  *
  * A test binds its database, store, clock and technician once; `db` and `storage` are read at each step, so a test
- * that resets them per test binds them once all the same. The environment's encryption key is one per scenario.
+ * that resets them per test binds them once all the same. A test that reads no content leaves `storage` out – the
+ * scenario keeps one store of its own. The environment's encryption key is one per scenario.
  */
 export function aiScenario({
   db,
@@ -35,30 +36,38 @@ export function aiScenario({
   technician,
 }: {
   db: () => NodePgDatabase;
-  storage: () => MemoryStorage;
+  storage?: () => MemoryStorage;
   clock: Clock;
   technician: Actor;
 }) {
   const environmentKey = randomBytes(32);
-  const by = { actor: technician, clock, newId: randomUUID };
+  const encryptionKey = () => environmentKey;
+  const ownStore = memoryStorage();
+  const store = storage ?? (() => ownStore);
+  const context = { actor: technician, clock, newId: randomUUID };
 
   /** The in-memory OpenRouter – by default it accepts SCENARIO_KEY and offers the Gemini models. */
   function openRouter(settings: MemoryAiSettings = {}): ScenarioOpenRouter {
     return memoryAi({ acceptedKeys: [SCENARIO_KEY], ...settings });
   }
 
-  /** The AI dependencies with the environment's encryption key – around `openRouter(settings)` or a given one. */
+  /**
+   * The AI dependencies with the environment's encryption key – around `openRouter(settings)` or a given one. A seam
+   * is told from settings by its `checkKey` (every AiSeam has it, no `MemoryAiSettings` option may be named so).
+   */
   function ai(settings: MemoryAiSettings | ScenarioOpenRouter = {}): ScenarioAi {
     const seam = "checkKey" in settings ? settings : openRouter(settings);
-    return { ai: seam, encryptionKey: () => environmentKey };
+    return { ai: seam, encryptionKey };
   }
 
+  /** Whole AI dependencies are told from a seam by their `encryptionKey`, which no AiSeam has. */
   const dependenciesOf = (given: AiDependencies | ScenarioOpenRouter): AiDependencies =>
     "encryptionKey" in given ? given : ai(given);
 
   /**
    * AI settings saved through CMD-ChangeAiSettings, the way a technician saves them – by default the key and both
-   * Gemini models, so AI is on. A change of the saved embedding model is confirmed on the warning (ST-110).
+   * Gemini models, so AI is on. A change of the saved embedding model is always confirmed, as on the warning (ST-110)
+   * – a test of the warning itself runs CMD-ChangeAiSettings.
    */
   async function turnAiOn({
     with: given = ai(),
@@ -76,7 +85,7 @@ export function aiScenario({
     const saved = await executeCommand(
       changeAiSettingsCommand(dependencies),
       { version, key, chatModel, embeddingModel, embeddingModelConfirmed: true },
-      { ...by, db: db() },
+      { ...context, db: db() },
     );
     if (!saved.ok) throw new Error(saved.error);
   }
@@ -88,7 +97,7 @@ export function aiScenario({
     const removed = await executeCommand(
       changeAiSettingsCommand(dependencies),
       { version, key: "", removeKey: true },
-      { ...by, db: db() },
+      { ...context, db: db() },
     );
     if (!removed.ok) throw new Error(removed.error);
   }
@@ -111,11 +120,11 @@ export function aiScenario({
     },
   ): Promise<string> {
     const name = `files/${randomUUID()}`;
-    await storage().write(name, bytes, contentType);
+    await store().write(name, bytes, contentType);
     const attached = await executeCommand(
       attachFileCommand,
       { machineId, attachTo: to, title, fileCategory, content: { name, size: bytes.length, contentType } },
-      { ...by, db: db() },
+      { ...context, db: db() },
     );
     if (!attached.ok) throw new Error(attached.error);
     return attached.result.fileId;
@@ -127,7 +136,7 @@ export function aiScenario({
     const jpeg = await aJpeg();
     const bytes = new Uint8Array(jpeg.length + padding);
     bytes.set(jpeg);
-    await storage().write(name, bytes, "image/jpeg");
+    await store().write(name, bytes, "image/jpeg");
     return name;
   }
 
@@ -147,7 +156,7 @@ export function aiScenario({
     const asked = await executeCommand(
       requestAiAssessmentCommand(ai()),
       { defectId, note, photos },
-      { ...by, actor, clock: at, db: db() },
+      { ...context, actor, clock: at, db: db() },
     );
     if (!asked.ok) throw new Error(asked.error);
     return asked.result.aiAssessmentId;
@@ -168,9 +177,9 @@ export function aiScenario({
     budgetSeconds?: number;
     continueWork?: () => Promise<void>;
   }): Promise<void> {
-    const ai = dependenciesOf(given);
-    return runAiWork({ db: db(), clock, budgetSeconds, ai, storage: storage(), continueWork, kinds });
+    const dependencies = dependenciesOf(given);
+    return runAiWork({ db: db(), clock, budgetSeconds, ai: dependencies, storage: store(), continueWork, kinds });
   }
 
-  return { openRouter, ai, turnAiOn, removeTheKey, attachFile, aPhoto, requestAiAssessment, run };
+  return { openRouter, ai, encryptionKey, turnAiOn, removeTheKey, attachFile, aPhoto, requestAiAssessment, run };
 }

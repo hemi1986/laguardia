@@ -44,7 +44,9 @@ Inside a module (flat until it grows):
 **Import rules** (lint, `eslint.config.mjs`, ADR 0002):
 - A module is used only through its `index.ts`. Inside a module, import freely. **One exception, for tests only**
   (user, 2026-10-02, ST-009): a `*.test.ts` may import another module's `*.test-support.ts` – its stand-ins for
-  commands that don't exist yet –, e.g. a page test that needs a machine with a changed status before ST-012.
+  commands that don't exist yet, e.g. a page test that needs a machine with a changed status before ST-012, and the
+  scenario steps a module offers its users' tests through its real commands (`aiScenario`, architecture review
+  2026-11-01).
 - Direction: `app` → `modules` → `platform`. The platform imports no module or page code (its tests may drive a module command); a module imports no page code.
 - A module's `index.ts` exports commands and read-model queries – **never** its persistence functions or tables. Other modules change its data only through its commands.
 
@@ -791,8 +793,9 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   `aiScenario({ db, storage, clock, technician })` (`ai-scenario.test-support.ts`) once and takes its steps from it –
   `openRouter(settings)` (a `memoryAi` that accepts `SCENARIO_KEY`), `ai(…)` (the `AiDependencies` with the scenario's
   encryption key), `turnAiOn`, `removeTheKey`, `attachFile`, `aPhoto`, `requestAiAssessment` and `run({ kinds, with })`
-  – through the real commands; it does not copy them. A test that is about CMD-ChangeAiSettings itself still runs the
-  command. Reading a rendered page – `field`, `selectedOf`, `optionOf`, `labelOf`, `textOf` – comes from
+  – through the real commands; it does not copy them. `turnAiOn` always confirms a change of the embedding model, so a
+  test of the warning, or any test about CMD-ChangeAiSettings itself, still runs the command. `storage` may be left out
+  by a test that reads no content. Reading a rendered page – `field`, `selectedOf`, `optionOf`, `labelOf`, `textOf` – comes from
   `src/test-support/html.ts`.
 - **Indexing a file** (ST-106) is the first real kind (`file-indexing-work.ts`, `kind: "file-indexing"`): `waiting` asks
   Collection's `filesForIndexing` and leaves out every file with an entry for the current embedding model; `work` reads

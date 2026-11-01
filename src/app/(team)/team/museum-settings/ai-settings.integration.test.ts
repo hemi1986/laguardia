@@ -12,7 +12,6 @@ import {
   type MemoryModel,
 } from "@/modules/ai-assistance/ai-seam.test-support";
 import { aiScenario, SCENARIO_KEY as KEY, type ScenarioAi } from "@/modules/ai-assistance/ai-scenario.test-support";
-import { memoryStorage } from "@/platform/storage";
 import { field, optionOf, selectedOf, textOf } from "@/test-support/html";
 import {
   aiSettingsJournal,
@@ -77,7 +76,7 @@ beforeEach(async () => {
 });
 
 /** OpenRouter as the test needs it – by default it offers Gemini 2.5 Flash and Gemini Embedding 2 and accepts KEY. */
-const scenario = aiScenario({ db: () => db, storage: () => memoryStorage(), clock, technician: tom });
+const scenario = aiScenario({ db: () => db, clock, technician: tom });
 
 function openRouterWith(settings: MemoryAiSettings = {}): ScenarioAi {
   return scenario.ai(scenario.openRouter({ acceptedKeys: [KEY, OTHER_KEY], ...settings }));

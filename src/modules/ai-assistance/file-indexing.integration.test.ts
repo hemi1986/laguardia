@@ -130,7 +130,7 @@ async function itemCount(fileId: string): Promise<number> {
 
 /** „Kosten der KI-Erfassung bisher“ of the overview (ST-109). */
 async function costOfIndexingSoFar(): Promise<number> {
-  return (await aiIndexOverview(db, { encryptionKey: scenario.ai().encryptionKey }))?.cost ?? 0;
+  return (await aiIndexOverview(db, { encryptionKey: scenario.encryptionKey }))?.cost ?? 0;
 }
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);

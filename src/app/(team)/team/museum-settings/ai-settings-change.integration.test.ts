@@ -18,7 +18,6 @@ import {
   type MemoryModel,
 } from "@/modules/ai-assistance/ai-seam.test-support";
 import { aiScenario, SCENARIO_KEY as KEY } from "@/modules/ai-assistance/ai-scenario.test-support";
-import { memoryStorage } from "@/platform/storage";
 import { field, labelOf, selectedOf, textOf } from "@/test-support/html";
 import {
   aiSettingsJournal,
@@ -55,7 +54,6 @@ const isolated = isolatedTestDatabase("ai_settings_change_page");
 let db: NodePgDatabase;
 const clock = fixedClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
-const storage = memoryStorage();
 const OTHER_KEY = "sk-or-v1-fedcba9876543210fedcba9876543210c3d4";
 const REFUSED_KEY = "sk-or-v1-refused000000000000000000000000dead";
 
@@ -108,7 +106,7 @@ beforeEach(async () => {
   journalBefore = (await aiSettingsJournal(db)).length;
 });
 
-const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const scenario = aiScenario({ db: () => db, clock, technician: tom });
 
 function openRouterWith(settings: MemoryAiSettings = {}): AiDependencies {
   return scenario.ai(
