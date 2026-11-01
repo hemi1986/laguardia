@@ -20,5 +20,6 @@ export type {
   ManyFormState,
   PhotoFormDefinition,
   PhotoFormState,
+  PhotosFormDefinition,
   UploadFormDefinition,
 } from "./form-runner";

@@ -1,5 +1,12 @@
 import { collectionChangesIn, type MachineStatus } from "@/modules/collection";
 import {
+  aiDependencies,
+  defectAiAssessments,
+  type AiDependencies,
+  type DefectAiAssessments,
+  type ShownAiAssessment,
+} from "@/modules/ai-assistance";
+import {
   defectActions,
   defectDetails,
   defectActionIn,
@@ -78,6 +85,8 @@ export type DefectDetailsData = {
   resolutionsAndReopenings: ShownResolutionOrReopening[];
   /** Its work log (ST-024), the newest entry first – who logged it by name. */
   workLog: ShownWorkLogEntry[];
+  /** The section „KI-Einschätzungen“ (ST-107, RM-DefectAiAssessments) – hidden while AI is off and none exists. */
+  aiAssessments: DefectAiAssessmentsData;
 };
 
 /** A resolution or a reopening on the defect's page. */
@@ -98,6 +107,17 @@ export type ShownWorkLogEntry = {
   loggedAt: Date;
 };
 
+/** The newest AI assessment on the defect's page (ST-107) – its requester named, its photos at their addresses. */
+export type ShownAiAssessmentData = Omit<ShownAiAssessment, "photos"> & {
+  requestedByName: string;
+  photos: { address: string }[];
+};
+
+/** The section „KI-Einschätzungen“ of the defect's page – RM-DefectAiAssessments (ST-107). */
+export type DefectAiAssessmentsData = Omit<DefectAiAssessments, "current"> & {
+  current: ShownAiAssessmentData | undefined;
+};
+
 /**
  * The defect page's data: Repair's defect with its problem reports, Collection's museum number and title, Team's names
  * – the page composes the modules' public queries (ST-009). Undefined when there is no such defect. `viewer` is the
@@ -108,10 +128,20 @@ export async function loadDefectDetails(
   db: Database,
   clock: Clock,
   defectId: string,
-  { storage = s3Storage(), viewer, done }: PhotoSource & { viewer?: Viewer; done?: DefectAction } = {},
+  {
+    storage = s3Storage(),
+    viewer,
+    done,
+    ai = aiDependencies(),
+  }: PhotoSource & { viewer?: Viewer; done?: DefectAction; ai?: AiDependencies } = {},
 ): Promise<DefectDetailsData | undefined> {
   const defect = await defectDetails(db, defectId, viewer && { teamMemberId: viewer.id, role: viewer.role });
   if (!defect) return undefined;
+  const aiAssessments = await defectAiAssessments(db, {
+    defectId: defect.id,
+    viewer: viewer && { teamMemberId: viewer.id, role: viewer.role },
+    dependencies: ai,
+  });
   // Read only for the confirmation – once: someone just back from an action (G3). Repair says which action the command
   // did, Collection whether it changed the machine status in the same step (reopening, ST-030).
   const command = done && viewer ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id) : undefined;
@@ -135,11 +165,13 @@ export async function loadDefectDetails(
         ...defect.resolutions.map((resolution) => resolution.resolvedBy),
         ...defect.reopenings.map((reopening) => reopening.reopenedBy),
         ...defect.workLog.map((entry) => entry.loggedBy),
+        aiAssessments.current?.requestedBy,
       ],
     }),
     photoViewAddresses(storage, clock, [
       ...defect.problemReports.flatMap(({ photo }) => (photo ? [photo] : [])),
       ...defect.workLog.flatMap((entry) => entry.photos),
+      ...(aiAssessments.current?.photos ?? []),
     ]),
   ]);
   // A status change made while reopening (ST-030) is confirmed when the same command changed it – the journal says so,
@@ -194,5 +226,13 @@ export async function loadDefectDetails(
         photos: entry.photos.flatMap((photo) => photoAt(photos, photo) ?? []),
       }))
       .reverse(),
+    aiAssessments: {
+      ...aiAssessments,
+      current: aiAssessments.current && {
+        ...aiAssessments.current,
+        requestedByName: shown.name(aiAssessments.current.requestedBy),
+        photos: aiAssessments.current.photos.flatMap((photo) => photoAt(photos, photo) ?? []),
+      },
+    },
   };
 }
