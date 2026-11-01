@@ -52,9 +52,14 @@ async function entriesFor(
   return new Map(rows.map(({ id, ...entry }) => [id, entry]));
 }
 
-/** Everything OpenRouter charged for indexing – every EVT-FileIndexedForAi ever recorded. */
+/**
+ * Everything OpenRouter charged for indexing – every EVT-FileIndexedForAi ever recorded, and what an indexing that
+ * failed or broke off cost before it ended (EVT-FileIndexingFailed; user, 2026-11-01 – OPEN_QUESTIONS ST-109).
+ */
 async function costOfIndexingSoFar(db: Database): Promise<number> {
-  const entries = await readJournal(db, aiAssistanceEvents, { types: ["EVT-FileIndexedForAi"] });
+  const entries = await readJournal(db, aiAssistanceEvents, {
+    types: ["EVT-FileIndexedForAi", "EVT-FileIndexingFailed"],
+  });
   return entries.reduce((sum, entry) => sum + (entry.data.cost ?? 0), 0);
 }
 

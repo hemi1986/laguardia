@@ -54,9 +54,11 @@ export const fileIndexingWork: AiWorkKind = {
           embeddingModel: settings.embeddingModel,
           // Asked before every request: AI turned off, a rotated key or a changed model stops the indexing at once.
           settings: () => aiIndexingSettings(context.db, context.ai),
+          // Kept with the hold, so an indexing that breaks off still says what it cost.
+          spent: (cost) => piece.recordSpent(cost),
         })
       : // A file record whose content is missing from the store (ST-105): a damaged PDF fails the same way.
-        { outcome: "failed", reason: "not readable" };
+        { outcome: "failed", reason: "not readable", cost: 0 };
     if (outcome.outcome === "given-up") return piece.giveUp();
     await storeOutcome(context, id, settings.embeddingModel, piece, outcome);
   },
@@ -67,13 +69,14 @@ export const fileIndexingWork: AiWorkKind = {
    * waiting instead of failing because someone turned AI off after the crash. The command's facts read the file under
    * the shared removal lock.
    */
-  async recordBrokenOff(tx, id, context) {
+  async recordBrokenOff(tx, id, context, spent) {
     const settings = await aiIndexingSettings(tx, context.ai);
     if (!settings.aiOn || !settings.embeddingModel) return;
     await runCommand(tx, context, {
       fileId: id,
       embeddingModel: settings.embeddingModel,
       failure: "broken off",
+      cost: spent,
     });
   },
 };
@@ -89,7 +92,7 @@ async function storeOutcome(
   if (outcome.outcome === "given-up") return piece.giveUp();
   const input: IndexFileForAiInput =
     outcome.outcome === "failed"
-      ? { fileId, embeddingModel, failure: outcome.reason }
+      ? { fileId, embeddingModel, failure: outcome.reason, cost: outcome.cost }
       : {
           fileId,
           embeddingModel,

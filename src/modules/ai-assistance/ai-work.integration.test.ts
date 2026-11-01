@@ -231,8 +231,10 @@ describe("a piece whose broken-off recording throws", () => {
     const [waiting] = await standIn.add(1, { seconds: 3, outcome: "done" });
     const refusing: AiWorkKind = {
       ...standIn.kind,
-      recordBrokenOff: (tx, id, context) =>
-        id === poison ? Promise.reject(new Error("a bug in the kind")) : standIn.kind.recordBrokenOff(tx, id, context),
+      recordBrokenOff: (tx, id, context, spent) =>
+        id === poison
+          ? Promise.reject(new Error("a bug in the kind"))
+          : standIn.kind.recordBrokenOff(tx, id, context, spent),
     };
     vi.spyOn(console, "error").mockImplementation(() => {});
 

@@ -87,6 +87,8 @@ export type FileIndexingFailed = {
   owner: FileOwner;
   embeddingModel: string;
   reason: IndexingFailureReason;
+  /** What OpenRouter charged before it failed or broke off (user, 2026-11-01) – absent in events recorded before. */
+  cost: number;
 };
 
 /**
@@ -100,7 +102,13 @@ export type IndexFileForAiInput =
       embeddingModel: string;
       result: { items: readonly Omit<AiIndexItem, "id">[]; pagesIndexed: number; imagesIndexed: number; cost: number };
     }
-  | { fileId: string; embeddingModel: string; failure: IndexingFailureReason };
+  | {
+      fileId: string;
+      embeddingModel: string;
+      failure: IndexingFailureReason;
+      /** What OpenRouter charged for the requests it answered before the failure. */
+      cost: number;
+    };
 
 /** The file the command's facts read under its removal lock – what the decision copies the owner from. */
 export type IndexingFile = { owner: FileOwner };
@@ -123,7 +131,7 @@ export function indexFileForAi(
       failureReason: input.failure,
       pagesIndexed: 0,
       imagesIndexed: 0,
-      cost: 0,
+      cost: input.cost,
       items: [],
     };
     return {
@@ -136,6 +144,7 @@ export function indexFileForAi(
           owner,
           embeddingModel: input.embeddingModel,
           reason: input.failure,
+          cost: input.cost,
         },
       ],
     };

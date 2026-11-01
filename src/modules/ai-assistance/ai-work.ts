@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -31,6 +31,11 @@ export type HeldPiece = {
   storeResult(store: (tx: Database) => Promise<unknown>): Promise<"stored" | "no-longer-held">;
   /** Ends the hold without a result and without a failure (AI turned off meanwhile): the piece is waiting again. */
   giveUp(): Promise<void>;
+  /**
+   * Adds what OpenRouter just charged for the piece to its hold, so a piece recorded broken off later still says what
+   * it cost (OPEN_QUESTIONS ST-109, user 2026-11-01).
+   */
+  recordSpent(cost: number): Promise<void>;
 };
 
 /**
@@ -46,8 +51,11 @@ export type AiWorkKind = {
   isWaiting(tx: Database, id: string, context: AiWorkContext): Promise<boolean>;
   /** Does the piece – the slow part, outside any transaction – and ends with `storeResult` or `giveUp`. */
   work(id: string, piece: HeldPiece, context: AiWorkContext): Promise<void>;
-  /** POL-UnfinishedAiWorkFails: records the piece failed as *broken off*, through the aggregate's own command. */
-  recordBrokenOff(tx: Database, id: string, context: AiWorkContext): Promise<void>;
+  /**
+   * POL-UnfinishedAiWorkFails: records the piece failed as *broken off*, through the aggregate's own command, with what
+   * OpenRouter had charged for it before it broke off (`spent`, from its hold).
+   */
+  recordBrokenOff(tx: Database, id: string, context: AiWorkContext, spent: number): Promise<void>;
 };
 
 export type AiWorkDependencies = AiWorkContext & {
@@ -122,7 +130,7 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boole
   try {
     return await db.transaction(async (tx) => {
       const [ranOut] = await tx
-        .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId })
+        .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId, spent: aiWorkHold.spent })
         .from(aiWorkHold)
         .where(lte(aiWorkHold.heldUntil, clock.now()))
         .orderBy(asc(aiWorkHold.heldUntil))
@@ -131,7 +139,7 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boole
       if (!ranOut) return false;
       found = ranOut;
       const kind = kinds.find((each) => each.kind === ranOut.kind);
-      if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies);
+      if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies, ranOut.spent);
       // A hold of a kind this deployment does not know cannot be recorded – it is dropped, never kept for ever.
       else console.error(`AI work: a hold of the unknown kind "${ranOut.kind}" is dropped`);
       await tx.delete(aiWorkHold).where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
@@ -203,6 +211,13 @@ function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id:
       }),
     giveUp: async () => {
       await db.delete(aiWorkHold).where(thisHold);
+    },
+    recordSpent: async (cost) => {
+      if (cost > 0)
+        await db
+          .update(aiWorkHold)
+          .set({ spent: sql`${aiWorkHold.spent} + ${cost}` })
+          .where(thisHold);
     },
   };
 }

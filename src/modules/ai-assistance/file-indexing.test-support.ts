@@ -1,5 +1,12 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import {
+  concatTransformationMatrix,
+  drawObject,
+  PDFDocument,
+  popGraphicsState,
+  pushGraphicsState,
+  StandardFonts,
+} from "pdf-lib";
 import { PNG } from "pngjs";
 
 /**
@@ -65,6 +72,37 @@ export async function aPdfWithAScanInTheMiddle(): Promise<Uint8Array> {
   second.drawImage(await pdf.embedPng(aPng()), { x: 60, y: 320, width: 420, height: 210 });
   const third = pdf.addPage([612, 792]);
   third.drawText("Page three: the bumper wiring and the switch.", { x: 50, y: 700, font, size: 16 });
+  return pdf.save();
+}
+
+/**
+ * A scanned page whose image cannot be decoded – a JBIG2 image with broken data. pdfjs only warns and renders the page
+ * blank; it is what every JBIG2 page of a real scanned manual looked like while pdfjs could not find its decoders.
+ */
+export async function aPdfWithAnUndecodableScan(): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const first = pdf.addPage([612, 792]);
+  first.drawText("Page one: the flipper assembly and its coil.", { x: 50, y: 700, font, size: 16 });
+  const second = pdf.addPage([612, 792]);
+  const scan = pdf.context.register(
+    pdf.context.stream(new Uint8Array(256).fill(0x5a), {
+      Type: "XObject",
+      Subtype: "Image",
+      Width: 200,
+      Height: 200,
+      ColorSpace: "DeviceGray",
+      BitsPerComponent: 1,
+      Filter: "JBIG2Decode",
+    }),
+  );
+  const name = second.node.newXObject("Scan", scan);
+  second.pushOperators(
+    pushGraphicsState(),
+    concatTransformationMatrix(400, 0, 0, 400, 100, 200),
+    drawObject(name),
+    popGraphicsState(),
+  );
   return pdf.save();
 }
 

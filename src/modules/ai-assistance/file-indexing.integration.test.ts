@@ -9,6 +9,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { aiSettingsForm, changeAiSettingsCommand, type AiDependencies } from ".";
 import { aiIndexEntryOf } from "./ai-index-entries";
+import { aiIndexOverview } from "./ai-index-overview";
 import { withoutAiSettings } from "./ai-settings.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
 import { runAiWork } from "./ai-work";
@@ -21,6 +22,7 @@ import {
   aPdfOfText,
   aPdfWithAScanInTheMiddle,
   aDamagedPdf,
+  aPdfWithAnUndecodableScan,
   nonWhitePixels,
 } from "./file-indexing.test-support";
 import { aiWorkHold } from "./schema";
@@ -170,6 +172,11 @@ async function itemCount(fileId: string): Promise<number> {
     sql`SELECT count(*)::int AS count FROM ai_index_item WHERE file_id = ${fileId}`,
   );
   return rows[0].count;
+}
+
+/** „Kosten der KI-Erfassung bisher“ of the overview (ST-109). */
+async function costOfIndexingSoFar(): Promise<number> {
+  return (await aiIndexOverview(db, { encryptionKey: () => environmentKey }))?.cost ?? 0;
 }
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);
@@ -336,6 +343,69 @@ describe("what is indexed", () => {
       expect(entry).toMatchObject({ state: "failed", failureReason: "not readable", items: [] });
       expect(await itemCount(fileId)).toBe(0);
     }
+  });
+
+  it("a PDF page whose image cannot be decoded fails the file as not readable instead of indexing it blank", async () => {
+    await saveAiSettings();
+    const ai = anAi();
+    const fileId = await attach({
+      title: "Scanned manual",
+      contentType: "application/pdf",
+      bytes: await aPdfWithAnUndecodableScan(),
+    });
+
+    await run({ ai });
+
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "not readable", items: [] });
+    expect(await itemCount(fileId)).toBe(0);
+  });
+
+  it("what OpenRouter charged before an indexing failed is its cost and counts in the cost of indexing so far", async () => {
+    await saveAiSettings();
+    const ai = anAi({ embeddingCost: 0.01, embedFailsAfter: { requests: 4, with: "unreachable" } });
+    const fileId = await attach({
+      title: "Five pages",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["one", "two", "three", "four", "five"]),
+    });
+    const before = await costOfIndexingSoFar();
+
+    await run({ ai });
+
+    // The first four requests were answered and charged before OpenRouter stopped answering.
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "OpenRouter not reachable" });
+    expect((await entryOf(fileId)).cost).toBeCloseTo(0.04);
+    expect((await costOfIndexingSoFar()) - before).toBeCloseTo(0.04);
+  });
+
+  it("what OpenRouter charged before an indexing broke off is its cost and counts in the cost of indexing so far", async () => {
+    await saveAiSettings();
+    let started!: () => void;
+    const hasStarted = new Promise<void>((resolve) => (started = resolve));
+    // Pages are embedded two at a time: the first two pages' four items are answered, then the run is cut off.
+    const cutOff = anAi({
+      embeddingCost: 0.01,
+      beforeEmbed: (requestNumber) => {
+        if (requestNumber <= 4) return;
+        started();
+        return new Promise<never>(() => {});
+      },
+    });
+    const fileId = await attach({
+      title: "Three pages",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["one", "two", "three"]),
+    });
+    const before = await costOfIndexingSoFar();
+    void run({ ai: cutOff });
+    await hasStarted;
+
+    clock.advance(2 * 250 + 1);
+    await run();
+
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off" });
+    expect((await entryOf(fileId)).cost).toBeCloseTo(0.04);
+    expect((await costOfIndexingSoFar()) - before).toBeCloseTo(0.04);
   });
 
   it("ST-106: A failure at OpenRouter keeps nothing of the file", async () => {
