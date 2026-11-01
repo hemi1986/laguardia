@@ -1,10 +1,5 @@
 import { executeCommand, type Database } from "@/platform/command";
-import {
-  fileForIndexing,
-  fileForIndexingWhileStoring,
-  filesForIndexing,
-  type FileForIndexing,
-} from "@/modules/collection";
+import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import { aiIndexHasEntryFor, aiIndexedFileIds } from "./ai-index-entries";
 import { aiIndexingSettings } from "./ai-settings";
 import type { IndexFileForAiInput } from "./ai-index-entry";
@@ -54,41 +49,39 @@ export const fileIndexingWork: AiWorkKind = {
     const outcome: IndexingOutcome = content
       ? await indexFileContent({
           contentType: file.content.contentType,
-          bytes: content.bytes,
+          bytes: content,
           ai: context.ai.ai,
-          key: settings.key,
           embeddingModel: settings.embeddingModel,
-          aiOn: async () => (await aiIndexingSettings(context.db, context.ai)).aiOn,
+          // Asked before every request: AI turned off, a rotated key or a changed model stops the indexing at once.
+          settings: () => aiIndexingSettings(context.db, context.ai),
         })
       : // A file record whose content is missing from the store (ST-105): a damaged PDF fails the same way.
         { outcome: "failed", reason: "not readable" };
     if (outcome.outcome === "given-up") return piece.giveUp();
-    await storeOutcome(context, file, settings.embeddingModel, piece, outcome);
+    await storeOutcome(context, id, settings.embeddingModel, piece, outcome);
   },
 
   /**
    * POL-UnfinishedAiWorkFails: a file whose hold ran out without a result is recorded failed as *broken off* – nothing
-   * is read or sent. A removed file records nothing; with no embedding model saved (AI off) it records nothing either,
-   * so the file stays waiting instead of failing because someone turned AI off after the crash.
+   * is read or sent. A removed file records nothing; while AI is off it records nothing either, so the file stays
+   * waiting instead of failing because someone turned AI off after the crash. The command's facts read the file under
+   * the shared removal lock.
    */
   async recordBrokenOff(tx, id, context) {
     const settings = await aiIndexingSettings(tx, context.ai);
-    if (!settings.embeddingModel) return;
-    const file = await fileForIndexingWhileStoring(tx, id);
-    if (!file) return;
+    if (!settings.aiOn || !settings.embeddingModel) return;
     await runCommand(tx, context, {
       fileId: id,
-      owner: file.owner,
       embeddingModel: settings.embeddingModel,
       failure: "broken off",
     });
   },
 };
 
-/** Stores the indexing's result only while the run still holds the file and the file is still there (ADR 0015/0014). */
+/** Stores the indexing's result only while the run still holds the file (ADR 0015); the command re-reads it (ADR 0014). */
 async function storeOutcome(
   context: AiWorkContext,
-  file: FileForIndexing,
+  fileId: string,
   embeddingModel: string,
   piece: HeldPiece,
   outcome: IndexingOutcome,
@@ -96,10 +89,9 @@ async function storeOutcome(
   if (outcome.outcome === "given-up") return piece.giveUp();
   const input: IndexFileForAiInput =
     outcome.outcome === "failed"
-      ? { fileId: file.id, owner: file.owner, embeddingModel, failure: outcome.reason }
+      ? { fileId, embeddingModel, failure: outcome.reason }
       : {
-          fileId: file.id,
-          owner: file.owner,
+          fileId,
           embeddingModel,
           result: {
             items: outcome.items,
@@ -108,13 +100,13 @@ async function storeOutcome(
             cost: outcome.cost,
           },
         };
-  await piece.storeResult(async (tx) => {
-    // The file's removal lock, taken shared: a removal waits for this store, and a file removed meanwhile records nothing.
-    if (!(await fileForIndexingWhileStoring(tx, file.id))) return;
-    await runCommand(tx, context, input);
-  });
+  await piece.storeResult((tx) => runCommand(tx, context, input));
 }
 
+/**
+ * CMD-IndexFileForAi as the system. A rejection – only `file-removed` today – records nothing, and the hold still ends
+ * with the piece's result (`storeResult`), so a run never pays twice for one piece.
+ */
 function runCommand(tx: Database, context: AiWorkContext, input: IndexFileForAiInput) {
   return executeCommand(indexFileForAiCommand, input, {
     actor: { kind: "system" },

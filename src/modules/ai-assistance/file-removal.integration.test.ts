@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { executeCommand, journalOf } from "@/platform/command";
@@ -10,6 +11,7 @@ import { aiSettingsForm, changeAiSettingsCommand, removeFileCommandWithAiIndex, 
 import { aiIndexEntryOf } from "./ai-index-entries";
 import { withoutAiSettings } from "./ai-settings.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
+import { indexFileForAiCommand } from "./index-file-for-ai-command";
 import { runAiWork } from "./ai-work";
 import { memoryAi, geminiEmbedding, geminiFlash } from "./ai-seam.test-support";
 import { steppingClock } from "./ai-work-stand-in.test-support";
@@ -59,6 +61,7 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   await db.delete(aiWorkHold);
   await db.execute("DELETE FROM ai_index_entry");
+  await db.execute("DELETE FROM file");
   await withoutAiSettings(db);
   clock.set("2026-11-02T10:00:00Z");
   storage = memoryStorage();
@@ -127,6 +130,18 @@ async function remove(fileId: string): Promise<void> {
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);
 
+/** Waits until a session is blocked on an advisory lock – the removal waiting for the store's shared removal lock. */
+async function waitUntilTheRemovalWaits(): Promise<void> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const { rows } = await db.execute<{ waiting: number }>(
+      sql`SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND wait_event = 'advisory'`,
+    );
+    if (rows[0].waiting > 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error("the removal never waited for the file's removal lock");
+}
+
 describe("a removed file and the AI index", () => {
   it("ST-106: A removed file leaves the AI index in the same step", async () => {
     await saveAiSettings();
@@ -158,5 +173,62 @@ describe("a removed file and the AI index", () => {
     expect(events).toContain("EVT-FileRemoved");
     expect(events).not.toContain("EVT-FileIndexedForAi");
     expect(events).not.toContain("EVT-FileIndexingFailed");
+  });
+
+  it("a removal that starts while the entry is being stored waits for the shared removal lock, then removes it", async () => {
+    await saveAiSettings();
+    const fileId = await attach("Eight Ball Manual", new TextEncoder().encode("One passage."), "text/plain");
+
+    // The store's transaction takes the file's removal lock shared and keeps it until it commits.
+    let releaseStore!: () => void;
+    const storeMayCommit = new Promise<void>((resolve) => (releaseStore = resolve));
+    let storeHappened!: () => void;
+    const storing = new Promise<void>((resolve) => (storeHappened = resolve));
+    const store = db.transaction(async (tx) => {
+      const stored = await executeCommand(
+        indexFileForAiCommand,
+        {
+          fileId,
+          embeddingModel: geminiEmbedding.id,
+          result: {
+            items: [{ kind: "passage", text: "One passage.", embedding: Array.from({ length: 1536 }, () => 0) }],
+            pagesIndexed: 0,
+            imagesIndexed: 0,
+            cost: 0.0001,
+          },
+        },
+        { actor: { kind: "system" }, db: tx, clock },
+      );
+      if (!stored.ok) throw new Error(stored.error);
+      storeHappened();
+      await storeMayCommit;
+    });
+    await storing;
+
+    // The removal starts during the store and must wait for the shared lock – the one guarantee of HS-29 (ADR 0014).
+    let removed = false;
+    const removal = remove(fileId).then(() => {
+      removed = true;
+    });
+    await waitUntilTheRemovalWaits();
+    expect(removed).toBe(false);
+
+    releaseStore();
+    await store;
+    await removal;
+
+    expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
+    expect(await eventsOf(fileId)).toContain("EVT-FileLeftAiIndex");
+  });
+
+  it("removing a file without an AI index entry records nothing", async () => {
+    await saveAiSettings();
+    const fileId = await attach("Never indexed", new TextEncoder().encode("Not reached by a run."), "text/plain");
+
+    await remove(fileId);
+
+    expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
+    expect(await eventsOf(fileId)).toContain("EVT-FileRemoved");
+    expect(await eventsOf(fileId)).not.toContain("EVT-FileLeftAiIndex");
   });
 });

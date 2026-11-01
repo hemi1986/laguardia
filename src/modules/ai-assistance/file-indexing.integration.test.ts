@@ -72,6 +72,7 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   await db.delete(aiWorkHold);
   await db.execute("DELETE FROM ai_index_entry");
+  await db.execute("DELETE FROM file");
   await withoutAiSettings(db);
   clock.set("2026-11-02T10:00:00Z");
   storage = memoryStorage();
@@ -160,6 +161,14 @@ async function entryOf(fileId: string) {
   const entry = await aiIndexEntryOf(db, fileId);
   if (!entry) throw new Error(`no AI index entry for ${fileId}`);
   return entry;
+}
+
+/** How many index items are really stored for a file – not how many its state mapping shows. */
+async function itemCount(fileId: string): Promise<number> {
+  const { rows } = await db.execute<{ count: number }>(
+    sql`SELECT count(*)::int AS count FROM ai_index_item WHERE file_id = ${fileId}`,
+  );
+  return rows[0].count;
 }
 
 const eventsOf = async (fileId: string) => (await journalOf(db, { aggregateId: fileId })).map((each) => each.type);
@@ -273,6 +282,33 @@ describe("what is indexed", () => {
     const entry = await entryOf(fileId);
     expect(entry).toMatchObject({ state: "failed", failureReason: "format not indexed", items: [] });
     expect(await eventsOf(fileId)).toContain("EVT-FileIndexingFailed");
+    // Nothing of it is stored – the failed entry really holds no item, not only in the state mapping.
+    expect(await itemCount(fileId)).toBe(0);
+  });
+
+  it("indexing a file again replaces its AI index entry as a whole", async () => {
+    const otherEmbedding = { ...geminiEmbedding, id: "google/other-embedding", name: "Other Embedding" };
+    const bothModels = anAi({ models: [geminiFlash, geminiEmbedding, otherEmbedding] });
+    await saveAiSettings({ ai: bothModels });
+    const fileId = await attach({
+      title: "Coils.md",
+      contentType: "text/markdown",
+      bytes: new TextEncoder().encode("# Coils\n\nThe flipper coil is 50 V.\n\nCheck the diode first."),
+    });
+    await run();
+    const before = await entryOf(fileId);
+
+    // A second embedding model – POL-AiIndexFollowsTheSettings indexes every file again with it.
+    await saveAiSettings({ ai: bothModels, embeddingModel: otherEmbedding.id });
+    await run({ ai: bothModels });
+
+    const after = await entryOf(fileId);
+    expect(after).toMatchObject({ state: "indexed", embeddingModel: otherEmbedding.id });
+    expect(after.at.getTime()).toBeGreaterThanOrEqual(before.at.getTime());
+    // Replaced as a whole: the new items, none of the old ones, and no accumulation.
+    expect(after.items).toHaveLength(before.items.length);
+    expect(after.items.map((item) => item.id)).not.toEqual(before.items.map((item) => item.id));
+    expect(await itemCount(fileId)).toBe(after.items.length);
   });
 
   it("ST-106: A file that cannot be read fails as not readable", async () => {
@@ -283,6 +319,11 @@ describe("what is indexed", () => {
       contentType: "application/pdf",
       bytes: new Uint8Array([1, 2, 3]),
     });
+    const corruptImage = await attach({
+      title: "Damaged photo",
+      contentType: "image/png",
+      bytes: new Uint8Array([9, 9, 9, 9]),
+    });
     // The content is gone from the object store – a preview's database copied from production (ST-105).
     const missingContent = (await db.execute<{ content: string }>(sql`SELECT content FROM file WHERE id = ${missing}`))
       .rows[0].content;
@@ -290,9 +331,10 @@ describe("what is indexed", () => {
 
     await run();
 
-    for (const fileId of [damaged, missing]) {
+    for (const fileId of [damaged, missing, corruptImage]) {
       const entry = await entryOf(fileId);
       expect(entry).toMatchObject({ state: "failed", failureReason: "not readable", items: [] });
+      expect(await itemCount(fileId)).toBe(0);
     }
   });
 
@@ -329,6 +371,36 @@ describe("what is indexed", () => {
       await run({ ai });
       expect(ai.embeddingRequests).toBe(requestsBefore);
     }
+  });
+  it("a file whose indexing broke off is recorded failed as broken off, and no run takes it again", async () => {
+    await saveAiSettings();
+    const fileId = await attach({
+      title: "Eight Ball Manual",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("The manual's only passage."),
+    });
+    // The run is cut off while it works on the file – a deployment or the time limit: its kind never returns.
+    let started!: () => void;
+    const hasStarted = new Promise<void>((resolve) => (started = resolve));
+    const cutOff = anAi({
+      beforeEmbed: () => {
+        started();
+        return new Promise<never>(() => {});
+      },
+    });
+    void run({ ai: cutOff });
+    await hasStarted;
+
+    // Once its hold (twice the budget) has run out, the next run records it failed as *broken off* (POL-UnfinishedAiWorkFails).
+    clock.advance(2 * 250 + 1);
+    await run();
+
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off", items: [] });
+    const requestsBefore = (await entryOf(fileId)).embeddingModel;
+    expect(requestsBefore).toBe(EMBEDDING);
+    // It is never taken again by itself.
+    await run();
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off" });
   });
 });
 

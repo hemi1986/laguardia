@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { aggregateStore, replaces, type Database } from "@/platform/command";
-import type { AiIndexEntryState, AiIndexItem } from "./ai-index-entry";
+import { ownerColumns, ownerOf, type AiIndexEntryState, type AiIndexItem } from "./ai-index-entry";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
@@ -34,7 +34,7 @@ export const aiIndexEntries = aggregateStore({
   replaces: { items },
   toState: (row, lists): AiIndexEntryState => ({
     id: row.id,
-    owner: row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! },
+    owner: ownerOf(row),
     state: row.state,
     embeddingModel: row.embeddingModel,
     at: row.changedAt,
@@ -46,8 +46,7 @@ export const aiIndexEntries = aggregateStore({
   }),
   toRow: (state: AiIndexEntryState) => ({
     id: state.id,
-    machineId: "machineId" in state.owner ? state.owner.machineId : null,
-    machineModelId: "machineModelId" in state.owner ? state.owner.machineModelId : null,
+    ...ownerColumns(state.owner),
     state: state.state,
     embeddingModel: state.embeddingModel,
     changedAt: state.at,
@@ -63,27 +62,31 @@ export async function aiIndexEntryOf(db: Database, fileId: string): Promise<AiIn
   return (await aiIndexEntries.load(db, fileId))?.state;
 }
 
-/** Whether the file already has an entry made with this embedding model – indexed or failed (never retried by a run). */
-export async function aiIndexHasEntryFor(db: Database, fileId: string, embeddingModel: string): Promise<boolean> {
-  const [row] = await db
+/** The IDs of the entries matching the filter – one query for the four questions below. */
+async function entryIds(db: Database, { fileId, embeddingModel }: { fileId?: string; embeddingModel?: string }) {
+  const rows = await db
     .select({ id: aiIndexEntry.id })
     .from(aiIndexEntry)
-    .where(and(eq(aiIndexEntry.id, fileId), eq(aiIndexEntry.embeddingModel, embeddingModel)))
-    .limit(1);
-  return !!row;
+    .where(
+      and(
+        fileId === undefined ? undefined : eq(aiIndexEntry.id, fileId),
+        embeddingModel === undefined ? undefined : eq(aiIndexEntry.embeddingModel, embeddingModel),
+      ),
+    );
+  return rows.map((row) => row.id);
+}
+
+/** Whether the file already has an entry made with this embedding model – indexed or failed (never retried by a run). */
+export async function aiIndexHasEntryFor(db: Database, fileId: string, embeddingModel: string): Promise<boolean> {
+  return (await entryIds(db, { fileId, embeddingModel })).length > 0;
 }
 
 /** The files that already have an entry for this embedding model – what a run leaves out when it looks for waiting files. */
 export async function aiIndexedFileIds(db: Database, embeddingModel: string): Promise<Set<string>> {
-  const rows = await db
-    .select({ id: aiIndexEntry.id })
-    .from(aiIndexEntry)
-    .where(eq(aiIndexEntry.embeddingModel, embeddingModel));
-  return new Set(rows.map((row) => row.id));
+  return new Set(await entryIds(db, { embeddingModel }));
 }
 
 /** Whether the file has any AI index entry – the removal policy asks before it removes one (EVT-FileLeftAiIndex). */
 export async function hasAiIndexEntry(db: Database, fileId: string): Promise<boolean> {
-  const [row] = await db.select({ id: aiIndexEntry.id }).from(aiIndexEntry).where(eq(aiIndexEntry.id, fileId)).limit(1);
-  return !!row;
+  return (await entryIds(db, { fileId })).length > 0;
 }

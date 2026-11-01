@@ -1,6 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
-import type { FileIndexedForAi, FileIndexingFailed, FileLeftAiIndex } from "./ai-index-entry";
+import { ownerColumns, type FileIndexedForAi, type FileIndexingFailed, type FileLeftAiIndex } from "./ai-index-entry";
 
 /**
  * AI assistance's event catalogue (ST-079): per event its aggregate and what reaches the journal. The OpenRouter key is
@@ -8,10 +8,10 @@ import type { FileIndexedForAi, FileIndexingFailed, FileLeftAiIndex } from "./ai
  * index's passages, page images and embeddings never reach it either: it names the file, the model, the counts and the
  * cost (ST-106).
  */
-const machineOf = (owner: { machineId: string } | { machineModelId: string }) =>
-  "machineId" in owner ? owner.machineId : null;
-const machineModelOf = (owner: { machineId: string } | { machineModelId: string }) =>
-  "machineModelId" in owner ? owner.machineModelId : null;
+const ownerData = (owner: { machineId: string } | { machineModelId: string }) => {
+  const { machineId, machineModelId } = ownerColumns(owner);
+  return { machineId, machineModelId };
+};
 
 export const aiAssistanceEvents = eventCatalogue({
   "EVT-AiSettingsChanged": {
@@ -30,36 +30,37 @@ export const aiAssistanceEvents = eventCatalogue({
   },
   "EVT-FileIndexedForAi": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileIndexedForAi) => ({
-      aggregateId: event.fileId,
-      machineId: machineOf(event.owner),
-      data: {
-        machineModelId: machineModelOf(event.owner),
-        embeddingModel: event.embeddingModel,
-        pagesIndexed: event.pagesIndexed,
-        imagesIndexed: event.imagesIndexed,
-        cost: event.cost,
-      },
-    }),
+    project: (event: FileIndexedForAi) => {
+      const { machineId, machineModelId } = ownerData(event.owner);
+      return {
+        aggregateId: event.fileId,
+        machineId,
+        data: {
+          machineModelId,
+          embeddingModel: event.embeddingModel,
+          pagesIndexed: event.pagesIndexed,
+          imagesIndexed: event.imagesIndexed,
+          cost: event.cost,
+        },
+      };
+    },
   },
   "EVT-FileIndexingFailed": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileIndexingFailed) => ({
-      aggregateId: event.fileId,
-      machineId: machineOf(event.owner),
-      data: {
-        machineModelId: machineModelOf(event.owner),
-        embeddingModel: event.embeddingModel,
-        reason: event.reason,
-      },
-    }),
+    project: (event: FileIndexingFailed) => {
+      const { machineId, machineModelId } = ownerData(event.owner);
+      return {
+        aggregateId: event.fileId,
+        machineId,
+        data: { machineModelId, embeddingModel: event.embeddingModel, reason: event.reason },
+      };
+    },
   },
   "EVT-FileLeftAiIndex": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileLeftAiIndex) => ({
-      aggregateId: event.fileId,
-      machineId: machineOf(event.owner),
-      data: { machineModelId: machineModelOf(event.owner) },
-    }),
+    project: (event: FileLeftAiIndex) => {
+      const { machineId, machineModelId } = ownerData(event.owner);
+      return { aggregateId: event.fileId, machineId, data: { machineModelId } };
+    },
   },
 });

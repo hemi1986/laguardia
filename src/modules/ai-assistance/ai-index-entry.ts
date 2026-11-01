@@ -24,6 +24,19 @@ export type IndexItemKind = (typeof indexItemKinds)[number];
 /** The file's owner, copied once: a file belongs to exactly one machine or one machine model and never changes. */
 export type FileOwner = { machineId: string } | { machineModelId: string };
 
+/** The owner of a stored AI index entry row – one of its two columns is set (CHECK constraint). */
+export function ownerOf(row: { machineId: string | null; machineModelId: string | null }): FileOwner {
+  return row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! };
+}
+
+/** The two owner columns of an AI index entry, for its row and its journal projection. */
+export function ownerColumns(owner: FileOwner): { machineId: string | null; machineModelId: string | null } {
+  return {
+    machineId: "machineId" in owner ? owner.machineId : null,
+    machineModelId: "machineModelId" in owner ? owner.machineModelId : null,
+  };
+}
+
 /** One thing the AI index holds of a file, with where it came from and its embedding. Never journaled. */
 export type AiIndexItem = {
   id: string;
@@ -77,24 +90,32 @@ export type FileIndexingFailed = {
 };
 
 /**
- * What the background work hands CMD-IndexFileForAi: the file and its result. The owner is copied from Collection's
- * file when it is read; the command's transaction checks again that the file is not removed (the removal lock).
+ * What the background work hands CMD-IndexFileForAi: the file's ID, the model it indexed with and the result. The
+ * command's facts read the file in its own transaction – under the removal lock – so its owner is never trusted from
+ * the caller and a file removed meanwhile records nothing.
  */
 export type IndexFileForAiInput =
   | {
       fileId: string;
-      owner: FileOwner;
       embeddingModel: string;
       result: { items: readonly Omit<AiIndexItem, "id">[]; pagesIndexed: number; imagesIndexed: number; cost: number };
     }
-  | { fileId: string; owner: FileOwner; embeddingModel: string; failure: IndexingFailureReason };
+  | { fileId: string; embeddingModel: string; failure: IndexingFailureReason };
+
+/** The file the command's facts read under its removal lock – what the decision copies the owner from. */
+export type IndexingFile = { owner: FileOwner };
+
+/** The file was removed (or no longer exists) before the result was stored – nothing is recorded. */
+export type IndexFileForAiError = "file-removed";
 
 export function indexFileForAi(
-  _nothingYet: undefined,
+  file: IndexingFile | undefined,
   input: IndexFileForAiInput,
   { clock, newId }: DecisionContext,
-): Decision<AiIndexEntryState, FileIndexedForAi | FileIndexingFailed, never> {
-  const base = { id: input.fileId, owner: input.owner, embeddingModel: input.embeddingModel, at: clock.now() };
+): Decision<AiIndexEntryState, FileIndexedForAi | FileIndexingFailed, IndexFileForAiError> {
+  if (!file) return { ok: false, error: "file-removed" };
+  const owner = file.owner;
+  const base = { id: input.fileId, owner, embeddingModel: input.embeddingModel, at: clock.now() };
   if ("failure" in input) {
     const state: AiIndexEntryState = {
       ...base,
@@ -112,7 +133,7 @@ export function indexFileForAi(
         {
           type: "EVT-FileIndexingFailed",
           fileId: input.fileId,
-          owner: input.owner,
+          owner,
           embeddingModel: input.embeddingModel,
           reason: input.failure,
         },
@@ -134,7 +155,7 @@ export function indexFileForAi(
       {
         type: "EVT-FileIndexedForAi",
         fileId: input.fileId,
-        owner: input.owner,
+        owner,
         embeddingModel: input.embeddingModel,
         pagesIndexed: state.pagesIndexed,
         imagesIndexed: state.imagesIndexed,

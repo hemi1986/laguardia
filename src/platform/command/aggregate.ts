@@ -116,7 +116,10 @@ export function aggregateStore<
       return true;
     },
     async remove(tx, id) {
-      // The lists go with it: a replaced list's rows have a foreign key to the aggregate's row.
+      // Only a store whose lists are replaced lists can remove its aggregate: its rows cascade (ON DELETE cascade). A
+      // history or a list of entities would leave orphans – removing such an aggregate is not supported.
+      if (Object.keys(definition.histories ?? {}).length || Object.keys(definition.entities ?? {}).length)
+        throw new Error(`${type}: an aggregate with histories or entities cannot be removed`);
       await tx.delete(table).where(eq(table.id, id));
     },
   };
@@ -193,11 +196,6 @@ type Common<
   /** The stored content the command removed on purpose, named by its result – deleted after the commit (`Command`). */
   removesContent?: (result: Result) => string | undefined;
   /**
-   * The command ends its aggregate: the stored row is removed instead of changed (ST-106: a file leaving the AI
-   * index). Like every command it still journals its event, and its `runs` and policies still run.
-   */
-  removes?: (state: State, events: Event[], input: Input) => boolean;
-  /**
    * Commands to run after saving, as the same acting person, in the same transaction (ST-018) – before the policies.
    * A rejection of one rejects the whole command; its errors are part of this command's result type.
    */
@@ -273,6 +271,12 @@ type Changing<
     context: DecisionContext<ActorOf<Allowed>>,
     facts: Facts,
   ) => Decision<State, Event, Error>;
+  /**
+   * The command ends its aggregate: the stored row is removed instead of changed (ST-106: a file leaving the AI
+   * index). Like every command it still journals its event, and its `runs` and policies still run. Only a changing
+   * command can remove its aggregate, and one that does cannot create others in the same step.
+   */
+  removes?: (state: State, events: Event[], input: Input) => boolean;
 } & ([Facts] extends [undefined]
     ? { facts?: never }
     : { facts: (tx: Database, input: Input, state: State) => Promise<Facts> });
@@ -355,17 +359,25 @@ export function aggregateCommand<
         return { ok: true, result: definition.result(decision.state, decision.events, input), events: [] };
 
       // New aggregates cannot conflict with anyone; saving the command's own aggregate is the last step.
-      const removes = expectedVersion !== undefined && definition.removes?.(decision.state, decision.events, input);
-      if (removes && !store.remove) throw new Error(`${definition.id}: its aggregate cannot be removed by this store`);
-      for (const c of removes ? [] : (decision.created ?? [])) await c.store.insert(tx, c.state);
-      if (removes) await store.remove!(tx, decision.state.id);
-      else if (expectedVersion === undefined) await store.insert(tx, decision.state);
-      else if (!(await store.update(tx, decision.state, expectedVersion))) {
-        // Someone changed the aggregate since it was seen – often by committing the same decision a moment earlier.
-        // The domain's reason wins over the conflict (Q11, ST-018): decide again on what is stored now.
-        const again = await decideOnStored?.();
-        if (again && !again.ok) return again;
-        throw new VersionConflict();
+      const removes =
+        expectedVersion !== undefined && "removes" in definition
+          ? definition.removes?.(decision.state, decision.events, input)
+          : false;
+      if (removes) {
+        if (decision.created?.length)
+          throw new Error(`${definition.id}: a command that removes its aggregate cannot create others`);
+        if (!store.remove) throw new Error(`${definition.id}: its aggregate cannot be removed by this store`);
+        await store.remove(tx, decision.state.id);
+      } else {
+        for (const c of decision.created ?? []) await c.store.insert(tx, c.state);
+        if (expectedVersion === undefined) await store.insert(tx, decision.state);
+        else if (!(await store.update(tx, decision.state, expectedVersion))) {
+          // Someone changed the aggregate since it was seen – often by committing the same decision a moment earlier.
+          // The domain's reason wins over the conflict (Q11, ST-018): decide again on what is stored now.
+          const again = await decideOnStored?.();
+          if (again && !again.ok) return again;
+          throw new VersionConflict();
+        }
       }
 
       for (const call of definition.runs?.(decision.state, decision.events, input) ?? []) {

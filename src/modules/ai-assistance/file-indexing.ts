@@ -1,20 +1,20 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { AiSeam, EmbedInput } from "./ai-seam";
 import type { AiIndexItem, IndexingFailureReason } from "./ai-index-entry";
 
 /**
  * Turning one file's content into what the AI index holds of it (ST-106, ADR 0014): a PDF page by page – its text layer
  * as a passage and the page rendered as an image; a Markdown or text file in passages; a PNG, JPEG or WebP image as it
- * is. No OCR. Every item is embedded on its own with the embedding model; one item per request (ST-105); pages are
- * rendered and embedded a few at a time, so a run's memory stays low and embedding hides behind rendering.
+ * is. No OCR. Every item is embedded on its own with the embedding model; one item per request, at most four at a time
+ * (ST-105); pages are rendered a few at a time so the page images held at once stay bounded.
  */
 
 /** The page image's bounded size and quality (ST-105: 792 × 1024 px, JPEG quality 75, ≈ 71 KB, 258 tokens a page). */
 const PAGE_IMAGE_LONG_EDGE = 1024;
 const PAGE_IMAGE_QUALITY = 75;
-/** One item per request; a few requests run beside each other (ST-105: 4 in parallel, no rate limit seen). */
+/** One item per request; up to four requests beside each other (ST-105: no rate limit seen at four). */
 const PARALLEL_REQUESTS = 4;
 /** How many pages are rendered before their items are embedded – bounds the page images held at once. */
 const PAGES_PER_BATCH = 2;
@@ -32,17 +32,20 @@ export type IndexingOutcome =
     }
   /** The file cannot be read or its format is not indexed, or OpenRouter refused or did not answer. */
   | { outcome: "failed"; reason: IndexingFailureReason }
-  /** AI was turned off meanwhile: nothing is stored, the file stays waiting (user, 2026-10-31). */
+  /** AI was turned off meanwhile (or the key or model changed): nothing is stored, the file stays waiting. */
   | { outcome: "given-up" };
+
+/** What the AI index work reads before every request – AI on, the key now, the model the index is built with. */
+export type IndexingSettings = { aiOn: boolean; key: string | undefined; embeddingModel: string | undefined };
 
 export type IndexFileOptions = {
   contentType: string;
   bytes: Uint8Array;
   ai: AiSeam;
-  key: string;
+  /** The embedding model this indexing was started with – every item of the entry must be made with it. */
   embeddingModel: string;
-  /** Asked before every request to OpenRouter – while AI is off nothing reaches it (rule of CMD-IndexFileForAi). */
-  aiOn: () => Promise<boolean>;
+  /** Asked before every request to OpenRouter: AI off, a rotated key or a changed model stops the indexing at once. */
+  settings: () => Promise<IndexingSettings>;
 };
 
 /** One thing to embed, with where it came from. */
@@ -54,7 +57,7 @@ type ItemToEmbed = {
   contentType?: string;
 };
 
-/** A source that went through OpenRouter, with the item it became. */
+/** An item that went through OpenRouter, with the cost its request reported. */
 type Embedded = { item: Omit<AiIndexItem, "id">; cost: number };
 
 const mediaTypesOf = (contentType: string) => contentType.split(";")[0].trim().toLowerCase();
@@ -69,45 +72,40 @@ export async function indexFileContent({
   contentType,
   bytes,
   ai,
-  key,
   embeddingModel,
-  aiOn,
+  settings,
 }: IndexFileOptions): Promise<IndexingOutcome> {
-  if (isPdf(contentType)) return indexPdf({ bytes, ai, key, embeddingModel, aiOn });
+  if (isPdf(contentType)) return indexPdf({ bytes, ai, embeddingModel, settings });
   if (isText(contentType)) {
     const text = new TextDecoder().decode(bytes);
     const itemsToEmbed: ItemToEmbed[] = passagesOf(text).map((passage) => ({ kind: "passage", text: passage }));
-    return indexSources(itemsToEmbed, { ai, key, embeddingModel, aiOn }, { pagesIndexed: 0, imagesIndexed: 0 });
+    return indexItems(itemsToEmbed, { ai, embeddingModel, settings }, { pagesIndexed: 0, imagesIndexed: 0 });
   }
   if (isImage(contentType)) {
-    return indexSources(
-      [{ kind: "image", bytes, contentType: mediaTypesOf(contentType) }],
-      { ai, key, embeddingModel, aiOn },
-      {
-        pagesIndexed: 0,
-        imagesIndexed: 1,
-      },
-    );
+    // A damaged image is a file that cannot be read – decode it before asking OpenRouter (ST-106, "not readable").
+    try {
+      await loadImage(Buffer.from(bytes));
+    } catch {
+      return { outcome: "failed", reason: "not readable" };
+    }
+    const itemsToEmbed: ItemToEmbed[] = [{ kind: "image", bytes, contentType: mediaTypesOf(contentType) }];
+    return indexItems(itemsToEmbed, { ai, embeddingModel, settings }, { pagesIndexed: 0, imagesIndexed: 1 });
   }
   return { outcome: "failed", reason: "format not indexed" };
 }
 
 /** A text, Markdown or image file: its items embedded, no page count. */
-async function indexSources(
+async function indexItems(
   itemsToEmbed: ItemToEmbed[],
-  embedding: { ai: AiSeam; key: string; embeddingModel: string; aiOn: () => Promise<boolean> },
+  embedding: { ai: AiSeam; embeddingModel: string; settings: () => Promise<IndexingSettings> },
   counts: { pagesIndexed: number; imagesIndexed: number },
 ): Promise<IndexingOutcome> {
-  const embedded: Embedded[] = [];
-  for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {
-    const answer = await embedSources(itemsToEmbed.slice(at, at + PARALLEL_REQUESTS), embedding);
-    if (answer.outcome !== "embedded") return answer;
-    embedded.push(...answer.embedded);
-  }
+  const answer = await embedItems(itemsToEmbed, embedding);
+  if (answer.outcome !== "embedded") return answer;
   return {
     outcome: "indexed",
-    items: embedded.map((each) => each.item),
-    cost: embedded.reduce((sum, each) => sum + each.cost, 0),
+    items: answer.embedded.map((each) => each.item),
+    cost: answer.embedded.reduce((sum, each) => sum + each.cost, 0),
     ...counts,
   };
 }
@@ -142,9 +140,8 @@ function splitLong(text: string): string[] {
 async function indexPdf({
   bytes,
   ai,
-  key,
   embeddingModel,
-  aiOn,
+  settings,
 }: Omit<IndexFileOptions, "contentType">): Promise<IndexingOutcome> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const assets = pdfjsAssets();
@@ -162,6 +159,7 @@ async function indexPdf({
     pdf = await loading.promise;
   } catch {
     // A damaged, password-protected or empty PDF, or content that is no PDF at all (ST-105).
+    await loading.destroy().catch(() => undefined);
     return { outcome: "failed", reason: "not readable" };
   }
   const pages = pdf.numPages;
@@ -169,27 +167,31 @@ async function indexPdf({
   try {
     for (let first = 1; first <= pages; first += PAGES_PER_BATCH) {
       const itemsToEmbed: ItemToEmbed[] = [];
-      for (let number = first; number <= Math.min(first + PAGES_PER_BATCH - 1, pages); number++) {
-        const page = await pdf.getPage(number);
-        const text = await page.getTextContent();
-        const passage = text.items
-          .map((item) => ("str" in item ? item.str : ""))
-          .join(" ")
-          .trim();
-        // A scanned page without a text layer has no passage – it is found through its page image (no OCR).
-        if (passage) {
-          for (const piece of passagesOf(passage)) itemsToEmbed.push({ kind: "passage", page: number, text: piece });
+      try {
+        for (let number = first; number <= Math.min(first + PAGES_PER_BATCH - 1, pages); number++) {
+          const page = await pdf.getPage(number);
+          const text = await page.getTextContent();
+          const passage = text.items
+            .map((item) => ("str" in item ? item.str : ""))
+            .join(" ")
+            .trim();
+          // A scanned page without a text layer has no passage – it is found through its page image (no OCR).
+          if (passage) {
+            for (const piece of passagesOf(passage)) itemsToEmbed.push({ kind: "passage", page: number, text: piece });
+          }
+          const image = await renderPage(page as unknown as PdfPage);
+          itemsToEmbed.push({ kind: "page-image", page: number, bytes: image, contentType: "image/jpeg" });
         }
-        const image = await renderPage(page as unknown as PdfPage);
-        itemsToEmbed.push({ kind: "page-image", page: number, bytes: image, contentType: "image/jpeg" });
+      } catch {
+        // A page that pdfjs cannot read or render: the whole file fails and nothing of it is kept.
+        return { outcome: "failed", reason: "not readable" };
       }
-      const answer = await embedSources(itemsToEmbed, { ai, key, embeddingModel, aiOn });
+      // Embedding errors are not the file's: they propagate, so the run keeps its hold and the file is recorded broken
+      // off later instead of failing permanently as "not readable" (D3 never retries a failed file).
+      const answer = await embedItems(itemsToEmbed, { ai, embeddingModel, settings });
       if (answer.outcome !== "embedded") return answer;
       embedded.push(...answer.embedded);
     }
-  } catch {
-    // A page that cannot be read or rendered – the whole file fails and nothing of it is kept.
-    return { outcome: "failed", reason: "not readable" };
   } finally {
     await loading.destroy();
   }
@@ -233,34 +235,45 @@ type EmbedAnswer =
   | { outcome: "given-up" }
   | { outcome: "failed"; reason: IndexingFailureReason };
 
-/** Embeds a few items at once – one request each, AI checked before every request (rule of CMD-IndexFileForAi). */
-async function embedSources(
+/**
+ * Embeds the items at most four requests at a time – one item per request. Before every request the settings are read:
+ * AI off gives the file up, a rotated key is used for this request, and a changed embedding model gives the file up so
+ * the entry never mixes two models.
+ */
+async function embedItems(
   itemsToEmbed: ItemToEmbed[],
-  { ai, key, embeddingModel, aiOn }: { ai: AiSeam; key: string; embeddingModel: string; aiOn: () => Promise<boolean> },
+  { ai, embeddingModel, settings }: { ai: AiSeam; embeddingModel: string; settings: () => Promise<IndexingSettings> },
 ): Promise<EmbedAnswer> {
-  const answers = await Promise.all(
-    itemsToEmbed.map(async (item): Promise<Embedded | "given-up" | IndexingFailureReason> => {
-      if (!(await aiOn())) return "given-up";
-      const input: EmbedInput =
-        item.kind === "passage"
-          ? { kind: "text", text: item.text! }
-          : { kind: "image", bytes: item.bytes!, contentType: item.contentType! };
-      const answer = await ai.embed(key, embeddingModel, input);
-      if (answer === "unreachable") return "OpenRouter not reachable";
-      if (answer === "refused") return "OpenRouter refused";
-      return {
-        item: {
-          kind: item.kind,
-          ...(item.page !== undefined && { page: item.page }),
-          ...(item.kind === "passage" && { text: item.text! }),
-          embedding: answer.embedding,
-        },
-        cost: answer.cost,
-      };
-    }),
-  );
-  if (answers.includes("given-up")) return { outcome: "given-up" };
-  const failure = answers.find((answer): answer is IndexingFailureReason => typeof answer === "string");
-  if (failure) return { outcome: "failed", reason: failure };
-  return { outcome: "embedded", embedded: answers as Embedded[] };
+  const embedded: Embedded[] = [];
+  for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {
+    const answers = await Promise.all(
+      itemsToEmbed
+        .slice(at, at + PARALLEL_REQUESTS)
+        .map(async (item): Promise<Embedded | "given-up" | IndexingFailureReason> => {
+          const now = await settings();
+          if (!now.aiOn || !now.key || now.embeddingModel !== embeddingModel) return "given-up";
+          const input: EmbedInput =
+            item.kind === "passage"
+              ? { kind: "text", text: item.text! }
+              : { kind: "image", bytes: item.bytes!, contentType: item.contentType! };
+          const answer = await ai.embed(now.key, embeddingModel, input);
+          if (answer === "unreachable") return "OpenRouter not reachable";
+          if (answer === "refused") return "OpenRouter refused";
+          return {
+            item: {
+              kind: item.kind,
+              ...(item.page !== undefined && { page: item.page }),
+              ...(item.kind === "passage" && { text: item.text! }),
+              embedding: answer.embedding,
+            },
+            cost: answer.cost,
+          };
+        }),
+    );
+    if (answers.includes("given-up")) return { outcome: "given-up" };
+    const failure = answers.find((answer): answer is IndexingFailureReason => typeof answer === "string");
+    if (failure) return { outcome: "failed", reason: failure };
+    embedded.push(...(answers as Embedded[]));
+  }
+  return { outcome: "embedded", embedded };
 }

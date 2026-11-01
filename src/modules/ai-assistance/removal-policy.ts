@@ -1,6 +1,6 @@
 import { aggregateCommand, policy, trigger, withPolicies } from "@/platform/command";
 import { removeFileCommand } from "@/modules/collection";
-import { removeFileFromAiIndex } from "./ai-index-entry";
+import { removeFileFromAiIndex, type RemoveFileFromAiIndexInput } from "./ai-index-entry";
 import { aiIndexEntries, hasAiIndexEntry } from "./ai-index-entries";
 import { aiAssistanceEvents } from "./events";
 
@@ -15,7 +15,7 @@ export const removeFileFromAiIndexCommand = aggregateCommand({
   allowedActors: ["system"],
   store: aiIndexEntries,
   // A policy names no version nobody saw; the entry is not shown to a person, so the row lock is enough.
-  target: (input: { fileId: string }) => ({ id: input.fileId }),
+  target: (input: RemoveFileFromAiIndexInput) => ({ id: input.fileId }),
   decide: removeFileFromAiIndex,
   removes: () => true,
   journal: aiAssistanceEvents.journal,

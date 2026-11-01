@@ -94,10 +94,7 @@ export function s3Storage({
       try {
         const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: name }));
         if (!object.Body) return undefined;
-        return {
-          bytes: await object.Body.transformToByteArray(),
-          contentType: object.ContentType ?? "application/octet-stream",
-        };
+        return await object.Body.transformToByteArray();
       } catch (error) {
         if (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404) return undefined;
         throw error;

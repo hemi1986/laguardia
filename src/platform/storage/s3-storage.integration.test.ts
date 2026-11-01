@@ -34,7 +34,7 @@ describe("the S3 adapter", () => {
 
     expect(await storage().details(name)).toEqual({ size: 1234, contentType: "application/pdf" });
     // The AI index reads a file's content through the same seam (ST-106).
-    expect(await storage().readContent(name)).toEqual({ bytes: new Uint8Array(1234), contentType: "application/pdf" });
+    expect(await storage().readContent(name)).toEqual(new Uint8Array(1234));
 
     await storage().delete(name);
     expect(await storage().details(name)).toBeUndefined();

@@ -32,13 +32,11 @@ export type ContentStorage = {
    */
   details(name: string): Promise<ContentDetails | undefined>;
   /**
-   * The content stored under a name, with the media type the store keeps – undefined when nothing is stored there.
-   * The server reads a file with it to index it for AI (ST-106); no page hands the content to the browser this way.
+   * The content stored under a name – undefined when nothing is stored there. The server reads a file with it to index
+   * it for AI (ST-106); no page hands the content to the browser this way. The media type is the file record's.
    */
-  readContent(name: string): Promise<StoredContent | undefined>;
+  readContent(name: string): Promise<Uint8Array | undefined>;
 };
-
-export type StoredContent = { bytes: Uint8Array; contentType: string };
 
 export type ContentDetails = { size: number; contentType: string };
 

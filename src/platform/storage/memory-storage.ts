@@ -50,7 +50,7 @@ export function memoryStorage(): MemoryStorage {
       return content && { size: content.bytes.length, contentType: content.contentType };
     },
     async readContent(name) {
-      return stored.get(name);
+      return stored.get(name)?.bytes;
     },
     read: (name) => stored.get(name),
     names: () => [...stored.keys()],
