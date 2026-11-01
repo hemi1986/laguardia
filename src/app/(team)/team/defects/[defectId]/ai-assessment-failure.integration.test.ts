@@ -236,6 +236,12 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect(input).toMatchObject({ defectId, note: "Coil gets hot" });
     expect(input?.photos).toEqual(photos);
     clock.advance(60); // the team member taps a moment later – the new AI assessment is the newest.
+    // A forged post cannot choose the input: the form has no fields; the note and photos come from the failed one.
+    const otherDefect = await anOpenDefect(await aMachine("LG-043"));
+    const forged = new FormData();
+    forged.append("defectId", otherDefect);
+    forged.append("note", "forged note");
+    forged.append("photos", "forged/photo.jpg");
     let landed = "";
     const retry = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
       requestAiAssessmentCommand(ai()),
@@ -246,7 +252,7 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
         },
       }),
     );
-    const state = await retry(null, new FormData());
+    const state = await retry(null, forged);
 
     expect(state).toBeNull();
     expect(landed).toBe(`/team/defects/${defectId}`);

@@ -97,7 +97,7 @@ export function AiAssessmentsSection({
               <p className="text-sm font-medium">
                 {texts.failed(current.failureReason ? texts.failureReasons[current.failureReason] : "")}
               </p>
-              {data.mayRequest && retryAction && <RetryAiAssessmentForm action={retryAction} />}
+              {retryAction && <RetryAiAssessmentForm action={retryAction} offered={data.mayRequest} />}
             </>
           )}
           {current.note && <p className="text-sm whitespace-pre-line">{current.note}</p>}
