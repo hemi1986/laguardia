@@ -1,5 +1,4 @@
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import sharp from "sharp";
 import type { AiSeam, EmbedInput } from "./ai-seam";
@@ -230,10 +229,15 @@ async function renderPage(page: PdfPage): Promise<Uint8Array> {
   return canvas.encode("jpeg", PAGE_IMAGE_QUALITY);
 }
 
-/** The pdfjs assets of the installed package – wasm (JBIG2, JPEG 2000), ICC profiles, fonts and CMaps (ST-105). */
+/**
+ * The pdfjs assets of the installed package – wasm (JBIG2, JPEG 2000), ICC profiles, fonts and CMaps (ST-105). Found
+ * from the working directory, not with `require.resolve`: Next's bundler rewrites that call for an external package to
+ * a virtual `[externals]/…` path, and pdfjs then renders every JBIG2 or JPEG 2000 page blank – with a warning only. The
+ * working directory is the project locally and the function's root on Vercel, where `outputFileTracingIncludes` puts
+ * these folders.
+ */
 function pdfjsAssets(): (folder: "wasm" | "iccs" | "standard_fonts" | "cmaps") => string {
-  const require = createRequire(import.meta.url);
-  const root = dirname(require.resolve("pdfjs-dist/package.json"));
+  const root = join(process.cwd(), "node_modules", "pdfjs-dist");
   // pdfjs expects a folder URL; a local path with a trailing slash works locally and in the traced function alike.
   return (folder) => `${join(root, folder)}/`;
 }
