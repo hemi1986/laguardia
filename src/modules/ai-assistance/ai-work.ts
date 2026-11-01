@@ -67,16 +67,26 @@ const secondsAfter = (instant: Date, seconds: number) => new Date(instant.getTim
 
 /** One run of the AI work. */
 export async function runAiWork(dependencies: AiWorkDependencies): Promise<void> {
-  const { clock, budgetSeconds, kinds } = dependencies;
-  const runId = randomUUID();
+  const { clock, budgetSeconds } = dependencies;
+  const run: Run = { id: randomUUID(), givenUp: new Set() };
   const budgetEnds = secondsAfter(clock.now(), budgetSeconds);
   while (await failOneBrokenOff(dependencies));
   while (clock.now() < budgetEnds) {
-    const taken = await takeNext(dependencies, runId);
+    const taken = await takeNext(dependencies, run);
     if (!taken) return;
-    await taken.kind.work(taken.id, heldPiece(dependencies, runId, taken.kind.kind, taken.id), dependencies);
+    await taken.kind.work(taken.id, heldPiece(dependencies, run, taken.kind.kind, taken.id), dependencies);
   }
-  if (await anyWaiting(dependencies, kinds)) await dependencies.continueWork();
+  if (await anyWaiting(dependencies, run)) await dependencies.continueWork();
+}
+
+/** This run: the ID its holds carry, and the pieces it gave up – it never takes those again. */
+type Run = { id: string; givenUp: Set<string> };
+
+const pieceKey = (kind: string, id: string) => `${kind}:${id}`;
+
+async function waitingFor(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKind): Promise<string[]> {
+  const waiting = await kind.waiting(dependencies.db, dependencies);
+  return waiting.filter((id) => !run.givenUp.has(pieceKey(kind.kind, id)));
 }
 
 /**
@@ -106,17 +116,17 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boole
   });
 }
 
-async function takeNext(dependencies: AiWorkDependencies, runId: string) {
+async function takeNext(dependencies: AiWorkDependencies, run: Run) {
   const { db, clock, budgetSeconds, kinds } = dependencies;
   for (const kind of kinds) {
-    for (const id of await kind.waiting(db, dependencies)) {
+    for (const id of await waitingFor(dependencies, run, kind)) {
       const taken = await db.transaction(async (tx) => {
         const held = await tx
           .insert(aiWorkHold)
           .values({
             kind: kind.kind,
             pieceId: id,
-            heldBy: runId,
+            heldBy: run.id,
             heldUntil: secondsAfter(clock.now(), holdSeconds(budgetSeconds)),
           })
           .onConflictDoNothing()
@@ -133,14 +143,14 @@ async function takeNext(dependencies: AiWorkDependencies, runId: string) {
   return undefined;
 }
 
-async function anyWaiting(dependencies: AiWorkDependencies, kinds: readonly AiWorkKind[]): Promise<boolean> {
-  for (const kind of kinds) if ((await kind.waiting(dependencies.db, dependencies)).length > 0) return true;
+async function anyWaiting(dependencies: AiWorkDependencies, run: Run): Promise<boolean> {
+  for (const kind of dependencies.kinds) if ((await waitingFor(dependencies, run, kind)).length > 0) return true;
   return false;
 }
 
-function heldPiece(dependencies: AiWorkDependencies, runId: string, kind: string, id: string): HeldPiece {
+function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id: string): HeldPiece {
   const { db, clock } = dependencies;
-  const thisHold = and(eq(aiWorkHold.kind, kind), eq(aiWorkHold.pieceId, id), eq(aiWorkHold.heldBy, runId));
+  const thisHold = and(eq(aiWorkHold.kind, kind), eq(aiWorkHold.pieceId, id), eq(aiWorkHold.heldBy, run.id));
   return {
     storeResult: (store) =>
       db.transaction(async (tx) => {
@@ -153,6 +163,7 @@ function heldPiece(dependencies: AiWorkDependencies, runId: string, kind: string
         return "stored";
       }),
     giveUp: async () => {
+      run.givenUp.add(pieceKey(kind, id));
       await db.delete(aiWorkHold).where(thisHold);
     },
   };

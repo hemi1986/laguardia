@@ -157,3 +157,26 @@ describe("work that broke off (POL-UnfinishedAiWorkFails)", () => {
     expect(await standIn.stored(cutOff)).toMatchObject({ state: "broken-off", done: 0 });
   });
 });
+
+describe("a piece given up on purpose", () => {
+  it("is waiting again without a failure, and a later run takes it and does not treat it as broken off", async () => {
+    const [piece] = await standIn.add(1, { seconds: 3, outcome: "ai-off" });
+
+    await run();
+    standIn.behave(piece, { seconds: 3, outcome: "done" });
+    clock.set("2026-11-02T10:30:00Z");
+    await run();
+
+    expect(standIn.started.map((each) => each.id)).toEqual([piece, piece]);
+    expect(await standIn.stored(piece)).toMatchObject({ state: "done", done: 1, brokenOff: 0 });
+  });
+
+  it("does not make the run call the worker route again for the piece it gave up", async () => {
+    await standIn.add(1, { seconds: 3, outcome: "ai-off" });
+
+    await run({ budgetSeconds: 10 });
+
+    expect(standIn.started).toHaveLength(1);
+    expect(calls).toBe(0);
+  });
+});
