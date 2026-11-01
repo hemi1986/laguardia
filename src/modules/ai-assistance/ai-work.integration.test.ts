@@ -180,3 +180,21 @@ describe("a piece given up on purpose", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("a piece whose work throws", () => {
+  it("keeps its hold, so it is recorded broken off later, and the run goes on with the next piece", async () => {
+    const [throws, next] = await standIn.add(2, { seconds: 3, outcome: "done" });
+    const throwing: AiWorkKind = {
+      ...standIn.kind,
+      work: (id, piece, context) =>
+        id === throws ? Promise.reject(new Error("a bug in the kind")) : standIn.kind.work(id, piece, context),
+    };
+
+    await run({ kinds: [throwing] });
+    clock.set("2026-11-02T10:30:00Z");
+    await run({ kinds: [throwing] });
+
+    expect(await standIn.stored(next)).toMatchObject({ state: "done", done: 1 });
+    expect(await standIn.stored(throws)).toMatchObject({ state: "broken-off", brokenOff: 1, done: 0 });
+  });
+});

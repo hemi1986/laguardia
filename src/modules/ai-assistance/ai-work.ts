@@ -74,9 +74,22 @@ export async function runAiWork(dependencies: AiWorkDependencies): Promise<void>
   while (clock.now() < budgetEnds) {
     const taken = await takeNext(dependencies, run);
     if (!taken) return;
-    await taken.kind.work(taken.id, heldPiece(dependencies, run, taken.kind.kind, taken.id), dependencies);
+    await workOn(dependencies, run, taken.kind, taken.id);
   }
   if (await anyWaiting(dependencies, run)) await dependencies.continueWork();
+}
+
+/**
+ * Works on one held piece. A kind that throws is a bug or an outage the kind did not turn into a failure of its own:
+ * the hold stays, so the piece is recorded broken off once its hold has run out, and the run goes on. Logged by kind
+ * and ID only – never what the piece holds.
+ */
+async function workOn(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKind, id: string): Promise<void> {
+  try {
+    await kind.work(id, heldPiece(dependencies, run, kind.kind, id), dependencies);
+  } catch (error) {
+    console.error(`AI work: ${kind.kind} ${id} ended without a result:`, error instanceof Error ? error.name : error);
+  }
 }
 
 /** This run: the ID its holds carry, and the pieces it gave up – it never takes those again. */
