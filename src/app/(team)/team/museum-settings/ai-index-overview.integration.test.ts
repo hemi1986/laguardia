@@ -8,9 +8,13 @@ import {
   aiSettingsForm,
   changeAiSettingsCommand,
   fileIndexingWork,
+  retryFileIndexingCommand,
   runAiWork,
   type AiDependencies,
 } from "@/modules/ai-assistance";
+import { formRunner } from "@/app/_actions/form-runner";
+import type { Actor } from "@/platform/command";
+import { post } from "@/test-support/forms";
 import { geminiEmbedding, geminiFlash, memoryAi } from "@/modules/ai-assistance/ai-seam.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
 import { executeCommand } from "@/platform/command";
@@ -19,6 +23,7 @@ import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadAiSettings } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
+import { retriedLanding, retryFileIndexingForm } from "./retry-file-indexing-definition";
 
 /**
  * ST-109: the overview „KI-Erfassung“ in the form „KI“ on „Einstellungen“, „Erneut versuchen“ on a failed file, and the
@@ -120,10 +125,38 @@ async function run(dependencies: AiDependencies = ai()): Promise<void> {
   });
 }
 
-/** „Einstellungen“ as a technician opens it – the section „KI“ rendered from its data. */
-async function settingsPage(dependencies: AiDependencies = ai()) {
-  const data = await loadAiSettings(db, {}, { dependencies });
+/** „Einstellungen“ as Tom opens it – the section „KI“ rendered from its data. */
+async function settingsPage(
+  dependencies: AiDependencies = ai(),
+  params: Record<string, string | undefined> = {},
+) {
+  const data = await loadAiSettings(db, params, { dependencies, viewer: tom.teamMemberId });
   return { data, html: renderToStaticMarkup(createElement(AiSettingsSection, data)) };
+}
+
+/** What „Erneut versuchen“ did: where it landed and how many runs it started after the response. */
+type Retried = { landed: string | undefined; starts: number };
+
+/** „Erneut versuchen“ posted through the real Server Action runner as this person, with these fields. */
+async function retry(fields: { fileId: string; version: number }, actor: Actor = tom, dependencies = ai()) {
+  const retried: Retried = { landed: undefined, starts: 0 };
+  const action = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID })(
+    retryFileIndexingCommand(dependencies),
+    retryFileIndexingForm(async ({ fileId }) => {
+      retried.starts += 1;
+      retried.landed = retriedLanding(fileId);
+    }),
+  );
+  const state = await action(null, post({ fileId: fields.fileId, version: String(fields.version) }));
+  return { state, ...retried };
+}
+
+/** The failed file of this title as the overview lists it – what its „Erneut versuchen“ posts. */
+async function failedOnPage(title: string) {
+  const { data } = await settingsPage();
+  const failed = data.overview?.failed.find((file) => file.title === title);
+  if (!failed) throw new Error(`${title} is not listed as failed`);
+  return { fileId: failed.fileId, version: failed.version };
 }
 
 describe("the overview „KI-Erfassung“ (ST-109)", () => {
@@ -168,5 +201,38 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     expect(html).toContain("LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst");
     expect(html).toContain("Eight Ball · Eight Ball Schematic – OpenRouter war nicht erreichbar");
     expect(html.match(/Erneut versuchen/g)).toHaveLength(2);
+  });
+
+  it("ST-109: Nothing indexed yet", async () => {
+    await turnAiOn();
+
+    const { data, html } = await settingsPage();
+
+    expect(data.overview).toMatchObject({ indexed: 0, waiting: 0, failed: [] });
+    expect(html).toContain("Noch keine Datei für die KI erfasst.");
+    expect(html).not.toContain("Erneut versuchen");
+  });
+
+  it("ST-109: A technician tries a failed file again", async () => {
+    await turnAiOn();
+    await aMachine("LG-042");
+    const schematic = await attach(await aMachine("LG-043"), "Eight Ball Schematic", { to: "machine-model" });
+    await run(ai({ unreachable: true }));
+
+    const retried = await retry(await failedOnPage("Eight Ball Schematic"));
+
+    expect(retried).toEqual({ state: null, landed: retriedLanding(schematic), starts: 1 });
+    const landed = await settingsPage(ai(), { retried: schematic });
+    expect(landed.html).toContain("Eight Ball Schematic wird erneut für die KI erfasst.");
+    // Waiting until the run started after the response has indexed it.
+    expect(landed.data.overview).toMatchObject({ indexed: 0, waiting: 1, failed: [] });
+
+    // OpenRouter answers this time.
+    await run();
+
+    const { data, html } = await settingsPage();
+    expect(data.overview).toMatchObject({ indexed: 1, waiting: 0, failed: [] });
+    expect(html).toContain("1 Datei für die KI erfasst · 0 warten auf KI-Erfassung · 0 für die KI nicht lesbar");
+    expect(html).not.toContain("Erneut versuchen");
   });
 });
