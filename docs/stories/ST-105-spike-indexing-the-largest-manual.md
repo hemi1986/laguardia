@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileIndexedForAi]
 depends_on: []
 labels: [feature:ai-assessment]
-status: in-progress
+status: done
 ---
 
 ## Question
@@ -70,7 +70,8 @@ OpenRouter for the whole spike: about 0,08 $.
   1536 px take the same time (560 ms locally); the embedding requests run beside the rendering and hide behind it.
 
 **Measured – largest manual** ("Williams Teile Katalog Blaue Version", `16-9064-B`, 25 MB, 568 pages, scanned with a
-text layer; the museum's manuals are far below 100 MB – user, 2026-11-01)
+text layer – so it is both the largest scanned manual and the largest with a text layer; the museum's manuals are far
+below 100 MB – user, 2026-11-01)
 
 | | Vercel preview (Hobby) | Local (WSL, Node 24.13) |
 |---|---|---|
@@ -122,6 +123,8 @@ proposed – it is Vercel-only, and the user expects to leave Vercel.
 - **A file record without content** – a preview's database copied from production holds files whose content is in
   production's store only – fails in pdfjs with "Invalid PDF structure"; ST-106 checks the store's answer and records
   "not readable".
+- **Size of the progress record** (for ST-112/ST-106): 568 pages give ≈ 1.136 vectors of 1536 numbers – ≈ 7 MB as
+  pgvector's 4-byte floats, plus ≈ 0,3 MB of text; well within PostgreSQL, also for a partly done PDF.
 - **Not answered**: the effect of more memory (Hobby offers none) and parallel rendering with worker threads.
 
 ## Notes
