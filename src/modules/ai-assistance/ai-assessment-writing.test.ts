@@ -49,4 +49,21 @@ describe("reading the chat model's answer", () => {
       references: [{ fileId: "f1" }, { fileId: "f1" }],
     });
   });
+
+  it("bounds an answer the model makes arbitrarily large", () => {
+    const answer = parseAiAssessmentAnswer(
+      JSON.stringify({
+        summary: "x".repeat(10_000),
+        probableCauses: Array.from({ length: 100 }, () => "y".repeat(5_000)),
+        whatToCheckFirst: Array.from({ length: 100 }, () => "z"),
+        references: Array.from({ length: 100 }, (_, index) => ({ file: `f${index}` })),
+      }),
+    );
+
+    expect(answer?.summary).toHaveLength(4000);
+    expect(answer?.probableCauses).toHaveLength(20);
+    expect(answer?.probableCauses[0]).toHaveLength(500);
+    expect(answer?.whatToCheckFirst).toHaveLength(20);
+    expect(answer?.references).toHaveLength(20);
+  });
 });

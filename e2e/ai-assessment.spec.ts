@@ -56,6 +56,18 @@ async function anAssessmentBeingWritten(defectId: string, note: string): Promise
   return id;
 }
 
+/** Puts the AI settings back to "off" and removes the seeded AI assessments – other specs read them (ST-104). */
+async function restoreAiOff(): Promise<void> {
+  await withDatabase(async (client) => {
+    await client.query("DELETE FROM ai_assessment");
+    await client.query(
+      `UPDATE ai_settings
+         SET encrypted_key = NULL, key_last_four = NULL, chat_model = NULL, embedding_model = NULL,
+             version = version + 1`,
+    );
+  });
+}
+
 async function writeIt(aiAssessmentId: string): Promise<void> {
   await withDatabase((client) =>
     client.query(
@@ -89,6 +101,8 @@ async function aDefectWithJavaScript(browser: Browser): Promise<{ address: strin
 
 test.describe("AI assessments on the defect page without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
+  // The shared browser database: leave AI off again for the other specs, whether these tests pass or fail.
+  test.afterAll(restoreAiOff);
   test.skip(!!process.env.BASE_URL, "seeds the local browser tests' database – no database behind a preview");
   test.skip(!process.env.E2E_TEAM_USERNAME, "no e2e technician configured");
 

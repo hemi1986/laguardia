@@ -84,3 +84,57 @@ No behaviour the story does not ask for was found; the `failed` branch and its r
 
 **fix blockers first** – the Client Component import of `MAX_AI_ASSESSMENT_PHOTOS` from the AI module barrel makes `next build` fail with 25 cascading errors (finding 1: pass the limit as a prop from the server page, as the work-log form does), and the seven majors should be fixed in this story as well – the most consequential are the missing page trigger for HS-33 (3), the unhandled HS-31 unique violation (4) and the chat model named vs. used (5).
 Most important after the build: **finding 2** – the run keeps sending visitors' descriptions and photos after AI is turned off, which the CMD rule and the file-indexing precedent do not allow.
+
+---
+
+## Pass 4 – re-check (commit `4e5eeb6`)
+
+Re-read `4e5eeb6` against `dbe27ae` (29 files), the new integration/e2e tests, the store wrapper, the command facts, the PDF rendering seam and the read-model cache.
+
+Checks run:
+- `npm run build` – **passes**. The 25 `server-only`/`pg` errors are gone; `request-form.tsx` no longer imports the module barrel and the server page passes `maxPhotos` (finding 1).
+- `npm run typecheck` – passes; `npm run lint` – 0 errors, 13 pre-existing warnings.
+- `npm test` – **207 files, 1505 tests passed**.
+- `npx vitest run src/modules/ai-assistance` – 10 files, 95 passed; the three AI story integration files – 13 passed.
+- `npx playwright test e2e/ai-assessment.spec.ts` – 2 passed (local, no-JS, 360 px).
+- `npx playwright test e2e/ai-assessment.spec.ts e2e/settings.spec.ts --workers=1` – **2 passed, 2 failed**: after the AI spec turns AI on, both ST-104 settings tests fail (`KI ist aus. Es fehlen:` not found); the e2e database afterwards holds the key and both models. See N1.
+- `check-language.ts` – 90 warnings, the known `ai`/`embedding`/`login`/`rejected` false positives plus the new `ai` identifiers; no new UI `_Avoid_` word.
+
+### Findings of Passes 1–3, one by one
+
+| # | State | Note |
+|---|---|---|
+| 1 | **fixed** | `request-form.tsx:10` import gone; `maxPhotos` prop from `page.tsx:44-47`; `npm run build` green. The build is still not in `verify.ts` – a process note, not this story's finding. |
+| 2 | **fixed** | `ai-assessment-work.ts:42-43` `settings()` re-read before the text embed (and each photo embed, `:186-201`) and before `chat` (`:88-92`); ai off → `fail("ai-off")`, nothing sent. Test `sends nothing more once AI is turned off while it is writing` passes (the first embed was already in flight when the key was removed – the next request is stopped). |
+| 3 | **fixed** | `defect/[defectId]/page.tsx:22-26` calls `startAiWorkWhenLeftUnfinished(AI_ASSESSMENT_KIND, [id])` only while requested; `AI_ASSESSMENT_KIND` exported. **No test exercises the expired-hold path**: the e2e spec seeds a requested assessment *without* a hold specifically so the page starts nothing. The code is right by ADR 0015; one test with an expired hold would close finding 15's remainder. |
+| 4 | **fixed** | `ai-assessments.ts:58-81` wraps the store's `insert` and maps 23505 on `ai_assessment_being_written_idx` to `Rejected("ai-assessment-being-written")`; the concurrency test (`Promise.all` of two real requests) passes. The wrapper follows the museum-number pattern; the sequential `beingWritten` fact still explains the common case. |
+| 5 | **fixed** | `ai-assessment-work.ts:92` now calls `chat(beforeChat.key, assessment.chatModel, …)`; `writeAiAssessment` keeps naming `state.chatModel`. Test changing the saved model between request and run asserts the request model is used. |
+| 6 | **fixed** | CMD-WriteAiAssessment now has `facts` (`write-ai-assessment-command.ts:42-49`) reading the defect's machine/model and Collection's files; `writeAiAssessment` filters and dedupes references (`ai-assessment.ts:181-187`). The work passes the parsed list raw. This also protects ST-108's retry. |
+| 7 | **fixed, residual minor (N3)** | `chatModelNames` caches successful names per process/model; the 5 s refresh no longer calls OpenRouter repeatedly. Only successes are cached – see N3. |
+| 8 | **fixed** | `renderPdfPages(bytes, pages)` opens one document for all pages; `imagesToSend` groups hits by file and reads each file once (`ai-assessment-work.ts:250-290`). |
+| 9 | **fixed** | Images are assembled first; `buildAiAssessmentPrompt` gets `sent.found` and the sent photo counts (`ai-assessment-work.ts:84-95`), so numbering and counts match what is sent. |
+| 10 | **fixed** | `events.yaml:794` and the story prose now say the report photos are sent, not searched. |
+| 11 | **fixed** | `EVT-AiAssessmentWritten` journals `references` (`file` or `file#page`) and `filesSearched` (`events.ts:86-90`); IDs only. |
+| 12 | **accepted as skipped – I agree** | `machineId: null` stays; ST-111 adds the AI assessments to the machine history and can carry the machine then (or correct `RM-MachineRecord`'s fed_by). Nothing reads it by machine today. |
+| 13 | **accepted as skipped – I agree** (with a preference) | No key leak: the key is decrypted for the read model/request facts only to decide `aiOn`, is never returned to a page or a log, and the run needs it anyway. It is hygiene, not a defect; a narrower `aiAssessmentAvailability` read remains the cleaner design when ST-108/ST-110 touch the path. |
+| 14 | **accepted as skipped – I agree** | The failure texts are user-visible only from ST-108, which owns the mapping; the 400 → *model-not-available* broadness should be decided there. |
+| 15 | **fixed, one gap** | Concurrency, AI off mid-run, a changed model, "records nothing" (open/retired and AI off), distinct passages, the 10 newest photos, category/technology and chat-adapter tests are added. Still missing: a test of the page trigger (finding 3) and of the parser bounds (finding 18); the new e2e isolation is N1. |
+| 16 | **fixed** | The catalogue equality is gone; the component test only renders and asserts the texts. |
+| 17 | **fixed** | `conventions.md:597` now names AI assessment photos/page images; the storage doc matches. |
+| 18 | **fixed** | `MAX_SUMMARY`/`MAX_TEXTS`/`MAX_TEXT`/`MAX_REFERENCES` bounds in `ai-assessment-writing.ts:35-39,134-152`. No unit test for the bounds – a short table test would lock them (minor). |
+| 19 | **fixed** | `EVT-AiAssessmentFailed` is in the story's `events:` list. |
+
+### New findings
+
+| # | Severity | Area | File:line | Finding | Source | Suggested direction |
+|---|---|---|---|---|---|---|
+| N1 | **major** | Test isolation – e2e | `e2e/ai-assessment.spec.ts:34-45,96,119` | Both e2e tests turn AI **on** in the shared `laguardia_e2e_test` (`UPDATE ai_settings`, `version + 1`) and never restore it. The e2e server resets the database once per run, not per file, and the spec is in the parallel project. Running it before `e2e/settings.spec.ts` (proved with `--workers=1`) makes both ST-104 tests fail: they expect "KI ist aus. Es fehlen:"; with the seeded key/models the page shows a configured AI instead. In the normal parallel run the files can overlap, so the local e2e suite is red/flaky although the new spec passes alone. | tdd (tests share the agreed seams, not hidden global state); `playwright.config.ts` serial-project precedent (the maintenance plan is a singleton changed by several specs); DoD "usable at 360 px" (the browser suite must stay green). | Restore the previous AI settings in `test.afterAll` (or turn AI off) **and** serialize this file with `settings.spec.ts` – e.g. a small serial project/list like `changesTheMaintenancePlan`, because a parallel `settings.spec.ts` can still open the page inside the AI-on window. |
+| N2 | minor | Embedding model changed mid-run | `src/modules/ai-assistance/ai-assessment-work.ts:172-215` | The settings are re-read per request, which is right for AI off and a rotated key, but a changed **embedding model** now makes the text search use model A and later photo searches model B; `filesSearched` is recorded from the first scope while `embeddingModel` (and the event) names the last one. The search rule says "only entries made with the current embedding model"; the stored pair can disagree about which "current" it was. | CMD-WriteAiAssessment rule "only entries made with the current embedding model"; ADR 0015 / ST-106's "a changed model gives the file up so nothing mixes". | Pick the embedding model once for the whole assessment (as the chat model is fixed at request time) or give up with a reason when it changed between requests; revisit with ST-110 (changing the models). |
+| N3 | minor | Read model – negative cache | `src/modules/ai-assistance/defect-ai-assessments.ts:92-103` | `chatModelNames` caches only successful lookups. While OpenRouter is unreachable (or a model is unknown), every defect page load – and every 5 s refresh while an assessment is requested – calls `ai.model` again and waits for the adapter's 10 s timeout; the page's fallback to the stored model ID never gets the chance to be cheap. The original finding 7 is fixed for the normal path, not for the outage path. | ADR 0002 (a read model is a query); finding 7's suggested direction ("fall back to the stored ID without a call when the lookup is slow/unreachable"). | Cache the failure for a short TTL (e.g. 60 s) or do not look the name up for a merely *requested* assessment (its branch does not show the model line) and race the lookup with a short bound. |
+| N4 | minor | Test quality – bounds | `src/modules/ai-assistance/ai-assessment-writing.test.ts` | Finding 18's bounds have no test: a 4001-character summary, a 21st cause or a 21st reference are not exercised, and a future removal of the `.slice(...)` calls would keep the suite green. | tdd (the parser is the named seam outside the catalog); finding 18. | One table row per bound next to the existing parser tests. |
+
+### Re-check verdict
+
+**The blocker and all seven majors of Passes 1–3 are resolved in code**, and the fixes are covered by tests; the full unit/integration suite (1505) and the build are green. One **new major remains in the test infrastructure**: the e2e spec leaves AI on in the shared browser-test database and makes the ST-104 settings spec fail (N1) – fix that (restore AI off and serialize with `settings.spec.ts`) before merge. N2–N4 are minors; 12 (ST-111), 13 and 14 (ST-108) are reasonably left as skipped.
+
+The single most important remaining item is **N1** – not application behaviour, but the new browser test currently breaks another story's browser test.
