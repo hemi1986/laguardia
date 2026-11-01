@@ -86,15 +86,20 @@ export function changedModel(saved: string | undefined, sent: string | undefined
 type Rejection = { ok: false; error: ChangeAiSettingsError };
 const rejected = (error: ChangeAiSettingsError): Rejection => ({ ok: false, error });
 
+/** A changed model always has its fact – one without is a bug in the facts, never "fits". */
+function missingFact(): never {
+  throw new Error("CMD-ChangeAiSettings: a changed model was not checked with OpenRouter");
+}
+
 function chatModelRefusal(model: AiSettingsFacts["chatModel"]): ChangeAiSettingsError | undefined {
-  if (model === undefined) return undefined;
+  if (model === undefined) return missingFact();
   if (model === "unreachable") return "openrouter-unreachable";
   if (model === "unknown") return "chat-model-unknown";
   return model.readsTextAndImages ? undefined : "chat-model-reads-no-images";
 }
 
 function embeddingModelRefusal(facts: AiSettingsFacts["embeddingModel"]): ChangeAiSettingsError | undefined {
-  if (facts === undefined) return undefined;
+  if (facts === undefined) return missingFact();
   const { model, test } = facts;
   if (model === "unreachable") return "openrouter-unreachable";
   if (model === "unknown") return "embedding-model-unknown";

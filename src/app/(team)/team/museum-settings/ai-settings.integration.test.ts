@@ -443,6 +443,22 @@ describe("the form „KI“", () => {
     });
   });
 
+  it("says why a save is rejected also when the saved key causes it, whose field is not shown", async () => {
+    await aiFormOf(tom).save(null, await filledIn({ key: KEY, chatModel: geminiFlash.id }));
+    // The key is revoked at OpenRouter meanwhile: the test embedding with the saved key is refused.
+    const revoked = openRouterWith({ acceptedKeys: [] });
+
+    const state = await aiFormOf(tom, revoked).save(
+      null,
+      post({ version: String((await aiSettingsForm(db, revoked)).version), embeddingModel: geminiEmbedding.id }),
+    );
+
+    expect(state).toMatchObject({ error: "ai-key-refused" });
+    const html = await formAfter(state, revoked);
+    expect(field(html, "key")).toBe("");
+    expect(textOf(html)).toContain("OpenRouter hat den Schlüssel abgelehnt.");
+  });
+
   it("says when OpenRouter cannot be reached to check the key, and saves nothing", async () => {
     const dependencies = openRouterWith({ unreachable: true });
     const state = await aiFormOf(tom, dependencies).save(null, await filledIn({ key: KEY }, { dependencies }));

@@ -84,7 +84,7 @@ describe("the OpenRouter adapter", () => {
     expect(await adapter().offeredModels("chat")).toEqual([
       {
         id: "google/gemini-2.5-flash",
-        name: "Google: Gemini 2.5 Flash",
+        name: "Gemini 2.5 Flash",
         contextLength: 1048576,
         pricePerMillion: { input: 0.3, output: 2.5 },
         readsTextAndImages: true,
@@ -106,7 +106,7 @@ describe("the OpenRouter adapter", () => {
     expect(await adapter().offeredModels("embedding")).toEqual([
       {
         id: "google/gemini-embedding-2",
-        name: "Google: Gemini Embedding 2",
+        name: "Gemini Embedding 2",
         contextLength: 8192,
         pricePerMillion: { input: 0.2 },
         readsTextAndImages: true,
@@ -136,6 +136,32 @@ describe("the OpenRouter adapter", () => {
     expect(await adapter().model("chat", "google/gemini-embedding-2")).toBe("unknown");
     expect(await adapter().model("chat", "nobody/nothing")).toBe("unknown");
     expect(await openRouter({ baseUrl: "http://127.0.0.1:1/api/v1" }).model("chat", "x/y")).toBe("unreachable");
+  });
+
+  it("looks up an alias ID with a leading tilde, as OpenRouter's list offers it", async () => {
+    answers["GET /api/v1/models/~google/gemini-flash-latest/endpoints"] = {
+      status: 200,
+      body: { data: { ...geminiFlash, id: "~google/gemini-flash-latest" } },
+    };
+
+    expect(await adapter().model("chat", "~google/gemini-flash-latest")).toMatchObject({
+      id: "~google/gemini-flash-latest",
+    });
+  });
+
+  it("leaves out router models whose price is not known beforehand, and drops the author from a name", async () => {
+    const router = { ...geminiFlash, id: "openrouter/auto", name: "Auto Router", pricing: { prompt: "-1", completion: "-1" } };
+    answers["GET /api/v1/models"] = { status: 200, body: { data: [geminiFlash, router] } };
+
+    expect(await adapter().offeredModels("chat")).toEqual([
+      expect.objectContaining({ id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash" }),
+    ]);
+  });
+
+  it("does not follow a redirect with the key", async () => {
+    answers["GET /api/v1/key"] = { status: 307, body: {} };
+
+    expect(await adapter().checkKey("sk-or-v1-good")).toBe("unreachable");
   });
 
   it("does not let a typed model ID reach another address", async () => {

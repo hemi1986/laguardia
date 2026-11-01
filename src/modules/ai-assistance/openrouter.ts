@@ -21,8 +21,11 @@ const TIMEOUT_MS = 10_000;
 /** What OpenRouter's lists name the output of each kind. */
 const outputOf: Record<ModelKind, string> = { chat: "text", embedding: "embeddings" };
 
-/** A model ID as OpenRouter writes it – `author/slug`, optionally `:variant` – so a typed ID cannot reach another address. */
-const MODEL_ID = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(:[a-z0-9._-]+)?$/i;
+/**
+ * A model ID as OpenRouter writes it – `author/slug`, optionally `:variant`, an alias with a leading `~`
+ * (`~google/gemini-flash-latest`) – so a typed ID cannot reach another address.
+ */
+const MODEL_ID = /^~?[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*(:[a-z0-9._-]+)?$/i;
 
 /** US dollars per token as OpenRouter gives it → per million tokens, without the float's noise. */
 function perMillion(perToken: string | undefined): number {
@@ -30,13 +33,23 @@ function perMillion(perToken: string | undefined): number {
   return Number.isFinite(value) ? Number(value.toPrecision(12)) : 0;
 }
 
+/** The model's name without the author OpenRouter puts before it: „Google: Gemini 2.5 Flash“ → „Gemini 2.5 Flash“. */
+function nameOf(model: ApiModel): string {
+  const colon = model.name.indexOf(": ");
+  return colon > 0 ? model.name.slice(colon + 2) : model.name;
+}
+
+/** A router (`openrouter/auto`) has no price of its own – OpenRouter gives -1; it is not offered in the list. */
+const pricedBeforehand = (model: ApiModel) =>
+  Number(model.pricing?.prompt ?? "0") >= 0 && Number(model.pricing?.completion ?? "0") >= 0;
+
 function offeredModel(model: ApiModel, kind: ModelKind): OfferedModel {
   const endpoint = model.endpoints?.[0];
   const pricing = model.pricing ?? endpoint?.pricing ?? {};
   const inputs = model.architecture?.input_modalities ?? [];
   return {
     id: model.id,
-    name: model.name,
+    name: nameOf(model),
     contextLength: model.context_length ?? endpoint?.context_length ?? 0,
     pricePerMillion:
       kind === "chat"
@@ -49,13 +62,21 @@ function offeredModel(model: ApiModel, kind: ModelKind): OfferedModel {
 const isOfKind = (model: ApiModel, kind: ModelKind) =>
   (model.architecture?.output_modalities ?? []).includes(outputOf[kind]);
 
-export function openRouter({
-  baseUrl = process.env.OPENROUTER_BASE_URL || DEFAULT_BASE_URL,
-}: { baseUrl?: string } = {}): AiSeam {
+/**
+ * `OPENROUTER_BASE_URL` is for the local browser tests only (`scripts/e2e-server.ts`, where nothing answers); production
+ * ignores it, so the museum's key never goes to another host there.
+ */
+function configuredBaseUrl(): string {
+  if (process.env.VERCEL_ENV === "production") return DEFAULT_BASE_URL;
+  return process.env.OPENROUTER_BASE_URL || DEFAULT_BASE_URL;
+}
+
+export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string } = {}): AiSeam {
   /** A request – undefined when OpenRouter cannot be reached at all. */
   async function request(path: string, init: RequestInit = {}): Promise<Response | undefined> {
     try {
-      return await fetch(`${baseUrl}${path}`, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+      // A redirect is never followed – a request may carry the key.
+      return await fetch(`${baseUrl}${path}`, { ...init, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) });
     } catch {
       return undefined;
     }
@@ -68,7 +89,9 @@ export function openRouter({
       if (!response?.ok) return "unavailable";
       try {
         const { data } = (await response.json()) as { data: ApiModel[] };
-        return data.filter((model) => isOfKind(model, kind)).map((model) => offeredModel(model, kind));
+        return data
+          .filter((model) => isOfKind(model, kind) && pricedBeforehand(model))
+          .map((model) => offeredModel(model, kind));
       } catch {
         return "unavailable";
       }

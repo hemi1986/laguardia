@@ -11,10 +11,15 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 export type EncryptedKey = string;
 
 const VERSION = "v1";
+/** The full GCM tag only – a shortened one would weaken the check (DEP0182). */
+const TAG_LENGTH = 16;
+/** Binds the ciphertext to what it is, so it cannot pass for another encrypted value. */
+const PURPOSE = Buffer.from("ai_settings.encrypted_key:v1");
 
 export function encryptKey(environmentKey: Buffer, key: string): EncryptedKey {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", environmentKey, iv);
+  const cipher = createCipheriv("aes-256-gcm", environmentKey, iv, { authTagLength: TAG_LENGTH });
+  cipher.setAAD(PURPOSE);
   const data = Buffer.concat([cipher.update(key, "utf8"), cipher.final()]);
   return [VERSION, iv.toString("base64"), cipher.getAuthTag().toString("base64"), data.toString("base64")].join(":");
 }
@@ -23,9 +28,14 @@ export function encryptKey(environmentKey: Buffer, key: string): EncryptedKey {
 export function decryptKey(environmentKey: Buffer, encrypted: EncryptedKey): string | undefined {
   const [version, iv, tag, data] = encrypted.split(":");
   if (version !== VERSION || !iv || !tag || data === undefined) return undefined;
+  const authTag = Buffer.from(tag, "base64");
+  if (authTag.length !== TAG_LENGTH) return undefined;
   try {
-    const decipher = createDecipheriv("aes-256-gcm", environmentKey, Buffer.from(iv, "base64"));
-    decipher.setAuthTag(Buffer.from(tag, "base64"));
+    const decipher = createDecipheriv("aes-256-gcm", environmentKey, Buffer.from(iv, "base64"), {
+      authTagLength: TAG_LENGTH,
+    });
+    decipher.setAAD(PURPOSE);
+    decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(Buffer.from(data, "base64")), decipher.final()]).toString("utf8");
   } catch {
     return undefined;

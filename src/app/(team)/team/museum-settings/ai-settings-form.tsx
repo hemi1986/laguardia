@@ -66,10 +66,13 @@ export function AiSettingsFormContent({
 }) {
   const rejectionId = useId();
   const kept = keptKey(state);
-  const invalid = state ? partOf(state.error) : undefined;
   const showKey = !keySaved || !!state?.values.keyOffered;
   const showChat = !chatModel.saved || !!state?.values.chatModel;
   const showEmbedding = !embeddingModel.saved || !!state?.values.embeddingModel;
+  const shown: Record<Part, boolean> = { key: showKey, chatModel: showChat, embeddingModel: showEmbedding };
+  // At its field when the form shows that field – a saved key refused by the test embedding is said under the form.
+  const part = state ? partOf(state.error) : undefined;
+  const invalid = part && shown[part] ? part : undefined;
   if (!showKey && !showChat && !showEmbedding) return null;
 
   const rejection = state && (
@@ -129,7 +132,10 @@ export function AiSettingsFormContent({
             id="key"
             name="key"
             type="password"
-            autoComplete="off"
+            // An API key, not this site's password – password managers must not offer to save it as the login.
+            autoComplete="new-password"
+            data-1p-ignore=""
+            data-lpignore="true"
             key={`key-${kept}`}
             spellCheck={false}
             {...fieldProps("key")}

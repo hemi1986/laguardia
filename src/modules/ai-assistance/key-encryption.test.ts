@@ -35,6 +35,9 @@ describe("key encryption", () => {
 
     expect(decryptKey(environmentKey, [version, iv, tag, changed.toString("base64")].join(":"))).toBeUndefined();
     expect(decryptKey(environmentKey, "not a ciphertext")).toBeUndefined();
+    // A shortened authentication tag is no tag (GCM with 16 bytes only).
+    const shortTag = Buffer.from(tag, "base64").subarray(0, 4).toString("base64");
+    expect(decryptKey(environmentKey, [version, iv, shortTag, data].join(":"))).toBeUndefined();
   });
 
   it.each([
