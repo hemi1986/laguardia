@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 75 of 78 domain stories done** · scenarios 711 of 734
+**Progress: 76 of 78 domain stories done** · scenarios 720 of 734
 
-**109 stories** · In Progress: 1 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 95 · Superseded: 11
+**109 stories** · In Progress: 0 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 96 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106 |
 
 ## Ready
 
@@ -112,6 +106,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |
 | [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 |
 | [ST-108](ST-108-failed-and-broken-off-ai-assessments.md) | An AI assessment that fails or breaks off says why and can be tried again | story | AI assistance | should | M | medium | ST-107 |
+| [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
