@@ -136,3 +136,22 @@ Most important: 2.1 – a throwing `recordBrokenOff` leaves a poison hold that s
 - 3.4 – accepted D2 decision, no action.
 
 No follow-up story: nothing passes the hurdle.
+
+## `/code-review` (medium, 2026-11-01) – unverified findings and what became of them
+
+1. A piece taken late in the budget can be cut off at 300 s, and then no continuation is called – **accepted
+   limitation** (D1: no design around Hobby); documented in `docs/operations/ai-work.md` (a cut-off run leaves the rest
+   of the queue for the next start).
+2. A hold whose broken-off recording keeps throwing stayed run out for good, so every page load would start a run –
+   **fixed**: a failing recording holds the piece for another hold's length; test "is tried again only after another
+   hold's length, so a page does not start a run on every load meanwhile".
+3. `notRecorded` keyed by piece ID only, database errors swallowed – **fixed** by 2 (the list is gone; a database error
+   while extending the hold fails the run).
+4. The waiting list read per take – same as minor 2.8, skipped.
+5. Concurrent chains are not merged – the holds keep them from paying twice; a museum's few triggers make several
+   chains rare. Revisit in ST-106 if indexing after turning AI on shows OpenRouter rate limits.
+6. A large self-hosted budget means long holds after a crash – by design (ADR 0015: the hold derives from the budget).
+7. Hold expiry on the app's clock rather than the database's – the hold outlasts the budget by a whole budget; clock
+   drift of seconds cannot reach a live hold. Skipped.
+8. The vector extension in the hold table's migration – the story asks for it in this task (ADR 0014); Neon offers the
+   extension. Skipped.

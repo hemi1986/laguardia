@@ -245,6 +245,34 @@ describe("a piece whose broken-off recording throws", () => {
     expect(await standIn.stored(poison)).toMatchObject({ state: "waiting", done: 0, brokenOff: 0 });
     expect(standIn.started.map((each) => each.id)).toEqual([poison, other, waiting]);
   });
+
+  it("is tried again only after another hold's length, so a page does not start a run on every load meanwhile", async () => {
+    const [poison] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    let attempts = 0;
+    const refusing: AiWorkKind = {
+      ...standIn.kind,
+      recordBrokenOff: () => {
+        attempts += 1;
+        return Promise.reject(new Error("a bug in the kind"));
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    clock.set("2026-11-02T10:08:20Z");
+    await run({ kinds: [refusing] });
+
+    expect(attempts).toBe(1);
+    expect(await aiWorkLeftUnfinished(db, fixedClock("2026-11-02T10:16:39Z"), "stand-in", [poison])).toBe(false);
+    clock.set("2026-11-02T10:16:39Z");
+    await run({ kinds: [refusing] });
+    expect(attempts).toBe(1);
+
+    expect(await aiWorkLeftUnfinished(db, fixedClock("2026-11-02T10:16:40Z"), "stand-in", [poison])).toBe(true);
+    clock.set("2026-11-02T10:16:40Z");
+    await run({ kinds: [standIn.kind] });
+    expect(await standIn.stored(poison)).toMatchObject({ state: "broken-off", brokenOff: 1, done: 0 });
+  });
 });
 
 describe("runs started at the same moment", () => {

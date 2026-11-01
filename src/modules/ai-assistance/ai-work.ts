@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gt, inArray, lte, notInArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -68,9 +68,9 @@ const secondsAfter = (instant: Date, seconds: number) => new Date(instant.getTim
 /** One run of the AI work. */
 export async function runAiWork(dependencies: AiWorkDependencies): Promise<void> {
   const { clock, budgetSeconds } = dependencies;
-  const run: Run = { id: randomUUID(), taken: new Set(), notRecorded: [] };
+  const run: Run = { id: randomUUID(), taken: new Set() };
   const budgetEnds = secondsAfter(clock.now(), budgetSeconds);
-  while (await failOneBrokenOff(dependencies, run));
+  while (await failOneBrokenOff(dependencies));
   while (clock.now() < budgetEnds) {
     const taken = await takeNext(dependencies, run);
     if (!taken) return;
@@ -94,10 +94,9 @@ async function workOn(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKi
 
 /**
  * This run: the ID its holds carry, the pieces it took – it never takes one twice, whether it stored a result, gave
- * it up or its kind's command rejected the result and left it waiting (so a run never pays twice for one piece) –
- * and the broken-off pieces whose recording threw, which it does not try again.
+ * it up or its kind's command rejected the result and left it waiting (so a run never pays twice for one piece).
  */
-type Run = { id: string; taken: Set<string>; notRecorded: string[] };
+type Run = { id: string; taken: Set<string> };
 
 const pieceKey = (kind: string, id: string) => `${kind}:${id}`;
 
@@ -110,23 +109,19 @@ async function waitingFor(dependencies: AiWorkDependencies, run: Run, kind: AiWo
  * POL-UnfinishedAiWorkFails (EVT-AiWorkLeftUnfinished, derived): one piece whose hold ran out without a result is
  * handed to its kind's broken-off recording, and the hold is dropped in the same transaction. `SKIP LOCKED` lets runs
  * started at the same moment share them, so each piece is recorded exactly once. A recording that throws rolls its
- * transaction back: the hold stays – so the piece is never taken again – the run logs it, skips it and goes on, and the
- * next run tries to record it again. False when there is none left.
+ * transaction back: the hold stays – so the piece is never taken again – and is held for another hold's length, so
+ * neither this run nor a page (`aiWorkLeftUnfinished`) comes back to it before then; the run logs it and goes on.
+ * False when there is none left.
  */
-async function failOneBrokenOff(dependencies: AiWorkDependencies, run: Run): Promise<boolean> {
-  const { db, clock, kinds } = dependencies;
+async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boolean> {
+  const { db, clock, budgetSeconds, kinds } = dependencies;
   let found: { kind: string; pieceId: string } | undefined;
   try {
     return await db.transaction(async (tx) => {
       const [ranOut] = await tx
         .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId })
         .from(aiWorkHold)
-        .where(
-          and(
-            lte(aiWorkHold.heldUntil, clock.now()),
-            run.notRecorded.length > 0 ? notInArray(aiWorkHold.pieceId, run.notRecorded) : undefined,
-          ),
-        )
+        .where(lte(aiWorkHold.heldUntil, clock.now()))
         .orderBy(asc(aiWorkHold.heldUntil))
         .limit(1)
         .for("update", { skipLocked: true });
@@ -143,7 +138,11 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies, run: Run): Pro
     });
   } catch (error) {
     if (!found) throw error;
-    run.notRecorded.push(found.pieceId);
+    // A database that cannot take this either fails the run – only the kind's own error is waited out.
+    await db
+      .update(aiWorkHold)
+      .set({ heldUntil: secondsAfter(clock.now(), holdSeconds(budgetSeconds)) })
+      .where(and(eq(aiWorkHold.kind, found.kind), eq(aiWorkHold.pieceId, found.pieceId)));
     console.error(
       `AI work: ${found.kind} ${found.pieceId} could not be recorded broken off:`,
       error instanceof Error ? error.name : "unknown",
