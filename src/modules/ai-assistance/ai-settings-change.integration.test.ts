@@ -16,8 +16,9 @@ import {
   type ChangeAiSettingsInput,
 } from ".";
 import { aiAssessmentById } from "./ai-assessments";
+import { embeddingModelChange } from "./embedding-model-change";
 import { aiAssessmentWork } from "./ai-assessment-work";
-import { aiIndexEntryModels, anIndexedFile } from "./ai-index.test-support";
+import { aiIndexOf, anIndexedFile } from "./ai-index.test-support";
 import { aiIndexEntryOf } from "./ai-index-entries";
 import {
   geminiEmbedding,
@@ -187,6 +188,12 @@ async function anAiAssessment(defectId: string, ai = anAi()) {
   return written;
 }
 
+/** The embedding model of each file's AI index entry. */
+async function modelsOf(...fileIds: string[]): Promise<Record<string, string | undefined>> {
+  const index = await aiIndexOf(db, fileIds);
+  return Object.fromEntries(fileIds.map((fileId) => [fileId, index[fileId].embeddingModel]));
+}
+
 const overview = async () => {
   const shown = await aiIndexOverview(db, dependencies());
   if (!shown) throw new Error("AI is off");
@@ -223,7 +230,10 @@ describe("changing the models", () => {
     const manual = await attachText("Eight Ball Manual", "The flipper coil is in the cabinet.");
     const schematic = await attachText("Eight Ball Schematic", "Coil wiring of the left flipper.");
     await run([fileIndexingWork]);
-    expect(await aiIndexEntryModels(db)).toEqual({ [manual]: geminiEmbedding.id, [schematic]: geminiEmbedding.id });
+    expect(await modelsOf(manual, schematic)).toEqual({
+      [manual]: geminiEmbedding.id,
+      [schematic]: geminiEmbedding.id,
+    });
 
     await confirmOtherEmbedding();
 
@@ -236,7 +246,7 @@ describe("changing the models", () => {
 
     await run([fileIndexingWork]);
 
-    expect(await aiIndexEntryModels(db)).toEqual({ [manual]: otherEmbedding.id, [schematic]: otherEmbedding.id });
+    expect(await modelsOf(manual, schematic)).toEqual({ [manual]: otherEmbedding.id, [schematic]: otherEmbedding.id });
     expect(await overview()).toMatchObject({ indexed: 2, waiting: 0 });
   });
 
@@ -254,7 +264,7 @@ describe("changing the models", () => {
 
     await run([fileIndexingWork], indexing);
 
-    expect(await aiIndexEntryModels(db)).toEqual({ [wiring]: geminiEmbedding.id });
+    expect(await modelsOf(wiring)).toEqual({ [wiring]: geminiEmbedding.id });
     expect(await overview()).toMatchObject({ indexed: 0, waiting: 1 });
     const ai = anAi();
     const meanwhile = await anAiAssessment(await anOpenDefect(), ai);
@@ -263,7 +273,7 @@ describe("changing the models", () => {
 
     await run([fileIndexingWork]);
 
-    expect(await aiIndexEntryModels(db)).toEqual({ [wiring]: otherEmbedding.id });
+    expect(await modelsOf(wiring)).toEqual({ [wiring]: otherEmbedding.id });
     expect(await overview()).toMatchObject({ indexed: 1, waiting: 0 });
   });
 
@@ -278,5 +288,21 @@ describe("changing the models", () => {
 
     expect(changed).toMatchObject({ ok: false, error: "embedding-model-change-unconfirmed" });
     expect((await aiSettingsForm(db, dependencies())).embeddingModel?.id).toBe(geminiEmbedding.id);
+  });
+
+  it("names a chat model changed in the same save on the warning, and reads a model ID as the command does", async () => {
+    expect(
+      await embeddingModelChange(db, dependencies(), {
+        embeddingModel: ` ${otherEmbedding.id} `,
+        chatModel: claudeSonnet.id,
+      }),
+    ).toMatchObject({
+      model: { id: otherEmbedding.id, name: "Other Embedding" },
+      chatModel: { id: claudeSonnet.id, name: "Claude Sonnet 4.5" },
+      files: 0,
+    });
+    expect(await embeddingModelChange(db, dependencies(), { embeddingModel: ` ${geminiEmbedding.id}` })).toBe(
+      "no-change",
+    );
   });
 });

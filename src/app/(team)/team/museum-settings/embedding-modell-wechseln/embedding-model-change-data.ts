@@ -38,7 +38,12 @@ export async function loadEmbeddingModelChange(
     embeddingModel: one(params.embeddingModel),
   };
   const change = chosen.embeddingModel
-    ? await embeddingModelChange(db, dependencies, chosen.embeddingModel, tokensPerPageOrImage)
+    ? await embeddingModelChange(
+        db,
+        dependencies,
+        { embeddingModel: chosen.embeddingModel, chatModel: chosen.chatModel },
+        tokensPerPageOrImage,
+      )
     : "no-change";
   return {
     change,

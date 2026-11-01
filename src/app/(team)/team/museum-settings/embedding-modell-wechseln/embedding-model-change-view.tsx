@@ -3,7 +3,7 @@ import { commandErrorText, teamMessages } from "@/platform/messages";
 import { ConfirmEmbeddingModelForm } from "./confirm-embedding-model-form";
 import type { EmbeddingModelChangeData } from "./embedding-model-change-data";
 
-const { embeddingModelChange: texts } = teamMessages;
+const { embeddingModelChange: texts, aiSettings } = teamMessages;
 
 const dollars = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -27,6 +27,15 @@ export function EmbeddingModelChangeView({ change, posted, back }: EmbeddingMode
       <p className="font-medium">
         {texts.question(change.files, change.pagesAndImages, dollars.format(change.estimatedCost))}
       </p>
+      {/* What the confirmation saves, named as the form „KI“ names the saved models (code review ST-110). */}
+      <p>
+        {aiSettings.embeddingModel}: {change.model.name}
+      </p>
+      {change.chatModel && (
+        <p>
+          {aiSettings.chatModel}: {change.chatModel.name}
+        </p>
+      )}
       <ConfirmEmbeddingModelForm posted={posted} back={back} />
     </>
   );

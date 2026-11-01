@@ -42,7 +42,8 @@ type Part = "key" | "chatModel" | "embeddingModel";
 
 /** At which field a rejection is said (G8, G9) – the rest under the form. */
 function partOf(error: NonNullable<AiSettingsFormState>["error"]): Part | undefined {
-  if (error === "ai-key-refused") return "key";
+  // „Bitte den neuen Schlüssel zuerst allein speichern …“ is about the key (code review ST-110).
+  if (error === "ai-key-refused" || error === "embedding-model-change-unconfirmed") return "key";
   if (error.startsWith("chat-model-")) return "chatModel";
   if (error.startsWith("embedding-model-")) return "embeddingModel";
   return undefined;

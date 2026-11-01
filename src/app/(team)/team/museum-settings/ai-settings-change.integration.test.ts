@@ -10,7 +10,7 @@ import {
   defectAiAssessments,
   type AiDependencies,
 } from "@/modules/ai-assistance";
-import { aiIndexEntryModels, anIndexedFile } from "@/modules/ai-assistance/ai-index.test-support";
+import { aiIndexOf, anIndexedFile } from "@/modules/ai-assistance/ai-index.test-support";
 import {
   geminiEmbedding,
   geminiFlash,
@@ -67,6 +67,9 @@ const otherEmbedding: MemoryModel = {
 };
 
 let machineId: string;
+/** The files this test attached and indexed – what "nothing is indexed again" looks at. */
+let attached: string[] = [];
+const aiIndexNow = () => aiIndexOf(db, attached);
 
 beforeAll(async () => {
   db = await isolated.reset();
@@ -99,6 +102,7 @@ let journalBefore = 0;
 beforeEach(async () => {
   await db.execute("DELETE FROM ai_index_entry");
   await db.execute("DELETE FROM file");
+  attached = [];
   await withoutAiSettings(db);
   await turnAiOn();
   journalBefore = (await aiSettingsJournal(db)).length;
@@ -183,7 +187,7 @@ async function warning(address: string, tokensPerPageOrImage = 2500) {
 }
 
 async function attachedAndIndexed(title: string, pages: number): Promise<string> {
-  const attached = await executeCommand(
+  const file = await executeCommand(
     attachFileCommand,
     {
       machineId,
@@ -194,9 +198,10 @@ async function attachedAndIndexed(title: string, pages: number): Promise<string>
     },
     { actor: tom, db, clock, newId: randomUUID },
   );
-  if (!attached.ok) throw new Error(attached.error);
-  await anIndexedFile(db, clock, attached.result.fileId, { embeddingModel: geminiEmbedding.id, pages });
-  return attached.result.fileId;
+  if (!file.ok) throw new Error(file.error);
+  await anIndexedFile(db, clock, file.result.fileId, { embeddingModel: geminiEmbedding.id, pages });
+  attached.push(file.result.fileId);
+  return file.result.fileId;
 }
 
 const field = (html: string, name: string) =>
@@ -214,7 +219,7 @@ const textOf = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, "
 describe("replacing the key", () => {
   it("ST-110: A technician replaces the key", async () => {
     const manual = await attachedAndIndexed("Eight Ball Manual", 3);
-    const indexedBefore = await aiIndexEntryModels(db);
+    const indexedBefore = await aiIndexNow();
     let html = await section();
     expect(html).toContain(`href="${REPLACE_KEY_ADDRESS.replaceAll("&", "&amp;")}"`);
     expect(textOf(html)).toContain("Ersetzen");
@@ -235,8 +240,8 @@ describe("replacing the key", () => {
     expect(html).not.toContain("a1b2");
     for (const key of [KEY, OTHER_KEY]) expect(html).not.toContain(key.slice(0, -4));
     // No file is indexed again: the entry stays the one of Gemini Embedding 2, and nothing waits.
-    expect(await aiIndexEntryModels(db)).toEqual(indexedBefore);
-    expect(indexedBefore[manual]).toBe(geminiEmbedding.id);
+    expect(await aiIndexNow()).toEqual(indexedBefore);
+    expect(indexedBefore[manual]).toEqual({ embeddingModel: geminiEmbedding.id, indexings: 1 });
     expect(textOf(html)).toContain("1 Datei für die KI erfasst · 0 warten auf KI-Erfassung");
     const journal = await aiSettingsJournal(db);
     expect(journal.slice(journalBefore)).toMatchObject([
@@ -323,7 +328,7 @@ describe("changing the embedding model", () => {
 
   it("ST-110: Changing the embedding model warns what indexing again will cost", async () => {
     await fortyFiles();
-    const indexedBefore = await aiIndexEntryModels(db);
+    const indexedBefore = await aiIndexNow();
     const { save, landed } = formsOf(tom);
     const posted = await filledIn({ embeddingModel: otherEmbedding.id });
 
@@ -336,6 +341,9 @@ describe("changing the embedding model", () => {
     expect(textOf(html)).toContain(
       "Embedding-Modell wechseln? Alle 40 Dateien (1.200 Seiten und Bilder) werden neu für die KI erfasst. Geschätzte Kosten: etwa 0,60 $. Bis dahin findet die KI nur die schon neu erfassten Dateien.",
     );
+    // It names what the confirmation saves – only the embedding model, the chat model was not changed.
+    expect(textOf(html)).toContain("Embedding-Modell: Other Embedding");
+    expect(textOf(html)).not.toContain("Chat-Modell:");
     expect(html).toContain(">Embedding-Modell wechseln</button>");
     expect(textOf(html)).toContain("Zurück");
     expect(html).not.toContain("Endgültig");
@@ -345,12 +353,12 @@ describe("changing the embedding model", () => {
     expect(address).not.toContain("key");
     expect((await aiSettingsForm(db, openRouterWith())).embeddingModel?.id).toBe(geminiEmbedding.id);
     expect(await aiSettingsJournal(db)).toHaveLength(journalBefore);
-    expect(await aiIndexEntryModels(db)).toEqual(indexedBefore);
+    expect(await aiIndexNow()).toEqual(indexedBefore);
   });
 
   it("ST-110: Going back from the warning changes nothing", async () => {
     await attachedAndIndexed("Eight Ball Manual", 3);
-    const indexedBefore = await aiIndexEntryModels(db);
+    const indexedBefore = await aiIndexNow();
     const posted = await filledIn({ embeddingModel: otherEmbedding.id });
     const address = embeddingModelWarning(await formsOf(tom).save(posted), false);
     const { data, html } = await warning(address!);
@@ -361,7 +369,7 @@ describe("changing the embedding model", () => {
 
     expect((await aiSettingsForm(db, openRouterWith())).embeddingModel?.id).toBe(geminiEmbedding.id);
     expect(await aiSettingsJournal(db)).toHaveLength(journalBefore);
-    expect(await aiIndexEntryModels(db)).toEqual(indexedBefore);
+    expect(await aiIndexNow()).toEqual(indexedBefore);
     expect(textOf(form)).toContain("Embedding-Modell: Gemini Embedding 2");
     expect(selectedOf(form, "embeddingModel")).toBe(otherEmbedding.id);
     expect(selectedOf(form, "chatModel")).toBe(geminiFlash.id);
@@ -374,9 +382,13 @@ describe("changing the embedding model", () => {
 
     expect(state).toMatchObject({ error: "embedding-model-change-unconfirmed" });
     expect(embeddingModelWarning(state, aiSaveLanding(posted).keyTyped)).toBeUndefined();
-    expect(textOf(await formAfter(state, REPLACE_KEY_ADDRESS))).toContain(
+    const html = await formAfter(state, REPLACE_KEY_ADDRESS);
+    expect(textOf(html)).toContain(
       "Bitte den neuen Schlüssel zuerst allein speichern und danach das Embedding-Modell wechseln.",
     );
+    expect(field(html, "key")).toContain('aria-invalid="true"');
+    expect(field(html, "key")).not.toContain("value=");
+    expect(html).not.toContain(OTHER_KEY.slice(0, -4));
     expect(await aiSettingsForm(db, openRouterWith())).toMatchObject({ keyLastFour: "a1b2" });
   });
 
@@ -399,7 +411,7 @@ describe("changing the embedding model", () => {
 describe("saving without a change", () => {
   it("ST-110: Saving without a change records nothing", async () => {
     await attachedAndIndexed("Eight Ball Manual", 3);
-    const indexedBefore = await aiIndexEntryModels(db);
+    const indexedBefore = await aiIndexNow();
     let html = await section();
     expect(selectedOf(html, "chatModel")).toBe(geminiFlash.id);
     expect(selectedOf(html, "embeddingModel")).toBe(geminiEmbedding.id);
@@ -416,7 +428,7 @@ describe("saving without a change", () => {
     expect(selectedOf(html, "chatModel")).toBe(geminiFlash.id);
     expect(selectedOf(html, "embeddingModel")).toBe(geminiEmbedding.id);
     expect(await aiSettingsJournal(db)).toHaveLength(journalBefore);
-    expect(await aiIndexEntryModels(db)).toEqual(indexedBefore);
+    expect(await aiIndexNow()).toEqual(indexedBefore);
     expect(textOf(html)).toContain("0 warten auf KI-Erfassung");
   });
 });

@@ -1,6 +1,7 @@
 import { and, count, eq, sum } from "drizzle-orm";
 import type { Database } from "@/platform/command";
-import { aiIndexingSettings, type AiDependencies } from "./ai-settings";
+import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
+import { changedModel } from "./change-ai-settings";
 import { aiIndexEntry } from "./schema";
 
 /**
@@ -14,6 +15,11 @@ export const TOKENS_PER_PAGE_OR_IMAGE = 530;
 export type EmbeddingModelChange = {
   /** The new embedding model, as OpenRouter names it. */
   model: { id: string; name: string };
+  /**
+   * The chat model chosen in the same save, when it differs from the saved one – the confirmation saves it too, so the
+   * warning names it (code review ST-110); its ID when OpenRouter does not answer for it.
+   */
+  chatModel?: { id: string; name: string };
   /** The files indexed with the current embedding model – all of them are indexed again. */
   files: number;
   /** Their pages and images. */
@@ -33,14 +39,20 @@ export type NoEmbeddingModelChange = "no-change" | "embedding-model-unknown" | "
  */
 export async function embeddingModelChange(
   db: Database,
-  { ai, encryptionKey }: AiDependencies,
-  newModel: string,
+  dependencies: AiDependencies,
+  chosen: { embeddingModel: string; chatModel?: string },
   tokensPerPageOrImage = TOKENS_PER_PAGE_OR_IMAGE,
 ): Promise<EmbeddingModelChange | NoEmbeddingModelChange> {
-  const { embeddingModel } = await aiIndexingSettings(db, { encryptionKey });
-  if (!embeddingModel || newModel === embeddingModel) return "no-change";
-  const [model, [indexed]] = await Promise.all([
+  const { ai } = dependencies;
+  const saved = await aiAssessmentSettings(db, dependencies);
+  const embeddingModel = saved.embeddingModel;
+  // Compared as the command compares them (`changedModel`): trimmed, and only when it differs from the saved one.
+  const newModel = changedModel(embeddingModel, chosen.embeddingModel);
+  if (!embeddingModel || !newModel) return "no-change";
+  const newChatModel = changedModel(saved.chatModel, chosen.chatModel);
+  const [model, chat, [indexed]] = await Promise.all([
     ai.model("embedding", newModel),
+    newChatModel ? ai.model("chat", newChatModel) : undefined,
     db
       .select({ files: count(), images: sum(aiIndexEntry.imagesIndexed).mapWith(Number) })
       .from(aiIndexEntry)
@@ -51,6 +63,7 @@ export async function embeddingModelChange(
   const pagesAndImages = indexed?.images ?? 0;
   return {
     model: { id: model.id, name: model.name },
+    ...(newChatModel && { chatModel: { id: newChatModel, name: typeof chat === "object" ? chat.name : newChatModel } }),
     files: indexed?.files ?? 0,
     pagesAndImages,
     estimatedCost: (pagesAndImages * tokensPerPageOrImage * model.pricePerMillion.input) / 1_000_000,
