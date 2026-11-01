@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { aggregateStore, Rejected, type AggregateStore, type Database } from "@/platform/command";
 import type { AiAssessmentState } from "./ai-assessment";
 import { aiAssessment } from "./schema";
@@ -105,20 +105,9 @@ export async function requestedAiAssessmentIds(db: Database): Promise<string[]> 
   return rows.map((row) => row.id);
 }
 
-/** The newest AI assessment of the defect, being written or ended – what the defect page shows (RM-DefectAiAssessments). */
-export async function newestAiAssessmentOf(db: Database, defectId: string): Promise<AiAssessmentState | undefined> {
-  const [row] = await db
-    .select()
-    .from(aiAssessment)
-    .where(eq(aiAssessment.defectId, defectId))
-    .orderBy(desc(aiAssessment.requestedAt), desc(aiAssessment.id))
-    .limit(1);
-  return row && toState(row);
-}
-
 /**
- * The AI assessments of the defect, the newest first – what „Erneut versuchen“ reads the failed one from (ST-108); the
- * defect page shows only the newest until ST-111 lists the earlier ones.
+ * The AI assessments of the defect, the newest first – the defect page shows the newest open and the earlier ones
+ * folded (ST-111); „Erneut versuchen“ reads the failed one from it (ST-108).
  */
 export async function aiAssessmentsOfDefect(db: Database, defectId: string): Promise<AiAssessmentState[]> {
   const rows = await db
@@ -127,4 +116,23 @@ export async function aiAssessmentsOfDefect(db: Database, defectId: string): Pro
     .where(eq(aiAssessment.defectId, defectId))
     .orderBy(desc(aiAssessment.requestedAt), desc(aiAssessment.id));
   return rows.map(toState);
+}
+
+/**
+ * The written and failed AI assessments of these defects, each defect's newest first – what the repair history shows
+ * under its defects (RM-MachineRecord, ST-111). One being written is not history yet.
+ */
+export async function endedAiAssessmentsOfDefects(
+  db: Database,
+  defectIds: string[],
+): Promise<Map<string, AiAssessmentState[]>> {
+  const byDefect = new Map<string, AiAssessmentState[]>();
+  if (defectIds.length === 0) return byDefect;
+  const rows = await db
+    .select()
+    .from(aiAssessment)
+    .where(and(inArray(aiAssessment.defectId, defectIds), ne(aiAssessment.state, "requested")))
+    .orderBy(desc(aiAssessment.requestedAt), desc(aiAssessment.id));
+  for (const row of rows) byDefect.set(row.defectId, [...(byDefect.get(row.defectId) ?? []), toState(row)]);
+  return byDefect;
 }
