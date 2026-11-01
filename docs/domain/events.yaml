@@ -739,10 +739,12 @@ commands:
       Run by POL-AiIndexFollowsTheSettings, POL-AttachedFileIsIndexedForAi and POL-UnfinishedAiWorkIsRetried in the
       background; a technician runs it by hand with „Erneut versuchen“ on a file that failed. The slow part (reading
       the file, rendering the pages, asking OpenRouter for embeddings) runs outside any transaction; only the
-      replacement of the AI index entry is one short transaction (ADR 0015).
+      replacement of the AI index entry is one short transaction (ADR 0015). A PDF too long for one run is indexed
+      across several runs; the pages done so far are kept in a technical progress record, not in the AI index entry,
+      which is replaced as a whole only when the last page is done (spike ST-105; docs/architecture/data-model.md).
     rules:
       - Only while AI is on – checked before every request to OpenRouter; AI turned off meanwhile stops it, nothing more is sent and the file stays waiting without an entry (user, 2026-10-31, story review)
-      - The file is not removed – read from Collection in the transaction that stores the entry, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
+      - The file is not removed – read from Collection in the transaction that stores the entry, and in each one that stores a PDF's progress, under the file's removal lock taken shared (ADR 0014); a file removed meanwhile records nothing
       - PDF, Markdown and text files and images (PNG, JPEG, WebP) are indexed; any other format fails with "format not indexed"
       - Run by a policy, a file that already has an entry for the current embedding model is skipped; by hand, a technician may run it only on a file that failed
       - The daily retry indexes again, at most once a day each, only files that failed with "OpenRouter not reachable" or "OpenRouter refused"; "not readable" and "format not indexed" only by hand (HS-32)

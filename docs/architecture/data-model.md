@@ -525,7 +525,7 @@ Derived: *AI on* (`RM-AiSettings`, `RM-DefectAiAssessments`, every command of AI
 
 **What is indexed (user, 2026-10-31):** a PDF – per page its text layer as a passage and the page rendered as an image (no OCR; a scanned page is found through its image); a Markdown or text file – its text in passages; a PNG, JPEG or WebP image – the image. Video, audio and other formats fail with *format not indexed*. Page images are not kept: when an AI assessment sends a found page, it renders that page again from the file (ADR 0014).
 
-**Removal:** `CMD-RemoveFile` removes the entry and its items in the same transaction (`POL-RemovedFileLeavesAiIndex`, HS-29). Storing an entry and removing its file are serialised by the file's removal lock (ADR 0014), so an indexing that read the file before its removal never stores an entry afterwards.
+**Removal:** `CMD-RemoveFile` removes the entry and its items – and a PDF's progress record, see below – in the same transaction (`POL-RemovedFileLeavesAiIndex`, HS-29). Storing an entry (or a PDF's progress) and removing its file are serialised by the file's removal lock (ADR 0014), so an indexing that read the file before its removal never stores an entry afterwards.
 
 **Lifecycle** – a file without an entry is *waiting* (derived):
 
@@ -560,6 +560,26 @@ stateDiagram-v2
 Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-AiSettings`) and the per-file state on the machine record (`RM-MachineRecord`) – from the entries and Collection's files that are not removed, counting only entries of the current embedding model as indexed. Passages, page images and embeddings stay out of the journal; `EVT-FileIndexedForAi` names the file, the embedding model, the counts and the cost.
 
 **Technical, not domain (ADR 0015):** while the background work indexes a file or writes an AI assessment it holds that piece of work for a limited time, so two runs do not do – and pay for – the same work; the hold is a short-lived record of the background work (file or AI assessment, held until), like a pending upload. It has no event and no read model and is not part of any aggregate. A hold lasts 15 minutes (HS-33).
+
+**Technical, not domain: the progress record of a PDF (ADR 0015, spike ST-105).** A PDF of more than about 280 pages cannot be indexed within one run on the project's hosting, so its indexing goes on across runs and keeps what it has done so far in a progress record – one per file at most, like the hold a record of the background work, with no event, no read model and not part of any aggregate. It holds:
+
+| Attribute | Type | Purpose |
+|---|---|---|
+| File | `FileId` (unique) | the file being indexed |
+| Embedding model | `ModelId` | the model every stored page was made with |
+| Last page done | `PageNumber` | where the next run continues |
+| Finished pages' items | per page: passage (text) and page image, each with its `Embedding` | become the entry's index items at the end |
+| Cost so far | `Cost` | summed into `EVT-FileIndexedForAi` *Cost* |
+| Last touched | `Timestamp` | when a run last stored pages |
+
+Why the invariants of the AI index entry hold unchanged:
+- **The entry changes only at the end.** When the last page is done, one short transaction replaces the AI index entry as a whole with the record's items (`EVT-FileIndexedForAi`) and drops the record. A failure at any page records `EVT-FileIndexingFailed` and drops the record the same way; a retry starts again at the first page. The file's content never changes (`AGG-File`), so pages stored by different runs are one indexing.
+- **One embedding model.** A run that finds a record of another model than the current one drops it and starts again at the first page.
+- **No second writer.** A run stores pages only while it holds the file and only directly after the record's *last page done* (a conditional write), so two runs can never interleave pages; storing pages renews the hold.
+- **Never for a removed file.** Every transaction that stores pages reads through Collection whether the file is removed, under the file's removal lock taken shared – the same read as for storing the entry (ADR 0014). `CMD-RemoveFile` drops the record in its transaction (`POL-RemovedFileLeavesAiIndex`); a run storing afterwards finds the file removed and records nothing.
+- **Waiting stays derived.** A file with a progress record still has no entry for the current embedding model, so it is *waiting*, and *Files waiting* in `RM-AiSettings` counts it unchanged. The record says how far the work got, not what state the file is in.
+
+When AI is turned off a run stops before its next request to OpenRouter and the record stays, like the AI index itself ("removing the key turns AI off and keeps the AI index"); turned on again with the same embedding model, the indexing continues where it stopped, with another model it starts again. Markdown, text and image files are one piece of work and need no record. Cost spent on a record that is dropped (model changed, file removed) never reaches `EVT-FileIndexedForAi`, so *Cost of indexing so far* leaves it out – at most the cost of one PDF (≈ 0,11 $ for the largest manual).
 
 ---
 
