@@ -808,7 +808,7 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   text search for the defect title, the problem report descriptions and the note, one image search per photo of the
   request; each search takes 8 text passages and 4 pages or images, merged and cut to 12 pages and images), renders the
   found PDF pages again from their file (`renderPdfPage`) and sends everything through the chat seam
-  (`ai.chat`, `openrouter.ts`, `provider: { data_collection: "deny", zdr: true }`). The answer is read as structured
+  (`ai.chat`, `openrouter.ts`, no provider restriction – ADR 0016). The answer is read as structured
   data (`parseAiAssessmentAnswer`); references to files outside the defect's machine and its machine model are dropped,
   and the result is stored through CMD-WriteAiAssessment with only the aggregate still *requested* – a late result of a
   run records nothing. The note and photos belong to the AI assessment; its photos are stored like a work log entry's

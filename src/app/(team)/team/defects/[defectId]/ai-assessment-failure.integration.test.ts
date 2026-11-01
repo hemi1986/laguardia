@@ -290,9 +290,10 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
         reason: "Das Guthaben bei OpenRouter ist aufgebraucht.",
       },
       {
-        what: "no provider that neither keeps nor trains on the data has the model",
+        what: "OpenRouter having no provider for the model",
         settings: { chatAnswer: { failure: "model-not-available" } },
-        reason: "Das Chat-Modell ist bei OpenRouter gerade nicht ohne Datenspeicherung verfügbar.",
+        reason:
+          "Das Chat-Modell ist bei OpenRouter gerade nicht verfügbar. Bei einem kostenlosen Modell die Datenschutz-Einstellungen des OpenRouter-Kontos prüfen.",
       },
       {
         what: "OpenRouter reachable but not answering in time",

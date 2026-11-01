@@ -140,12 +140,11 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
           input: "Flipper",
           dimensions: EMBEDDING_SIZE,
           encoding_format: "float",
-          provider: { data_collection: "deny", zdr: true },
         }),
       });
       if (!response) return "unreachable";
       if (response.status === 401 || response.status === 402 || response.status === 403) return "refused";
-      // OpenRouter answers a model it does not have – or one without a provider that keeps nothing – with 400 or 404.
+      // OpenRouter answers a model it does not have – or one the account's privacy settings exclude – with 400 or 404.
       if (response.status === 400 || response.status === 404) return "unknown";
       if (!response.ok) return "unreachable";
       try {
@@ -165,7 +164,7 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
           headers: { ...bearer(key), "content-type": "application/json" },
           body: JSON.stringify({
             model,
-            // One item per request: OpenRouter routes several inputs to an endpoint without zero data retention (ST-105).
+            // One item per request: each item's cost and failure stay its own (ST-105).
             input:
               input.kind === "text"
                 ? input.text
@@ -183,13 +182,12 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
                   ],
             dimensions: EMBEDDING_SIZE,
             encoding_format: "float",
-            provider: { data_collection: "deny", zdr: true },
           }),
         },
         EMBED_TIMEOUT_MS,
       );
       if (!response) return "unreachable";
-      // A refusal – the key, the credits, the model or a provider that keeps nothing – stores nothing of the file.
+      // A refusal – the key, the credits or the model – stores nothing of the file.
       if (!response.ok) return "refused";
       try {
         const { data, usage } = (await response.json()) as {
@@ -238,8 +236,8 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
             ],
             // The answer is read as an AI assessment, not as prose (ST-107: the structured-answer parser).
             response_format: { type: "json_object" },
-            // Never a provider that keeps or trains on the data (ADR 0014) – a model without one fails as not available.
-            provider: { data_collection: "deny", zdr: true },
+            // Any provider OpenRouter routes to – free models and providers that keep or train on the data included
+            // (user, 2026-11-01, ADR 0016). Only the account's own privacy settings at OpenRouter still narrow it.
           }),
         });
       } catch (error) {

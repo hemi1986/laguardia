@@ -64,7 +64,7 @@ export function aiSettingsFormProps(
 /**
  * The section „KI“ on „Einstellungen“ (ST-104, ST-110, RM-AiSettings): whether AI is on and what is missing (G37) – a
  * saved key that can no longer be read says so –, the saved key as its last four characters with „Ersetzen“ and
- * „Entfernen“ (G36), the saved models, the form, and the reminders – a spending limit and zero data retention at
+ * „Entfernen“ (G36), the saved models, the form, and the reminders – a spending limit and the privacy settings for free models at
  * OpenRouter, the privacy notice.
  */
 export function AiSettingsSection({ form, confirmed, overview, retried, replacingKey, chosen }: AiSettingsData) {
