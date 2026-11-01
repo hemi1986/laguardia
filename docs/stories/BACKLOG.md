@@ -4,7 +4,7 @@
 
 **Progress: 72 of 78 domain stories done** · scenarios 684 of 737
 
-**109 stories** · In Progress: 1 · Ready: 7 · In Review: 0 · Draft: 0 · Done: 90 · Superseded: 11
+**109 stories** · In Progress: 1 · Ready: 5 · In Review: 2 · Draft: 0 · Done: 90 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -18,13 +18,18 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-112](ST-112-background-work-for-ai.md) | Background work for AI – worker route, holds, run budget and continuation | tech-task | AI assistance | should | M | high | ST-105 |
-| [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |
-| [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 |
+| [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 (review) |
 | [ST-108](ST-108-failed-and-broken-off-ai-assessments.md) | An AI assessment that fails or breaks off says why and can be tried again | story | AI assistance | should | L | high | ST-107 |
-| [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106, ST-108 |
-| [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 |
+| [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106 (review), ST-108 |
+| [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 (review) |
 | [ST-111](ST-111-earlier-ai-assessments.md) | Earlier AI assessments on the defect page and in the repair history | story | AI assistance | should | S | low | ST-107, ST-108 |
+
+## In Review
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-112](ST-112-background-work-for-ai.md) | Background work for AI – worker route, holds, run budget and continuation | tech-task | AI assistance | should | M | high | ST-105 |
+| [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 (review) |
 
 ## Done
 

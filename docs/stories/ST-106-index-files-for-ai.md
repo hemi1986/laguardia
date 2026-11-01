@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileLeftAiIndex, EVT-AiSettingsChanged]
 depends_on: [ST-104, ST-112]
 labels: [feature:ai-assessment]
-status: ready
+status: review
 ---
 
 ## Story
@@ -155,8 +155,7 @@ Scenario: A file is indexed once, even when two runs find it
 - none
 
 ## Notes
-- Result of the spike ST-105: *to be filled in by ST-105.* If it says a large PDF needs page-by-page progress, the
-  invariant "replaced as a whole" changes and this story goes back to `review`.
+- Result of the spike ST-105 (2026-11-01, `docs/stories/ST-105-spike-indexing-the-largest-manual.md`, *Result*): the project is on Vercel **Hobby** – a run has 300 s at most (≈ 250 s budget), not 800 s; the user will not buy Pro and expects to self-host later in Docker. A PDF page costs ≈ 0,89 s on Vercel (rendering 0,85 s), so a run indexes ≈ 280 pages and the largest manual (568 pages) does not fit one run; memory ≈ 320 MB, no extra memory needed. Proposal (ADR 0015, updated, still `proposed`): a PDF's indexing keeps its progress page by page in a technical progress record and replaces the AI index entry as a whole only when the last page is done – the invariant holds unchanged. For this story: one item per embedding request (several in one request have no zero-data-retention endpoint), up to 4 in parallel; pdfjs needs `wasmUrl` and `iccUrl` or a scanned page renders blank without an error; page images 1024 px, JPEG quality 75 (≈ 71 KB, 258 tokens); a file whose content is not in the store must fail as "not readable". Cost ≈ 0,00019 $ per PDF page. Back to `review` for the page-by-page progress.
 - OpenRouter and the object store are behind seams (ADR 0014, ADR 0012); tests drive one run directly through ST-112's
   run function with the injected clock, database, AI seam and storage seam – no test waits for a real background run.
 - If L proves too large in `/implement`: scenario 1 (PDF) and the PDF rendering become a story of their own after the

@@ -9,7 +9,7 @@ risk: high
 events: []
 depends_on: [ST-105]
 labels: [foundation, feature:ai-assessment]
-status: ready
+status: review
 ---
 
 ## Task
@@ -41,7 +41,7 @@ task is built.
 - [ ] The pull request goes through the normal review lane plus `/code-review` (shared platform code) and `/security-review` (a route accepting a secret that starts paid work).
 
 ## Notes
-- Result of the spike ST-105: *to be filled in by ST-105.*
+- Result of the spike ST-105 (2026-11-01, `docs/stories/ST-105-spike-indexing-the-largest-manual.md`, *Result*): the project is on Vercel **Hobby** – a run has 300 s at most (≈ 250 s budget), not 800 s; the user will not buy Pro and expects to self-host later in Docker. A PDF page costs ≈ 0,89 s on Vercel (rendering 0,85 s), so a run indexes ≈ 280 pages and the largest manual (568 pages) does not fit one run; memory ≈ 320 MB, no extra memory needed. Proposal (ADR 0015, updated, still `proposed`): a PDF's indexing keeps its progress page by page in a technical progress record and replaces the AI index entry as a whole only when the last page is done – the invariant holds unchanged. For this task: `maxDuration` is 300 (Hobby; a longer value fails the deployment), the budget about 250 s and a setting; the progress record of a PDF is a second kind of technical record beside the hold. Back to `review` – the checklist names `maxDuration = 800` and a budget of 600 s.
 - Built out of turn on purpose: ST-106 depends on it, so the generated backlog pulls it in front of ST-106 although its
   number is higher. Feature order (user, 2026-10-31): ST-104 → ST-105 → ST-112 → ST-106 → ST-107 → ST-108 → ST-109 →
   ST-110 → ST-111.

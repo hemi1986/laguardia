@@ -177,6 +177,7 @@ Scenario: While AI is off nothing about AI assessments is offered
   (`docs/stories/OPEN_QUESTIONS.md`, ST-107).
 
 ## Notes
+- Spike ST-105 (2026-11-01): `google/gemini-2.5-flash` has no zero-data-retention endpoint on OpenRouter (every request fails with "No endpoints found matching your data policy") – the scenarios' „Gemini 2.5 Flash“ is a display name only; `~google/gemini-flash-latest` accepted 27 images in one request (12 + 10 + 5 fit), ≈ 1.090 tokens per small image. Its reasoning counts against the answer limit: a limit of 20 tokens returned no text, so the answer limit must leave room for it.
 - OpenRouter is an external system behind the AI seam (ADR 0014); the scenarios describe behaviour, the tests use the
   in-memory stand-in and drive one run of the background work directly (ST-112's run function, ADR 0015). Seams
   outside the catalog: the structured-answer parser (unit test); the page refresh is covered by the catalog row

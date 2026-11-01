@@ -135,6 +135,6 @@ Scenario: Saving without a change records nothing
 - Built after ST-109 although it only needs ST-104 and ST-106 (implementation order of the feature, user 2026-10-31).
   Until then ST-104's form offers no change of a saved part and no „Ersetzen“; a part not saved yet can always be
   added, and removing the key and saving a new one works from ST-104 on.
-- The tokens-per-item constant comes from ST-105; the 2.500 in the scenario is a test value, not the measured figure.
+- The tokens-per-item constant comes from ST-105; the 2.500 in the scenario is a test value, not the measured figure. Measured by ST-105 (2026-11-01, `google/gemini-embedding-2`): a page image 258 tokens, a PDF page's text passage 274 on average – so a PDF page ≈ 530 tokens, an image 258.
 - Entries of the earlier embedding model stay until they are replaced – storage grows meanwhile; accepted (story review
   2026-10-31, section 5).
