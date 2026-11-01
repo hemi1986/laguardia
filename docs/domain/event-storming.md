@@ -106,7 +106,7 @@ flowchart LR
     POL_AttachedFileIsIndexedForAi{{"An attached file is indexed for AI"}}:::pol
     POL_RemovedFileLeavesAiIndex{{"A removed file leaves the AI index"}}:::pol
     POL_RequestedAiAssessmentIsWritten{{"A requested AI assessment is written"}}:::pol
-    POL_UnfinishedAiWorkIsRetried{{"Unfinished AI work is retried"}}:::pol
+    POL_UnfinishedAiWorkFails{{"Unfinished AI work fails as broken off"}}:::pol
     POL_TriageProblemReports{{"New problem reports are triaged"}}:::pol
     POL_DefectMayChangeMachineStatus{{"A new or reopened defect may change the machine status"}}:::pol
     POL_ResolvedDefectsReturnMachineToPlay{{"Machines without open defects return to play"}}:::pol
@@ -221,9 +221,9 @@ flowchart LR
     POL_RemovedFileLeavesAiIndex --> CMD_RemoveFileFromAiIndex
     EVT_AiAssessmentRequested --> POL_RequestedAiAssessmentIsWritten
     POL_RequestedAiAssessmentIsWritten --> CMD_WriteAiAssessment
-    EVT_AiWorkLeftUnfinished --> POL_UnfinishedAiWorkIsRetried
-    POL_UnfinishedAiWorkIsRetried --> CMD_IndexFileForAi
-    POL_UnfinishedAiWorkIsRetried --> CMD_WriteAiAssessment
+    EVT_AiWorkLeftUnfinished --> POL_UnfinishedAiWorkFails
+    POL_UnfinishedAiWorkFails --> CMD_IndexFileForAi
+    POL_UnfinishedAiWorkFails --> CMD_WriteAiAssessment
     EVT_ProblemReported --> POL_TriageProblemReports
     POL_TriageProblemReports --> CMD_RecordDefect
     POL_TriageProblemReports --> CMD_LinkProblemReportToDefect
