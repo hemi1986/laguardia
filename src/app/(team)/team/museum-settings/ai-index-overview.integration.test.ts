@@ -87,6 +87,18 @@ async function turnAiOn(): Promise<void> {
   if (!saved.ok) throw new Error(saved.error);
 }
 
+/** The key removed through CMD-ChangeAiSettings – AI is off, the AI index is kept. */
+async function removeTheKey(): Promise<void> {
+  const dependencies = ai();
+  const { version } = await aiSettingsForm(db, dependencies);
+  const removed = await executeCommand(
+    changeAiSettingsCommand(dependencies),
+    { version, key: "", removeKey: true },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!removed.ok) throw new Error(removed.error);
+}
+
 async function aMachine(museumNumber: string): Promise<string> {
   const registered = await executeCommand(
     registerMachineCommand,
@@ -361,5 +373,54 @@ describe("the mark on the machine record (ST-109)", () => {
     expect(fileItem(html, "Eight Ball Manual")).not.toContain("Für die KI nicht lesbar");
     expect(fileItem(html, "Wiring notes")).not.toContain("Für die KI nicht lesbar");
     expect(html.match(/Für die KI nicht lesbar/g)).toHaveLength(1);
+  });
+
+  it("ST-109: While AI is off neither the overview nor the mark is shown", async () => {
+    await turnAiOn();
+    const machineId = await aMachine("LG-042");
+    for (let number = 1; number <= 12; number++) await attach(machineId, `Notes ${number}`);
+    const attract = await attach(machineId, "Attract mode.mp4", { kind: "video" });
+    await run();
+    const failed = await failedOnPage("Attract mode.mp4");
+    await removeTheKey();
+
+    const settings = await settingsPage();
+    const record = await machineRecord("LG-042");
+
+    expect(settings.data.overview).toBeUndefined();
+    expect(settings.html).not.toContain("KI-Erfassung");
+    expect(settings.html).not.toContain("Erneut versuchen");
+    expect(record.html).not.toContain("Für die KI nicht lesbar");
+    const openRouter = ai();
+    const retried = await retry(failed, tom, openRouter);
+    await run(openRouter);
+    expect(retried).toMatchObject({ state: { error: "file-indexing-ai-off" }, starts: 0 });
+    expect(openRouter.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
+
+    // AI on again: both come back as before.
+    await turnAiOn();
+    const again = await settingsPage();
+    expect(again.data.overview).toMatchObject({ indexed: 12, waiting: 0 });
+    expect(again.data.overview?.failed).toMatchObject([{ fileId: attract, reason: "format not indexed" }]);
+    expect(fileItem((await machineRecord("LG-042")).html, "Attract mode.mp4")).toContain("Für die KI nicht lesbar");
+  });
+});
+
+describe("helpers (ST-109)", () => {
+  it("ST-109: Helpers cannot try a failed file again", async () => {
+    await turnAiOn();
+    await attach(await aMachine("LG-042"), "Eight Ball Schematic", { to: "machine-model" });
+    await run(ai({ unreachable: true }));
+    const failed = await failedOnPage("Eight Ball Schematic");
+    const openRouter = ai();
+
+    const retried = await retry(failed, ben, openRouter);
+    await run(openRouter);
+
+    expect(retried).toMatchObject({ state: { error: "not-authorized" }, starts: 0 });
+    expect(openRouter.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
+    expect((await settingsPage()).data.overview?.failed).toMatchObject([{ title: "Eight Ball Schematic" }]);
+    // The overview is on „Einstellungen“, which helpers do not reach: the page and its action check
+    // `requireTechnician()` – the browser test „ST-104: Helpers do not get the AI settings“ shows it.
   });
 });
