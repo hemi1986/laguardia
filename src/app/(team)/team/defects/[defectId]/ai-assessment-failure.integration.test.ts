@@ -390,4 +390,40 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
       failureReason: "broken-off",
     });
   });
+
+  it("ST-108: A late result after a break-off is not stored", async () => {
+    const machineId = await aMachine("LG-042");
+    const defectId = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    // The run that took the AI assessment is still writing it when its hold runs out.
+    let writing!: () => void;
+    const writingStarted = new Promise<void>((resolve) => (writing = resolve));
+    let finish!: () => void;
+    const finishes = new Promise<void>((resolve) => (finish = resolve));
+    const lateAi = memoryAi({
+      acceptedKeys: [KEY],
+      beforeChat: async () => {
+        writing();
+        await finishes;
+      },
+    });
+    const lateRun = runWith({ ai: lateAi, encryptionKey: () => environmentKey });
+    await writingStarted;
+
+    clock.set("2026-11-03T10:08:21Z");
+    await runWith({ ai: memoryAi({ acceptedKeys: [KEY] }), encryptionKey: () => environmentKey });
+    expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)).toMatchObject({
+      state: "failed",
+      failureReason: "broken-off",
+    });
+
+    // That run finishes its AI assessment afterwards – a late result records nothing.
+    finish();
+    await lateRun;
+
+    const late = (await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id);
+    expect(late).toMatchObject({ state: "failed", failureReason: "broken-off" });
+    expect(late?.summary).toBeUndefined();
+    expect(late?.cost).toBeUndefined();
+  });
 });
