@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-AiWorkLeftUnfinished]
 depends_on: [ST-104, ST-105]
 labels: [foundation, feature:ai-assessment]
-status: in-progress
+status: done
 ---
 
 ## Task
