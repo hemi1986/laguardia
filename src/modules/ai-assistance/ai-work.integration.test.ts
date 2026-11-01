@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { memoryAi } from "./ai-seam.test-support";
-import { runAiWork, type AiWorkKind } from "./ai-work";
+import { runAiWork, type AiWorkKind, type HeldPiece } from "./ai-work";
 import { standInWork, steppingClock } from "./ai-work-stand-in.test-support";
 
 /**
@@ -92,5 +92,68 @@ describe("holds", () => {
 
     expect(standIn.started.map((each) => each.id)).toEqual([piece]);
     expect(await standIn.stored(piece)).toMatchObject({ done: 0 });
+  });
+});
+
+describe("work that broke off (POL-UnfinishedAiWorkFails)", () => {
+  it("the next run records a piece whose hold ran out broken off exactly once, before it takes any waiting piece", async () => {
+    const [cutOff] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    const [waiting] = await standIn.add(1, { seconds: 3, outcome: "done" });
+    let brokenOffBeforeTheWaitingPiece: boolean | undefined;
+    const nextStart = standIn.nextStart().then(async () => {
+      brokenOffBeforeTheWaitingPiece = (await standIn.stored(cutOff)).state === "broken-off";
+    });
+
+    clock.set("2026-11-02T10:08:20Z");
+    await run();
+    await nextStart;
+    await run();
+
+    expect(brokenOffBeforeTheWaitingPiece).toBe(true);
+    expect(await standIn.stored(cutOff)).toMatchObject({ state: "broken-off", brokenOff: 1, done: 0 });
+    expect(await standIn.stored(waiting)).toMatchObject({ state: "done", done: 1 });
+    expect(standIn.started.map((each) => each.id)).toEqual([cutOff, waiting]);
+  });
+
+  it("two runs starting at the same moment record it broken off once, and no later run takes or records it again", async () => {
+    const [cutOff] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    await aRunCutOffAtTheNextPiece();
+    standIn.behave(cutOff, { seconds: 3, outcome: "done" });
+
+    clock.set("2026-11-02T10:08:20Z");
+    await Promise.all([run(), run(), run()]);
+    clock.set("2026-11-02T10:30:00Z");
+    await run();
+
+    expect(await standIn.stored(cutOff)).toMatchObject({ state: "broken-off", brokenOff: 1, done: 0 });
+    expect(standIn.started.map((each) => each.id)).toEqual([cutOff]);
+  });
+
+  it("a late result of the cut-off run, after its piece was recorded broken off, stores nothing", async () => {
+    const [cutOff] = await standIn.add(1, { seconds: 3, outcome: "cut-off" });
+    let late: HeldPiece | undefined;
+    const keepsThePiece: AiWorkKind = {
+      ...standIn.kind,
+      work: async (id, piece) => {
+        late = piece;
+        await new Promise<never>(() => {});
+      },
+    };
+    const started = new Promise<void>((resolve) => {
+      const wait = () => (late ? resolve() : setTimeout(wait, 5));
+      wait();
+    });
+    void run({ kinds: [keepsThePiece] });
+    await started;
+
+    clock.set("2026-11-02T10:08:20Z");
+    await run();
+    const stored = await late!.storeResult((tx) =>
+      tx.execute(sql`UPDATE ai_work_stand_in SET state = 'done', done = done + 1 WHERE id = ${cutOff}`),
+    );
+
+    expect(stored).toBe("no-longer-held");
+    expect(await standIn.stored(cutOff)).toMatchObject({ state: "broken-off", done: 0 });
   });
 });

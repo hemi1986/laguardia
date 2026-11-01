@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, lte } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
@@ -70,12 +70,40 @@ export async function runAiWork(dependencies: AiWorkDependencies): Promise<void>
   const { clock, budgetSeconds, kinds } = dependencies;
   const runId = randomUUID();
   const budgetEnds = secondsAfter(clock.now(), budgetSeconds);
+  while (await failOneBrokenOff(dependencies));
   while (clock.now() < budgetEnds) {
     const taken = await takeNext(dependencies, runId);
     if (!taken) return;
     await taken.kind.work(taken.id, heldPiece(dependencies, runId, taken.kind.kind, taken.id), dependencies);
   }
   if (await anyWaiting(dependencies, kinds)) await dependencies.continueWork();
+}
+
+/**
+ * POL-UnfinishedAiWorkFails (EVT-AiWorkLeftUnfinished, derived): one piece whose hold ran out without a result is
+ * handed to its kind's broken-off recording, and the hold is dropped in the same transaction. `SKIP LOCKED` lets runs
+ * started at the same moment share them, so each piece is recorded exactly once. False when there is none left.
+ */
+async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boolean> {
+  const { db, clock, kinds } = dependencies;
+  return db.transaction(async (tx) => {
+    const [ranOut] = await tx
+      .select({ kind: aiWorkHold.kind, pieceId: aiWorkHold.pieceId })
+      .from(aiWorkHold)
+      .where(lte(aiWorkHold.heldUntil, clock.now()))
+      .orderBy(asc(aiWorkHold.heldUntil))
+      .limit(1)
+      .for("update", { skipLocked: true });
+    if (!ranOut) return false;
+    const kind = kinds.find((each) => each.kind === ranOut.kind);
+    if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies);
+    // A hold of a kind this deployment does not know cannot be recorded – it is dropped, never kept for ever.
+    else console.error(`AI work: a hold of the unknown kind "${ranOut.kind}" is dropped`);
+    await tx
+      .delete(aiWorkHold)
+      .where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
+    return true;
+  });
 }
 
 async function takeNext(dependencies: AiWorkDependencies, runId: string) {
