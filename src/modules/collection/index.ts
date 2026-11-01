@@ -9,7 +9,16 @@ export type {
   FileCategory,
   FileContent,
 } from "./attach-file";
-export { fileToOpen, machineFile, type FileOfMachine, type MachineFile } from "./files";
+export {
+  fileForIndexing,
+  fileForIndexingWhileStoring,
+  filesForIndexing,
+  fileToOpen,
+  machineFile,
+  type FileForIndexing,
+  type FileOfMachine,
+  type MachineFile,
+} from "./files";
 export { removeFileCommand } from "./remove-file-command";
 export { mayRemoveFiles, removeFileRefusal } from "./remove-file";
 export type { RemoveFileError, RemoveFileInput } from "./remove-file";

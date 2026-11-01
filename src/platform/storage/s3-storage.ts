@@ -89,6 +89,17 @@ export function s3Storage({
         throw error;
       }
     },
+    async readContent(name) {
+      const { client, bucket } = store();
+      try {
+        const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: name }));
+        if (!object.Body) return undefined;
+        return await object.Body.transformToByteArray();
+      } catch (error) {
+        if (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404) return undefined;
+        throw error;
+      }
+    },
   };
 }
 

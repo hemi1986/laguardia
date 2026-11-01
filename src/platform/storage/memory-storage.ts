@@ -29,9 +29,7 @@ export function memoryStorage(): MemoryStorage {
     },
     async viewAddresses(names, validUntil, { download = false } = {}) {
       const suffix = download ? "&download=1" : "";
-      return new Map(
-        names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}${suffix}`]),
-      );
+      return new Map(names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}${suffix}`]));
     },
     async uploadAddress(name, declared) {
       const url = `memory://${name}?upload-until=${declared.validUntil.toISOString()}&size=${declared.size}`;
@@ -50,6 +48,9 @@ export function memoryStorage(): MemoryStorage {
     async details(name) {
       const content = stored.get(name);
       return content && { size: content.bytes.length, contentType: content.contentType };
+    },
+    async readContent(name) {
+      return stored.get(name)?.bytes;
     },
     read: (name) => stored.get(name),
     names: () => [...stored.keys()],

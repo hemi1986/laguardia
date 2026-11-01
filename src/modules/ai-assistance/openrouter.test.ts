@@ -150,7 +150,12 @@ describe("the OpenRouter adapter", () => {
   });
 
   it("leaves out router models whose price is not known beforehand, and drops the author from a name", async () => {
-    const router = { ...geminiFlash, id: "openrouter/auto", name: "Auto Router", pricing: { prompt: "-1", completion: "-1" } };
+    const router = {
+      ...geminiFlash,
+      id: "openrouter/auto",
+      name: "Auto Router",
+      pricing: { prompt: "-1", completion: "-1" },
+    };
     answers["GET /api/v1/models"] = { status: 200, body: { data: [geminiFlash, router] } };
 
     expect(await adapter().offeredModels("chat")).toEqual([
@@ -225,5 +230,74 @@ describe("the OpenRouter adapter", () => {
     answers["POST /api/v1/embeddings"] = { status, body: { error: { message: "no" } } };
 
     expect(await adapter().testEmbedding("k", "x/y")).toBe(expected);
+  });
+
+  it("embeds one text passage with the provider rule, and reports the cost OpenRouter charged", async () => {
+    answers["POST /api/v1/embeddings"] = {
+      status: 200,
+      body: {
+        object: "list",
+        model: "google/gemini-embedding-2",
+        data: [{ object: "embedding", index: 0, embedding: Array(1536).fill(0.1) }],
+        usage: { prompt_tokens: 274, total_tokens: 274, cost: 0.00006 },
+      },
+    };
+
+    const answer = await adapter().embed("sk-or-v1-good", "google/gemini-embedding-2", {
+      kind: "text",
+      text: "The flipper coil is 50 V.",
+    });
+
+    expect(answer).toMatchObject({ cost: 0.00006 });
+    expect((answer as { embedding: number[] }).embedding).toHaveLength(1536);
+    expect(received[0]).toMatchObject({
+      authorization: "Bearer sk-or-v1-good",
+      body: {
+        model: "google/gemini-embedding-2",
+        input: "The flipper coil is 50 V.",
+        dimensions: 1536,
+        encoding_format: "float",
+        provider: { data_collection: "deny", zdr: true },
+      },
+    });
+  });
+
+  it("embeds an image as a data URL in the multimodal content form", async () => {
+    answers["POST /api/v1/embeddings"] = {
+      status: 200,
+      body: { data: [{ embedding: Array(1536).fill(0) }], usage: { cost: 0.000128 } },
+    };
+
+    const answer = await adapter().embed("k", "google/gemini-embedding-2", {
+      kind: "image",
+      bytes: new Uint8Array([1, 2, 3]),
+      contentType: "image/jpeg",
+    });
+
+    expect(answer).toMatchObject({ cost: 0.000128 });
+    expect(received[0].body).toMatchObject({
+      input: [
+        {
+          content: [{ type: "image_url", image_url: { url: "data:image/jpeg;base64,AQID" } }],
+        },
+      ],
+      provider: { data_collection: "deny", zdr: true },
+    });
+  });
+
+  it.each([
+    [401, "refused"],
+    [404, "refused"],
+    [500, "refused"],
+  ])("turns an embedding refused with %i into %s – nothing of the file is kept", async (status, expected) => {
+    answers["POST /api/v1/embeddings"] = { status, body: { error: { message: "no" } } };
+
+    expect(await adapter().embed("k", "x/y", { kind: "text", text: "Flipper" })).toBe(expected);
+  });
+
+  it("refuses an embedding whose size is not the index's 1536 numbers", async () => {
+    answers["POST /api/v1/embeddings"] = { status: 200, body: { data: [{ embedding: [1, 2, 3] }] } };
+
+    expect(await adapter().embed("k", "x/y", { kind: "text", text: "Flipper" })).toBe("refused");
   });
 });

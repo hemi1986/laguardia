@@ -281,6 +281,13 @@
       "when": 1793532908772,
       "tag": "0039_ai_work",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793539136998,
+      "tag": "0040_ai_index",
+      "breakpoints": true
     }
   ]
 }

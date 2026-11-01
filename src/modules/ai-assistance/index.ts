@@ -12,3 +12,8 @@ export {
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export { aiWorkDependencies } from "./ai-work-dependencies";
+/**
+ * Collection's CMD-RemoveFile with POL-RemovedFileLeavesAiIndex added – what the file pages run (ST-106). The command
+ * and its policy stay inside the module; only the composed command is exported for the page.
+ */
+export { removeFileCommandWithAiIndex } from "./removal-policy";

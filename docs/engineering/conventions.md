@@ -462,6 +462,16 @@ hand for a history. A history table has its own `id` (the entry's ID, no databas
 `position bigserial` for the order entries were stored in (entries of one command share their point in time).
 - **A fact that comes later is an entry of its own** – a reopening after a resolution (data model, ST-030) is appended
   as a *Reopening*, never written onto the stored *Resolution*; the page puts the two in order.
+- **A list an aggregate replaces as a whole** (ST-106: the passages, page images and images of an AI index entry) is
+  `replaces({ table, owner, toEntry, toRow })` named in the store under `replaces`: saving removes everything stored for
+  the aggregate and inserts the state's entries, so nothing of an earlier save stays. Unlike a history or a list of
+  entities (which never delete), a failed AI index entry therefore really holds no item. An aggregate identified from
+  outside itself and replaced as a whole (the AI index entry, whose ID is the file's) also sets `insertReplaces: true`
+  on its store: its creating command inserts or replaces the row and counts the version on. A command that **ends** its
+  aggregate declares `removes` and the store's `remove` deletes the row (ST-106: a file leaving the AI index); its lists
+  go with it by foreign key. Only a changing command can remove its aggregate – it checks the version the person saw
+  like every other change and cannot create others in the same step –, and `remove` refuses a store with histories or
+  entities, whose rows would be orphaned.
 - **A list of values inside a history entry** (the photos of a work log entry, ST-032, user 2026-10-25) is an array
   column of the entry's row: saved with the entry once and never written again, like every other column of it – so
   nothing can be added to the list later. A list of entries that have their own fields would be a history of its own,
@@ -584,7 +594,7 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 ## Photos and stored content (ST-016, ADR 0009 – superseding ADR 0007)
 
 - **A photo is stored only through the photo module's `withStoredPhoto`** (store → run the command with the reference → delete if it fails) – in a Server Action via `formAction` with a `photo` step. Nobody calls the storage seam's `write` for a photo directly.
-- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, and since ST-085 `uploadAddress` and `details`) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`.
+- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, since ST-085 `uploadAddress` and `details`, and since ST-106 `readContent` – the content itself, which only the server reads and only to index a file for AI) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`. No page hands a file to the browser through `readContent` – that stays the signed view address.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when the store cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`). Exception: `/logo`, the museum's logo; the welcome page's data holds only whether a logo exists. (ST-102 – that rule
@@ -777,6 +787,17 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   and a counting `continueWork`; a cut-off run is one whose kind never returns (`aRunCutOffAtTheNextPiece` in
   `ai-work.integration.test.ts`). The stand-in kind (`ai-work-stand-in.test-support.ts`) shows the shape. Never wait
   for a real background run.
+- **Indexing a file** (ST-106) is the first real kind (`file-indexing-work.ts`, `kind: "file-indexing"`): `waiting` asks
+  Collection's `filesForIndexing` and leaves out every file with an entry for the current embedding model; `work` reads
+  the content through the storage seam (`readContent`), turns it into passages and page images (`file-indexing.ts`:
+  pdfjs with `wasmUrl`/`iccUrl`, `@napi-rs/canvas` at 1024 px/JPEG 75, one item per embedding request at most four at a
+  time, batches of pages) and stores through CMD-IndexFileForAi with `insertReplaces`. The command's own `facts` re-read
+  the file through Collection's `fileForIndexingWhileStoring` – the file's removal lock taken shared (ADR 0014) – and
+  reject with `file-removed` for a file removed meanwhile, so nothing is recorded and the hold still ends. The command
+  is the rule's only place; ST-109's „Erneut versuchen“ runs the same command. `recordBrokenOff` records nothing while
+  AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
+  turned AI off after a crash. `settings()` is read before every request: a rotated key is used for the next request,
+  and a changed embedding model gives the file up so an entry never mixes two models.
 
 ## Read models
 

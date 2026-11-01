@@ -23,6 +23,15 @@ export type KeyCheck = "accepted" | "refused" | "unreachable";
 
 export type TestEmbedding = { size: number } | "refused" | "unknown" | "unreachable";
 
+/** What one embedding request embeds – one item per request, never several (ST-105: only so it stays zero-data-retention). */
+export type EmbedInput = { kind: "text"; text: string } | { kind: "image"; bytes: Uint8Array; contentType: string };
+
+/** One embedding the AI index keeps, and what OpenRouter charged for its request (ST-106). */
+export type Embedding = { embedding: number[]; cost: number };
+
+/** One embedding request's answer – OpenRouter's refusal or its silence as the domain's reasons. */
+export type EmbedResult = Embedding | "refused" | "unreachable";
+
 export type AiSeam = {
   /** The models of one kind OpenRouter offers now – "unavailable" when the list cannot be loaded. */
   offeredModels(kind: ModelKind): Promise<OfferedModel[] | "unavailable">;
@@ -32,6 +41,11 @@ export type AiSeam = {
   checkKey(key: string): Promise<KeyCheck>;
   /** One short test embedding of 1536 numbers asked for – how many came back. */
   testEmbedding(key: string, model: string): Promise<TestEmbedding>;
+  /**
+   * Embeds one item – a text passage or an image – with the embedding model (ST-106). Every request asks only for
+   * providers that neither keep nor train on the data (ADR 0014); one item per request keeps it so (ST-105).
+   */
+  embed(key: string, model: string, input: EmbedInput): Promise<EmbedResult>;
 };
 
 /** The size of an embedding in the AI index (ADR 0014, HS-34). */

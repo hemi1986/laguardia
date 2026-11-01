@@ -63,6 +63,18 @@ only by hand.
   has run out – noticed by the next run, whatever starts it. A run cut off never calls the worker route for the rest of
   the queue, so that rest waits for the next start too. A technician taps „Erneut versuchen“ on the file; a team
   member requests a new AI assessment.
+- **A crafted file can use a run's whole budget.** A PDF with a very high page count, or one whose pages carry megabytes
+  of text, keeps the worker busy until the 300 s limit cuts the run off (the accepted Hobby limitation, D1); the file
+  then fails as *broken off* and each retry costs again. This is the same limit as a genuine 568-page manual and not a
+  separate cap – a ceiling would stop that manual on a server of its own.
+
+## PDFs and page images
+
+Indexing a PDF (ST-106) parses it with `pdfjs-dist` and renders each page with `@napi-rs/canvas` – both kept as server
+packages of their own (`next.config.ts`). pdfjs' **wasm** decoders (JBIG2, JPEG 2000), **ICC** profiles, standard fonts
+and CMaps are traced into the worker route's function; without them a scanned page renders blank and only logs a
+warning (ST-105). Both packages come as prebuilt binaries – no system library is needed locally or on Vercel, and the
+function stays within its size limit (ST-105 measured pdfjs 35 MB, the Linux canvas binary 36 MB).
 
 ## Rotating the secret
 
