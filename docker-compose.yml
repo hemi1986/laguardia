@@ -1,9 +1,10 @@
-# Local development (ADR 0003, ADR 0012): PostgreSQL and SeaweedFS as the S3-compatible object store. Previews and
-# production use Neon (ADR 0006) and AWS S3 in eu-central-1 (ADR 0012). `npm run db:up` starts everything and waits
-# until both are healthy and the buckets exist. Every port is bound to this machine only.
+# Local development (ADR 0003, ADR 0012): PostgreSQL with the pgvector extension (ADR 0014) and SeaweedFS as the
+# S3-compatible object store. Previews and production use Neon (ADR 0006) and AWS S3 in eu-central-1 (ADR 0012).
+# `npm run db:up` starts everything and waits until both are healthy and the buckets exist. Every port is bound to this
+# machine only.
 services:
   db:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: laguardia
       POSTGRES_PASSWORD: laguardia
