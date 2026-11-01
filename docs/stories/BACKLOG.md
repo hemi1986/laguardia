@@ -4,15 +4,20 @@
 
 **Progress: 71 of 78 domain stories done** · scenarios 674 of 737
 
-**109 stories** · In Progress: 0 · Ready: 9 · In Review: 0 · Draft: 0 · Done: 89 · Superseded: 11
+**109 stories** · In Progress: 1 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 89 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-104](ST-104-ai-settings-key-and-models.md) | AI settings – the OpenRouter key and the two models on „Einstellungen“ | story | AI assistance | should | L | medium | – |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-104](ST-104-ai-settings-key-and-models.md) | AI settings – the OpenRouter key and the two models on „Einstellungen“ | story | AI assistance | should | L | medium | – |
 | [ST-105](ST-105-spike-indexing-the-largest-manual.md) | Indexing the largest manual for AI within one run | spike | AI assistance | should | M | high | – |
 | [ST-112](ST-112-background-work-for-ai.md) | Background work for AI – worker route, holds, run budget and continuation | tech-task | AI assistance | should | M | high | ST-105 |
 | [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |

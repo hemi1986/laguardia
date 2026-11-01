@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-AiSettingsChanged]
 depends_on: []
 labels: [ui, feature:ai-assessment]
-status: ready
+status: in-progress
 ---
 
 ## Story
