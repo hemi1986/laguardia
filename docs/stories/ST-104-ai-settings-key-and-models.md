@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-AiSettingsChanged]
 depends_on: []
 labels: [ui, feature:ai-assessment]
-status: ready
+status: done
 ---
 
 ## Story
@@ -39,7 +39,7 @@ until this story and changes with the catalog, as its `_Note_` says).
   anything the AI settings hold no key and no models (singleton, never created – invariant *exactly one AI
   settings*). The form says whether AI is on and, while it is off, what is missing (G37).
 - **A part that is not saved yet can always be chosen or entered; only a saved part is shown without a change until
-  ST-110** (stopgap, story review 2026-10-31). So a technician who saved only a key – or only the models – can complete
+  ST-110** (stopgap, story review 2026-10-31). So a technician who saved only a key – or only the chat model – can complete
   the AI settings with a second save. A wrongly chosen saved model can only be corrected once ST-110 is built; AI is
   unused before the feature is done, so this is accepted.
 - **The key (G36):** a new key is checked with OpenRouter before it is saved; a key OpenRouter refuses is rejected and
@@ -52,8 +52,12 @@ until this story and changes with the catalog, as its `_Note_` says).
   and price per million tokens (RM-AiSettings); when the list cannot be loaded, the model ID is typed by hand (rule).
   The chat model must read text and images, and so must the embedding model (rule). The embedding model must return
   1536 numbers, natively or on request – one test embedding on saving checks it (one short text, so it costs next to
-  nothing). A model that does not fit is offered in the list marked „· passt nicht“ and cannot be chosen (HS-34); a
-  model typed by hand is checked the same way on saving and rejected if it does not fit.
+  nothing); OpenRouter's list does not give the size (user, 2026-11-01). A model that does not read text and images is
+  offered in the list marked „· passt nicht“ and cannot be chosen (HS-34); a listed embedding model of another size can
+  be chosen and is rejected on saving. A model typed by hand is checked the same way on saving and rejected if it does
+  not fit. **The embedding model can be saved only with a key** entered in the same save or already saved – the test
+  embedding needs it; otherwise the save is rejected at the embedding model. The chat model can be saved without a key
+  (user, 2026-11-01).
 - **Removing the key** („Entfernen“) turns AI off and keeps the chosen models (data model, lifecycle *On → Off*);
   nothing else is removed. It is **one tap without a question page** – the key can be saved again, and the
   confirmation names the consequence (G10c's reasoning; user, 2026-10-31).
@@ -85,7 +89,7 @@ until this story and changes with the catalog, as its `_Note_` says).
   „OpenRouter ist gerade nicht erreichbar. Es wurde nichts gespeichert – bitte später erneut speichern.“, „Dieses
   Modell liest keine Bilder. Bitte ein Modell wählen, das Text und Bilder liest.“, „Dieses Embedding-Modell passt
   nicht zur KI-Erfassung (es liefert keine 1536 Werte). Bitte ein anderes wählen.“, „OpenRouter kennt dieses Modell
-  nicht.“
+  nicht.“, „Das Embedding-Modell lässt sich nur mit dem API-Schlüssel prüfen. Bitte den Schlüssel mit eingeben.“
 - Reminders: „Lege bei OpenRouter ein Ausgabenlimit für den Schlüssel fest und schalte in den
   Datenschutz-Einstellungen des Kontos Zero Data Retention ein und das Speichern von Prompts aus.“ and „Beschreibungen
   und Fotos von Meldungen gehen an OpenRouter – erwähne das im Datenschutzhinweis (Rechtstexte).“
@@ -142,8 +146,9 @@ Scenario: Models that do not fit are offered in the list but cannot be chosen
   Given OpenRouter offers the chat models "Gemini 2.5 Flash" and "Text Chat", which reads text only
   And it offers the embedding models "Gemini Embedding 2", "Text Embedding", which reads text only, and "Small Embedding", which returns 768 numbers
   When a technician opens the form „KI“
-  Then "Text Chat", "Text Embedding" and "Small Embedding" are listed marked as not fitting and cannot be chosen
-  And "Gemini 2.5 Flash" and "Gemini Embedding 2" can be chosen
+  Then "Text Chat" and "Text Embedding" are listed marked as not fitting and cannot be chosen
+  And "Gemini 2.5 Flash", "Gemini Embedding 2" and "Small Embedding" are listed without the marker and can be chosen
+  And a form „KI“ saved with "Small Embedding" and an accepted key is rejected at the embedding model with a reason saying it does not fit the AI index
   And a form „KI“ sent with "Text Chat" as the chat model anyway is rejected at the chat model and saves nothing
 
 Scenario Outline: Without OpenRouter's model list a typed model that does not fit is rejected

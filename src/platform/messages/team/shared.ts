@@ -32,7 +32,10 @@ export const sharedTexts = {
     "Repair times": "Reparaturzeiten",
     "Time to first work log entry": "Bis zum ersten Arbeitsschritt",
     "Time to resolved": "Bis behoben",
-    "Museum settings": "Museumseinstellungen",
+    Settings: "Einstellungen",
+    "AI settings": "KI",
+    "Chat model": "Chat-Modell",
+    "Embedding model": "Embedding-Modell",
   },
   /** The team UI's frame: the navigation (G19) and who is logged in. */
   team: {
@@ -41,7 +44,7 @@ export const sharedTexts = {
     more: "Mehr",
     logout: "Abmelden",
     accounts: "Teammitglieder",
-    museumSettings: "Museumseinstellungen",
+    settings: "Einstellungen",
     maintenance: "Wartung",
     maintenancePlan: "Wartungsplan",
     repairTimes: "Reparaturzeiten",

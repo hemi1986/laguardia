@@ -42,6 +42,11 @@ export type FormDefinition<Input, Result, Field extends string> = {
   input: (fields: FormFields<Field>) => Input;
   /** After the command succeeded, e.g. `revalidatePath` and `redirect` (which ends the action). */
   onSuccess: (result: Result) => Promise<void>;
+  /**
+   * Fields that hold a secret (the OpenRouter key, ST-104): read like the others, but never sent back after a
+   * rejection – their value in the state is empty, so the field is empty again (G36).
+   */
+  secret?: readonly Field[];
 };
 
 /** `storage`: where a form's photo is stored (ST-016) or removed content deleted (ST-020, ST-038) – Vercel Blob unless a test injects another. */
@@ -288,7 +293,7 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
       ...dependencies,
       actor: await currentPerson(),
     });
-    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
+    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields, definition.secret) };
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
@@ -307,7 +312,7 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
     const posted = postedPhotos(formData, field);
-    if (atMost && posted.length > atMost.count) return { error: atMost.error, values: valuesOf(fields) };
+    if (atMost && posted.length > atMost.count) return { error: atMost.error, values: valuesOf(fields, definition.secret) };
     const actor = await currentPerson();
     // Without a rule on how many, the form has one photo: the first file posted in its field.
     const photos = await Promise.all(
@@ -321,7 +326,7 @@ function photosStep<Input, Result, Error extends string, Field extends string>(
         executeCommand(command, definition.input(fields, references, stored), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
-      const state = { error: outcome.error, values: valuesOf(fields) };
+      const state = { error: outcome.error, values: valuesOf(fields, definition.secret) };
       const ofThePhotos =
         (isPhotoError(outcome.error) && rejectsThePhoto[outcome.error]) || outcome.error === atMost?.error;
       return photos.length > 0 && !ofThePhotos ? { ...state, photoAgain: true } : state;
@@ -341,14 +346,14 @@ function logoStep<Input, Result, Error extends string, Field extends string>(
     const fields = fieldsOf(formData, definition.fields);
     const [file] = postedPhotos(formData, definition.logo.field);
     // Known before reading it: a file over the limit is not copied into memory (the acceptance checks again).
-    if (file && file.size > LOGO_LIMITS.maxUploadBytes) return { error: "logo-too-large", values: valuesOf(fields) };
+    if (file && file.size > LOGO_LIMITS.maxUploadBytes) return { error: "logo-too-large", values: valuesOf(fields, definition.secret) };
     const actor = await currentPerson();
     const outcome = await withStoredLogo(
       file && new Uint8Array(await file.arrayBuffer()),
       { storage: storage ?? s3Storage(), newId: dependencies.newId ?? randomUUID },
       (logo) => executeCommand(command, definition.input(fields, logo), { ...dependencies, actor }),
     );
-    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields) };
+    if (!outcome.ok) return { error: outcome.error, values: valuesOf(fields, definition.secret) };
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
     return null;
@@ -364,8 +369,8 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
     const fields = fieldsOf(formData, definition.fields);
     const name = fields[definition.upload.field];
     const refusal = definition.refusal(fields);
-    if (refusal) return { error: refusal, values: valuesOf(fields) };
-    if (!name) return { error: "file-required", values: valuesOf(fields) };
+    if (refusal) return { error: refusal, values: valuesOf(fields, definition.secret) };
+    if (!name) return { error: "file-required", values: valuesOf(fields, definition.secret) };
     const actor = await currentPerson();
     const outcome = await withUploadedContent(
       {
@@ -380,7 +385,7 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
     if (!outcome.ok) {
       const gone: readonly string[] = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
       const values = Object.fromEntries(
-        Object.entries(valuesOf(fields)).map(([field, value]) => [field, gone.includes(field) ? "" : value]),
+        Object.entries(valuesOf(fields, definition.secret)).map(([field, value]) => [field, gone.includes(field) ? "" : value]),
       ) as { readonly [F in Field]: string };
       return { error: outcome.error, values };
     }
@@ -406,7 +411,7 @@ function manyStep<Input, Result, Error extends string, Field extends string>(
     });
     if (!outcome.ok) {
       const subjects = outcome.subjects ? { subjects: outcome.subjects } : {};
-      return { error: outcome.error, values: valuesOf(fields), chosen, seen, ...subjects };
+      return { error: outcome.error, values: valuesOf(fields, definition.secret), chosen, seen, ...subjects };
     }
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);
@@ -424,7 +429,7 @@ function eachStep<Input, Result, Error extends string, Field extends string>(
     const chosen = [
       ...new Set(formData.getAll(definition.each.field).filter((item): item is string => typeof item === "string")),
     ];
-    if (chosen.length === 0) return { error: "nothing-chosen", values: valuesOf(fields), chosen };
+    if (chosen.length === 0) return { error: "nothing-chosen", values: valuesOf(fields, definition.secret), chosen };
     const actor = await currentPerson();
     const done: { item: string; result: Result }[] = [];
     const rejected: { item: string; error: CommandError<typeof command> }[] = [];
@@ -447,7 +452,7 @@ function eachStep<Input, Result, Error extends string, Field extends string>(
     for (const { result } of done) await deleteWhatItRemoved(storage, command, result);
     if (done.length === 0) {
       const shared = rejected.every(({ error }) => error === rejected[0].error);
-      return { error: rejected[0].error, values: valuesOf(fields), chosen, ...(shared ? {} : { rejected }) };
+      return { error: rejected[0].error, values: valuesOf(fields, definition.secret), chosen, ...(shared ? {} : { rejected }) };
     }
     await definition.onSuccess({ done, rejected, notRun });
     return null;
@@ -472,8 +477,16 @@ function fieldsOf<Field extends string>(formData: FormData, names: readonly Fiel
   ) as FormFields<Field>;
 }
 
-function valuesOf<Field extends string>(fields: FormFields<Field>): { readonly [F in Field]: string } {
-  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, value ?? ""])) as {
+function valuesOf<Field extends string>(
+  fields: FormFields<Field>,
+  secret: readonly Field[] = [],
+): { readonly [F in Field]: string } {
+  return Object.fromEntries(
+    Object.entries<string | undefined>(fields).map(([name, value]) => [
+      name,
+      secret.includes(name as Field) ? "" : (value ?? ""),
+    ]),
+  ) as {
     readonly [F in Field]: string;
   };
 }

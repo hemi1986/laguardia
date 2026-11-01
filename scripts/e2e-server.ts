@@ -49,12 +49,22 @@ async function main() {
       DATABASE_URL: database.toString(),
       BETTER_AUTH_URL: `http://localhost:${E2E_PORT}`,
       ...E2E_STORE,
+      ...E2E_AI,
     },
   });
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => server.kill(signal));
   // Killed by a signal: not a clean end – the wrapper fails too.
   server.on("exit", (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 }
+
+/**
+ * AI (ST-104): the browser tests never reach OpenRouter – its address points where nothing answers, so the form „KI“
+ * shows that the model list could not be loaded. The encryption key is a fixed one for this throwaway database only.
+ */
+const E2E_AI = {
+  OPENROUTER_BASE_URL: "http://127.0.0.1:9/api/v1",
+  AI_SETTINGS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+};
 
 /** SeaweedFS not running fails here with what to do – not as an SDK error in the middle of the cleanup. */
 async function reachable(endpoint: string): Promise<void> {
