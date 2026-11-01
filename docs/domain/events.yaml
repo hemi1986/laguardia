@@ -16,7 +16,7 @@ external_systems:
     description: >-
       The only AI backend (feature ai-assessment, 2026-10-31), paid with the museum's own API key. Writes AI
       assessments with the chosen chat model and turns files and queries into embeddings with the chosen embedding
-      model; only providers that neither keep nor train on the data are used.
+      model; any provider OpenRouter routes to, free models included (user, 2026-11-01, ADR 0016).
 # Machine status lives in Collection (technician decision; Repair only prompts it via policies).
 # Team accounts, roles and last visit: the generic context BC-Team, not modelled here (no aggregates or events) – see docs/domain/context-map.md (supplier to all contexts).
 # Context relationships: docs/domain/context-map.md. Logical data model: docs/architecture/data-model.md.

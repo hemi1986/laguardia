@@ -71,9 +71,10 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - On-site usage / devices: mainly smartphones, probably tablets; the workshop PC for administration.
 - Network/Wi-Fi in the exhibition: good Wi-Fi everywhere, no offline capability needed.
 - Operations & hosting: minimal operating effort – keep it simple.
-- AI: OpenRouter is the only AI backend, paid with the museum's own API key; only providers that neither keep nor
-  train on the data are used. Problem report descriptions and photos – also visitors' – reach it, so the privacy
-  notice has to say so (the technicians change the legal texts).
+- AI: OpenRouter is the only AI backend, paid with the museum's own API key; any model OpenRouter offers may be
+  chosen – free ones and providers that keep or train on the data included (user, 2026-11-01, ADR 0016). Problem
+  report descriptions and photos – also visitors' – reach it, so the privacy notice has to say so (the technicians
+  change the legal texts).
 - Who develops and maintains it long-term: a single volunteer, who is also one of the two technicians.
 
 ## Initial Maintenance Plan

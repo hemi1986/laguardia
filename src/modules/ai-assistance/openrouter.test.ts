@@ -189,7 +189,7 @@ describe("the OpenRouter adapter", () => {
     expect(await openRouter({ baseUrl: "http://127.0.0.1:1/api/v1" }).checkKey("sk-or-v1-good")).toBe("unreachable");
   });
 
-  it("sends one short test embedding of 1536 numbers, only to providers that neither keep nor train on the data", async () => {
+  it("sends one short test embedding of 1536 numbers, to any provider", async () => {
     answers["POST /api/v1/embeddings"] = {
       status: 200,
       body: {
@@ -206,9 +206,10 @@ describe("the OpenRouter adapter", () => {
         model: "google/gemini-embedding-2",
         dimensions: 1536,
         encoding_format: "float",
-        provider: { data_collection: "deny", zdr: true },
       },
     });
+    // Any provider OpenRouter routes to – free models included (user, 2026-11-01, ADR 0016).
+    expect(received[0].body).not.toHaveProperty("provider");
     expect(typeof (received[0].body as { input: unknown }).input).toBe("string");
   });
 
@@ -232,7 +233,7 @@ describe("the OpenRouter adapter", () => {
     expect(await adapter().testEmbedding("k", "x/y")).toBe(expected);
   });
 
-  it("embeds one text passage with the provider rule, and reports the cost OpenRouter charged", async () => {
+  it("embeds one text passage, to any provider, and reports the cost OpenRouter charged", async () => {
     answers["POST /api/v1/embeddings"] = {
       status: 200,
       body: {
@@ -257,9 +258,10 @@ describe("the OpenRouter adapter", () => {
         input: "The flipper coil is 50 V.",
         dimensions: 1536,
         encoding_format: "float",
-        provider: { data_collection: "deny", zdr: true },
       },
     });
+    // Any provider OpenRouter routes to – free models included (user, 2026-11-01, ADR 0016).
+    expect(received[0].body).not.toHaveProperty("provider");
   });
 
   it("embeds an image as a data URL in the multimodal content form", async () => {
@@ -281,8 +283,9 @@ describe("the OpenRouter adapter", () => {
           content: [{ type: "image_url", image_url: { url: "data:image/jpeg;base64,AQID" } }],
         },
       ],
-      provider: { data_collection: "deny", zdr: true },
     });
+    // Any provider OpenRouter routes to – free models included (user, 2026-11-01, ADR 0016).
+    expect(received[0].body).not.toHaveProperty("provider");
   });
 
   it.each([
@@ -301,7 +304,7 @@ describe("the OpenRouter adapter", () => {
     expect(await adapter().embed("k", "x/y", { kind: "text", text: "Flipper" })).toBe("refused");
   });
 
-  it("asks the chat model with text and images, only for providers that keep nothing, and reports the cost", async () => {
+  it("asks the chat model with text and images, from any provider, and reports the cost", async () => {
     answers["POST /api/v1/chat/completions"] = {
       status: 200,
       body: {
@@ -331,9 +334,9 @@ describe("the OpenRouter adapter", () => {
         },
       ],
       response_format: { type: "json_object" },
-      // The first request that carries visitors' photos must not go to a provider that keeps or trains on them.
-      provider: { data_collection: "deny", zdr: true },
     });
+    // Any provider OpenRouter routes to – free models included (user, 2026-11-01, ADR 0016).
+    expect(received[0].body).not.toHaveProperty("provider");
   });
 
   it.each([

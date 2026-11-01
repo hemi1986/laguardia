@@ -27,7 +27,7 @@ export const aiAssistanceTexts = {
     inputOnly: "(Eingabe)",
     doesNotFit: "passt nicht",
     spendingLimit:
-      "Lege bei OpenRouter ein Ausgabenlimit für den Schlüssel fest und schalte in den Datenschutz-Einstellungen des Kontos Zero Data Retention ein und das Speichern von Prompts aus.",
+      "Lege bei OpenRouter ein Ausgabenlimit für den Schlüssel fest. Kostenlose Modelle brauchen in den Datenschutz-Einstellungen des Kontos die Freigabe für Anbieter, die Eingaben speichern oder zum Training nutzen.",
     privacyNotice:
       "Beschreibungen und Fotos von Meldungen gehen an OpenRouter – erwähne das im Datenschutzhinweis (Rechtstexte).",
     save: "KI speichern",
@@ -115,7 +115,8 @@ export const aiAssistanceTexts = {
       "key-invalid":
         "OpenRouter hat den API-Schlüssel abgelehnt. Techniker:innen können ihn unter Einstellungen ersetzen.",
       "credit-used-up": "Das Guthaben bei OpenRouter ist aufgebraucht.",
-      "model-not-available": "Das Chat-Modell ist bei OpenRouter gerade nicht ohne Datenspeicherung verfügbar.",
+      "model-not-available":
+        "Das Chat-Modell ist bei OpenRouter gerade nicht verfügbar. Bei einem kostenlosen Modell die Datenschutz-Einstellungen des OpenRouter-Kontos prüfen.",
       "timed-out": "Die KI hat nicht rechtzeitig geantwortet.",
       "openrouter-not-reachable": "OpenRouter war nicht erreichbar.",
       "ai-off": "Die KI wurde inzwischen ausgeschaltet.",
