@@ -10,7 +10,7 @@ export const photoErrors = ["too-large", "not-an-image", "unsupported-format", "
 export type PhotoError = (typeof photoErrors)[number];
 
 /** Who a photo belongs to – the first part of its stored name. */
-export type PhotoOwner = "problem-reports" | "work-log" | "files";
+export type PhotoOwner = "problem-reports" | "work-log" | "files" | "ai-assessments";
 
 /** The reference a command keeps for a stored photo: its name in the storage seam. */
 export type PhotoReference = string;

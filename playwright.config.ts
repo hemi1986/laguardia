@@ -32,6 +32,13 @@ const changesTheMaintenancePlan = [
   "register-machine-maintenance.spec.ts",
 ];
 
+/**
+ * The specs that share the one AI settings row (ST-107): the AI assessment spec turns AI on in the browser tests'
+ * database and restores it afterwards, while ST-104's settings spec reads „KI ist aus“. They run one after the other,
+ * never beside each other.
+ */
+const changesAiSettings = ["ai-assessment.spec.ts", "settings.spec.ts"];
+
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
@@ -51,8 +58,9 @@ export default defineConfig({
     video: "off",
   },
   projects: [
+    { name: "ai-settings", testMatch: changesAiSettings, workers: 1 },
     { name: "maintenance-plan", testMatch: changesTheMaintenancePlan, workers: 1 },
-    { name: "parallel", testIgnore: changesTheMaintenancePlan },
+    { name: "parallel", testIgnore: [...changesTheMaintenancePlan, ...changesAiSettings] },
   ],
   // Locally (ST-083): a dev server of their own on port 3100 against laguardia_e2e_test, prepared before it serves –
   // never the developer's server on 3000 nor its database. Not reused: a server already on 3100 fails the run.

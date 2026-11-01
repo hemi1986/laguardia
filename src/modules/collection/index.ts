@@ -12,10 +12,14 @@ export type {
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
+  filesForAiReferences,
   filesForIndexing,
+  filesOfMachineAndModelForAi,
   fileToOpen,
   machineFile,
+  type FileForAiReference,
   type FileForIndexing,
+  type FileOfAiAssessmentMachine,
   type FileOfMachine,
   type MachineFile,
 } from "./files";
@@ -35,7 +39,13 @@ export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
 export { groupMachines, type MachineGroup } from "./machine-groups";
-export { machineModelForTeam, machineModelsToChooseFrom, type MachineModelForTeam } from "./machine-models";
+export {
+  machineModelForTeam,
+  machineModelsToChooseFrom,
+  machineModelOfMachineForAi,
+  type MachineModelForTeam,
+  type MachineModelOfMachine,
+} from "./machine-models";
 export { changeMuseumDetailsCommand } from "./change-museum-details-command";
 export type { ChangeMuseumDetailsError, ChangeMuseumDetailsInput } from "./change-museum-details";
 export {

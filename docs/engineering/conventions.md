@@ -594,7 +594,7 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 ## Photos and stored content (ST-016, ADR 0009 – superseding ADR 0007)
 
 - **A photo is stored only through the photo module's `withStoredPhoto`** (store → run the command with the reference → delete if it fails) – in a Server Action via `formAction` with a `photo` step. Nobody calls the storage seam's `write` for a photo directly.
-- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, since ST-085 `uploadAddress` and `details`, and since ST-106 `readContent` – the content itself, which only the server reads and only to index a file for AI) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`. No page hands a file to the browser through `readContent` – that stays the signed view address.
+- **The storage seam** (`src/platform/storage/`, `ContentStorage`: write, delete, `viewAddresses` – one call per page –, since ST-085 `uploadAddress` and `details`, and since ST-106 `readContent` – the content itself, which only the server reads: to index a file for AI, and to send the photos and page images of an AI assessment) is injected like the clock and the ID generator: `s3Storage()` on Vercel and locally (ST-099, ADR 0012 – AWS S3 `eu-central-1` on Vercel, SeaweedFS in Docker locally; `src/platform/storage/s3-storage.ts` is the only file that may import `@aws-sdk/*` – lint; configured only from `S3_*` / `AWS_ROLE_ARN`, `s3-settings.ts`), `memoryStorage()` in integration tests. A page data function takes `{ storage }` with `s3Storage()` as its default (`PhotoSource`); a runner takes `storage`. No page hands a file to the browser through `readContent` – that stays the signed view address.
 - **Names and times come from the injected generator and clock:** `<owner>/<newId()>.jpg`; view addresses are valid 5 minutes from `clock.now()` (`photoViewAddresses`).
 - **A failure of the storage never breaks a page or hides an answer:** `photoViewAddresses` gives no addresses when the store cannot sign (the page shows its reports without photos), and a failed cleanup delete after a rejected command still returns the rejection (the photo stays behind unreferenced, ADR 0007).
 - **Only team pages issue view addresses** (HS-1); a visitor page's data never holds a photo reference. A team page shows a photo with `ProblemReportPhoto`, a work log entry's with `WorkLogPhotos` (`src/app/(team)/team/team-photos.tsx`). Exception: `/logo`, the museum's logo; the welcome page's data holds only whether a logo exists. (ST-102 – that rule
@@ -798,6 +798,19 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. `settings()` is read before every request: a rotated key is used for the next request,
   and a changed embedding model gives the file up so an entry never mixes two models.
+- **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
+  asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
+  `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
+  AI index (`ai-index-search.ts`: only the defect's machine and machine model, only the current embedding model; one
+  text search for the defect title, the problem report descriptions and the note, one image search per photo of the
+  request; each search takes 8 text passages and 4 pages or images, merged and cut to 12 pages and images), renders the
+  found PDF pages again from their file (`renderPdfPage`) and sends everything through the chat seam
+  (`ai.chat`, `openrouter.ts`, `provider: { data_collection: "deny", zdr: true }`). The answer is read as structured
+  data (`parseAiAssessmentAnswer`); references to files outside the defect's machine and its machine model are dropped,
+  and the result is stored through CMD-WriteAiAssessment with only the aggregate still *requested* – a late result of a
+  run records nothing. The note and photos belong to the AI assessment; its photos are stored like a work log entry's
+  (`owner: "ai-assessments"`). The model's name in the read model is read from `ai.model("chat", id)` when the defect
+  page opens – the state keeps only the model's ID (data model *AI assessment*).
 
 ## Read models
 

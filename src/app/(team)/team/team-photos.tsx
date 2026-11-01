@@ -32,6 +32,20 @@ export function WorkLogPhotos({ photos }: { photos: { address: string }[] }) {
   );
 }
 
+/** The photos that came with an AI assessment's request (ST-107) – each like a work log entry's. */
+export function AiAssessmentPhotos({ photos }: { photos: { address: string }[] }) {
+  if (photos.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap gap-2">
+      {photos.map(({ address }) => (
+        <li key={address}>
+          <TeamPhoto address={address} alt={teamMessages.aiAssessments.photoAlt} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function TeamPhoto({ address, alt }: { address: string; alt: string }) {
   return (
     <a href={address} target="_blank" rel="noreferrer" className="self-start">

@@ -15,6 +15,7 @@ import { DefectButtonForm } from "./defect-button-form";
 import { ManageDefect } from "./manage-defect";
 import { defectActionPages, defectFormAddress } from "./defect-action-pages";
 import type { DefectDetailsData } from "./defect-details-data";
+import { AiAssessmentsSection } from "./ai-assessments";
 import { ProblemReportPhoto, WorkLogPhotos } from "../../team-photos";
 
 const { defects: texts, recordDefect, terms, machineRecord, machines } = teamMessages;
@@ -172,6 +173,8 @@ export function DefectDetailsView({
           }
         />
       </div>
+      {/* Right below the actions, above the records of what happened (ST-107, RM-DefectAiAssessments). */}
+      <AiAssessmentsSection data={details.aiAssessments} requestHref={`/team/defects/${details.id}/ki-einschaetzung`} />
       {/* How it ended each time and why it was reopened – each reopening after the closing note it followed (ST-030). */}
       {details.resolutionsAndReopenings.map((step, index, steps) => {
         // A resolved defect offers only reopening, at the end of its last closing note (G22, G29).

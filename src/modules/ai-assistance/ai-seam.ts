@@ -32,6 +32,19 @@ export type Embedding = { embedding: number[]; cost: number };
 /** One embedding request's answer – OpenRouter's refusal or its silence as the domain's reasons. */
 export type EmbedResult = Embedding | "refused" | "unreachable";
 
+/** An image sent to the chat model (ST-107): a photo of the request or a page rendered from a file. */
+export type ChatImage = { bytes: Uint8Array; contentType: string };
+
+/** What CMD-WriteAiAssessment sends the chat model – the system prompt and the request in words and images. */
+export type ChatInput = { system: string; text: string; images: ChatImage[] };
+
+/** Why a chat request ended without an answer – the anti-corruption layer's words, never OpenRouter's (ST-107). */
+export type ChatFailure =
+  "key-invalid" | "credit-used-up" | "model-not-available" | "timed-out" | "openrouter-not-reachable";
+
+/** The chat model's answer: its text and what OpenRouter charged, or one of the domain's reasons. */
+export type ChatAnswer = { content: string; cost: number } | { failure: ChatFailure };
+
 export type AiSeam = {
   /** The models of one kind OpenRouter offers now – "unavailable" when the list cannot be loaded. */
   offeredModels(kind: ModelKind): Promise<OfferedModel[] | "unavailable">;
@@ -46,6 +59,11 @@ export type AiSeam = {
    * providers that neither keep nor train on the data (ADR 0014); one item per request keeps it so (ST-105).
    */
   embed(key: string, model: string, input: EmbedInput): Promise<EmbedResult>;
+  /**
+   * Asks the chat model for an AI assessment's answer (ST-107): text and images, asking only for providers that neither
+   * keep nor train on the data (ADR 0014). The content is returned as it came; the caller reads it as an answer.
+   */
+  chat(key: string, model: string, input: ChatInput): Promise<ChatAnswer>;
 };
 
 /** The size of an embedding in the AI index (ADR 0014, HS-34). */

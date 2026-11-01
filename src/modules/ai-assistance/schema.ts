@@ -1,16 +1,20 @@
+import { sql } from "drizzle-orm";
 import {
   bigserial,
   doublePrecision,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
 import { EMBEDDING_SIZE } from "./ai-seam";
+import { assessmentFailureReasons, type AiAssessmentReference } from "./ai-assessment";
 import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
 
 /**
@@ -79,6 +83,54 @@ export const aiIndexEntry = pgTable(
     version: integer("version").notNull().default(0),
   },
   (table) => [index("ai_index_entry_embedding_model_idx").on(table.embeddingModel)],
+);
+
+/**
+ * AGG-AiAssessment (ST-107, data model *AI assessment*): one row per request, referring to its defect by ID. A defect
+ * has any number of them, but at most one *requested* (being written) at a time – the partial unique index is the
+ * store's guarantee of the set-based rule (HS-31). The written text and the note are free text and never journaled;
+ * the photos are stored through the photo module like a work log entry's. A written or failed AI assessment never
+ * changes (invariant).
+ */
+export const aiAssessment = pgTable(
+  "ai_assessment",
+  {
+    id: uuid("id").primaryKey(),
+    /** The defect it assesses – never changes (invariant). */
+    defectId: uuid("defect_id").notNull(),
+    note: text("note"),
+    /** The stored names of the request's photos (photo module), at most 5 – none is ever added or removed. */
+    photos: text("photos")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    requestedBy: uuid("requested_by").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull(),
+    /** The chat model it was requested with – never changes. */
+    chatModel: text("chat_model").notNull(),
+    state: text("state", { enum: ["requested", "written", "failed"] }).notNull(),
+    /** Written only. */
+    summary: text("summary"),
+    probableCauses: text("probable_causes").array(),
+    whatToCheckFirst: text("what_to_check_first").array(),
+    /** Written only – each a file of the defect's machine or its machine model, and, for a PDF, a page. */
+    references: jsonb("references").$type<AiAssessmentReference[]>(),
+    filesSearched: uuid("files_searched").array(),
+    embeddingModel: text("embedding_model"),
+    cost: doublePrecision("cost"),
+    /** Written or failed at. */
+    changedAt: timestamp("changed_at", { withTimezone: true }),
+    failureReason: text("failure_reason", { enum: assessmentFailureReasons }),
+    /** Optimistic version check (HS-16): a late result after the assessment failed records nothing. */
+    version: integer("version").notNull().default(0),
+  },
+  (table) => [
+    index("ai_assessment_defect_idx").on(table.defectId),
+    // At most one AI assessment of a defect is being written (HS-31) – the store's guarantee, like the museum number.
+    uniqueIndex("ai_assessment_being_written_idx")
+      .on(table.defectId)
+      .where(sql`${table.state} = 'requested'`),
+  ],
 );
 
 /**

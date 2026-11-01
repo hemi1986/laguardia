@@ -6,10 +6,10 @@ context: BC-AiAssistance
 priority: should
 size: L
 risk: high
-events: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten]
+events: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
 depends_on: [ST-106]
 labels: [ui, feature:ai-assessment]
-status: ready
+status: done
 ---
 
 ## Story
@@ -59,7 +59,7 @@ of its problem reports and the **10 newest** of their photos (visitors' included
 log entries, the machine model (title, manufacturer, year, machine category, technology), the machine's **5 latest
 resolved defects** with their closing notes, the note and photos of the request, and what the AI index finds –
 searched **only in the files of the defect's machine and its machine model**, only in entries made with the current
-embedding model. The text (defect title, descriptions of its problem reports, note of the request) and each photo of the request and of its problem reports are one search each (CMD-WriteAiAssessment); **each search takes the 8 best text
+embedding model. The text (defect title, descriptions of its problem reports, note of the request) and each photo of the request are one search each (CMD-WriteAiAssessment; the problem reports' photos are sent with the prompt, not searched – user, 2026-10-31); **each search takes the 8 best text
 passages and the 4 best pages or images**; the results are merged, each found once, and **cut to 12 pages and images
 in total** before they are sent – found pages and images are sent as images (rule: a fixed number, not a setting; user,
 2026-10-31; constants in the code). A machine whose files have

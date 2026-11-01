@@ -1,4 +1,12 @@
-import { EMBEDDING_SIZE, type AiSeam, type EmbedInput, type ModelKind, type OfferedModel } from "./ai-seam";
+import {
+  EMBEDDING_SIZE,
+  type AiSeam,
+  type ChatAnswer,
+  type ChatInput,
+  type EmbedInput,
+  type ModelKind,
+  type OfferedModel,
+} from "./ai-seam";
 
 /** A model the in-memory OpenRouter offers – with the size of the embeddings it returns, for an embedding model. */
 export type MemoryModel = OfferedModel & { kind: ModelKind; embeddingSize?: number };
@@ -36,16 +44,34 @@ export type MemoryAiSettings = {
   embedFailsAfter?: { requests: number; with: "refused" | "unreachable" };
   /** Called before each embedding request is answered – a test can change things meanwhile (turning AI off, ST-106). */
   beforeEmbed?: (requestNumber: number, input: EmbedInput) => Promise<void> | void;
+  /** What the chat model answers to an AI assessment (ST-107) – its content and cost, or a failure. */
+  chatAnswer?: ChatAnswer | ((request: ChatRequest, number: number) => ChatAnswer);
+  /** What one chat request asked – recorded for the scenarios that check what was sent (ST-107). */
+  beforeChat?: (request: ChatRequest, number: number) => Promise<void> | void;
+};
+
+/** One chat request the in-memory OpenRouter received – everything CMD-WriteAiAssessment sent (ST-107). */
+export type ChatRequest = ChatInput & { key: string; model: string };
+
+/** A default answer the structured-answer parser reads – a summary only, unless a test says otherwise. */
+const defaultChatAnswer: ChatAnswer = {
+  content: JSON.stringify({
+    summary: "Der linke Flipperfinger wird schwach.",
+    probableCauses: [],
+    whatToCheckFirst: [],
+  }),
+  cost: 0.04,
 };
 
 /**
  * The AI seam in memory (ADR 0014, ST-104) – what every scenario test uses instead of OpenRouter. `requests` lists
  * what was asked, by kind, never the key; `costs` is what it reported for each embedding, summed – the number the AI
- * index records (ST-106).
+ * index records (ST-106). `chatRequests` holds every chat request of an AI assessment (ST-107).
  */
 export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & {
   requests: string[];
   embedInputs: EmbedInput[];
+  chatRequests: ChatRequest[];
   reportedCost: number;
   embeddingRequests: number;
 } {
@@ -53,6 +79,7 @@ export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & {
   const accepted = new Set(settings.acceptedKeys ?? []);
   const requests: string[] = [];
   const embedInputs: EmbedInput[] = [];
+  const chatRequests: ChatRequest[] = [];
   let reportedCost = 0;
   let embeddingRequests = 0;
   const offered = (model: MemoryModel): OfferedModel => ({
@@ -65,6 +92,7 @@ export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & {
   return {
     requests,
     embedInputs,
+    chatRequests,
     get reportedCost() {
       return reportedCost;
     },
@@ -113,6 +141,16 @@ export function memoryAi(settings: MemoryAiSettings = {}): AiSeam & {
         embedding: Array.from({ length: EMBEDDING_SIZE }, (_, index) => ((seed * 31 + index) % 1000) / 1000),
         cost,
       };
+    },
+    async chat(key, model, input) {
+      requests.push(`chat:${model}`);
+      const request: ChatRequest = { ...input, key, model };
+      chatRequests.push(request);
+      await settings.beforeChat?.(request, chatRequests.length);
+      if (settings.unreachable) return { failure: "openrouter-not-reachable" };
+      if (!accepted.has(key)) return { failure: "key-invalid" };
+      const answer = settings.chatAnswer;
+      return typeof answer === "function" ? answer(request, chatRequests.length) : (answer ?? defaultChatAnswer);
     },
   };
 }

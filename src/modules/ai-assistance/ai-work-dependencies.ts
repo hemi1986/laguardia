@@ -3,14 +3,15 @@ import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { s3Storage } from "@/platform/storage";
 import { aiDependencies } from "./ai-settings";
+import { aiAssessmentWork } from "./ai-assessment-work";
 import { fileIndexingWork } from "./file-indexing-work";
 import type { AiWorkDependencies, AiWorkKind } from "./ai-work";
 
 /**
  * The kinds of AI work, in the order a run takes them (ADR 0015): AI assessments still requested before waiting files,
- * because a person is waiting. ST-107 adds writing an AI assessment first, ST-106 indexes a file after it.
+ * because a person is waiting. ST-107 writes an AI assessment first, ST-106 indexes a file after it.
  */
-export const aiWorkKinds: readonly AiWorkKind[] = [fileIndexingWork];
+export const aiWorkKinds: readonly AiWorkKind[] = [aiAssessmentWork, fileIndexingWork];
 
 /** The budget a run gets when `AI_WORK_BUDGET_SECONDS` is not set – fits the 300 s of Vercel Hobby (ST-105). */
 export const DEFAULT_AI_WORK_BUDGET_SECONDS = 250;

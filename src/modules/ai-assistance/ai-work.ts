@@ -88,7 +88,10 @@ async function workOn(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKi
   try {
     await kind.work(id, heldPiece(dependencies, run, kind.kind, id), dependencies);
   } catch (error) {
-    console.error(`AI work: ${kind.kind} ${id} ended without a result:`, error instanceof Error ? error.name : "unknown");
+    console.error(
+      `AI work: ${kind.kind} ${id} ended without a result:`,
+      error instanceof Error ? error.name : "unknown",
+    );
   }
 }
 
@@ -131,9 +134,7 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies): Promise<boole
       if (kind) await kind.recordBrokenOff(tx, ranOut.pieceId, dependencies);
       // A hold of a kind this deployment does not know cannot be recorded – it is dropped, never kept for ever.
       else console.error(`AI work: a hold of the unknown kind "${ranOut.kind}" is dropped`);
-      await tx
-        .delete(aiWorkHold)
-        .where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
+      await tx.delete(aiWorkHold).where(and(eq(aiWorkHold.kind, ranOut.kind), eq(aiWorkHold.pieceId, ranOut.pieceId)));
       return true;
     });
   } catch (error) {

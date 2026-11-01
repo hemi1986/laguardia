@@ -238,6 +238,48 @@ function pdfjsAssets(): (folder: "wasm" | "iccs" | "standard_fonts" | "cmaps") =
   return (folder) => `${join(root, folder)}/`;
 }
 
+/**
+ * The pages an AI assessment sends, rendered again from one PDF file (ST-107, ADR 0014): found pages are sent as
+ * images, and page images are not kept. The file is read and opened once for all its pages; a page that cannot be
+ * rendered is left out, so the assessment is written without it.
+ */
+export async function renderPdfPages(
+  bytes: Uint8Array,
+  pageNumbers: readonly number[],
+): Promise<Map<number, Uint8Array>> {
+  const wanted = [...new Set(pageNumbers)].filter((page) => Number.isInteger(page) && page > 0);
+  if (wanted.length === 0) return new Map();
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const assets = pdfjsAssets();
+  const loading = pdfjs.getDocument({
+    // pdfjs may transfer the buffer: a copy keeps the caller's bytes untouched.
+    data: bytes.slice(),
+    useSystemFonts: false,
+    wasmUrl: assets("wasm"),
+    iccUrl: assets("iccs"),
+    standardFontDataUrl: assets("standard_fonts"),
+    cMapUrl: assets("cmaps"),
+    cMapPacked: true,
+  });
+  const rendered = new Map<number, Uint8Array>();
+  try {
+    const pdf = await loading.promise;
+    for (const pageNumber of wanted) {
+      if (pageNumber > pdf.numPages) continue;
+      try {
+        rendered.set(pageNumber, await renderPage((await pdf.getPage(pageNumber)) as unknown as PdfPage));
+      } catch {
+        // A page that cannot be rendered is left out – the others are still sent.
+      }
+    }
+  } catch {
+    // A file that cannot be opened renders no page.
+  } finally {
+    await loading.destroy().catch(() => undefined);
+  }
+  return rendered;
+}
+
 type EmbedAnswer =
   | { outcome: "embedded"; embedded: Embedded[] }
   | { outcome: "given-up" }
