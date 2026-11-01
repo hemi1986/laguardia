@@ -5,6 +5,8 @@ import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
 import { AiAssessmentPhotos } from "../../team-photos";
 import type { DefectAiAssessmentsData } from "./defect-details-data";
+import { RetryAiAssessmentForm } from "./ki-einschaetzung/retry-ai-assessment-form";
+import type { RetryAiAssessmentState } from "./ki-einschaetzung/retry-ai-assessment-definition";
 
 const { aiAssessments: texts } = teamMessages;
 
@@ -20,10 +22,13 @@ const costFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, ma
 export function AiAssessmentsSection({
   data,
   requestHref,
+  retryAction,
 }: {
   data: DefectAiAssessmentsData;
   /** The request form's page – bound by the defect's page. */
   requestHref: string;
+  /** „Erneut versuchen“ for a failed AI assessment (ST-108) – none where the page is only looked at. */
+  retryAction?: (previous: RetryAiAssessmentState, formData: FormData) => Promise<RetryAiAssessmentState>;
 }) {
   if (!data.shown) return null;
   const current = data.current;
@@ -88,9 +93,12 @@ export function AiAssessmentsSection({
               )}
             </>
           ) : (
-            <p className="text-sm font-medium">
-              {texts.failed(current.failureReason ? texts.failureReasons[current.failureReason] : "")}
-            </p>
+            <>
+              <p className="text-sm font-medium">
+                {texts.failed(current.failureReason ? texts.failureReasons[current.failureReason] : "")}
+              </p>
+              {retryAction && <RetryAiAssessmentForm action={retryAction} offered={data.mayRequest} />}
+            </>
           )}
           {current.note && <p className="text-sm whitespace-pre-line">{current.note}</p>}
           <AiAssessmentPhotos photos={current.photos} />
@@ -102,7 +110,7 @@ export function AiAssessmentsSection({
               `${costFormat.format(current.cost ?? 0)} $`,
             )}
           </p>
-          <RequestLink href={requestHref} offered={data.mayRequest} />
+          {current.state !== "failed" && <RequestLink href={requestHref} offered={data.mayRequest} />}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

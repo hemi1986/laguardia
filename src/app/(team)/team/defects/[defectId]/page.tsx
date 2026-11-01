@@ -7,6 +7,7 @@ import { claimDefectAction, releaseClaimAction, resumeDefectAction } from "./act
 import { doneActionOf } from "./defect-action-pages";
 import { loadDefectDetails } from "./defect-details-data";
 import { DefectDetailsView } from "./defect-details";
+import { retryAiAssessmentAction } from "./ki-einschaetzung/actions";
 
 /**
  * A defect's own page (ST-021), headed by its title (ST-092, G1), opened from the open defects list – every team member; they claim it here (ST-025),
@@ -32,6 +33,7 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
       claimAction={details && claimDefectAction.bind(null, details.id)}
       releaseAction={details && releaseClaimAction.bind(null, details.id)}
       resumeAction={details && resumeDefectAction.bind(null, details.id)}
+      retryAiAssessmentAction={details && retryAiAssessmentAction.bind(null, details.id)}
     />
   );
 }

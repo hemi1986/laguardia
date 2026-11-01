@@ -115,3 +115,16 @@ export async function newestAiAssessmentOf(db: Database, defectId: string): Prom
     .limit(1);
   return row && toState(row);
 }
+
+/**
+ * The AI assessments of the defect, the newest first – what „Erneut versuchen“ reads the failed one from (ST-108); the
+ * defect page shows only the newest until ST-111 lists the earlier ones.
+ */
+export async function aiAssessmentsOfDefect(db: Database, defectId: string): Promise<AiAssessmentState[]> {
+  const rows = await db
+    .select()
+    .from(aiAssessment)
+    .where(eq(aiAssessment.defectId, defectId))
+    .orderBy(desc(aiAssessment.requestedAt), desc(aiAssessment.id));
+  return rows.map(toState);
+}

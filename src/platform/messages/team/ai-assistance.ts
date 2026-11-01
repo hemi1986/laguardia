@@ -52,6 +52,7 @@ export const aiAssistanceTexts = {
     line: (model: string, at: string, by: string, cost: string) =>
       `KI-Einschätzung · ${model} · ${at} · angefordert von ${by} · ${cost}`,
     failed: (reason: string) => `KI-Einschätzung fehlgeschlagen: ${reason}`,
+    retry: "Erneut versuchen",
     photoAlt: "Foto der KI-Einschätzung",
     photosField: {
       full: (atMost: number) => `${atMost} Fotos ausgewählt – mehr gehen nicht.`,

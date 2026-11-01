@@ -2,8 +2,13 @@ import { filesForAiReferences } from "@/modules/collection";
 import { defectForAiAssessmentRequest, type DefectForAiAssessmentRequest } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 import type { Role } from "@/platform/command";
-import type { AiAssessmentReference, AiAssessmentState, RequestAiAssessmentError } from "./ai-assessment";
-import { aiAssessmentBeingWritten, newestAiAssessmentOf } from "./ai-assessments";
+import type {
+  AiAssessmentReference,
+  AiAssessmentState,
+  RequestAiAssessmentError,
+  RequestAiAssessmentInput,
+} from "./ai-assessment";
+import { aiAssessmentBeingWritten, aiAssessmentsOfDefect, newestAiAssessmentOf } from "./ai-assessments";
 import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
 
 /**
@@ -72,6 +77,19 @@ export async function defectAiAssessments(
   const refusal = requestRefusal(settings, defect, viewer, beingWritten);
   const current = newest && (await shown(db, newest, dependencies));
   return { shown: !refusal || !!newest, mayRequest: !refusal, refusal, current };
+}
+
+/**
+ * What „Erneut versuchen“ asks again (ST-108): the note and photos of the defect's newest AI assessment, while it is
+ * failed. The failed one stays as it is; the photos are shared – they are never deleted (ADR 0009).
+ */
+export async function aiAssessmentRetryRequest(
+  db: Database,
+  defectId: string,
+): Promise<RequestAiAssessmentInput | undefined> {
+  const [newest] = await aiAssessmentsOfDefect(db, defectId);
+  if (!newest || newest.state !== "failed") return undefined;
+  return { defectId, note: newest.note ?? "", photos: newest.photos };
 }
 
 /** The request command's rule as the page asks it: no control that can only be rejected (G11). */
