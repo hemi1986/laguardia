@@ -138,16 +138,32 @@ async function request(defectId: string, note = "", photos: string[] = []) {
 }
 
 /** One run of the real AI assessment kind – the background work as the worker route starts it. */
-function run(settings: Parameters<typeof memoryAi>[0] = {}) {
+function runWith(dependencies: AiDependencies) {
   return runAiWork({
     db,
     clock,
     budgetSeconds: 250,
-    ai: ai(settings),
+    ai: dependencies,
     storage,
     continueWork: async () => undefined,
     kinds: [aiAssessmentWork],
   });
+}
+
+function run(settings: Parameters<typeof memoryAi>[0] = {}) {
+  return runWith(ai(settings));
+}
+
+/** Removes the key – AI is off from then on (AGG-AiSettings). */
+async function removeTheKey() {
+  const dependencies = ai();
+  const { version } = await aiSettingsForm(db, dependencies);
+  const removed = await executeCommand(
+    changeAiSettingsCommand(dependencies),
+    { version, key: "", removeKey: true },
+    { actor: tom, db, clock, newId: randomUUID },
+  );
+  if (!removed.ok) throw new Error(removed.error);
 }
 
 async function page(defectId: string, viewer: { id: string; role: "helper" | "technician" } = tomViewer) {
@@ -291,5 +307,27 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
       // Never OpenRouter's own words – the anti-corruption layer turns every answer into one of the fixed reasons.
       if (example.raw) expect(html, example.what).not.toContain(example.raw);
     }
+  });
+
+  it("ST-108: AI turned off meanwhile fails the AI assessment without sending anything", async () => {
+    const machineId = await aMachine("LG-042");
+    const defectId = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    // A technician removes the key before the writing has started.
+    await removeTheKey();
+    const off = memoryAi({ acceptedKeys: [KEY] });
+
+    await runWith({ ai: off, encryptionKey: () => environmentKey });
+
+    expect(off.requests).toEqual([]);
+    expect(off.chatRequests).toEqual([]);
+    expect((await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id)).toMatchObject({
+      state: "failed",
+      failureReason: "ai-off",
+    });
+    const { details, html } = await page(defectId);
+    expect(details.aiAssessments.mayRequest).toBe(false);
+    expect(html).toContain("KI-Einschätzung fehlgeschlagen: Die KI wurde inzwischen ausgeschaltet.");
+    expect(html).not.toContain("Erneut versuchen");
   });
 });
