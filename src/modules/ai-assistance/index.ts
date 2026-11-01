@@ -13,6 +13,7 @@ export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
 export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
 export {
   aiIndexOverview,
+  fileIndexingRetriedBy,
   filesTheAiCannotRead,
   type AiIndexOverview,
   type FailedFile,

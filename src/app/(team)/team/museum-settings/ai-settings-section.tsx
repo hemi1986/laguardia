@@ -56,7 +56,7 @@ export function aiSettingsFormProps(form: AiSettingsReadModel): AiSettingsFormPr
  * key as its last four characters with „Entfernen“ (G36), the saved models, the form for what is not saved yet, and the
  * reminders – a spending limit and zero data retention at OpenRouter, the privacy notice.
  */
-export function AiSettingsSection({ form, confirmed, overview }: AiSettingsData) {
+export function AiSettingsSection({ form, confirmed, overview, retried }: AiSettingsData) {
   const props = aiSettingsFormProps(form);
   const state = form.aiOn
     ? texts.on
@@ -88,7 +88,7 @@ export function AiSettingsSection({ form, confirmed, overview }: AiSettingsData)
       <AiSettingsForm {...props} />
       <p className="text-muted-foreground text-sm">{texts.spendingLimit}</p>
       <p className="text-muted-foreground text-sm">{texts.privacyNotice}</p>
-      {overview && <AiIndexOverviewView overview={overview} />}
+      {overview && <AiIndexOverviewView overview={overview} retried={retried} />}
     </Section>
   );
 }

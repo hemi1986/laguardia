@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { readJournal, type Database } from "@/platform/command";
-import { filesForIndexing } from "@/modules/collection";
+import { entriesOf, isId, lastCommandBy, readJournal, type Database } from "@/platform/command";
+import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import type { FileOwner, IndexingFailureReason } from "./ai-index-entry";
 import { aiIndexingSettings, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
@@ -105,4 +105,22 @@ export async function filesTheAiCannotRead(
   if (!settings.aiOn || !settings.embeddingModel) return new Set();
   const entries = await entriesFor(db, settings.embeddingModel, fileIds);
   return new Set(fileIds.filter((id) => entries.get(id)?.state === "failed"));
+}
+
+/**
+ * The file a technician just tried again (ST-109, G3): its title, only when the latest step on the file was their own
+ * „Erneut versuchen“ (EVT-FileIndexingRetried) and the file is not removed – never from the address alone.
+ */
+export async function fileIndexingRetriedBy(
+  db: Database,
+  fileId: string,
+  teamMemberId: string,
+): Promise<{ title: string } | undefined> {
+  if (!isId(fileId)) return undefined;
+  const command = await lastCommandBy(db, { aggregateId: fileId }, teamMemberId);
+  if (!command || !entriesOf(aiAssistanceEvents, command).some((entry) => entry.type === "EVT-FileIndexingRetried")) {
+    return undefined;
+  }
+  const file = await fileForIndexing(db, fileId);
+  return file && { title: file.title };
 }

@@ -2,6 +2,8 @@
  * German texts of AI assistance's pages (ST-104: the form „KI“ on „Einstellungen“; wording decided by the user on
  * 2026-10-31 and 2026-11-01).
  */
+const germanCount = (count: number) => new Intl.NumberFormat("de-DE").format(count);
+
 export const aiAssistanceTexts = {
   /** The form „KI“ (RM-AiSettings). */
   aiSettings: {
@@ -35,8 +37,13 @@ export const aiAssistanceTexts = {
   /** The overview „KI-Erfassung“ in the form „KI“ (RM-AiSettings, ST-109; wording decided by the user on 2026-10-31). */
   aiIndex: {
     title: "KI-Erfassung",
-    counts: (indexed: string, waiting: string, failed: string) =>
-      `${indexed} Dateien für die KI erfasst · ${waiting} warten auf KI-Erfassung · ${failed} für die KI nicht lesbar`,
+    /** „12 Dateien für die KI erfasst · 3 warten auf KI-Erfassung · 2 für die KI nicht lesbar“ – German numbers (G13). */
+    counts: (indexed: number, waiting: number, failed: number) =>
+      [
+        `${germanCount(indexed)} ${indexed === 1 ? "Datei" : "Dateien"} für die KI erfasst`,
+        `${germanCount(waiting)} ${waiting === 1 ? "wartet" : "warten"} auf KI-Erfassung`,
+        `${germanCount(failed)} für die KI nicht lesbar`,
+      ].join(" · "),
     cost: (dollars: string) => `Kosten der KI-Erfassung bisher: ${dollars} $`,
     empty: "Noch keine Datei für die KI erfasst.",
     failedFile: (owner: string, title: string, reason: string) => `${owner} · ${title} – ${reason}`,

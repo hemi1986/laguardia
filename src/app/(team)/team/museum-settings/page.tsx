@@ -17,7 +17,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/team/mu
   const db = database();
   const [museum, ai] = await Promise.all([
     loadMuseumSettings(db, params, { viewer: technician.id }),
-    loadAiSettings(db, params),
+    loadAiSettings(db, params, { viewer: technician.id }),
   ]);
 
   return (

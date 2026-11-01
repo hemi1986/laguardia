@@ -2,6 +2,7 @@ import {
   aiDependencies,
   aiIndexOverview,
   aiSettingsForm,
+  fileIndexingRetriedBy,
   type AiDependencies,
   type AiIndexOverview,
   type AiSettingsForm,
@@ -37,6 +38,8 @@ export type AiSettingsData = {
   confirmed: AiConfirmed | undefined;
   /** None while AI is off (user, 2026-10-31). */
   overview: ShownAiIndexOverview | undefined;
+  /** The file the technician just tried again (G3) – its title. */
+  retried: string | undefined;
 };
 
 /** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
@@ -63,19 +66,24 @@ async function shownOverview(db: Database, overview: AiIndexOverview): Promise<S
 /**
  * The section „KI“'s data (ST-104): RM-AiSettings, with OpenRouter's models read now, and what was just done. Like
  * „Museum“, a save is confirmed **without the journal** – a save without a change records no event (HS-27) – and the
- * confirmation only says what the section shows. „Entfernen“ is confirmed only while no key is saved.
+ * confirmation only says what the section shows. „Entfernen“ is confirmed only while no key is saved. „Erneut
+ * versuchen“ on a failed file (ST-109) is confirmed by the technician's own last step on that file – the journal.
  */
 export async function loadAiSettings(
   db: Database,
   params: Record<string, string | string[] | undefined>,
-  { dependencies = aiDependencies() }: { dependencies?: AiDependencies } = {},
+  { dependencies = aiDependencies(), viewer }: { dependencies?: AiDependencies; viewer: string },
 ): Promise<AiSettingsData> {
-  const [form, overview] = await Promise.all([aiSettingsForm(db, dependencies), aiIndexOverview(db, dependencies)]);
+  const [form, overview, retried] = await Promise.all([
+    aiSettingsForm(db, dependencies),
+    aiIndexOverview(db, dependencies),
+    typeof params.retried === "string" ? fileIndexingRetriedBy(db, params.retried, viewer) : undefined,
+  ]);
   const confirmed =
     params.saved === savedParam.saved
       ? "saved"
       : params.saved === savedParam["key-removed"] && !form.keyLastFour
         ? "key-removed"
         : undefined;
-  return { form, confirmed, overview: overview && (await shownOverview(db, overview)) };
+  return { form, confirmed, overview: overview && (await shownOverview(db, overview)), retried: retried?.title };
 }

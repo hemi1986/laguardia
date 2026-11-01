@@ -1,3 +1,4 @@
+import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { retryFileIndexingAction } from "./ai-index-actions";
 import type { ShownAiIndexOverview } from "./ai-settings-data";
@@ -5,7 +6,6 @@ import { RetryFileIndexingForm } from "./retry-file-indexing-form";
 
 const { aiIndex: texts } = teamMessages;
 
-const count = new Intl.NumberFormat("de-DE");
 const dollars = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
@@ -13,16 +13,24 @@ const dollars = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maxim
  * failed, what indexing has cost so far, and the failed files with what they belong to and why (G7: an empty index
  * says so). German numbers and the cost in German notation (G13).
  */
-export function AiIndexOverviewView({ overview }: { overview: ShownAiIndexOverview }) {
+export function AiIndexOverviewView({
+  overview,
+  retried,
+}: {
+  overview: ShownAiIndexOverview;
+  /** The title of the file the technician just tried again (G3). */
+  retried: string | undefined;
+}) {
   const empty = overview.indexed === 0 && overview.waiting === 0 && overview.failed.length === 0;
   return (
     <div className="flex flex-col gap-2">
       <h3 className="font-medium">{texts.title}</h3>
+      {retried && <Confirmation>{texts.retrying(retried)}</Confirmation>}
       {empty ? (
         <p>{texts.empty}</p>
       ) : (
         <p>
-          {texts.counts(count.format(overview.indexed), count.format(overview.waiting), count.format(overview.failed.length))}
+          {texts.counts(overview.indexed, overview.waiting, overview.failed.length)}
         </p>
       )}
       <p>{texts.cost(dollars.format(overview.cost))}</p>
