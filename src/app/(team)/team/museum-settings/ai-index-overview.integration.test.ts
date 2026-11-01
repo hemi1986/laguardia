@@ -17,7 +17,7 @@ import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
 import { geminiEmbedding, geminiFlash, memoryAi } from "@/modules/ai-assistance/ai-seam.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
-import { executeCommand } from "@/platform/command";
+import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -36,6 +36,7 @@ const isolated = isolatedTestDatabase("ai_index_overview");
 let db: NodePgDatabase;
 const clock = steppingClock("2026-11-04T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const environmentKey = randomBytes(32);
 const KEY = "sk-or-v1-0123456789abcdef0123456789abcdefa1b2";
 let eightBall: string;
@@ -50,6 +51,7 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, eva, "Eva");
   clock.set("2026-11-04T10:00:00Z");
   storage = memoryStorage();
   const created = await executeCommand(
@@ -151,6 +153,9 @@ async function retry(fields: { fileId: string; version: number }, actor: Actor =
   return { state, ...retried };
 }
 
+/** What the journal holds of a file – its AI index entry shares the file's ID. */
+const journalOfFile = (fileId: string) => journalOf(db, { aggregateId: fileId });
+
 /** The failed file of this title as the overview lists it – what its „Erneut versuchen“ posts. */
 async function failedOnPage(title: string) {
   const { data } = await settingsPage();
@@ -234,5 +239,30 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     expect(data.overview).toMatchObject({ indexed: 1, waiting: 0, failed: [] });
     expect(html).toContain("1 Datei für die KI erfasst · 0 warten auf KI-Erfassung · 0 für die KI nicht lesbar");
     expect(html).not.toContain("Erneut versuchen");
+  });
+
+  it("ST-109: Only a failed file can be tried again", async () => {
+    await turnAiOn();
+    const manual = await attach(await aMachine("LG-042"), "Eight Ball Manual", { to: "machine-model" });
+    await run(ai({ unreachable: true }));
+    // Tom's page was opened while the manual had failed; Eva tried it again meanwhile and it was indexed.
+    const tomsPage = await failedOnPage("Eight Ball Manual");
+    expect((await retry(tomsPage, eva)).state).toBeNull();
+    await run();
+    const journalBefore = await journalOfFile(manual);
+    const openRouter = ai();
+
+    const retried = await retry(tomsPage, tom, openRouter);
+    await run(openRouter);
+
+    expect(retried).toEqual({
+      state: { error: "file-indexing-not-failed", values: { fileId: manual, version: String(tomsPage.version) } },
+      landed: undefined,
+      starts: 0,
+    });
+    expect(openRouter.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
+    expect(await journalOfFile(manual)).toEqual(journalBefore);
+    const { data } = await settingsPage();
+    expect(data.overview).toMatchObject({ indexed: 1, waiting: 0, failed: [] });
   });
 });
