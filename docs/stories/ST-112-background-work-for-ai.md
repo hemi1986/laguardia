@@ -67,6 +67,11 @@ own command and therefore belongs to the kind: an AI assessment failed as *broke
   broken-off step and the "has a hold run out" query come in, each one test on the same run function. What stays risky
   is the first route that starts paid work (security review) and connection handling during a run of up to 300 seconds
   against a database that scales to zero.
+- As built (code review 2026-11-01): a piece without a hold has no row to lock, and locking the piece's own row would
+  lock another module's table (Collection's file) – so a hold is *taken* by inserting it, its primary key deciding
+  between runs, with the kind's `isWaiting` asked again in the same transaction; `FOR UPDATE SKIP LOCKED` is used where
+  a hold row exists, in the broken-off step. The behaviour the criterion asks for is tested
+  (`ai-work.integration.test.ts`, "runs started at the same moment").
 - A result is stored only while the run still holds the piece, in the transaction that ends the hold; a late result
   after the hold ran out records nothing – for files (`CMD-IndexFileForAi`, story review 2026-11-01) as for AI
   assessments (`CMD-WriteAiAssessment`'s version check). The hold step offers this as a conditional write.

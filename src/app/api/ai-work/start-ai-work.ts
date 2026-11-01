@@ -38,11 +38,13 @@ export async function startAiWork({ env, fetch }: StartAiWorkDependencies): Prom
     const response = await fetch(`${workerOrigin(env)}/api/ai-work`, {
       method: "POST",
       headers: { authorization: `Bearer ${secret}` },
+      // A redirect would send the bearer request on to another address – it fails instead.
+      redirect: "error",
       signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
     });
     if (response.status !== 202) console.error(`AI work: the worker route answered ${response.status} – no run`);
   } catch (error) {
-    console.error("AI work: the worker route could not be called:", error instanceof Error ? error.message : error);
+    console.error("AI work: the worker route could not be called:", error instanceof Error ? error.message : "unknown");
   }
 }
 

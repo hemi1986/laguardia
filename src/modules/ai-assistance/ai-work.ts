@@ -68,7 +68,7 @@ const secondsAfter = (instant: Date, seconds: number) => new Date(instant.getTim
 /** One run of the AI work. */
 export async function runAiWork(dependencies: AiWorkDependencies): Promise<void> {
   const { clock, budgetSeconds } = dependencies;
-  const run: Run = { id: randomUUID(), givenUp: new Set(), notRecorded: [] };
+  const run: Run = { id: randomUUID(), taken: new Set(), notRecorded: [] };
   const budgetEnds = secondsAfter(clock.now(), budgetSeconds);
   while (await failOneBrokenOff(dependencies, run));
   while (clock.now() < budgetEnds) {
@@ -88,21 +88,22 @@ async function workOn(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKi
   try {
     await kind.work(id, heldPiece(dependencies, run, kind.kind, id), dependencies);
   } catch (error) {
-    console.error(`AI work: ${kind.kind} ${id} ended without a result:`, error instanceof Error ? error.name : error);
+    console.error(`AI work: ${kind.kind} ${id} ended without a result:`, error instanceof Error ? error.name : "unknown");
   }
 }
 
 /**
- * This run: the ID its holds carry, the pieces it gave up – it never takes those again – and the broken-off pieces
- * whose recording threw, which it does not try again.
+ * This run: the ID its holds carry, the pieces it took – it never takes one twice, whether it stored a result, gave
+ * it up or its kind's command rejected the result and left it waiting (so a run never pays twice for one piece) –
+ * and the broken-off pieces whose recording threw, which it does not try again.
  */
-type Run = { id: string; givenUp: Set<string>; notRecorded: string[] };
+type Run = { id: string; taken: Set<string>; notRecorded: string[] };
 
 const pieceKey = (kind: string, id: string) => `${kind}:${id}`;
 
 async function waitingFor(dependencies: AiWorkDependencies, run: Run, kind: AiWorkKind): Promise<string[]> {
   const waiting = await kind.waiting(dependencies.db, dependencies);
-  return waiting.filter((id) => !run.givenUp.has(pieceKey(kind.kind, id)));
+  return waiting.filter((id) => !run.taken.has(pieceKey(kind.kind, id)));
 }
 
 /**
@@ -145,7 +146,7 @@ async function failOneBrokenOff(dependencies: AiWorkDependencies, run: Run): Pro
     run.notRecorded.push(found.pieceId);
     console.error(
       `AI work: ${found.kind} ${found.pieceId} could not be recorded broken off:`,
-      error instanceof Error ? error.name : error,
+      error instanceof Error ? error.name : "unknown",
     );
     return true;
   }
@@ -172,7 +173,10 @@ async function takeNext(dependencies: AiWorkDependencies, run: Run) {
         await tx.delete(aiWorkHold).where(and(eq(aiWorkHold.kind, kind.kind), eq(aiWorkHold.pieceId, id)));
         return false;
       });
-      if (taken) return { kind, id };
+      if (taken) {
+        run.taken.add(pieceKey(kind.kind, id));
+        return { kind, id };
+      }
     }
   }
   return undefined;
@@ -198,7 +202,6 @@ function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id:
         return "stored";
       }),
     giveUp: async () => {
-      run.givenUp.add(pieceKey(kind, id));
       await db.delete(aiWorkHold).where(thisHold);
     },
   };

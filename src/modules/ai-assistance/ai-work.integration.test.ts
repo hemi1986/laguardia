@@ -246,3 +246,33 @@ describe("a piece whose broken-off recording throws", () => {
     expect(standIn.started.map((each) => each.id)).toEqual([poison, other, waiting]);
   });
 });
+
+describe("runs started at the same moment", () => {
+  it("never take the same piece – each waiting piece is done exactly once", async () => {
+    const pieces = await standIn.add(6, { seconds: 1, outcome: "done" });
+
+    await Promise.all([run(), run(), run()]);
+
+    expect([...standIn.started.map((each) => each.id)].sort()).toEqual([...pieces].sort());
+    for (const id of pieces) expect(await standIn.stored(id)).toMatchObject({ state: "done", done: 1 });
+  });
+});
+
+describe("a piece whose stored result leaves it waiting (a rejected command)", () => {
+  it("is not taken again by the same run, and the run does not continue for it", async () => {
+    const [piece] = await standIn.add(1, { seconds: 3, outcome: "done" });
+    const storesNothing: AiWorkKind = {
+      ...standIn.kind,
+      work: async (id, held) => {
+        standIn.started.push({ id, at: clock.now().toISOString() });
+        clock.advance(3);
+        await held.storeResult(async () => {});
+      },
+    };
+
+    await run({ budgetSeconds: 10, kinds: [storesNothing] });
+
+    expect(standIn.started.map((each) => each.id)).toEqual([piece]);
+    expect(calls).toBe(0);
+  });
+});

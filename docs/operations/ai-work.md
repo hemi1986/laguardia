@@ -60,7 +60,8 @@ only by hand.
 - **A call of the worker route fails** (a deployment in between, the route not reachable): the chain stops and is
   logged (`AI work: the worker route …`). Nothing is lost – what was not taken stays waiting for the next start.
 - **A run is cut off** (a crash, a deployment, the time limit): the pieces it held fail as *broken off* once their hold
-  has run out – noticed by the next run, whatever starts it. A technician taps „Erneut versuchen“ on the file; a team
+  has run out – noticed by the next run, whatever starts it. A run cut off never calls the worker route for the rest of
+  the queue, so that rest waits for the next start too. A technician taps „Erneut versuchen“ on the file; a team
   member requests a new AI assessment.
 
 ## Rotating the secret

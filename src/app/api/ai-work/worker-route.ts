@@ -32,7 +32,7 @@ export function workerRoute(dependencies: WorkerRouteDependencies) {
       try {
         await dependencies.run();
       } catch (error) {
-        console.error("AI work: the run failed:", error instanceof Error ? error.name : error);
+        console.error("AI work: the run failed:", error instanceof Error ? error.name : "unknown");
       }
     });
     return new Response(null, { status: 202 });

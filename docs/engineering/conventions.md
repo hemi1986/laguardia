@@ -768,7 +768,10 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
 - **A new kind** (ST-106, ST-107) is one `AiWorkKind` in AI assistance, added to `aiWorkKinds` in its place: `kind`
   (its name in the holds – never renamed once deployed), `waiting`, `isWaiting`, `work` (reads and asks OpenRouter
   outside any transaction, stores through `storeResult` with its command's usual checks) and `recordBrokenOff` (its
-  command with the reason *broken off*).
+  command with the reason *broken off*). Inside `storeResult` and `recordBrokenOff` the kind runs its command as the
+  system on the given transaction (`executeCommand(command, input, { actor: system, db: tx, … })`); a command that
+  rejects the result still ends the hold, and the run takes no piece twice – so a rejected result is never paid for
+  again in the same run, and the kind's `waiting` must leave out what its command will not take.
 - **Testing a run**: drive `runAiWork({ db, clock, budgetSeconds, ai, storage, continueWork, kinds })` directly in an
   isolated database (the holds are one set) with a `steppingClock` the kind moves forward, `memoryAi`, `memoryStorage`
   and a counting `continueWork`; a cut-off run is one whose kind never returns (`aRunCutOffAtTheNextPiece` in
