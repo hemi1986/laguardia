@@ -36,8 +36,8 @@ bounded_contexts:
   - id: BC-AiAssistance
     name: AI assistance
     purpose: >-
-      Asking an AI for help with open defects – the AI settings, the AI index of the machines' and machine models'
-      files, and the AI assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of
+      Asking an AI for help with open defects – the AI settings, the AI index of the museum's files, and the AI
+      assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of
       Collection, Repair and Team; the only context that talks to OpenRouter (EXT-OpenRouter), behind an
       anti-corruption layer
 aggregates:
@@ -96,11 +96,17 @@ aggregates:
     name: File
     context: BC-Collection
     description: >-
-      Manuals, schematics, photos and other documents of a machine or machine model.
-      Photos of problem reports and work log entries are not files – they belong to those aggregates.
+      Manuals, schematics, photos and other documents of the museum, attached to any number of machines and machine
+      models (feature files, user, 2026-11-02). Photos of problem reports and work log entries are not files – they
+      belong to those aggregates; the logo belongs to the museum settings. Contains its attachments, which refer to
+      machines and machine models by ID only. Attaching and detaching are set deltas without a version check, so
+      parallel ones never conflict; changing the details and removing check the version, which a real attach or detach
+      raises (docs/architecture/data-model.md).
     invariants:
-      - A file belongs to exactly one machine or one machine model, which never changes
+      - A file is attached to any number of machines and machine models, none included, and to each at most once
+      - A removed file has no attachments that count – it shows nowhere and nothing can be attached to it, detached from it or changed on it
       - A file has exactly one file category
+      - A file's content is never replaced
       - A removed file stays removed
   - id: AGG-MaintenancePlan
     name: Maintenance plan
@@ -139,8 +145,8 @@ aggregates:
       details (museum name, machines listed on the welcome page), logo, legal texts. No invariant spans two parts, so
       the version check is per part (domain-architect, 2026-10-31): a save is rejected only when someone changed the
       same part meanwhile, never because another form was saved. The logo belongs here as a reference to its content
-      in the object store (through the storage seam, ADR 0012), not as a file – files belong to a machine or machine
-      model. The museum name is the one visitors see wherever a visitor page names the museum.
+      in the object store (through the storage seam, ADR 0012), not as a file – files are attached to machines and
+      machine models. The museum name is the one visitors see wherever a visitor page names the museum.
     invariants:
       - There is exactly one museum settings – never created or removed by a command
       - The museum name is never empty
@@ -164,18 +170,19 @@ aggregates:
     name: AI index entry
     context: BC-AiAssistance
     description: >-
-      What the AI index holds of one file (HS-28, domain-architect 2026-10-31) – refers to its file by ID and keeps
-      the file's machine or machine model, copied once, because the file's owner never changes (AGG-File) and the
-      search is limited to one machine and its machine model. Small on purpose: one per file, so indexing files in
+      What the AI index holds of one file (HS-28, domain-architect 2026-10-31) – refers to its file by ID and knows no
+      machine and no machine model: the file is indexed once, whatever it is attached to, and an AI assessment limits
+      its search with Collection's query for the files attached to the defect's machine or its machine model
+      (feature files, 2026-11-02). Small on purpose: one per file, so indexing files in
       parallel never contends, and replacing what the index holds of one file is one consistency step. A file without
-      an entry for the current embedding model is waiting – waiting is derived, never stored, so a file attached while
+      an entry for the current embedding model is waiting – waiting is derived, never stored, so a file added while
       AI is off needs no extra record. An indexing a crash, a deployment or the time limit cut off is recorded failed
       as "broken off" by the next run (POL-UnfinishedAiWorkFails). A removed file's entry is removed in the same
       transaction as the file (POL-RemovedFileLeavesAiIndex); indexing and removal of the same file are serialised
       by the file's removal lock (ADR 0014), so an indexing that started before the removal can never bring the file
       back into the AI index.
     invariants:
-      - An AI index entry refers to exactly one file and to that file's machine or machine model, which never change; a file has at most one AI index entry
+      - An AI index entry refers to exactly one file, which never changes; a file has at most one AI index entry
       - An AI index entry is either indexed or failed – an indexed one holds the file's passages, page images and images, each with where it came from (file and, for a PDF, page), all made with the one embedding model it names; a failed one holds none of them and exactly one reason
       - Indexing a file again replaces its AI index entry as a whole – never a mix of two indexings or two embedding models
   - id: AGG-AiAssessment
@@ -193,7 +200,7 @@ aggregates:
       - An AI assessment is requested, then either written or failed exactly once; a written or failed AI assessment never changes
       - The note, the photos, who requested it and the chat model it was requested with never change
       - Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
-      - Every reference names a file of the defect's machine or its machine model and, for a PDF, a page
+      - Every reference names a file that was attached to the defect's machine or its machine model when the AI assessment was written and, for a PDF, a page – a later detach or removal changes nothing
 events:
   # --- Problem reports ---
   - id: EVT-ProblemReported
@@ -300,10 +307,32 @@ events:
     name: Machine model corrected
     aggregate: AGG-MachineModel
     data: [Machine model, Title, Manufacturer, Year, Machine category, Technology, Corrected by]
+  - id: EVT-FileAdded
+    aggregate: AGG-File
+    name: File added
+    data: [File, Title, File category (Manual, Schematic, Photo, Other), Original file name, Content (content reference, media type, size), Added by]
+    description: >-
+      A team member added a file to La Guardia (feature files, 2026-11-02) – from the file overview or from a machine
+      record, attached to something or to nothing yet. Files from before this feature have no such event: their
+      EVT-FileAttached carries the title and file category too, and they have no original file name.
   - id: EVT-FileAttached
     aggregate: AGG-File
     name: File attached
-    data: [Machine or machine model, File, Title, File category (Manual, Schematic, Photo, Other), Attached by]
+    data: [File, Machine or machine model, Attached by]
+    description: >-
+      The file shows on the machine, or on every machine of the machine model. One event per machine or machine model.
+      Journal entries from before the feature files also carry the title and file category and stand for adding the
+      file as well.
+  - id: EVT-FileDetached
+    aggregate: AGG-File
+    name: File detached
+    data: [File, Machine or machine model, Detached by]
+    description: The file no longer shows there; it stays a file, also when it is attached to nothing now.
+  - id: EVT-FileDetailsChanged
+    aggregate: AGG-File
+    name: File details changed
+    data: [File, Changed details (title, file category), File category, Changed by]
+    description: The typed title stays out of the journal's data, like the museum name; the changed title is the file's state.
   - id: EVT-FileRemoved
     aggregate: AGG-File
     name: File removed
@@ -395,7 +424,7 @@ events:
   - id: EVT-FileIndexedForAi
     name: File indexed for AI
     aggregate: AGG-AiIndexEntry
-    data: [File, Machine or machine model of the file, Embedding model, Passages (text, file, page), Page images and images (file, page), Pages indexed, Images indexed, Cost]
+    data: [File, Embedding model, Passages (text, file, page), Page images and images (file, page), Pages indexed, Images indexed, Cost]
     description: >-
       The file's text and every page of a PDF (its text layer and the page as an image), or the image file itself, are
       in the AI index with where each came from (file, page). No OCR – a scanned page is found through its page image.
@@ -404,7 +433,7 @@ events:
   - id: EVT-FileIndexingFailed
     name: File indexing failed
     aggregate: AGG-AiIndexEntry
-    data: [File, Machine or machine model of the file, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable, broken off), Cost]
+    data: [File, Embedding model, Reason (not readable, format not indexed, OpenRouter refused, OpenRouter not reachable, broken off), Cost]
     description: >-
       The file shows "Für die KI nicht lesbar" (or the reason) until it is indexed again – only by hand („Erneut
       versuchen“) or with a new embedding model, never automatically (user, 2026-11-01, D3). "broken off" – the
@@ -415,7 +444,7 @@ events:
   - id: EVT-FileIndexingRetried
     name: File indexing retried
     aggregate: AGG-AiIndexEntry
-    data: [File, Machine or machine model of the file, Embedding model]
+    data: [File, Embedding model]
     description: >-
       A technician tapped „Erneut versuchen“ on a file that failed (ST-109): its failed AI index entry is removed in the
       same step, so the file is waiting again (derived) until the background work indexes it or it fails again (user,
@@ -637,18 +666,53 @@ commands:
     actor: ACT-Technician
     aggregate: AGG-MachineModel
     produces: [EVT-MachineModelCorrected]
+  - id: CMD-AddFile
+    aggregate: AGG-File
+    name: Add file
+    actor: ACT-TeamMember
+    produces: [EVT-FileAdded, EVT-FileAttached]
+    description: >-
+      „Datei hinzufügen“ in the file overview, with optional machines and machine models, and „Datei anhängen“ on a
+      machine record, with that machine or its machine model (feature files, 2026-11-02). The file and its attachments
+      are stored together or not at all.
+    rules:
+      - Files are visible to team members only, like photos
+      - A title and a file category are required; one file at a time, at most 100 MB, any format
+      - Only registered machines that are not retired and existing machine models can be chosen
+      - The same content added twice is not recognised – it becomes two files
   - id: CMD-AttachFile
     aggregate: AGG-File
     name: Attach file
     actor: ACT-TeamMember
     produces: [EVT-FileAttached]
+    description: Attaches an existing file to further machines and machine models, from its file details.
     rules:
-      - Files are visible to team members only, like photos
+      - Only registered machines that are not retired and existing machine models can be chosen; what the file is already attached to is not offered and attaching it again changes nothing
+      - Attaching starts no indexing and costs nothing – the AI index holds the file once, whatever it is attached to
+  - id: CMD-DetachFile
+    aggregate: AGG-File
+    name: Detach file
+    actor: ACT-Technician
+    produces: [EVT-FileDetached]
+    rules:
+      - One tap without a question – attaching again undoes it (G10a)
+      - A retired machine can be detached too
+      - Written AI assessments and their references stay as they are
+  - id: CMD-ChangeFileDetails
+    aggregate: AGG-File
+    name: Change file details
+    actor: ACT-TeamMember
+    produces: [EVT-FileDetailsChanged]
+    rules:
+      - A title and a file category are required; for other content, add the new file and remove the old one
+      - Sent unchanged it lands like a save and records nothing (G33)
   - id: CMD-RemoveFile
     aggregate: AGG-File
     name: Remove file
     actor: ACT-Technician
     produces: [EVT-FileRemoved]
+    rules:
+      - Asks once on a page of its own, naming the file and every machine and machine model it disappears from (G10, G10b)
   - id: CMD-RetireMachine
     aggregate: AGG-Machine
     name: Retire machine
@@ -802,17 +866,18 @@ commands:
       Run only by POL-RequestedAiAssessmentIsWritten in the background. Sends the chat model the defect (title,
       priority, hold reason), the descriptions and photos of its problem reports, its work log entries, the machine
       model (title, manufacturer, year, machine category, technology), the machine's latest resolved defects with
-      their closing notes, the note and photos of the request, and what the AI index finds for the machine and its
-      machine model – searched with the text (the defect title, the descriptions of its problem reports and the note of the request) and with each photo of the request (user, 2026-10-31, grilling Q21; story review: the photos of the problem reports are sent with the prompt but not searched, which keeps one search per request photo) – with found pages and images as images.
+      their closing notes, the note and photos of the request, and what the AI index finds among the files attached to
+      the machine or its machine model – searched with the text (the defect title, the descriptions of its problem reports and the note of the request) and with each photo of the request (user, 2026-10-31, grilling Q21; story review: the photos of the problem reports are sent with the prompt but not searched, which keeps one search per request photo) – with found pages and images as images.
     rules:
-      - Only the AI index of the defect's machine and its machine model is searched, and only entries made with the current embedding model
+      - The files attached to the defect's machine or its machine model are read from Collection once, when the writing begins (user, 2026-11-02); that list limits the search, is what the chat model is told and is what references are checked against – a file attached or detached during the writing changes nothing for this AI assessment
+      - Of the AI index, only those files are searched, and only entries made with the current embedding model; a file attached to nothing is not found
       - A fixed number of hits is sent (text passages and pages or images) – not a setting
       - A defect resolved or closed on retirement meanwhile does not stop it – the AI assessment is written and kept (HS-30)
       - What it sends is read from Repair and Collection through their public queries, without a lock and outside the transaction that stores the result; a file removed meanwhile is a reference by its title without link (RM-DefectAiAssessments)
       - Only an AI assessment still requested is written or failed – a late result of a run after the AI assessment was failed as "broken off" records nothing (version check)
       - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and fails the AI assessment with reason "broken off"
       - AI turned off meanwhile fails it with reason "AI off"; nothing is sent to OpenRouter then
-      - References to files outside the defect's machine and its machine model are dropped; an answer without a usable summary fails it with reason "answer unusable" (user, 2026-10-31, story review)
+      - References to files outside that list are dropped; an answer without a usable summary fails it with reason "answer unusable" (user, 2026-10-31, story review)
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect
@@ -853,13 +918,15 @@ policies:
       is indexed; when the embedding model changes, every file is indexed again with it. Removing the key turns AI off
       and keeps the AI index. Within AI assistance.
   - id: POL-AttachedFileIsIndexedForAi
-    name: An attached file is indexed for AI
-    when: [EVT-FileAttached]
+    name: An added file is indexed for AI
+    when: [EVT-FileAdded]
     then: [CMD-IndexFileForAi]
     description: >-
       Automatic, in the background, only while AI is on. Collection does not know it: AI assistance names the event as
       making work, the form runner starts the AI work after the response, and the AI work finds the new file as waiting –
-      no data passes from Collection's command to AI assistance (ADR 0015).
+      no data passes from Collection's command to AI assistance (ADR 0015). Since the feature files it follows adding,
+      not attaching: a file attached to nothing is indexed as well, and attaching or detaching changes nothing in the
+      AI index (user, 2026-11-02).
   - id: POL-RemovedFileLeavesAiIndex
     name: A removed file leaves the AI index
     when: [EVT-FileRemoved]
@@ -945,10 +1012,10 @@ read_models:
     fields: [Museum number, Machine model title, Machine category, Technology, Location, Machine status, Number of open defects, Number of overdue maintenance tasks]
   - id: RM-MachineRecord
     name: Machine record
-    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAttached, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileIndexedForAi, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
+    fed_by: [EVT-MachineModelCreated, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-FileAdded, EVT-FileAttached, EVT-FileDetached, EVT-FileDetailsChanged, EVT-FileRemoved, EVT-DefectRecorded, EVT-WorkLogged, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectPutOnHold, EVT-DefectResumed, EVT-DefectClosedOnRetirement, EVT-ProblemResolvedOnTheSpot, EVT-MaintenanceRecorded, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MachineMoved, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-DefectDetailsChanged, EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileIndexedForAi, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed]
     used_by: [ACT-TeamMember]
     description: Everything about one machine, including the repair history. Team members scanning the QR code land here (with a Report problem action).
-    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files of the machine and its machine model by file category (with „Für die KI nicht lesbar“ where indexing failed), AI assessments of the defects in the repair history (collapsed)]
+    fields: [Museum number, Serial number, Machine model (title, manufacturer, year, category, technology), Location, Machine status with history, Open defects, Repair history (defects with work log entries and photos, problems resolved on the spot), Maintenance records, Maintenance tasks that apply to it, Due and overdue maintenance tasks, Files attached to the machine or its machine model by file category, each once (with „Für die KI nicht lesbar“ where indexing failed), AI assessments of the defects in the repair history (collapsed)]
   - id: RM-DueMaintenance
     name: Due maintenance
     fed_by: [EVT-MaintenancePlanChanged, EVT-MachinesOfMaintenanceTaskChanged, EVT-MaintenanceTaskDue, EVT-MaintenanceTaskOverdue, EVT-MaintenanceRecorded, EVT-MachineRegistered, EVT-MachineStatusChanged, EVT-MachineRetired, EVT-MachineMoved, EVT-MachineModelCorrected]
@@ -1028,10 +1095,12 @@ read_models:
     description: >-
       The form „KI“ on the settings page „Einstellungen“ (team area, under „Mehr“), technicians only. Says whether AI
       is on, reminds that a spending limit is set on the key at OpenRouter and that the privacy notice has to mention
-      the AI, and shows the AI index overview with the files that failed and „Erneut versuchen“.
-    fed_by: [EVT-AiSettingsChanged, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileLeftAiIndex, EVT-FileAttached, EVT-FileRemoved]
+      the AI, and shows the AI index overview with the files that failed and „Erneut versuchen“. It counts every file
+      that is not removed, also one attached to nothing; a failed file leads to its file details, which say what it is
+      attached to (feature files, 2026-11-02).
+    fed_by: [EVT-AiSettingsChanged, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileLeftAiIndex, EVT-FileAdded, EVT-FileDetailsChanged, EVT-FileRemoved]
     used_by: [ACT-Technician]
-    fields: [AI on, Last four characters of the key, Chat model, Embedding model, Models offered by OpenRouter (name, context size, price per million tokens), Files indexed, Files waiting, Files failed (machine or machine model, title, reason), Cost of indexing so far]
+    fields: [AI on, Last four characters of the key, Chat model, Embedding model, Models offered by OpenRouter (name, context size, price per million tokens), Files indexed, Files waiting, Files failed (title, reason), Cost of indexing so far]
   - id: RM-DefectAiAssessments
     name: AI assessments of a defect
     description: >-
@@ -1039,9 +1108,44 @@ read_models:
       the page refreshes itself), otherwise the newest written or failed one, earlier ones collapsed. The action
       „KI-Einschätzung anfordern“ only for those who may request it, only while AI is on and the defect is open.
       Without any AI assessment and with AI off the section is not shown.
-    fed_by: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-DefectDetailsChanged, EVT-AiSettingsChanged, EVT-FileRemoved]
+    fed_by: [EVT-AiAssessmentRequested, EVT-AiAssessmentWritten, EVT-AiAssessmentFailed, EVT-DefectResolved, EVT-DefectReopened, EVT-DefectClosedOnRetirement, EVT-DefectDetailsChanged, EVT-AiSettingsChanged, EVT-FileDetailsChanged, EVT-FileRemoved]
     used_by: [ACT-TeamMember]
-    fields: [State (being written, written, failed with reason), Summary, Probable causes, What to check first, References (file title, page – opening the file; a removed file as its title without link), Note and photos of the request, Requested by, Requested at, Chat model, Cost, May request]
+    fields: [State (being written, written, failed with reason), Summary, Probable causes, What to check first, References (the file's current title, page – opening the file, also one detached since; a removed file as its title without link), Note and photos of the request, Requested by, Requested at, Chat model, Cost, May request]
+  - id: RM-FileOverview
+    name: File overview
+    description: >-
+      „Dateien“ under „Mehr“, for the whole team (user, 2026-11-02): finding a file. „Datei hinzufügen“ directly under
+      the heading, then how many files match. Full-text search over title, original file name, the names of the
+      machines and machine models it is attached to and – for files in the AI index – the text of their passages; it
+      says that only the content of indexed files is searched, and that content stays searchable while AI is off. A
+      machine's name is its museum number and its machine model's title. Every word searched for must occur somewhere in
+      these, not all in the same place. No OCR and no search by meaning. Filters (applied with
+      „Filtern“): file category, machine or machine model (HS-36), „Nirgends angehängt“, AI index state (absent while AI
+      is off, G37). Newest first, best match first while searching – a word found in the file's own data before a word
+      found only in its content (docs/domain/context-map.md); 25 to a page with „Zurück“ and „Weiter“, working
+      without JavaScript, search and filters kept in the address. Removed files are not listed. What a file is attached
+      to is not shown here – it belongs to the file details.
+    fed_by: [EVT-FileAdded, EVT-FileAttached, EVT-FileDetached, EVT-FileDetailsChanged, EVT-FileRemoved, EVT-MachineRegistered, EVT-MachineDetailsCorrected, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileLeftAiIndex, EVT-AiSettingsChanged]
+    used_by: [ACT-TeamMember]
+    fields: [Number of files found, Title, File category, Media type, Size, AI index state, Added at]
+  - id: RM-FileDetails
+    name: File details
+    description: >-
+      One file's page, from the overview or the machine record's „Details“: managing that file. A removed file has no
+      such page. No preview; the file opens as it does today. The section „KI-Erfassung“ is absent while AI is off
+      (G37); which AI assessments named the file is deliberately not shown (user, 2026-11-02). „Lösen“ and „Datei
+      entfernen“ only for technicians, „Erneut versuchen“ only for technicians and only on a failed file.
+    fed_by: [EVT-FileAdded, EVT-FileAttached, EVT-FileDetached, EVT-FileDetailsChanged, EVT-FileRemoved, EVT-MachineRetired, EVT-MachineDetailsCorrected, EVT-MachineModelCorrected, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-AiSettingsChanged]
+    used_by: [ACT-TeamMember]
+    fields: [Title, File category, Media type, Size, Original file name, Added by, Added at, Attached to (machines with museum number and machine model, a retired one as „Ausgemustert“; machine models), AI index state with reason]
+  - id: RM-AttachmentChoice
+    name: Machines and machine models to attach a file to
+    description: >-
+      The choice on „Datei hinzufügen“ and „Anhängen“: „Geräte“ and „Modelle“ in folding groups by machine category and
+      technology (G27). Offers only machines that are not retired and only what the file is not attached to yet.
+    fed_by: [EVT-MachineRegistered, EVT-MachineRetired, EVT-MachineDetailsCorrected, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-FileAttached, EVT-FileDetached]
+    used_by: [ACT-TeamMember]
+    fields: [Machines (museum number, machine model title), Machine models (title), Machine category, Technology, Chosen]
 hotspots:
   # --- Flow: problem report to defect ---
   - id: HS-1
@@ -1361,6 +1465,24 @@ hotspots:
       Accepted as recommended (user, 2026-11-01): opening the form „KI“ on the settings page starts a run when a hold
       has run out without a result, like the defect page; the file shows as failed (*broken off*, UI „abgebrochen“) on
       the next load. The hold stays purely technical and feeds no read model.
+  # --- Feature files (domain-architect, 2026-11-02) ---
+  - id: HS-36
+    question: >-
+      The file overview's filter „machine or machine model“ – what does it find? A file attached to the machine model
+      „Medieval Madness“ shows on the record of LG-042, a machine of that model; a file attached only to LG-042 does not
+      show on the other machines of the model. Filtering by LG-042 – only files attached to LG-042, or everything its
+      machine record shows? Filtering by the machine model – only files attached to the model, or also those attached
+      to one of its machines? Recommendation – filtering by a machine finds what its machine record shows (attached to
+      it or to its machine model); filtering by a machine model finds what is attached to it or to any of its machines,
+      retired ones included, because someone looking for a manual of a game does not know where it was attached. The
+      file details still say exactly what it is attached to. Alternative – exactly what is attached to the one chosen,
+      which is simpler to explain but hides the model's manual when filtering by a machine.
+    refs: [RM-FileOverview, RM-MachineRecord, AGG-File]
+    status: resolved
+    resolution: >-
+      Accepted as recommended (user, 2026-11-02): filtering by a machine finds what its machine record shows – attached
+      to it or to its machine model; filtering by a machine model finds what is attached to it or to any of its
+      machines, retired ones included. The file details say exactly what a file is attached to.
 
 flows:
   - id: FLOW-ProblemReportTriage
@@ -1402,8 +1524,15 @@ flows:
   - id: FLOW-AiAssessment
     name: AI assessment of a defect
     description: >-
-      Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the files of the
-      machines and machine models are indexed for AI in the background. A team member who may work on an open defect
-      asks for an AI assessment with an optional note and photos; it is written in the background and kept with the
-      defect.
+      Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the museum's files are
+      indexed for AI in the background. A team member who may work on an open defect asks for an AI assessment with an
+      optional note and photos; it searches the files attached to the machine or its machine model, is written in the
+      background and kept with the defect.
     sequence: [ACT-Technician, EVT-AiSettingsChanged, EVT-FileIndexedForAi, ACT-TeamMember, EVT-AiAssessmentRequested, EXT-OpenRouter, EVT-AiAssessmentWritten]
+  - id: FLOW-FileManagement
+    name: Managing files
+    description: >-
+      Feature files (2026-11-02). A team member adds a file, attached to something or to nothing yet; it is indexed for
+      AI once, whatever it is attached to. Team members attach it to further machines and machine models and correct its
+      title and file category; technicians detach it or remove it for good.
+    sequence: [ACT-TeamMember, EVT-FileAdded, EVT-FileAttached, EVT-FileIndexedForAi, EVT-FileDetailsChanged, ACT-Technician, EVT-FileDetached, EVT-FileRemoved, EVT-FileLeftAiIndex]

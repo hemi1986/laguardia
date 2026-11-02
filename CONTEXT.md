@@ -99,7 +99,7 @@ _UI (de)_: Für Helfer:innen geeignet
 ### Collection
 
 **Machine model**:
-A product as built by a manufacturer (title, manufacturer, year, machine category, technology), shared by all machines of that model; holds manuals and schematics.
+A product as built by a manufacturer (title, manufacturer, year, machine category, technology), shared by all machines of that model; a file attached to it shows on every one of them.
 _Avoid_: Game, title (alone), type
 _UI (de)_: Modell
 
@@ -114,7 +114,7 @@ _Avoid_: Generation, era, type
 _UI (de)_: Technik
 
 **Machine**:
-One physical exhibit the team maintains – a pinball machine, an arcade machine or another machine – with its own museum number, status, files and history.
+One physical exhibit the team maintains – a pinball machine, an arcade machine or another machine – with its own museum number, status and history; it shows the files attached to it or to its machine model.
 _Avoid_: Pinball (for machines in general), game, device, unit, exhibit
 _UI (de)_: Gerät
 _Note_: in code and docs "device" means only the browser on a team member's phone or PC whose design choice is kept (ST-090, G26) – never a machine.
@@ -155,12 +155,32 @@ _Avoid_: Deleted, archived, sold
 _UI (de)_: Erfasst / Ausgemustert
 
 **File**:
-A document or image attached to one machine or one machine model – manual, schematic, photo or other. Photos attached to a problem report or a work log entry are not files; they belong to that report or entry.
+A document or image of the museum – manual, schematic, photo or other – attached to any number of machines and machine models, none included (feature files, user, 2026-11-02). Photos attached to a problem report or a work log entry and the logo are not files; they belong to that report, entry or the museum settings.
 _Avoid_: Attachment, upload (as a noun)
 _UI (de)_: Datei
 
+**Attach** / **Detach**:
+Making a file show on a machine or a machine model, or ending that; detaching leaves the file itself in place, and a file attached to nothing says so. Attaching a file to a machine model shows it on every machine of that model. Never "link" – that word belongs to a problem report and its defect.
+_Avoid_: Link, connect, assign, unlink
+_UI (de)_: Anhängen / Lösen („Angehängt an“, „Nirgends angehängt“)
+
+**Original file name**:
+The name a file had on the team member's device when it was added; it can be searched for and never changes. Files from before the feature *files* have none. Not the *title*, which the team chooses and may correct.
+_Avoid_: File name (alone), upload name
+_UI (de)_: Ursprünglicher Dateiname
+
+**File overview**:
+The team's page for finding a file, by search and filters, over every file that is not removed, also those attached to nothing.
+_Avoid_: File list, library, archive
+_UI (de)_: Dateien
+
+**File details**:
+One file's page for managing it: its details, what it is attached to and how far the AI index got.
+_Avoid_: File page, file record
+_UI (de)_: Details
+
 **Pending upload**:
-Technical, not a domain term (ST-085, ADR 0009): content a team member uploaded from the browser for a machine or machine model that no file refers to yet. Attaching it as a file ends it; one older than 24 hours is abandoned and cleaned up. It is not a *File* – the noun "upload" alone still means nothing here.
+Technical, not a domain term (ST-085, ADR 0009): content a team member uploaded from the browser that no file refers to yet. Adding it as a file ends it; one older than 24 hours is abandoned and cleaned up. It is not a *File* – the noun "upload" alone still means nothing here.
 _Avoid_: Upload (alone), temporary file
 
 **Upload address**:
@@ -330,9 +350,12 @@ _Avoid_: Vector model, encoder
 _UI (de)_: Embedding-Modell
 
 **AI index**:
-What the AI can search in the machines' and machine models' files: the text and every page of their PDFs, their
-Markdown and text files, and their images, each kept with where it came from (file and page). It follows the files –
-a removed file leaves it in the same step – and is built only while AI is on.
+What the AI can search in the museum's files: the text and every page of their PDFs, their Markdown and text files,
+and their images, each kept with where it came from (file and page). It holds a file once, whatever the file is
+attached to, also a file attached to nothing; an AI assessment finds only what is in the files attached to the defect's
+machine or its machine model. It follows the files – a removed file leaves it in the same step, attaching and detaching
+change nothing in it – and is built only while AI is on. The file overview searches its text as well, also while AI is
+off.
 _Avoid_: Knowledge base, vector database (in domain text), RAG
 _UI (de)_: KI-Erfassung (the overview)
 
@@ -359,6 +382,8 @@ _Avoid_: aborted, crashed
 _UI (de)_: abgebrochen
 
 **Reference**:
-A place in a machine's or machine model's file that an AI assessment relied on – the file and, for a PDF, the page.
+A place in a file that an AI assessment relied on – the file and, for a PDF, the page. The file was attached to the
+defect's machine or its machine model when the AI assessment was written; the reference stays as it is when the file
+is detached later.
 _Avoid_: Source, citation, hit
 _UI (de)_: Fundstelle

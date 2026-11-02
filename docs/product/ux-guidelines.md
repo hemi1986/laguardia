@@ -1,7 +1,8 @@
 # UX Guidelines – La Guardia
 
-> **Status: accepted by the user on 2026-10-01, amended since – last on 2026-10-31.** Every rule below (G1–G39,
-> including G2a, G4a, G6a, G8a, G10a, G10b, G10c and G21a) is binding. One violation is known and accepted: the
+> **Status: accepted by the user on 2026-10-01, amended since – last on 2026-11-02.** Every rule below (G1–G40,
+> including G2a, G4a, G6a, G8a, G10a, G10b, G10c and G21a) is binding. The decisions of 2026-11-02 (feature `files`:
+> G40, G19 row 8a, and the file additions to G10a, G10b and G18) are decided but not built yet. One violation is known and accepted: the
 > unchanged-form rejections of ST-031 and ST-036, named under G33. The exception under G2a ended with ST-036. The changes of 2026-10-25 (G16's one width, G26 dark design, G27 grouped
 > checkboxes, G28 account pages, and with it G10, G10a and G10b, and G29–G34) are decided but not built yet – the screens
 > contradict them until the stories of that day's `/feature` are done.
@@ -211,6 +212,14 @@ read, not for history lines: a history of recorded facts follows G24.
 *Why:* the newest is the one that matters now, the older ones are there to compare; all of them open would bury the
 rest of a 360 px defect page.
 
+**G40 – A list that can grow past a page is paged** (user, 2026-11-02, feature `files`).
+Such a list shows 25 entries per page, with the buttons „Zurück“ and „Weiter“ under the entries. Paging works without
+JavaScript, and search and filters (G4, G32) stay in the address, so a page can be bookmarked and „Zurück“ / „Weiter“
+keep them. The list shows the total count (G4), not only the count of the page.
+*First use:* „Dateien“ (G19 row 8a).
+*Why:* it is the first list that has no natural limit – every file ever uploaded stays in it – and the scale figures
+above no longer bound it. A pattern comes here first (G15).
+
 ## 3. The states that must exist
 
 **G7 – Empty: say what to do about it.**
@@ -271,6 +280,9 @@ and offers „Erneut versuchen“. A failed run is a state of the page, not a re
 confirmation (G3).
 *Why:* no notifications (vision): the screen the person looks at has to carry the information. A request that
 returns before the work is done must still say where the work is, or it looks like nothing happened (G3).
+*Narrowed* (user, 2026-11-02, feature `files`): the section „KI-Erfassung“ of a file's details page states the file's
+AI index state and does not refresh itself, like the form „KI“ – a file can wait indefinitely, and nobody started that
+work on this page.
 
 **G36 – A secret a person saves is never shown again** (user, 2026-10-31, feature `ai-assessment`).
 After saving, a secret (the OpenRouter API key) appears only as its last four characters („…a1b2“) with the actions
@@ -312,6 +324,11 @@ feature. *Since 2026-10-25 (user, `/feature` grilling)* this is what lets deacti
 visibility state says "for now", a recorded fact says "this happened", and undoing a recorded fact would mean
 rewriting history rather than changing a setting – a correction is its own command with its own story, not an
 undo button. Deleted bytes we simply no longer have.
+*Files* (user, 2026-11-02, feature `files`): detaching a file from a machine or a machine model („Lösen“) is one tap
+with no question, because attaching it again undoes it – it is a setting a person made, not a recorded fact. A retired
+machine is detached the same way although it cannot be attached again: a deliberately accepted small risk, since the
+file itself stays. Removing a
+file stays under G10 and G10b (the bytes are gone).
 *Why:* a mistap in a list of ten names locks a colleague out, and the only repair today is a second account for the
 same person – which splits their work history in two. Without the boundary written down, the same rule would be
 read as "everything has an undo", and the next story would promise one the domain cannot keep.
@@ -326,6 +343,9 @@ that was typed. Only the verb button carries the action out.
 form. Without one shape, each would pick its own – and a „Zurück“ that loses the reason just typed punishes the
 person for checking.
 „Endgültig …“ is said only for what cannot be undone.
+*Files* (user, 2026-11-02, feature `files`): the question for „Datei entfernen“ names the file and **every machine and
+every machine model it disappears from** – the consequence nobody sees from the details page's button. A file is
+removed only on its own details page, no longer from the machine record.
 *Exception: G10c* – content that can be uploaded again is removed without this page.
 *Amendment of 2026-10-17 withdrawn on 2026-10-25 (user, `/feature` grilling):* deactivating an account had its own
 question page with „Konto deaktivieren“ / „Zurück“ (ST-081). It is now one tap on the team member's page, without a
@@ -461,6 +481,17 @@ way back without the browser's button.
 The owner story fixes the page's sections and their order; every later story adds its content *into* one of those
 sections, or adds a new section at a named place – never a second shape for the same page. The owner is named in
 the later stories, so a reader knows which story to look at.
+*Files* (user, 2026-11-02, feature `files`):
+- **The file overview „Dateien“ (G19 row 8a)** lists each entry with title, file category, type, size and AI index state
+  (G5). „Angehängt an“ is deliberately only on the details page. The list is paged (G40).
+- **The file's details page** has these sections in this order: the head (title, file category, type, size, who added it
+  and when, „Datei öffnen“, „Datei bearbeiten“) · „Angehängt an“, with „Anhängen“ · „KI-Erfassung“ (absent while AI is
+  off, G37) · „Datei entfernen“ at the end, for technicians (G11).
+- „Angehängt an“ names what the file is attached to; a retired machine shows „LG-042 · Ausgemustert“; a file attached
+  to nothing shows „Nirgends angehängt“ (G7). Each entry offers „Lösen“ (G10a). The attach choice uses G27 in two
+  parts, „Geräte“ and „Modelle“, and offers only what is not attached yet and no retired machine.
+- **On the machine record** each file additionally offers „Details“. „Datei anhängen“ with the choice „nur LG-042 /
+  alle Geräte des Modells“ stays there. A file is not removed from the record any more.
 *Why:* eleven stories add to the machine record (ST-009, 011, 012, 015, 021, 033, 034, 035, 037, 039, 047) and four
 to the dashboards (ST-048, 049, 050, 058). Fourteen things on one phone page, in an order no story decides, is
 decided by whoever implements last – and two of those stories render the same list twice.
@@ -489,6 +520,7 @@ question for the user, not a line a story adds on its way past.
 | 6 | Maintenance plan | Wartungsplan | ST-040 | technicians | "Mehr" |
 | 7 | Repair times | Reparaturzeiten | ST-051 | technicians | "Mehr" |
 | 8 | Machine models | Modelle | ST-006 | technicians | "Mehr" |
+| 8a | File overview | Dateien | feature `files` | everyone | "Mehr" |
 | 9 | Team members | Teammitglieder | ST-005 | technicians | "Mehr" |
 | 9a | Settings | Einstellungen | ST-100 (as „Museumseinstellungen“), feature `ai-assessment` | technicians | "Mehr" |
 | 10 | Own password | Passwort ändern | ST-004 | everyone | "Mehr" |
@@ -509,6 +541,10 @@ item 3). Recorded here when ST-051 was built (2026-10-25).
 *Changed 2026-10-31 (user, feature `ai-assessment`):* row 9a added and renamed – the destination built as
 „Museumseinstellungen“ (ST-100) is **„Einstellungen“** (`CONTEXT.md`: *Settings*), with the forms „Museum“, „Logo“,
 „Rechtstexte“ and „KI“, each saved on its own. It is numbered 9a so the row numbers other guidelines cite stay valid.
+*Changed 2026-11-02 (user, feature `files`):* row 8a added – **„Dateien“** (the file overview), shown to everyone, under
+„Mehr“ directly after row 8 „Modelle“. It is numbered 8a so the row numbers other guidelines cite stay valid. „Mehr“
+is otherwise mostly management; „Dateien“ is there because the machine record stays the everyday way to a machine's
+files, and the overview is file management (finding, attaching, removing across machines).
 *Why:* ST-007, ST-008, ST-017, ST-021, ST-040 and ST-043 each silently add one. By the end of the MVP the team
 navigation needs ~10 destinations; today it is five in two rows at 360 px, and nothing in the backlog decides what
 happens at ten.
@@ -555,4 +591,6 @@ None at the moment. O2 became part of **G16** on 2026-10-02.
 | 2026-10-25 | **G27 amended** (the header count follows the ticks only with JavaScript, without it the state when the page opened; groups without an entry not shown; groups in `CONTEXT.md`'s order, task groups by interval shortest first; machines by museum number, tasks by name; an entry that cannot become due says so – „· Nicht ausgestellt“). **G33 added** (a form sent unchanged lands like a save with a confirmation of the resulting state; ST-031 and ST-036 an accepted exception until a story touches them). **G28 amended** (one's own edit page shows the role without a choice – „Die eigene Rolle kann nur eine andere Techniker:in ändern.“ – and no „Neues Passwort“, only a link to „Passwort ändern“; heading „Konto bearbeiten · Anna Berger“). **G34 added** (form headings „<job> · <thing>“ everywhere). | User, story review 2026-10-25 (`docs/reviews/2026-10-25-story-review.md`, "Proposed guideline changes" and "Decisions (user)" 1 and 4) |
 | 2026-10-25 | Housekeeping: **G2a's exception ended** (ST-036 is done, the machine model has its own pages); **G9's "not yet true"** and **G22's "already built"** updated to what is built; status line updated. | The yardstick said things that are no longer true (ux-designer, consistency audit `docs/reviews/2026-10-25-ux-audit-consistency.md`) |
 | 2026-10-31 | **G10c added** (removing content that can be uploaded again – the museum's logo in the museum settings – is one step without a question page; an explicit exception to G10/G10a; a file on a machine's record, ST-038, stays under G10 and G10b). | User, feature `museum-start-page` (ST-102): nothing is lost that cannot be restored by uploading again, and the logo is not the history of a machine |
+| 2026-11-02 | Feature `files`: **G19 row 8a added** („Dateien“, everyone, under „Mehr“ after „Modelle“; the machine record stays the everyday way to files). **G40 added** (a list that can grow past a page is paged: 25 per page, „Zurück“ / „Weiter“, no JavaScript needed, search and filters in the address, total count; first use „Dateien“). **G10a**: detaching a file („Lösen“) is one tap without a question. **G10b**: removing a file names every machine and machine model it disappears from, and happens only on the details page. **G18**: the sections of the file overview entry, the file details page (head · „Angehängt an“ · „KI-Erfassung“ · „Datei entfernen“) and the additions to the machine record („Details“). | User, `/feature` grilling 2026-11-02. The first paged list and the first page for a file of its own; G15 – a new pattern comes here first |
+| 2026-11-02 | **G10a**: a retired machine is detached with one tap too, though it cannot be attached again. **G35 narrowed**: „KI-Erfassung“ on a file's details page does not refresh itself. | User, story review 2026-11-02 (`docs/reviews/2026-11-02-story-review.md`) |
 | 2026-10-31 | Feature `ai-assessment`: **G35 added** (background work is a state on its page – „KI-Einschätzung läuft …“, self-refreshing, no spinner; failure „… fehlgeschlagen: <Grund>“ with „Erneut versuchen“), **G36** (a saved secret is never shown again – „…a1b2“, „Ersetzen“, „Entfernen“), **G37** (a feature that depends on a setting is absent while it is off, existing content stays), **G38** (AI output is labelled „KI-Einschätzung“ with model, time, requester and cost, and never changes domain data), **G39** (earlier entries of one kind: newest expanded, older collapsed). **G19 row 9a added**: „Museumseinstellungen“ is now „Einstellungen“ with the forms Museum, Logo, Rechtstexte, KI. **G10c** names the form „Logo“ on „Einstellungen“. | User, `ai-assessment` grilling 2026-10-31. Background work, secrets and AI output are first met here; G15 – a new pattern comes here first |

@@ -39,6 +39,11 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
 - Visitors see a machine's open defects (by title) before writing a report, to avoid duplicates.
 - Helpers may resolve a problem report on the spot (e.g. stuck ball) and mark a machine *Out of order* when unsafe; all other triage, status changes, file deletion, the maintenance plan, the machines a maintenance task applies to and machine registration are technician-only.
 - Any team member can upload files.
+- File management (user, 2026-11-02, `feature:files`): „Dateien“ lists every file with full-text search, filters and
+  pages; a file can be attached to any number of machines and machine models, or to nothing yet. Team members add,
+  attach and correct files; only technicians detach or remove them. Out of the first version: OCR and search by
+  meaning, replacing a file's content, spotting duplicates, adding several files at once, a preview. Photos of problem
+  reports and work log entries and the logo stay where they are – they are not files.
 - AI assessments (user, 2026-10-31, `feature:ai-assessment`): once a technician saves an OpenRouter API key and
   two models in the settings, a team member who may work on an open defect can ask for an AI assessment – probable
   causes, what to check first and references into the machine's manuals, schematics and images. The machines' and
