@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { aiAssessmentRetryRequest, aiDependencies, requestAiAssessmentCommand } from "@/modules/ai-assistance";
 import { formAction, type PhotoFormState } from "@/app/_actions/form-action";
-import { startAiWorkAfterResponse } from "@/app/ai-work";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "../../../../../team-session";
 import {
@@ -18,8 +17,8 @@ export type RequestAiAssessmentState = PhotoFormState<RequestAiAssessmentFormErr
 
 /**
  * CMD-RequestAiAssessment from the form „KI-Einschätzung anfordern“ (ST-107): the page's access check, the command
- * through the Server Action runner as the signed-in team member, back on the defect page at once. Once the command has
- * committed, the AI work is started after the response (POL-RequestedAiAssessmentIsWritten, ADR 0015).
+ * through the Server Action runner as the signed-in team member, back on the defect page at once. The runner starts the
+ * AI work once the command has committed (POL-RequestedAiAssessmentIsWritten, ADR 0015).
  */
 export async function requestAiAssessmentAction(
   defectId: string,
@@ -31,10 +30,7 @@ export async function requestAiAssessmentAction(
     requestAiAssessmentCommand(aiDependencies()),
     requestAiAssessmentForm({
       defectId,
-      onSuccess: async () => {
-        startAiWorkAfterResponse();
-        redirect(aiAssessmentLanding(defectId));
-      },
+      onSuccess: async () => redirect(aiAssessmentLanding(defectId)),
     }),
   )(previous, formData);
 }
@@ -57,10 +53,7 @@ export async function retryAiAssessmentAction(
     requestAiAssessmentCommand(aiDependencies()),
     retryAiAssessmentForm({
       input,
-      onSuccess: async () => {
-        startAiWorkAfterResponse();
-        redirect(aiAssessmentLanding(defectId));
-      },
+      onSuccess: async () => redirect(aiAssessmentLanding(defectId)),
     }),
   )(previous, formData);
 }

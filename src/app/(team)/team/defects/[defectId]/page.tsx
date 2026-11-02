@@ -1,5 +1,5 @@
-import { AI_ASSESSMENT_KIND } from "@/modules/ai-assistance";
-import { startAiWorkWhenLeftUnfinished } from "@/app/ai-work";
+import { aiAssessmentLeftUnfinished } from "@/modules/ai-assistance";
+import { startAiWorkAfterResponse } from "@/app/ai-work";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "../../../../team-session";
@@ -23,8 +23,11 @@ export default async function DefectPage({ params, searchParams }: PageProps<"/t
   // A page that shows an AI assessment being written starts a run when its hold ran out without a result (HS-33,
   // ADR 0015) – never before, so the five-second refresh does not start work on every load.
   const beingWritten = details?.aiAssessments.current;
-  if (beingWritten?.state === "requested") {
-    await startAiWorkWhenLeftUnfinished(AI_ASSESSMENT_KIND, [beingWritten.id]);
+  if (
+    beingWritten?.state === "requested" &&
+    (await aiAssessmentLeftUnfinished(database(), systemClock, beingWritten.id))
+  ) {
+    startAiWorkAfterResponse();
   }
 
   return (

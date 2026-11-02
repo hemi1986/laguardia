@@ -761,10 +761,12 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   deployment without a secret of at least 32 characters refuses everything), answers 202 at once and runs in its own
   `after()`. `maxDuration` is the literal `300` in `route.ts` (static route config, Vercel Hobby); only the budget is a
   setting (`AI_WORK_BUDGET_SECONDS`, default 250, `docs/operations/ai-work.md`).
-- **Starting it**: `startAiWorkAfterResponse()` (`src/app/ai-work.ts`) – a Server Action whose command made work calls
-  it once the command has committed (in `onSuccess`, never before the commit); a page that shows AI work calls
-  `startAiWorkWhenLeftUnfinished(kind, pieceIds?)`, which starts a run only when a hold of that kind ran out without a
-  result (`aiWorkLeftUnfinished`), so a refreshing page never starts work on every load. Both go through
+- **Starting it** (architecture review 2026-11-01): no Server Action starts the work by hand. `formAction` hands every
+  command the `afterCommit` of `src/app/ai-work.ts`, which asks AI assistance's `makesAiWork(events)` – the one list of the
+  events that make work – and starts a run after the response. A new way to make work is a new event in that list.
+  A page that shows AI work asks a domain question (`aiAssessmentLeftUnfinished`, `fileIndexingLeftUnfinished`) and
+  calls `startAiWorkAfterResponse()` only when a hold ran out without a result, so a refreshing page never starts work on
+  every load. Both go through
   `startAiWork({ env, fetch })`, which calls the deployment's own address from its environment (never a request's
   Host – it would receive the secret) and never throws: a failed call is logged and the chain waits for the next start.
 - **Holds.** A run takes **one piece at a time** (a whole file or a whole AI assessment) by inserting its hold
@@ -821,7 +823,7 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   is the rule's only place and runs as the system only. ST-109's „Erneut versuchen“ is CMD-IndexFileForAi run by hand
   (`retryFileIndexingCommand`, technicians only, at the entry's version): it removes the failed entry and records
   EVT-FileIndexingRetried, so the file waits again (derived); its Server Action starts the work after the response.
-  „Einstellungen“ opened with AI on starts a run only when a file's hold ran out (`startAiWorkWhenLeftUnfinished`, HS-35). `recordBrokenOff` records nothing while
+  „Einstellungen“ opened with AI on starts a run only when a file's hold ran out (`openingStartsAiWork`, HS-35). `recordBrokenOff` records nothing while
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. Every request goes through `piece.openRouter`: a rotated key is used for the next request,
   and a changed embedding model gives the file up so an entry never mixes two models.

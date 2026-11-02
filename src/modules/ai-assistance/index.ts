@@ -16,7 +16,8 @@ export {
   type EmbeddingModelChange,
   type NoEmbeddingModelChange,
 } from "./embedding-model-change";
-export { aiWorkLeftUnfinished, runAiWork } from "./ai-work";
+export { runAiWork } from "./ai-work";
+export { makesAiWork } from "./ai-work-events";
 export {
   aiIndexOverview,
   fileIndexingRetriedBy,
@@ -32,8 +33,8 @@ export type {
 } from "./ai-index-entry";
 export { retryFileIndexingCommand } from "./index-file-for-ai-command";
 export { aiWorkDependencies } from "./ai-work-dependencies";
-export { AI_ASSESSMENT_KIND, aiAssessmentWork } from "./ai-assessment-work";
-export { FILE_INDEXING_KIND, fileIndexingWork } from "./file-indexing-work";
+export { aiAssessmentLeftUnfinished, aiAssessmentWork } from "./ai-assessment-work";
+export { fileIndexingLeftUnfinished, fileIndexingWork } from "./file-indexing-work";
 export { aiAssessmentsOfDefect } from "./ai-assessments";
 export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
 export type {

@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
-import { aiSettingsForm, changeAiSettingsCommand, type AiDependencies } from "@/modules/ai-assistance";
+import { aiSettingsForm, changeAiSettingsCommand, makesAiWork, type AiDependencies } from "@/modules/ai-assistance";
 import {
   geminiEmbedding,
   geminiFlash,
@@ -85,7 +85,16 @@ function openRouterWith(settings: MemoryAiSettings = {}): ScenarioAi {
 /** The form „KI“ as the actor sends it; `landed` names where each successful save went. */
 function aiFormOf(actor: Actor, dependencies = openRouterWith()) {
   const landed: string[] = [];
-  const run = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID });
+  const work = { started: 0 };
+  const run = formRunner({
+    currentPerson: async () => actor,
+    db,
+    clock,
+    newId: randomUUID,
+    afterCommit: (events) => {
+      if (makesAiWork(events)) work.started += 1;
+    },
+  });
   const command = changeAiSettingsCommand(dependencies);
   return {
     save: run(command, { ...aiSettingsFormDefinition, onSuccess: async () => void landed.push(aiLanding("saved")) }),
@@ -94,6 +103,7 @@ function aiFormOf(actor: Actor, dependencies = openRouterWith()) {
       onSuccess: async () => void landed.push(aiLanding("key-removed")),
     }),
     landed,
+    work,
   };
 }
 
@@ -356,6 +366,24 @@ describe("the form „KI“", () => {
       actor: tom,
       data: { changedParts: ["key-removed"], keyLastFour: null, aiOn: false },
     });
+  });
+
+  it("starts the AI work for a save that changed something – not for one that changed nothing, a rejection or the key removed", async () => {
+    const { save, remove, work } = aiFormOf(tom);
+    await save(null, await filledIn({ key: KEY, chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id }));
+    expect(work.started).toBe(1);
+
+    expect(
+      await save(null, await filledIn({ chatModel: geminiFlash.id, embeddingModel: geminiEmbedding.id })),
+    ).toBeNull();
+    expect(work.started).toBe(1);
+
+    expect(await save(null, await filledIn({ chatModel: "unknown/model" }))).not.toBeNull();
+    expect(work.started).toBe(1);
+
+    const { version } = await aiSettingsForm(db, openRouterWith());
+    expect(await remove(null, post({ version: String(version) }))).toBeNull();
+    expect(work.started).toBe(1);
   });
 
   it("ST-104: AI settings changed by someone else meanwhile are not overwritten", async () => {

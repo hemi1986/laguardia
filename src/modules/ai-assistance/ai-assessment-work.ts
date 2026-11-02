@@ -1,3 +1,4 @@
+import type { Clock } from "@/platform/clock";
 import { executeCommand, type Database } from "@/platform/command";
 import { fileForIndexing, filesOfMachineAndModelForAi, machineModelOfMachineForAi } from "@/modules/collection";
 import { defectForAiAssessment } from "@/modules/repair";
@@ -13,7 +14,7 @@ import {
 import { aiState } from "./ai-settings";
 import { renderPdfPages } from "./file-indexing";
 import { searchAiIndex, searchedFiles, type AiIndexHit } from "./ai-index-search";
-import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
+import { aiWorkLeftUnfinished, type AiWorkContext, type AiWorkKind, type HeldPiece } from "./ai-work";
 import { failAiAssessmentCommand, writeAiAssessmentCommand } from "./write-ai-assessment-command";
 import type { ChatImage } from "./ai-seam";
 import type { OpenRouterSession } from "./open-router-session";
@@ -25,7 +26,12 @@ import type { OpenRouterSession } from "./open-router-session";
  * only the storage of the answer is one short transaction that ends the hold. Turning AI off stops the writing at the
  * next request and sends nothing more (CMD-WriteAiAssessment rule, the piece's OpenRouter session).
  */
-export const AI_ASSESSMENT_KIND = "ai-assessment";
+const AI_ASSESSMENT_KIND = "ai-assessment";
+
+/** Whether this AI assessment was left unfinished: its hold ran out without a result (HS-33). */
+export function aiAssessmentLeftUnfinished(db: Database, clock: Clock, aiAssessmentId: string): Promise<boolean> {
+  return aiWorkLeftUnfinished(db, clock, AI_ASSESSMENT_KIND, [aiAssessmentId]);
+}
 
 export const aiAssessmentWork: AiWorkKind = {
   kind: AI_ASSESSMENT_KIND,

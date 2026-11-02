@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { attachFileCommand } from "@/modules/collection";
 import { formAction } from "@/app/_actions/form-action";
-import { startAiWorkAfterResponse } from "@/app/ai-work";
 import { requireTeamMember } from "../../../../../team-session";
 import { attachFileForm } from "./attach-file-form";
 
@@ -12,8 +11,8 @@ import { attachFileForm } from "./attach-file-form";
  * CMD-AttachFile from the page that attaches a file (ST-037) – through the upload runner: the content was uploaded
  * when the file was chosen (ST-085). After attaching, the team member is back on the machine record, which names the
  * file (G3). The machine is bound by the page – a bound value is still checked by the command (`attachingFacts`).
- * Once the command has committed, the AI work is started after the response (POL-AttachedFileIsIndexedForAi, ST-106);
- * it finds the new file as waiting on its own, so Collection never knows AI.
+ * The runner starts the AI work once the command has committed (POL-AttachedFileIsIndexedForAi, ST-106); it finds the
+ * new file as waiting on its own, so Collection never knows AI.
  */
 const attachFile = (museumNumber: string) =>
   formAction(
@@ -21,7 +20,6 @@ const attachFile = (museumNumber: string) =>
     attachFileForm(async ({ fileId }) => {
       const record = `/team/machines/${encodeURIComponent(museumNumber)}`;
       revalidatePath(record);
-      startAiWorkAfterResponse();
       redirect(`${record}?attached=${fileId}`);
     }),
   );

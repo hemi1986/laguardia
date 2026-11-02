@@ -230,8 +230,9 @@ function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id:
 
 /**
  * Whether a piece of this kind – or of these pieces – was left unfinished (EVT-AiWorkLeftUnfinished, derived): its
- * hold ran out without a result and no run has recorded it broken off yet. A page that shows such work (the defect
- * page, ST-108; the form „KI“, ST-109) starts a run only then, so refreshing it never starts work on every load.
+ * hold ran out without a result and no run has recorded it broken off yet. A page that shows such work asks its kind
+ * (`aiAssessmentLeftUnfinished`, `fileIndexingLeftUnfinished`) and starts a run only then, so refreshing it never
+ * starts work on every load.
  */
 export async function aiWorkLeftUnfinished(
   db: Database,
