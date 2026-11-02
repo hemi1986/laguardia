@@ -147,12 +147,26 @@ export type CommandError<C> = C extends Command<never, unknown, infer Error> ? C
 
 type CommandFailure<Error extends string> = Extract<CommandResult<unknown, Error>, { ok: false }>["error"];
 
-export type CommandDependencies = { actor: Actor; db?: Database; clock?: Clock; newId?: () => string };
+/** One event a command committed, as whoever ran it is told: its type and what the journal holds of it. */
+export type CommittedEvent = { type: string; data: unknown };
+
+export type CommandDependencies = {
+  actor: Actor;
+  db?: Database;
+  clock?: Clock;
+  newId?: () => string;
+  /**
+   * Told what the command journaled, policies included, once its transaction has ended – not after a rejection, and not
+   * when it changed nothing. For whoever runs the command and must react outside it (the AI work, architecture review
+   * 2026-11-01), so never with a `db` that is itself a transaction. What it throws is only logged: the command stands.
+   */
+  afterCommit?: (events: readonly CommittedEvent[]) => void;
+};
 
 export async function executeCommand<Input, Result, Error extends string>(
   command: Command<Input, Result, Error>,
   input: Input,
-  { actor, db = database(), clock = systemClock, newId = randomUUID }: CommandDependencies,
+  { actor, db = database(), clock = systemClock, newId = randomUUID, afterCommit }: CommandDependencies,
 ): Promise<CommandResult<Result, Error>> {
   if (!command.allowedActors.includes(actorKind(actor))) return { ok: false, error: "not-authorized" };
 
@@ -161,18 +175,19 @@ export async function executeCommand<Input, Result, Error extends string>(
   const commandClock: Clock = { now: () => new Date(now) };
 
   try {
-    const result = await db.transaction(async (tx) => {
+    const { result, rows } = await db.transaction(async (tx) => {
       const { result, rows } = await runInTransaction(command, input, actor, { tx, clock: commandClock, newId });
       // Every command writes its journal entry (Definition of Done) – unless it may change nothing (a set delta).
       if (rows.length === 0 && !command.mayChangeNothing)
         throw new Error(`${command.id} succeeded but journals no event`);
-      if (rows.length === 0) return result;
+      if (rows.length === 0) return { result, rows };
       // One ID for everything the command journals – a page asks the journal what one command did (G3, lastCommandBy).
       // Not from the injected generator: it is no domain ID, and tests count the IDs a command takes.
       const commandId = randomUUID();
       await tx.insert(eventJournal).values(rows.map((row) => ({ ...row, commandId })));
-      return result;
+      return { result, rows };
     });
+    if (rows.length > 0) tellCommitted(afterCommit, command.id, rows);
     return { ok: true, result };
   } catch (error) {
     if (error instanceof Rejected) {
@@ -181,6 +196,18 @@ export async function executeCommand<Input, Result, Error extends string>(
     if (error instanceof NotFound) return { ok: false, error: "not-found" };
     if (error instanceof VersionConflict) return { ok: false, error: "version-conflict" };
     throw error;
+  }
+}
+
+/** Outside the command's `try`: an error here must not read as the command's, whose changes are committed. */
+function tellCommitted(afterCommit: CommandDependencies["afterCommit"], commandId: string, rows: JournalRow[]): void {
+  try {
+    afterCommit?.(rows.map(({ type, data }) => ({ type, data })));
+  } catch (error) {
+    console.error(
+      `${commandId} committed, but what follows it failed:`,
+      error instanceof Error ? error.name : "unknown",
+    );
   }
 }
 

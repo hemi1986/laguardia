@@ -1,33 +1,15 @@
 import "server-only";
 import { after } from "next/server";
-import { aiWorkLeftUnfinished } from "@/modules/ai-assistance";
-import { systemClock } from "@/platform/clock";
-import { database } from "@/platform/database";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
+import type { CommittedEvent } from "@/platform/command";
 import { startAiWork } from "./api/ai-work/start-ai-work";
-import { startWhenLeftUnfinished, type LeftUnfinishedStart } from "./ai-work-when-left-unfinished";
 
-/**
- * Starts the AI work after the response (ST-112, ADR 0015) – for a Server Action whose command made work (saving the
- * AI settings, a request, attaching a file, „Erneut versuchen“), called once the command has committed. The page does
- * not wait for it.
- */
+/** Starts one run of the AI work after the response (ST-112, ADR 0015) – the page does not wait for it. */
 export function startAiWorkAfterResponse(): void {
   after(() => startAiWork({ env: process.env, fetch }));
 }
 
-/**
- * For a page that shows AI work (the defect page, ST-108; the form „KI“, ST-109): starts a run after the response only
- * when work of this kind – or of these pieces – was left unfinished, so refreshing the page never starts work on
- * every load (HS-33, HS-35).
- */
-export async function startAiWorkWhenLeftUnfinished(kind: string, pieceIds?: readonly string[]): Promise<void> {
-  await startWhenLeftUnfinished(aiWorkStarter(), kind, pieceIds);
-}
-
-/** The real database read and start, for a page whose decision lives in its data module (the form „KI“, ST-109). */
-export function aiWorkStarter(): LeftUnfinishedStart {
-  return {
-    leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(database(), systemClock, kind, pieceIds),
-    start: startAiWorkAfterResponse,
-  };
+/** What every form's command does once it has committed (`formAction`): starts the work, when it made any. */
+export function startAiWorkForCommitted(events: readonly CommittedEvent[]): void {
+  if (makesAiWork(events)) startAiWorkAfterResponse();
 }

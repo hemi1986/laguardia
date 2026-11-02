@@ -5,8 +5,9 @@ ST-112). The server starts a run by calling its own worker route `/api/ai-work`;
 the **worker secret**. About 5 minutes per environment.
 
 There is **no scheduled job** (no cron) and **no automatic retry**. A run is started only after something made work:
-saving the AI settings, requesting an AI assessment, attaching a file, „Erneut versuchen“ – or a page that sees a piece
-of work whose hold ran out (the defect page, the form „KI“). A run that has more work than its budget calls the worker
+a change to the AI settings (not a save that changes nothing, not removing the key), requesting an AI assessment,
+attaching a file, „Erneut versuchen“ – or a page that sees a piece of work whose hold ran out (the defect page, the form
+„KI“). To start a run by hand when work waits with no hold behind it, type the key again: that always counts as a change. A run that has more work than its budget calls the worker
 route again before it ends, so a long queue is a chain of runs.
 
 ## `AI_WORK_SECRET` – create it

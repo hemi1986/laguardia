@@ -2,7 +2,6 @@ import {
   aiDependencies,
   aiIndexOverview,
   aiSettingsForm,
-  FILE_INDEXING_KIND,
   fileIndexingRetriedBy,
   type AiDependencies,
   type AiIndexOverview,
@@ -11,7 +10,6 @@ import {
 } from "@/modules/ai-assistance";
 import { machineLabels, machineModelTitles } from "@/modules/collection";
 import type { Database } from "@/platform/command";
-import { startWhenLeftUnfinished, type LeftUnfinishedStart } from "@/app/ai-work-when-left-unfinished";
 
 /** What the form „KI“ just did (ST-104): a save, „Entfernen“, or – ST-110 – „Ersetzen“ saved. */
 export type AiConfirmed = "saved" | "key-removed" | "key-replaced";
@@ -58,7 +56,9 @@ export type AiSettingsData = {
 /** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
 async function shownOverview(db: Database, overview: AiIndexOverview): Promise<ShownAiIndexOverview> {
   const machineIds = overview.failed.flatMap(({ owner }) => ("machineId" in owner ? [owner.machineId] : []));
-  const machineModelIds = overview.failed.flatMap(({ owner }) => ("machineModelId" in owner ? [owner.machineModelId] : []));
+  const machineModelIds = overview.failed.flatMap(({ owner }) =>
+    "machineModelId" in owner ? [owner.machineModelId] : [],
+  );
   const [machines, machineModels] = await Promise.all([
     machineLabels(db, machineIds),
     machineModelTitles(db, machineModelIds),
@@ -112,10 +112,13 @@ export async function loadAiSettings(
 }
 
 /**
- * What opening „Einstellungen“ does (HS-35, ST-109): with AI on – the overview is shown – it starts a run of the AI
- * work after its response when a file's indexing was left unfinished, never otherwise, so opening it does not start
- * work on every load. Answers whether it did. The page passes the real start; a test passes its own.
+ * Whether opening „Einstellungen“ starts a run of the AI work after its response (HS-35, ST-109): with AI on – the
+ * overview is shown – when a file's indexing was left unfinished, never otherwise, so opening it does not start work on
+ * every load.
  */
-export function startAiWorkOnOpening(data: AiSettingsData, starter: LeftUnfinishedStart): Promise<boolean> {
-  return data.overview ? startWhenLeftUnfinished(starter, FILE_INDEXING_KIND) : Promise.resolve(false);
+export async function openingStartsAiWork(
+  data: AiSettingsData,
+  fileIndexingLeftUnfinished: () => Promise<boolean>,
+): Promise<boolean> {
+  return !!data.overview && (await fileIndexingLeftUnfinished());
 }

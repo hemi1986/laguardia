@@ -5,11 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import {
-  aiWorkLeftUnfinished,
+  fileIndexingLeftUnfinished,
   fileIndexingWork,
   retryFileIndexingCommand,
   type AiDependencies,
 } from "@/modules/ai-assistance";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { formRunner } from "@/app/_actions/form-runner";
 import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
@@ -19,7 +20,7 @@ import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { loadAiSettings, startAiWorkOnOpening } from "./ai-settings-data";
+import { loadAiSettings, openingStartsAiWork } from "./ai-settings-data";
 import { AiSettingsSection } from "./ai-settings-section";
 import { loadMachineRecord } from "../machines/[museumNumber]/machine-record-data";
 import { MachineRecordView } from "../machines/[museumNumber]/machine-record";
@@ -123,10 +124,17 @@ type Retried = { landed: string | undefined; starts: number };
 /** „Erneut versuchen“ posted through the real Server Action runner as this person, with these fields. */
 async function retry(fields: { fileId: string; version: number }, actor: Actor = tom, dependencies = ai()) {
   const retried: Retried = { landed: undefined, starts: 0 };
-  const action = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID })(
+  const action = formRunner({
+    currentPerson: async () => actor,
+    db,
+    clock,
+    newId: randomUUID,
+    afterCommit: (events) => {
+      if (makesAiWork(events)) retried.starts += 1;
+    },
+  })(
     retryFileIndexingCommand(dependencies),
     retryFileIndexingForm(async ({ fileId }) => {
-      retried.starts += 1;
       retried.landed = retriedLanding(fileId);
     }),
   );
@@ -263,13 +271,9 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
       }),
     );
     await embeddingStarted;
-    const starts: string[] = [];
-    // What „Einstellungen“ does when it is opened – the page's own decision, with a start the test counts.
+    // What „Einstellungen“ decides when it is opened.
     const openingStartsARun = async () =>
-      startAiWorkOnOpening((await settingsPage()).data, {
-        leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
-        start: () => starts.push("run"),
-      });
+      openingStartsAiWork((await settingsPage()).data, () => fileIndexingLeftUnfinished(db, clock));
     // Until the hold has run out the manual is waiting, and opening the page starts nothing.
     expect(await openingStartsARun()).toBe(false);
     expect((await settingsPage()).data.overview).toMatchObject({ waiting: 1, failed: [] });
@@ -277,7 +281,6 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     // The hold – twice the budget of 250 s – has run out without a result, and no other run has started since.
     clock.set("2026-11-04T10:08:21Z");
     expect(await openingStartsARun()).toBe(true);
-    expect(starts).toEqual(["run"]);
     const started = ai();
     await run(started);
 
@@ -296,7 +299,6 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     ]);
     // Opening „Einstellungen“ again starts no run: no hold has run out.
     expect(await openingStartsARun()).toBe(false);
-    expect(starts).toEqual(["run"]);
   });
 });
 
@@ -330,12 +332,7 @@ describe("the mark on the machine record (ST-109)", () => {
     const record = await machineRecord("LG-042");
 
     expect(settings.data.overview).toBeUndefined();
-    const starts: string[] = [];
-    const opened = await startAiWorkOnOpening(settings.data, {
-      leftUnfinished: async () => true,
-      start: () => starts.push("run"),
-    });
-    expect({ opened, starts }).toEqual({ opened: false, starts: [] });
+    expect(await openingStartsAiWork(settings.data, async () => true)).toBe(false);
     expect(settings.html).not.toContain("KI-Erfassung");
     expect(settings.html).not.toContain("Erneut versuchen");
     expect(record.html).not.toContain("Für die KI nicht lesbar");

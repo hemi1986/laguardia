@@ -1,4 +1,5 @@
 import "server-only";
+import { startAiWorkForCommitted } from "@/app/ai-work";
 import { currentPerson } from "./current-person";
 import { formRunner } from "./form-runner";
 
@@ -6,8 +7,9 @@ import { formRunner } from "./form-runner";
  * The runner every Server Action uses (ST-073): `formAction(command, { fields, input, onSuccess })` gives the
  * action for `useActionState` – with `photo` for a form with a photo (ST-016), with `upload` for one that attaches a
  * file uploaded from the browser (ST-037). The acting person comes from `currentPerson()` – there is no way to pass one.
+ * A command that made AI work starts it, whichever form ran it (architecture review 2026-11-01).
  */
-export const formAction = formRunner({ currentPerson });
+export const formAction = formRunner({ currentPerson, afterCommit: startAiWorkForCommitted });
 
 export type {
   EachFormState,

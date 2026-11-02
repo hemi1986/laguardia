@@ -27,8 +27,8 @@ export const indexFileForAiCommand = aggregateCommand({
 /**
  * CMD-IndexFileForAi run by hand (ST-109): „Erneut versuchen“ on a failed file – technicians only, only while AI is on,
  * only on a file that failed with the current embedding model. It removes the failed entry and records
- * EVT-FileIndexingRetried; the indexing itself is the background work's, started by the Server Action after the
- * response. A file removed meanwhile has no entry any more (POL-RemovedFileLeavesAiIndex) – `not-found`.
+ * EVT-FileIndexingRetried; the indexing itself is the background work's, started after the response because this event
+ * makes work (`makesAiWork`). A file removed meanwhile has no entry any more (POL-RemovedFileLeavesAiIndex) – `not-found`.
  */
 export function retryFileIndexingCommand(dependencies: Pick<AiDependencies, "encryptionKey">) {
   return aggregateCommand({

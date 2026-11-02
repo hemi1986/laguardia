@@ -23,8 +23,8 @@ const CALL_TIMEOUT_MS = 10_000;
 
 /**
  * Starts the AI work (ST-112, ADR 0015): calls the worker route of this deployment with the worker secret from the
- * server's environment, so the secret never reaches a page, a link or the browser. Called after a response – by a
- * Server Action once its command has committed, by a page that sees work left unfinished, and by a run that leaves
+ * server's environment, so the secret never reaches a page, a link or the browser. Called after a response – by the
+ * Server Action runner once a command that made work has committed, by a page that sees work left unfinished, and by a run that leaves
  * work for the next one. Never throws: when the call fails, the chain of runs stops and what is left waits for the
  * next start (docs/operations/ai-work.md).
  */

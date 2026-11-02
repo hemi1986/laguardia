@@ -1,10 +1,11 @@
+import type { Clock } from "@/platform/clock";
 import { executeCommand, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import { aiIndexStatesOfFiles } from "./ai-index-entries";
 import { aiState } from "./ai-settings";
 import type { IndexFileForAiInput } from "./ai-index-entry";
 import { indexFileForAiCommand } from "./index-file-for-ai-command";
-import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
+import { aiWorkLeftUnfinished, type AiWorkContext, type AiWorkKind, type HeldPiece } from "./ai-work";
 import { indexFileContent, type IndexingOutcome } from "./file-indexing";
 
 /**
@@ -13,7 +14,12 @@ import { indexFileContent, type IndexingOutcome } from "./file-indexing";
  * the replacement of the AI index entry is one short transaction that ends the hold. What broke off is recorded
  * *broken off* by POL-UnfinishedAiWorkFails; a failed file is never taken by a run again.
  */
-export const FILE_INDEXING_KIND = "file-indexing";
+const FILE_INDEXING_KIND = "file-indexing";
+
+/** Whether a file's indexing was left unfinished: its hold ran out without a result (HS-35). */
+export function fileIndexingLeftUnfinished(db: Database, clock: Clock): Promise<boolean> {
+  return aiWorkLeftUnfinished(db, clock, FILE_INDEXING_KIND);
+}
 
 export const fileIndexingWork: AiWorkKind = {
   kind: FILE_INDEXING_KIND,

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { attachFileCommand, machineRecord } from "@/modules/collection";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
@@ -49,18 +50,23 @@ async function aChosenPdf(storage: MemoryStorage, { bytes = 3, maximumSize = und
 
 function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}) {
   const attached: string[] = [];
+  const work = { started: 0 };
   const action = formRunner({
     currentPerson: async () => anna,
     db,
     clock: fixedClock(when),
     newId: randomUUID,
     storage,
+    afterCommit: (events) => {
+      if (makesAiWork(events)) work.started += 1;
+    },
   })(
     attachFileCommand,
     attachFileForm(async ({ fileId }) => void attached.push(fileId)),
   );
   return {
     attached,
+    work,
     send: (fields: Record<string, string>) => action(null, post({ machineId, fileName: "manual.pdf", ...fields })),
   };
 }
@@ -77,6 +83,7 @@ describe("the form that attaches a file", () => {
 
     expect(await form.send({ ...complete, title: "Attached through the form", content })).toBeNull();
     expect(form.attached).toHaveLength(1);
+    expect(form.work.started).toBe(1);
     expect(await titles()).toContain("Attached through the form");
     expect(storage.read(content)).toBeDefined();
   });

@@ -6,16 +6,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { defectDetails, reportProblemAndTriageCommand, resolveDefectCommand } from "@/modules/repair";
 import {
-  AI_ASSESSMENT_KIND,
+  aiAssessmentLeftUnfinished,
   aiAssessmentRetryRequest,
   aiAssessmentWork,
   aiAssessmentsOfDefect,
-  aiWorkLeftUnfinished,
   removeFileCommandWithAiIndex,
   requestAiAssessmentCommand,
   type AiDependencies,
 } from "@/modules/ai-assistance";
-import { startWhenLeftUnfinished } from "@/app/ai-work-when-left-unfinished";
 import { writeAiAssessmentForTest } from "@/modules/ai-assistance/ai-assessment.test-support";
 import { aiScenario, type ScenarioOpenRouter } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
@@ -312,23 +310,12 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     await writingStarted;
 
     // A refresh of the page before the hold ran out starts no run.
-    const starts: string[] = [];
-    const pageStartsARun = () =>
-      startWhenLeftUnfinished(
-        {
-          leftUnfinished: (kind, pieceIds) => aiWorkLeftUnfinished(db, clock, kind, pieceIds),
-          start: () => starts.push("run"),
-        },
-        AI_ASSESSMENT_KIND,
-        [id],
-      );
+    const pageStartsARun = () => aiAssessmentLeftUnfinished(db, clock, id);
     expect(await pageStartsARun()).toBe(false);
-    expect(starts).toEqual([]);
 
     // The hold has run out: the page's refresh starts the run that records the break-off.
     clock.set("2026-11-03T10:08:21Z");
     expect(await pageStartsARun()).toBe(true);
-    expect(starts).toEqual(["run"]);
     const recording = openRouter();
     await runWith(recording);
 
