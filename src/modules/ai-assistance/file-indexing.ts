@@ -42,7 +42,7 @@ export type IndexingOutcome =
    * charged for the requests it answered before (OPEN_QUESTIONS ST-109, user 2026-11-01).
    */
   | { outcome: "failed"; reason: IndexingFailureReason; cost: number }
-  /** AI was turned off meanwhile (or the key or model changed): nothing is stored, the file stays waiting. */
+  /** AI was turned off or the embedding model changed meanwhile: nothing is stored, the file stays waiting. */
   | { outcome: "given-up" };
 
 export type IndexFileOptions = {
@@ -55,7 +55,7 @@ export type IndexFileOptions = {
 };
 
 /** How embedding is done for one file. */
-type Embedding = Pick<IndexFileOptions, "openRouter" | "embeddingModel">;
+type EmbeddingOfFile = Pick<IndexFileOptions, "openRouter" | "embeddingModel">;
 
 /** One thing to embed, with where it came from. */
 type ItemToEmbed = {
@@ -83,7 +83,7 @@ export async function indexFileContent({
   openRouter,
   embeddingModel,
 }: IndexFileOptions): Promise<IndexingOutcome> {
-  const embedding: Embedding = { openRouter, embeddingModel };
+  const embedding: EmbeddingOfFile = { openRouter, embeddingModel };
   if (isPdf(contentType)) return indexPdf(bytes, embedding);
   if (isText(contentType)) {
     const text = new TextDecoder().decode(bytes);
@@ -108,7 +108,7 @@ export async function indexFileContent({
 /** A text, Markdown or image file: its items embedded, no page count. */
 async function indexItems(
   itemsToEmbed: ItemToEmbed[],
-  embedding: Embedding,
+  embedding: EmbeddingOfFile,
   counts: { pagesIndexed: number; imagesIndexed: number },
 ): Promise<IndexingOutcome> {
   const answer = await embedItems(itemsToEmbed, embedding);
@@ -150,7 +150,7 @@ function splitLong(text: string): string[] {
 }
 
 /** Renders every page, batches of pages rendered before their text and page image are embedded (ST-105). */
-async function indexPdf(bytes: Uint8Array, embedding: Embedding): Promise<IndexingOutcome> {
+async function indexPdf(bytes: Uint8Array, embedding: EmbeddingOfFile): Promise<IndexingOutcome> {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const assets = pdfjsAssets();
   const loading = pdfjs.getDocument({
@@ -325,7 +325,7 @@ type EmbedAnswer =
  */
 async function embedItems(
   itemsToEmbed: ItemToEmbed[],
-  { openRouter, embeddingModel }: Embedding,
+  { openRouter, embeddingModel }: EmbeddingOfFile,
 ): Promise<EmbedAnswer> {
   const embedded: Embedded[] = [];
   for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {

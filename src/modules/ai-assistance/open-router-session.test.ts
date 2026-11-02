@@ -56,11 +56,11 @@ describe("an OpenRouter session of a held piece", () => {
     expect(sent).toEqual(["chat k1 requested-with"]);
   });
 
-  it("records each request's cost as it comes and sums it", async () => {
+  it("puts an embedding's cost on the hold as it comes, and sums it with the chat's", async () => {
     const { session, recorded } = aSession();
     await session.embed(text);
     await session.chat("c1", chatInput);
-    expect(recorded).toEqual([0.01, 0.04]);
+    expect(recorded).toEqual([0.01]);
     expect(session.spent()).toBeCloseTo(0.05);
   });
 

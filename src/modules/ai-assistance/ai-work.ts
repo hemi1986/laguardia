@@ -19,7 +19,8 @@ import { aiWorkHold } from "./schema";
 export type AiWorkContext = {
   db: NodePgDatabase;
   clock: Clock;
-  ai: AiDependencies;
+  /** Enough to ask whether AI is on; a kind reaches OpenRouter only through `piece.openRouter`. */
+  ai: Pick<AiDependencies, "encryptionKey">;
   storage: ContentStorage;
 };
 
@@ -59,7 +60,8 @@ export type AiWorkKind = {
   recordBrokenOff(tx: Database, id: string, context: AiWorkContext, spent: number): Promise<void>;
 };
 
-export type AiWorkDependencies = AiWorkContext & {
+export type AiWorkDependencies = Omit<AiWorkContext, "ai"> & {
+  ai: AiDependencies;
   /** How long a run may take new work (a setting – about 250 s on Vercel Hobby, far more on a server of its own). */
   budgetSeconds: number;
   /** Calls the worker route, so the next run takes what is left. */

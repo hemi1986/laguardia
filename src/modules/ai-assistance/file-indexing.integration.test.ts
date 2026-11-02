@@ -527,6 +527,28 @@ describe("when a file is indexed", () => {
 });
 
 describe("a run and the files it finds", () => {
+  it("gives a file up when the embedding model changes while it is indexed, so an entry never mixes two models", async () => {
+    const otherEmbedding = { ...geminiEmbedding, id: "google/other-embedding", name: "Other Embedding" };
+    const ai: ScenarioOpenRouter = anAi({
+      models: [geminiFlash, geminiEmbedding, otherEmbedding],
+      beforeEmbed: async (request) => {
+        if (request === 4) await saveAiSettings({ ai, embeddingModel: otherEmbedding.id });
+      },
+    });
+    await saveAiSettings({ ai });
+    const fileId = await attach({
+      title: "Eight Ball Schematic",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["one", "two", "three", "four", "five"]),
+    });
+
+    await run({ ai });
+
+    expect(ai.requests.filter((each) => each.startsWith(`embed:${otherEmbedding.id}`))).toEqual([]);
+    expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
+    expect(await eventsOf(fileId)).not.toContain("EVT-FileIndexingFailed");
+  });
+
   it("ST-106: A file is indexed once, even when two runs find it", async () => {
     await saveAiSettings();
     const fileId = await attach({

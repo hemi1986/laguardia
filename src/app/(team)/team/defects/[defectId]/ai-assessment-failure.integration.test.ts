@@ -346,7 +346,7 @@ describe("an AI assessment that failed or broke off (ST-108)", () => {
     expect(later.chatRequests).toEqual([]);
     const brokenOff = (await aiAssessmentsOfDefect(db, defectId)).find((each) => each.id === id);
     expect(brokenOff).toMatchObject({ state: "failed", failureReason: "broken-off" });
-    // The cut-off run was charged for its embedding, and that stood on its hold – a broken-off one still records no cost.
+    // The cut-off run was charged for its embedding – a broken-off AI assessment still records no cost (ST-108).
     expect(cutOff.reportedCost).toBeGreaterThan(0);
     expect(brokenOff?.cost).toBeUndefined();
   });
