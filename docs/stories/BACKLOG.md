@@ -2,11 +2,25 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 78 of 78 domain stories done** · scenarios 734 of 734
+**Progress: 78 of 87 domain stories done** · scenarios 734 of 813
 
-**109 stories** · In Progress: 0 · Ready: 0 · In Review: 0 · Draft: 0 · Done: 98 · Superseded: 11
+**118 stories** · In Progress: 0 · Ready: 9 · In Review: 0 · Draft: 0 · Done: 98 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## Ready
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
+| [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
+| [ST-120](ST-120-an-ai-assessment-follows-what-a-file-is-attached-to.md) | An AI assessment follows what a file is attached to | story | AI assistance | should | M | medium | ST-113, ST-107, ST-109 |
+| [ST-121](ST-121-remove-a-file-on-its-details-page.md) | Remove a file on its details page | story | Collection | should | M | medium | ST-114, ST-038 |
+| [ST-115](ST-115-attach-and-detach-from-file-details.md) | Attach a file to further machines and machine models, and detach it | story | Collection | should | L | medium | ST-114, ST-094, ST-120, ST-121 |
+| [ST-116](ST-116-correct-title-and-file-category.md) | Correct a file's title and file category | story | Collection | should | M | low | ST-114 |
+| [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
+| [ST-119](ST-119-add-a-file-from-the-file-overview.md) | Add a file from the file overview, attached to something or to nothing yet | story | Collection | should | L | medium | ST-115, ST-116, ST-117 |
+| [ST-118](ST-118-full-text-search-in-the-file-overview.md) | Search the file overview by title, names and content | story | Collection | should | L | medium | ST-117, ST-119, ST-106 |
 
 ## Done
 

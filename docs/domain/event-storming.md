@@ -47,7 +47,10 @@ flowchart LR
         CMD_MoveMachine["Move machine"]:::cmd
         CMD_CorrectMachineDetails["Correct machine details"]:::cmd
         CMD_CorrectMachineModel["Correct machine model"]:::cmd
+        CMD_AddFile["Add file"]:::cmd
         CMD_AttachFile["Attach file"]:::cmd
+        CMD_DetachFile["Detach file"]:::cmd
+        CMD_ChangeFileDetails["Change file details"]:::cmd
         CMD_RemoveFile["Remove file"]:::cmd
         CMD_RetireMachine["Retire machine"]:::cmd
         CMD_ChangeMuseumDetails["Change museum details"]:::cmd
@@ -60,7 +63,10 @@ flowchart LR
         EVT_MachineMoved["Machine moved"]:::evt
         EVT_MachineDetailsCorrected["Machine details corrected"]:::evt
         EVT_MachineModelCorrected["Machine model corrected"]:::evt
+        EVT_FileAdded["File added"]:::evt
         EVT_FileAttached["File attached"]:::evt
+        EVT_FileDetached["File detached"]:::evt
+        EVT_FileDetailsChanged["File details changed"]:::evt
         EVT_FileRemoved["File removed"]:::evt
         EVT_MachineRetired["⭐ Machine retired"]:::evt
         EVT_MuseumDetailsChanged["Museum details changed"]:::evt
@@ -87,6 +93,7 @@ flowchart LR
         EVT_AiSettingsChanged["AI settings changed"]:::evt
         EVT_FileIndexedForAi["File indexed for AI"]:::evt
         EVT_FileIndexingFailed["File indexing failed"]:::evt
+        EVT_FileIndexingRetried["File indexing retried"]:::evt
         EVT_FileLeftAiIndex["File left the AI index"]:::evt
         EVT_AiWorkLeftUnfinished["AI work left unfinished"]:::evt
         EVT_AiAssessmentRequested["⭐ AI assessment requested"]:::evt
@@ -103,7 +110,7 @@ flowchart LR
     POL_RetirementDismissesProblemReports{{"Retirement dismisses untriaged problem reports"}}:::pol
     POL_RegistrationAppliesChosenMaintenanceTasks{{"Registering a machine applies the chosen maintenance tasks"}}:::pol
     POL_AiIndexFollowsTheSettings{{"The AI index follows the AI settings"}}:::pol
-    POL_AttachedFileIsIndexedForAi{{"An attached file is indexed for AI"}}:::pol
+    POL_AttachedFileIsIndexedForAi{{"An added file is indexed for AI"}}:::pol
     POL_RemovedFileLeavesAiIndex{{"A removed file leaves the AI index"}}:::pol
     POL_RequestedAiAssessmentIsWritten{{"A requested AI assessment is written"}}:::pol
     POL_UnfinishedAiWorkFails{{"Unfinished AI work fails as broken off"}}:::pol
@@ -129,6 +136,9 @@ flowchart LR
     RM_MuseumSettings[("Museum settings")]:::rm
     RM_AiSettings[("AI settings")]:::rm
     RM_DefectAiAssessments[("AI assessments of a defect")]:::rm
+    RM_FileOverview[("File overview")]:::rm
+    RM_FileDetails[("File details")]:::rm
+    RM_AttachmentChoice[("Machines and machine models to attach a file to")]:::rm
     ACT_Visitor --> CMD_ReportProblem
     CMD_ReportProblem --> EVT_ProblemReported
     CMD_ReportProblem --> EVT_DefectRecorded
@@ -173,8 +183,15 @@ flowchart LR
     CMD_CorrectMachineDetails --> EVT_MachineDetailsCorrected
     ACT_Technician --> CMD_CorrectMachineModel
     CMD_CorrectMachineModel --> EVT_MachineModelCorrected
+    ACT_TeamMember --> CMD_AddFile
+    CMD_AddFile --> EVT_FileAdded
+    CMD_AddFile --> EVT_FileAttached
     ACT_TeamMember --> CMD_AttachFile
     CMD_AttachFile --> EVT_FileAttached
+    ACT_Technician --> CMD_DetachFile
+    CMD_DetachFile --> EVT_FileDetached
+    ACT_TeamMember --> CMD_ChangeFileDetails
+    CMD_ChangeFileDetails --> EVT_FileDetailsChanged
     ACT_Technician --> CMD_RemoveFile
     CMD_RemoveFile --> EVT_FileRemoved
     ACT_Technician --> CMD_RetireMachine
@@ -200,6 +217,7 @@ flowchart LR
     ACT_Technician --> CMD_IndexFileForAi
     CMD_IndexFileForAi --> EVT_FileIndexedForAi
     CMD_IndexFileForAi --> EVT_FileIndexingFailed
+    CMD_IndexFileForAi --> EVT_FileIndexingRetried
     CMD_RemoveFileFromAiIndex --> EVT_FileLeftAiIndex
     ACT_TeamMember --> CMD_RequestAiAssessment
     CMD_RequestAiAssessment --> EVT_AiAssessmentRequested
@@ -215,7 +233,7 @@ flowchart LR
     POL_RegistrationAppliesChosenMaintenanceTasks --> CMD_ChangeMachinesOfMaintenanceTask
     EVT_AiSettingsChanged --> POL_AiIndexFollowsTheSettings
     POL_AiIndexFollowsTheSettings --> CMD_IndexFileForAi
-    EVT_FileAttached --> POL_AttachedFileIsIndexedForAi
+    EVT_FileAdded --> POL_AttachedFileIsIndexedForAi
     POL_AttachedFileIsIndexedForAi --> CMD_IndexFileForAi
     EVT_FileRemoved --> POL_RemovedFileLeavesAiIndex
     POL_RemovedFileLeavesAiIndex --> CMD_RemoveFileFromAiIndex
@@ -294,7 +312,10 @@ flowchart LR
     EVT_MachineRegistered -.-> RM_MachineRecord
     EVT_MachineStatusChanged -.-> RM_MachineRecord
     EVT_MachineRetired -.-> RM_MachineRecord
+    EVT_FileAdded -.-> RM_MachineRecord
     EVT_FileAttached -.-> RM_MachineRecord
+    EVT_FileDetached -.-> RM_MachineRecord
+    EVT_FileDetailsChanged -.-> RM_MachineRecord
     EVT_FileRemoved -.-> RM_MachineRecord
     EVT_DefectRecorded -.-> RM_MachineRecord
     EVT_WorkLogged -.-> RM_MachineRecord
@@ -314,6 +335,7 @@ flowchart LR
     EVT_MaintenancePlanChanged -.-> RM_MachineRecord
     EVT_MachinesOfMaintenanceTaskChanged -.-> RM_MachineRecord
     EVT_FileIndexingFailed -.-> RM_MachineRecord
+    EVT_FileIndexingRetried -.-> RM_MachineRecord
     EVT_FileIndexedForAi -.-> RM_MachineRecord
     EVT_AiAssessmentWritten -.-> RM_MachineRecord
     EVT_AiAssessmentFailed -.-> RM_MachineRecord
@@ -400,8 +422,10 @@ flowchart LR
     EVT_AiSettingsChanged -.-> RM_AiSettings
     EVT_FileIndexedForAi -.-> RM_AiSettings
     EVT_FileIndexingFailed -.-> RM_AiSettings
+    EVT_FileIndexingRetried -.-> RM_AiSettings
     EVT_FileLeftAiIndex -.-> RM_AiSettings
-    EVT_FileAttached -.-> RM_AiSettings
+    EVT_FileAdded -.-> RM_AiSettings
+    EVT_FileDetailsChanged -.-> RM_AiSettings
     EVT_FileRemoved -.-> RM_AiSettings
     RM_AiSettings -.-> ACT_Technician
     EVT_AiAssessmentRequested -.-> RM_DefectAiAssessments
@@ -412,8 +436,45 @@ flowchart LR
     EVT_DefectClosedOnRetirement -.-> RM_DefectAiAssessments
     EVT_DefectDetailsChanged -.-> RM_DefectAiAssessments
     EVT_AiSettingsChanged -.-> RM_DefectAiAssessments
+    EVT_FileDetailsChanged -.-> RM_DefectAiAssessments
     EVT_FileRemoved -.-> RM_DefectAiAssessments
     RM_DefectAiAssessments -.-> ACT_TeamMember
+    EVT_FileAdded -.-> RM_FileOverview
+    EVT_FileAttached -.-> RM_FileOverview
+    EVT_FileDetached -.-> RM_FileOverview
+    EVT_FileDetailsChanged -.-> RM_FileOverview
+    EVT_FileRemoved -.-> RM_FileOverview
+    EVT_MachineRegistered -.-> RM_FileOverview
+    EVT_MachineDetailsCorrected -.-> RM_FileOverview
+    EVT_MachineModelCreated -.-> RM_FileOverview
+    EVT_MachineModelCorrected -.-> RM_FileOverview
+    EVT_FileIndexedForAi -.-> RM_FileOverview
+    EVT_FileIndexingFailed -.-> RM_FileOverview
+    EVT_FileIndexingRetried -.-> RM_FileOverview
+    EVT_FileLeftAiIndex -.-> RM_FileOverview
+    EVT_AiSettingsChanged -.-> RM_FileOverview
+    RM_FileOverview -.-> ACT_TeamMember
+    EVT_FileAdded -.-> RM_FileDetails
+    EVT_FileAttached -.-> RM_FileDetails
+    EVT_FileDetached -.-> RM_FileDetails
+    EVT_FileDetailsChanged -.-> RM_FileDetails
+    EVT_FileRemoved -.-> RM_FileDetails
+    EVT_MachineRetired -.-> RM_FileDetails
+    EVT_MachineDetailsCorrected -.-> RM_FileDetails
+    EVT_MachineModelCorrected -.-> RM_FileDetails
+    EVT_FileIndexedForAi -.-> RM_FileDetails
+    EVT_FileIndexingFailed -.-> RM_FileDetails
+    EVT_FileIndexingRetried -.-> RM_FileDetails
+    EVT_AiSettingsChanged -.-> RM_FileDetails
+    RM_FileDetails -.-> ACT_TeamMember
+    EVT_MachineRegistered -.-> RM_AttachmentChoice
+    EVT_MachineRetired -.-> RM_AttachmentChoice
+    EVT_MachineDetailsCorrected -.-> RM_AttachmentChoice
+    EVT_MachineModelCreated -.-> RM_AttachmentChoice
+    EVT_MachineModelCorrected -.-> RM_AttachmentChoice
+    EVT_FileAttached -.-> RM_AttachmentChoice
+    EVT_FileDetached -.-> RM_AttachmentChoice
+    RM_AttachmentChoice -.-> ACT_TeamMember
     classDef evt fill:#a3391f,stroke:#e65100,color:#fff
     classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
     classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
@@ -598,7 +659,7 @@ flowchart LR
 
 ### AI assessment of a defect
 
-Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the files of the machines and machine models are indexed for AI in the background. A team member who may work on an open defect asks for an AI assessment with an optional note and photos; it is written in the background and kept with the defect.
+Feature ai-assessment (2026-10-31). A technician saves the OpenRouter key and two models; the museum's files are indexed for AI in the background. A team member who may work on an open defect asks for an AI assessment with an optional note and photos; it searches the files attached to the machine or its machine model, is written in the background and kept with the defect.
 
 ```mermaid
 flowchart LR
@@ -625,12 +686,45 @@ flowchart LR
     classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
 ```
 
+### Managing files
+
+Feature files (2026-11-02). A team member adds a file, attached to something or to nothing yet; it is indexed for AI once, whatever it is attached to. Team members attach it to further machines and machine models and correct its title and file category; technicians detach it or remove it for good.
+
+```mermaid
+flowchart LR
+    ACT_TeamMember(["Team member"]):::act
+    EVT_FileAdded["File added"]:::evt
+    EVT_FileAttached["File attached"]:::evt
+    EVT_FileIndexedForAi["File indexed for AI"]:::evt
+    EVT_FileDetailsChanged["File details changed"]:::evt
+    ACT_Technician(["Technician"]):::act
+    EVT_FileDetached["File detached"]:::evt
+    EVT_FileRemoved["File removed"]:::evt
+    EVT_FileLeftAiIndex["File left the AI index"]:::evt
+    ACT_TeamMember --> EVT_FileAdded
+    EVT_FileAdded --> EVT_FileAttached
+    EVT_FileAttached --> EVT_FileIndexedForAi
+    EVT_FileIndexedForAi --> EVT_FileDetailsChanged
+    EVT_FileDetailsChanged --> ACT_Technician
+    ACT_Technician --> EVT_FileDetached
+    EVT_FileDetached --> EVT_FileRemoved
+    EVT_FileRemoved --> EVT_FileLeftAiIndex
+    classDef evt fill:#a3391f,stroke:#e65100,color:#fff
+    classDef cmd fill:#64b5f6,stroke:#0d47a1,color:#000
+    classDef pol fill:#ce93d8,stroke:#4a148c,color:#000
+    classDef rm fill:#81c784,stroke:#1b5e20,color:#000
+    classDef act fill:#a3751f,stroke:#f57f17,color:#000
+    classDef ext fill:#f48fb1,stroke:#880e4f,color:#000
+    classDef agg fill:#ffe082,stroke:#ff6f00,color:#000
+    classDef hs fill:#e57373,stroke:#b71c1c,color:#fff
+```
+
 ## Bounded Contexts & Aggregates
 
 | Context | Purpose | Aggregates | Events |
 |---|---|---|---|
-| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files – and how the museum presents itself to visitors (museum settings) | Machine, Machine model, File, Museum settings | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File attached, File removed, Machine retired, Museum details changed, Logo replaced, Logo removed, Legal texts changed |
+| Collection (`BC-Collection`) | Which machines the museum has, what they are, where they stand, whether they are playable, and their files – and how the museum presents itself to visitors (museum settings) | Machine, Machine model, File, Museum settings | Machine model created, Machine registered, Machine status changed, Machine moved, Machine details corrected, Machine model corrected, File added, File attached, File detached, File details changed, File removed, Machine retired, Museum details changed, Logo replaced, Logo removed, Legal texts changed |
 | Repair (`BC-Repair`) | From problem reports via triage to defects that are worked on and resolved | Problem report, Defect | Problem reported, Defect recorded, Problem report linked to defect, Problem resolved on the spot, Problem report dismissed, Defect prioritized, Defect details changed, Defect claimed, Defect claim released, Work logged, Defect put on hold, Defect resumed, Defect resolved, Defect reopened, Defect closed on retirement |
 | Team (`BC-Team`) | Generic, not modelled – team member accounts, roles (helper, technician), signing in and last visit; supplier to all other contexts | – | – |
 | Maintenance (`BC-Maintenance`) | The maintenance plan and keeping every machine's scheduled maintenance up to date | Maintenance plan, Maintenance record | Maintenance plan changed, Machines of maintenance task changed, Maintenance task due, Maintenance task overdue, Maintenance recorded |
-| AI assistance (`BC-AiAssistance`) | Asking an AI for help with open defects – the AI settings, the AI index of the machines' and machine models' files, and the AI assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of Collection, Repair and Team; the only context that talks to OpenRouter (EXT-OpenRouter), behind an anti-corruption layer | AI settings, AI index entry, AI assessment | AI settings changed, File indexed for AI, File indexing failed, File left the AI index, AI work left unfinished, AI assessment requested, AI assessment written, AI assessment failed |
+| AI assistance (`BC-AiAssistance`) | Asking an AI for help with open defects – the AI settings, the AI index of the museum's files, and the AI assessments of defects (feature ai-assessment, 2026-10-31; HS-28). Supporting, downstream of Collection, Repair and Team; the only context that talks to OpenRouter (EXT-OpenRouter), behind an anti-corruption layer | AI settings, AI index entry, AI assessment | AI settings changed, File indexed for AI, File indexing failed, File indexing retried, File left the AI index, AI work left unfinished, AI assessment requested, AI assessment written, AI assessment failed |

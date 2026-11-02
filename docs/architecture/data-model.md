@@ -1,6 +1,6 @@
 # Logical Data Model
 
-> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-10-31 (AI assistance, feature ai-assessment; museum settings, feature museum-start-page)
+> Stack-neutral. Source: `docs/domain/events.yaml`. Glossary: `CONTEXT.md`. Contexts: `docs/domain/context-map.md`. As of: 2026-11-02 (file management, feature files; AI assistance, feature ai-assessment; museum settings, feature museum-start-page)
 >
 > No physical model yet – the stack is only *proposed* (`docs/adr/0001-tech-stack.md`, `0002`, `0003`). A "Physical Model" section follows once the user accepts them.
 
@@ -32,7 +32,7 @@
 | `MaintenanceOutcome` | *done* \| *partially done* – only *done* resets the interval |
 | `Interval` | Positive time span of a maintenance task (all initial values are whole months) |
 | `Photo` | A stored image (content reference, media type, size); used by problem reports and work log entries |
-| `FileContent` | A stored document or image (content reference, original name, media type, size) |
+| `FileContent` | A stored document or image (content reference, media type, size), reached through the storage seam (ADR 0012); it never changes |
 | `LogoContent` | The logo kept in the object store: content reference (its name in the store, reached through the storage seam – ADR 0012) and media type (PNG, JPEG or WebP, re-encoded by the server without metadata) |
 | `LegalText` | A non-empty Markdown text of which visitors see only headings, paragraphs, bold and italic, lists and links to https and mailto addresses (CMD-ChangeLegalTexts; other Markdown: HS-26) |
 | `AiAssessmentId` | Opaque identity of an AI assessment, like the IDs above |
@@ -54,8 +54,9 @@ Relationships between aggregates are references by ID (labelled "refers to").
 erDiagram
     MACHINE_MODEL ||--o{ MACHINE : "refers to (model of)"
     MACHINE ||--|{ STATUS_CHANGE : contains
-    MACHINE_MODEL ||--o{ FILE : "refers to (attached to)"
-    MACHINE ||--o{ FILE : "refers to (attached to)"
+    FILE ||--o{ ATTACHMENT : contains
+    MACHINE ||--o{ ATTACHMENT : "refers to (attached to)"
+    MACHINE_MODEL ||--o{ ATTACHMENT : "refers to (attached to)"
     MACHINE ||--o{ PROBLEM_REPORT : "refers to (reported for)"
     MACHINE ||--o{ DEFECT : "refers to (fault of)"
     PROBLEM_REPORT ||--o| DEFECT : "refers to (recorded as)"
@@ -74,8 +75,6 @@ erDiagram
     MUSEUM_SETTINGS ||--o| LOGO : contains
     MUSEUM_SETTINGS ||--|{ LEGAL_TEXT : contains
     FILE ||--o| AI_INDEX_ENTRY : "refers to (indexed as)"
-    MACHINE ||--o{ AI_INDEX_ENTRY : "refers to (owner of the file)"
-    MACHINE_MODEL ||--o{ AI_INDEX_ENTRY : "refers to (owner of the file)"
     AI_INDEX_ENTRY ||--o{ INDEX_ITEM : contains
     DEFECT ||--o{ AI_ASSESSMENT : "refers to (assessment of)"
     AI_ASSESSMENT ||--o{ REFERENCE : contains
@@ -296,32 +295,59 @@ The **category history** is append-only, like the machine status history: its fi
 ## File (`AGG-File`, context `BC-Collection`)
 
 **Invariants**
-- A file belongs to exactly one machine or one machine model, which never changes
+- A file is attached to any number of machines and machine models, none included, and to each at most once
+- A removed file has no attachments that count – it shows nowhere and nothing can be attached to it, detached from it or changed on it
 - A file has exactly one file category
+- A file's content is never replaced
 - A removed file stays removed
 
-**Lifecycle**
+**No owner (feature files, user, 2026-11-02):** a file exists on its own. Adding it and attaching it are two things, which `CMD-AddFile` may do in one step (stored together or not at all). What a file is attached to says where it shows – on the machine, or on every machine of the machine model – and for AI assistance which AI assessments may find it. It decides nothing else: attaching and detaching start no indexing and cost nothing (`POL-AttachedFileIsIndexedForAi` follows `EVT-FileAdded`).
+
+**Attachments:** an attachment is an entity of the file, one per machine or machine model, unique within the file. Detaching removes it; attaching again creates a new one – both are in the journal, and no read model shows an earlier attachment or who made one, so who attached or detached and when is journal-only (`EVT-FileAttached`, `EVT-FileDetached`).
+
+**Retired machine:** an attachment to a machine that is then retired stays, shows as retired (`RM-FileDetails`) and can be detached. No policy reacts to `EVT-MachineRetired`. Only attaching is refused: `CMD-AddFile` and `CMD-AttachFile` read the chosen machines through the retirement lock taken shared, in the order of their IDs (ADR 0010, the pattern of `readChosenMachines`; taken after the file row's lock, which is safe because no retirement step locks a file), and a retired or unknown one rejects the whole command. A machine model has no retirement.
+
+**Concurrency – attaching and detaching are set deltas, the rest checks the version (domain-architect, 2026-11-02):**
+- `CMD-AttachFile` and `CMD-DetachFile` carry what the team member changed, not the state they saw, like `CMD-ChangeMachinesOfMaintenanceTask` (engineering conventions, *a set delta*): they name no version, the file row is loaded with a row lock, and two of them run one after the other. Attaching what is already attached, or detaching what is already detached, is nothing to do – no conflict, no event, the version stays. So two team members attaching a file to different machines at the same moment both succeed, and so do two who attach it to the same machine.
+- `CMD-ChangeFileDetails` and `CMD-RemoveFile` save at the version the team member saw. An attach or detach that really changed something raises that version too (the file row is one aggregate with one version). This is wanted for `CMD-RemoveFile`: its question names every machine and machine model the file disappears from (G10b), so a change meanwhile rejects the removal and the page asks again with the current list. For `CMD-ChangeFileDetails` the same conflict is rare and harmless – the form keeps what was typed and a second save succeeds. A version per part, as on the museum settings, was rejected: it would add a second version for that rare case and take the protection from the removal.
+- A removed file rejects all four. An attach or detach waiting for the row lock of a running removal then reads *removed*. Attaching does not take the file's removal lock (ADR 0014): that lock serialises the removal with an indexing, which holds no row lock; here the row lock is enough.
+
+**Removal:** the record stays – who removed it and when, its title for the references of earlier AI assessments, and its attachments, which no longer count. The content is deleted from the store after the commit (ADR 0009). Removing the file takes it out of the AI index (`POL-RemovedFileLeavesAiIndex`); detaching it from everything does not.
+
+**Journal:** title and original file name are typed text and stay out of the journal's data (engineering conventions), like the museum name. `EVT-FileAdded` journals the file category; `EVT-FileDetailsChanged` names which details changed and the file category; who changed the details and when is journal-only. No read model shows it.
+
+**Lifecycle** – attaching, detaching and changing the details happen inside *Active* and do not change the state. `Active` is only a diagram label, not a domain term; attached to nothing is derived, not a state.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Attached : EVT-FileAttached
-    Attached --> Removed : EVT-FileRemoved
+    [*] --> Active : EVT-FileAdded
+    Active --> Active : EVT-FileAttached
+    Active --> Active : EVT-FileDetached
+    Active --> Active : EVT-FileDetailsChanged
+    Active --> Removed : EVT-FileRemoved
     Removed --> [*]
 ```
 
 | Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
 |---|---|---|---|---|---|
 | File | Root | ID | `FileId` | yes | – (identity) |
-| | | Attached to | `MachineId` xor `MachineModelId` | yes | EVT-FileAttached |
-| | | Title | `Title` | yes | EVT-FileAttached |
-| | | File category | `FileCategory` | yes | EVT-FileAttached |
-| | | Content | `FileContent` | yes (until removed) | EVT-FileAttached |
-| | | Attached by | `TeamMemberId` | yes | EVT-FileAttached |
-| | | Attached at | `Timestamp` | yes | EVT-FileAttached (occurrence) |
+| | | Title | `Title` | yes | EVT-FileAdded, EVT-FileDetailsChanged |
+| | | File category | `FileCategory` | yes | EVT-FileAdded, EVT-FileDetailsChanged |
+| | | Original file name | `Text` | no – none for files from before the feature files | EVT-FileAdded; *Original file name* in RM-FileDetails, searched in RM-FileOverview |
+| | | Content | `FileContent` | yes (the reference stays after removal; the content is deleted) | EVT-FileAdded; *Media type*, *Size* in RM-FileOverview, RM-FileDetails |
+| | | Added by | `TeamMemberId` | yes | EVT-FileAdded; RM-FileDetails |
+| | | Added at | `Timestamp` | yes | EVT-FileAdded (occurrence); RM-FileOverview, RM-FileDetails |
+| | | Attachments | list of Attachment | yes (may be empty) | see below |
 | | | Removed by | `TeamMemberId` | when removed | EVT-FileRemoved |
 | | | Removed at | `Timestamp` | when removed | EVT-FileRemoved (occurrence) |
+| Attachment | Entity (per file and machine or machine model) | Attached to | `MachineId` xor `MachineModelId` | yes, unique within the file | EVT-FileAttached, EVT-FileDetached; *Attached to* in RM-FileDetails, *Files of the machine and its machine model* in RM-MachineRecord |
 
-Whether the content of a removed file is deleted or only hidden is not decided; recommendation: delete the content, keep the record (who removed what, when).
+Derived for read models:
+- *Files of a machine* (`RM-MachineRecord`) and the files an AI assessment may find – the files not removed that are attached to the machine or to its machine model, each once, also when attached to both.
+- *Attached to nothing* („Nirgends angehängt“, `RM-FileOverview`, `RM-FileDetails`) – no attachment.
+- *Name of an attachment in the search* (`RM-FileOverview`) – for a machine its museum number and its machine model's title, for a machine model its title; always the current values, and a retired machine's too. Manufacturer and serial number are not searched.
+
+**From before the feature (migration):** every existing file gets its owner as its one attachment, removed files included; *Attached by* and *Attached at* become *Added by* and *Added at*; it has no original file name. The journal is not rewritten: such a file has no `EVT-FileAdded`, and its `EVT-FileAttached` stands for adding it as well.
 
 ---
 
@@ -515,13 +541,17 @@ Derived: *AI on* (`RM-AiSettings`, `RM-DefectAiAssessments`, every command of AI
 ## AI index entry (`AGG-AiIndexEntry`, context `BC-AiAssistance`)
 
 **Invariants**
-- An AI index entry refers to exactly one file and to that file's machine or machine model, which never change; a file has at most one AI index entry
+- An AI index entry refers to exactly one file, which never changes; a file has at most one AI index entry
 - An AI index entry is either indexed or failed – an indexed one holds the file's passages, page images and images, each with where it came from (file and, for a PDF, page), all made with the one embedding model it names; a failed one holds none of them and exactly one reason
 - Indexing a file again replaces its AI index entry as a whole – never a mix of two indexings or two embedding models
 
-**One per file, identified by its file:** the entry's identity is the `FileId`. It copies the file's owner (machine or machine model) once, because the owner never changes (`AGG-File`) and the search is limited to the defect's machine and its machine model.
+**One per file, identified by its file:** the entry's identity is the `FileId`. It knows no machine and no machine model (feature files, 2026-11-02): what a file is attached to is Collection's and changes at any time, and attaching or detaching changes nothing in the AI index, so a copy would have to follow every attach and detach for nothing.
 
-**Waiting is derived, not stored:** a file that is not removed and has no entry for the current embedding model is *waiting* – just attached, attached while AI was off, indexed with an earlier embedding model, or not yet reached by a chain of runs that broke. The background work finds its work this way (ADR 0015); nothing records "waiting". A file whose indexing a run began and that ended without a result is not waiting: once the run's hold has run out, the next run records it *failed* with *broken off* (`EVT-AiWorkLeftUnfinished`, `POL-UnfinishedAiWorkFails`). A failed file is never indexed again automatically – only by hand or with a new embedding model (HS-32, user 2026-11-01, D3). An entry made with an earlier embedding model stays until it is replaced, but is never searched.
+**How an AI assessment's search is limited:** when the writing begins, `CMD-WriteAiAssessment` asks Collection for the files attached to the defect's machine or its machine model and searches the AI index among those file IDs (only entries of the current embedding model, ADR 0014). A file attached to nothing, or only elsewhere, is indexed but not found until it is attached. See *AI assessment* for why this is read once.
+
+**Waiting is derived, not stored:** a file that is not removed and has no entry for the current embedding model is *waiting* – just added, added while AI was off, indexed with an earlier embedding model, or not yet reached by a chain of runs that broke. A file attached to nothing waits like any other. The background work finds its work this way (ADR 0015); nothing records "waiting". A file whose indexing a run began and that ended without a result is not waiting: once the run's hold has run out, the next run records it *failed* with *broken off* (`EVT-AiWorkLeftUnfinished`, `POL-UnfinishedAiWorkFails`). A failed file is never indexed again automatically – only by hand or with a new embedding model (HS-32, user 2026-11-01, D3). An entry made with an earlier embedding model stays until it is replaced, but no AI assessment searches it.
+
+**Content search in the file overview (`RM-FileOverview`, user, 2026-11-02):** AI assistance publishes a query for the files whose passages contain given words (`docs/domain/context-map.md`, *The file overview*). It reads the passages' *Text* of every entry that is *indexed*, **whatever its embedding model and whether AI is on**: the words of a passage do not depend on the embedding model, and while AI is off there may be none to compare with. So a file keeps being found while it is indexed again with a new embedding model, and no request to OpenRouter is made – the search works on words, never on embeddings. No OCR: a scanned page has no passage and its words are not found. A failed entry holds no passages.
 
 **What is indexed (user, 2026-10-31):** a PDF – per page its text layer as a passage and the page rendered as an image (no OCR; a scanned page is found through its image); a Markdown or text file – its text in passages; a PNG, JPEG or WebP image – the image. Video, audio and other formats fail with *format not indexed*. Page images are not kept: when an AI assessment sends a found page, it renders that page again from the file (ADR 0014).
 
@@ -545,7 +575,6 @@ stateDiagram-v2
 | Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
 |---|---|---|---|---|---|
 | AI index entry | Root | File | `FileId` | yes, unique (identity) | EVT-FileIndexedForAi, EVT-FileIndexingFailed |
-| | | Owner of the file | `MachineId` xor `MachineModelId` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed (*Machine or machine model of the file*) |
 | | | State | *indexed* \| *failed* | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed; *Für die KI nicht lesbar* in RM-MachineRecord |
 | | | Embedding model | `ModelId` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed |
 | | | Indexed or failed at | `Timestamp` | yes | EVT-FileIndexedForAi, EVT-FileIndexingFailed (occurrence) |
@@ -555,7 +584,7 @@ stateDiagram-v2
 | | | Cost | `Cost` | when indexed; when failed, what it cost before (none for entries failed before 2026-11-01) | EVT-FileIndexedForAi, EVT-FileIndexingFailed; *Cost of indexing so far* in RM-AiSettings (summed from the journal, replaced and failed entries included) |
 | Index item | Entity | Kind | *passage* \| *page image* \| *image* | yes | EVT-FileIndexedForAi (*Passages*, *Page images and images*) |
 | | | Page | `PageNumber` | for a PDF | EVT-FileIndexedForAi; *References (file, page)* in RM-DefectAiAssessments |
-| | | Text | `Text` | for a passage | EVT-FileIndexedForAi (*Passages*) – what an AI assessment sends of a text hit |
+| | | Text | `Text` | for a passage | EVT-FileIndexedForAi (*Passages*) – what an AI assessment sends of a text hit; its words are what RM-FileOverview searches |
 | | | Embedding | `Embedding` | yes | EVT-FileIndexedForAi (never journaled) |
 
 Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-AiSettings`) and the per-file state on the machine record (`RM-MachineRecord`) – from the entries and Collection's files that are not removed, counting only entries of the current embedding model as indexed. Passages, page images and embeddings stay out of the journal; `EVT-FileIndexedForAi` names the file, the embedding model, the counts and the cost.
@@ -571,7 +600,9 @@ Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-A
 - An AI assessment is requested, then either written or failed exactly once; a written or failed AI assessment never changes
 - The note, the photos, who requested it and the chat model it was requested with never change
 - Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
-- Every reference names a file of the defect's machine or its machine model and, for a PDF, a page
+- Every reference names a file that was attached to the defect's machine or its machine model when the AI assessment was written and, for a PDF, a page – a later detach or removal changes nothing
+
+**Which files count (user, 2026-11-02):** what a file is attached to when the AI assessment is written, not when it was requested. The writing reads Collection's query once, at its beginning; that one list limits the search, is what the chat model is told, and is what references are checked against when the result is stored. A chat answer takes minutes, so this matters: a file detached meanwhile keeps its reference, because the AI really relied on it, and a file attached meanwhile was neither searched nor offered. A file removed meanwhile stays a reference by its title without a link (`RM-DefectAiAssessments`). Only the system runs the command, so the list passes through its input instead of being read again in the storing transaction.
 
 **Set-based rule (HS-31):** at most one AI assessment of a defect is *requested* (being written) at a time – checked by `CMD-RequestAiAssessment` and guaranteed by the store with a uniqueness among the requested AI assessments of a defect, like the museum number (HS-17). A write that ends without a result is failed as *broken off* by the next run once its hold has run out – the defect page, refreshing itself, starts that run – and is never written again automatically (HS-33, user 2026-11-01, D3).
 
@@ -610,7 +641,7 @@ The defect's own state plays no part after the request: a defect resolved or clo
 | Reference | VO | File | `FileId` | yes | EVT-AiAssessmentWritten (*References (file, page)*) |
 | | | Page | `PageNumber` | for a PDF | EVT-AiAssessmentWritten |
 
-The written text (summary, causes, what to check first) and the note stay out of the journal – free text, like the legal texts; `EVT-AiAssessmentWritten` journals that it was written, the models and the cost. A reference's file title is read from Collection when shown; a removed file keeps its title there and is shown without a link (`RM-DefectAiAssessments`). The photos are stored through the photo module like a work log entry's (store → command → delete on failure, ADR 0009).
+The written text (summary, causes, what to check first) and the note stay out of the journal – free text, like the legal texts; `EVT-AiAssessmentWritten` journals that it was written, the models and the cost. A reference holds the file and the page and never changes; it stays linked after the file is detached. The file's title is read from Collection when shown, so a corrected title shows there too; a removed file keeps its title there and is shown without a link (`RM-DefectAiAssessments`). The photos are stored through the photo module like a work log entry's (store → command → delete on failure, ADR 0009).
 
 Derived for read models: *May request* (`RM-DefectAiAssessments`) – AI on, the defect open (Repair), the viewer a technician or the defect suitable for helpers, and no AI assessment of the defect requested.
 
@@ -640,6 +671,7 @@ The dashboards compute their mark line with this rule at display time and never 
 
 ## Open points
 HS-18 to HS-21 are resolved (see `docs/domain/events.yaml`): corrections have their own events, museum numbers are "LG-" plus three digits and never reused, a machine back on display is due immediately but overdue only counted from its return, and "new" is measured since the Last visit – where the previous dashboard visit began.
-- Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen; whether removed file content is deleted.
+- Details for story refinement (no hotspot): full list of dismissal reasons; which resolution counts for repair times after a reopen.
 - Museum settings: HS-25, HS-26 and HS-27 are resolved.
 - AI assistance: HS-28 and HS-32 to HS-34 are resolved (user, 2026-10-31; HS-32 and HS-33 changed by D3, 2026-11-01 – no automatic retry, *broken off*). HS-35 is resolved (opening the form „KI“ starts a run).
+- Files: HS-36 is open – what the filter „machine or machine model“ of `RM-FileOverview` includes; it changes no aggregate.
