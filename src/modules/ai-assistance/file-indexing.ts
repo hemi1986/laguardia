@@ -2,7 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createCanvas } from "@napi-rs/canvas";
 import sharp from "sharp";
-import type { AiSeam, EmbedInput } from "./ai-seam";
+import type { EmbedInput } from "./ai-seam";
+import type { OpenRouterSession } from "./open-router-session";
 import type { AiIndexItem, IndexingFailureReason } from "./ai-index-entry";
 
 /**
@@ -44,23 +45,17 @@ export type IndexingOutcome =
   /** AI was turned off meanwhile (or the key or model changed): nothing is stored, the file stays waiting. */
   | { outcome: "given-up" };
 
-/** What the AI index work reads before every request – AI on, the key now, the model the index is built with. */
-export type IndexingSettings = { on: false } | { on: true; key: string; embeddingModel: string };
-
 export type IndexFileOptions = {
   contentType: string;
   bytes: Uint8Array;
-  ai: AiSeam;
+  /** AI off, a rotated key or a changed model takes effect at the next request; what it charges stays on the hold. */
+  openRouter: OpenRouterSession;
   /** The embedding model this indexing was started with – every item of the entry must be made with it. */
   embeddingModel: string;
-  /** Asked before every request to OpenRouter: AI off, a rotated key or a changed model stops the indexing at once. */
-  readAiNow: () => Promise<IndexingSettings>;
-  /** Told what OpenRouter charged after every few requests – the run keeps it in case the indexing breaks off. */
-  spent?: (cost: number) => Promise<void>;
 };
 
-/** How embedding is done for one file – the seam, the model, the settings asked before each request, the cost told. */
-type Embedding = Pick<IndexFileOptions, "ai" | "embeddingModel" | "readAiNow" | "spent">;
+/** How embedding is done for one file. */
+type Embedding = Pick<IndexFileOptions, "openRouter" | "embeddingModel">;
 
 /** One thing to embed, with where it came from. */
 type ItemToEmbed = {
@@ -71,8 +66,8 @@ type ItemToEmbed = {
   contentType?: string;
 };
 
-/** An item that went through OpenRouter, with the cost its request reported. */
-type Embedded = { item: Omit<AiIndexItem, "id">; cost: number };
+/** An item that went through OpenRouter. */
+type Embedded = Omit<AiIndexItem, "id">;
 
 const mediaTypesOf = (contentType: string) => contentType.split(";")[0].trim().toLowerCase();
 
@@ -85,12 +80,10 @@ const isImage = (contentType: string) => imageTypes.includes(mediaTypesOf(conten
 export async function indexFileContent({
   contentType,
   bytes,
-  ai,
+  openRouter,
   embeddingModel,
-  readAiNow,
-  spent,
 }: IndexFileOptions): Promise<IndexingOutcome> {
-  const embedding: Embedding = { ai, embeddingModel, readAiNow, spent };
+  const embedding: Embedding = { openRouter, embeddingModel };
   if (isPdf(contentType)) return indexPdf(bytes, embedding);
   if (isText(contentType)) {
     const text = new TextDecoder().decode(bytes);
@@ -120,11 +113,12 @@ async function indexItems(
 ): Promise<IndexingOutcome> {
   const answer = await embedItems(itemsToEmbed, embedding);
   if (answer.outcome === "given-up") return answer;
-  if (answer.outcome === "failed") return { outcome: "failed", reason: answer.reason, cost: costOf(answer.embedded) };
+  const cost = embedding.openRouter.spent();
+  if (answer.outcome === "failed") return { outcome: "failed", reason: answer.reason, cost };
   return {
     outcome: "indexed",
-    items: answer.embedded.map((each) => each.item),
-    cost: costOf(answer.embedded),
+    items: answer.embedded,
+    cost,
     ...counts,
   };
 }
@@ -199,14 +193,14 @@ async function indexPdf(bytes: Uint8Array, embedding: Embedding): Promise<Indexi
       } catch {
         // A page that pdfjs cannot read or render: the whole file fails and nothing of it is kept – but what the pages
         // before it cost is still its cost.
-        return { outcome: "failed", reason: "not readable", cost: costOf(embedded) };
+        return { outcome: "failed", reason: "not readable", cost: embedding.openRouter.spent() };
       }
       // Embedding errors are not the file's: they propagate, so the run keeps its hold and the file is recorded broken
       // off later instead of failing permanently as "not readable" (D3 never retries a failed file).
       const answer = await embedItems(itemsToEmbed, embedding);
       if (answer.outcome === "given-up") return answer;
       if (answer.outcome === "failed")
-        return { outcome: "failed", reason: answer.reason, cost: costOf([...embedded, ...answer.embedded]) };
+        return { outcome: "failed", reason: answer.reason, cost: embedding.openRouter.spent() };
       embedded.push(...answer.embedded);
     }
   } finally {
@@ -214,15 +208,13 @@ async function indexPdf(bytes: Uint8Array, embedding: Embedding): Promise<Indexi
   }
   return {
     outcome: "indexed",
-    items: embedded.map((each) => each.item),
+    items: embedded,
     pagesIndexed: pages,
     // Every page is a page image; a PDF has no separate image files.
     imagesIndexed: pages,
-    cost: costOf(embedded),
+    cost: embedding.openRouter.spent(),
   };
 }
-
-const costOf = (embedded: readonly Embedded[]) => embedded.reduce((sum, each) => sum + each.cost, 0);
 
 /** What rendering one PDF page needs – pdfjs' page, narrowed to the calls used (its types want a DOM canvas). */
 type PdfPage = {
@@ -322,20 +314,18 @@ export async function renderPdfPages(
   return rendered;
 }
 
-/** A failure keeps what was embedded before it – its cost is the file's (the items themselves are not kept). */
 type EmbedAnswer =
   | { outcome: "embedded"; embedded: Embedded[] }
   | { outcome: "given-up" }
-  | { outcome: "failed"; reason: IndexingFailureReason; embedded: Embedded[] };
+  | { outcome: "failed"; reason: IndexingFailureReason };
 
 /**
- * Embeds the items at most four requests at a time – one item per request. Before every request the settings are read:
- * AI off gives the file up, a rotated key is used for this request, and a changed embedding model gives the file up so
- * the entry never mixes two models.
+ * Embeds the items at most four requests at a time – one item per request. AI off gives the file up, and so does a
+ * changed embedding model, so the entry never mixes two models.
  */
 async function embedItems(
   itemsToEmbed: ItemToEmbed[],
-  { ai, embeddingModel, readAiNow, spent }: Embedding,
+  { openRouter, embeddingModel }: Embedding,
 ): Promise<EmbedAnswer> {
   const embedded: Embedded[] = [];
   for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {
@@ -343,31 +333,26 @@ async function embedItems(
       itemsToEmbed
         .slice(at, at + PARALLEL_REQUESTS)
         .map(async (item): Promise<Embedded | "given-up" | IndexingFailureReason> => {
-          const aiNow = await readAiNow();
-          if (!aiNow.on || aiNow.embeddingModel !== embeddingModel) return "given-up";
           const input: EmbedInput =
             item.kind === "passage"
               ? { kind: "text", text: item.text! }
               : { kind: "image", bytes: item.bytes!, contentType: item.contentType! };
-          const answer = await ai.embed(aiNow.key, embeddingModel, input);
+          const answer = await openRouter.embed(input, { sameModel: embeddingModel });
+          if (answer === "stopped") return "given-up";
           if (answer === "unreachable") return "OpenRouter not reachable";
           if (answer === "refused") return "OpenRouter refused";
           return {
-            item: {
-              kind: item.kind,
-              ...(item.page !== undefined && { page: item.page }),
-              ...(item.kind === "passage" && { text: item.text! }),
-              embedding: answer.embedding,
-            },
-            cost: answer.cost,
+            kind: item.kind,
+            ...(item.page !== undefined && { page: item.page }),
+            ...(item.kind === "passage" && { text: item.text! }),
+            embedding: answer.embedding,
           };
         }),
     );
     const answered = answers.filter((answer): answer is Embedded => typeof answer === "object");
-    await spent?.(costOf(answered));
     if (answers.includes("given-up")) return { outcome: "given-up" };
     const failure = answers.find((answer): answer is IndexingFailureReason => typeof answer === "string");
-    if (failure) return { outcome: "failed", reason: failure, embedded: [...embedded, ...answered] };
+    if (failure) return { outcome: "failed", reason: failure };
     embedded.push(...answered);
   }
   return { outcome: "embedded", embedded };

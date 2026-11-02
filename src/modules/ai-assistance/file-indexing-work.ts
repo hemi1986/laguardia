@@ -50,12 +50,8 @@ export const fileIndexingWork: AiWorkKind = {
       ? await indexFileContent({
           contentType: file.content.contentType,
           bytes: content,
-          ai: context.ai.ai,
+          openRouter: piece.openRouter,
           embeddingModel: aiNow.embeddingModel,
-          // Asked before every request: AI turned off, a rotated key or a changed model stops the indexing at once.
-          readAiNow: () => aiState(context.db, context.ai),
-          // Kept with the hold, so an indexing that breaks off still says what it cost.
-          spent: (cost) => piece.recordSpent(cost),
         })
       : // A file record whose content is missing from the store (ST-105): a damaged PDF fails the same way.
         { outcome: "failed", reason: "not readable", cost: 0 };

@@ -777,6 +777,12 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   (else `"no-longer-held"` and nothing is stored) – or `piece.giveUp()` (AI turned off meanwhile): the hold ends without
   a result or failure, the piece is waiting again, and this run does not take it again. A kind that throws keeps its
   hold; the run logs kind and ID only and goes on.
+- **OpenRouter from a held piece** (architecture review 2026-11-01): a kind asks through `piece.openRouter`
+  (`open-router-session.ts`), never the AI seam directly. Every request reads `aiState` first and answers `"stopped"`
+  without sending when AI is off or – with `sameModel` – the embedding model changed; it uses the key saved now, and
+  what it charges goes on the hold at once and into `spent()`. The kind decides only what a stop means: indexing gives
+  the file up, an AI assessment fails as *AI off*. `recordBrokenOff` gets the hold's `spent`; indexing records it, an AI
+  assessment does not (ST-108).
 - **What broke off fails, once** (`POL-UnfinishedAiWorkFails`): before it takes new work, a run takes every hold that
   ran out `FOR UPDATE SKIP LOCKED`, hands the piece to its kind's `recordBrokenOff(tx, id, context)` and deletes the
   hold in the same transaction. Runs started at the same moment share them; each piece is recorded exactly once. A

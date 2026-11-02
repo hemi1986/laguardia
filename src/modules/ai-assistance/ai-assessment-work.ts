@@ -4,19 +4,20 @@ import { defectForAiAssessment } from "@/modules/repair";
 import type { AssessmentFailureReason } from "./ai-assessment";
 import { aiAssessmentById, requestedAiAssessmentIds } from "./ai-assessments";
 import { buildAiAssessmentPrompt, parseAiAssessmentAnswer } from "./ai-assessment-writing";
-import { aiState, type AiState } from "./ai-settings";
+import { aiState } from "./ai-settings";
 import { renderPdfPages } from "./file-indexing";
 import { searchAiIndex, searchedFiles, type AiIndexHit } from "./ai-index-search";
 import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
 import { failAiAssessmentCommand, writeAiAssessmentCommand } from "./write-ai-assessment-command";
 import type { ChatFailure, ChatImage } from "./ai-seam";
+import type { OpenRouterSession } from "./open-router-session";
 
 /**
  * Writing an AI assessment as a kind of the background work (ST-107, ADR 0015, POL-RequestedAiAssessmentIsWritten).
  * A run takes one whole AI assessment: what is known about the defect is read outside any transaction from Repair and
  * Collection, the AI index is searched with the text and with each photo of the request, the chat model answers, and
- * only the storage of the answer is one short transaction that ends the hold. The settings are read again before every
- * request, so turning AI off stops the writing and sends nothing more (CMD-WriteAiAssessment rule).
+ * only the storage of the answer is one short transaction that ends the hold. Turning AI off stops the writing at the
+ * next request and sends nothing more (CMD-WriteAiAssessment rule, the piece's OpenRouter session).
  */
 export const AI_ASSESSMENT_KIND = "ai-assessment";
 
@@ -39,9 +40,8 @@ export const aiAssessmentWork: AiWorkKind = {
   },
 
   async work(id, piece, context) {
-    const readAiNow = () => aiState(context.db, context.ai);
     // AI turned off before it started: nothing is sent, and the request is failed as *AI off* (rule).
-    if (!(await readAiNow()).on) return fail(id, "ai-off", piece, context);
+    if (!(await aiState(context.db, context.ai)).on) return fail(id, "ai-off", piece, context);
     const assessment = await aiAssessmentById(context.db, id);
     // Already written or failed meanwhile – a stale hold does nothing.
     if (!assessment || assessment.state !== "requested") return piece.giveUp();
@@ -64,7 +64,7 @@ export const aiAssessmentWork: AiWorkKind = {
 
     const searches = await searchWithTheDefect({
       context,
-      readAiNow,
+      openRouter: piece.openRouter,
       title: defect.title,
       descriptions: defect.problemReports.map((each) => each.description),
       note: assessment.note,
@@ -73,7 +73,7 @@ export const aiAssessmentWork: AiWorkKind = {
       machineModelId: machineModel.id,
     });
     if (!searches.ok) return fail(id, searches.failure, piece, context);
-    const { passages, images, embeddingCost, filesSearched } = searches;
+    const { passages, images, filesSearched } = searches;
     // The images are assembled first: the prompt names only those that are actually sent (a removed file or a page
     // that cannot be rendered is left out rather than shifting every later image).
     const sent = await imagesToSend(context, images, reportPhotos, requestPhotos);
@@ -84,15 +84,14 @@ export const aiAssessmentWork: AiWorkKind = {
       note: assessment.note,
       photos: { reportPhotos: sent.reportPhotos, requestPhotos: sent.requestPhotos },
     });
-    const aiNow = await readAiNow();
-    // AI turned off while searching: nothing more is sent (rule).
-    if (!aiNow.on) return fail(id, "ai-off", piece, context);
     // The chat model is the one the assessment was requested with – never the one saved meanwhile (invariant).
-    const answer = await context.ai.ai.chat(aiNow.key, assessment.chatModel, {
+    const answer = await piece.openRouter.chat(assessment.chatModel, {
       system: prompt.system,
       text: prompt.text,
       images: sent.images,
     });
+    // AI turned off while searching: nothing more is sent (rule).
+    if (answer === "stopped") return fail(id, "ai-off", piece, context);
     if ("failure" in answer) return fail(id, answer.failure, piece, context);
     const parsed = parseAiAssessmentAnswer(answer.content);
     if (!parsed) return fail(id, "answer-unusable", piece, context);
@@ -108,7 +107,7 @@ export const aiAssessmentWork: AiWorkKind = {
           references: parsed.references,
           filesSearched,
           embeddingModel: searches.embeddingModel,
-          cost: embeddingCost + answer.cost,
+          cost: piece.openRouter.spent(),
         },
         { actor: { kind: "system" }, db: tx, clock: context.clock },
       ),
@@ -147,7 +146,6 @@ type SearchOutcome =
       ok: true;
       passages: AiIndexHit[];
       images: AiIndexHit[];
-      embeddingCost: number;
       filesSearched: string[];
       embeddingModel: string;
     }
@@ -157,11 +155,11 @@ type SearchOutcome =
  * The AI index is searched with the text – the defect title, the descriptions of its problem reports and the note of
  * the request, as one search – and with each photo of the request, one search each (user, 2026-10-31). Each takes the
  * fixed number of best text passages and pages or images; the images are merged, each once, and cut to the fixed total.
- * The settings are read again before every embedding request: AI off stops the search and sends nothing more.
+ * AI off stops the search and sends nothing more.
  */
 async function searchWithTheDefect({
   context,
-  readAiNow,
+  openRouter,
   title,
   descriptions,
   note,
@@ -170,7 +168,7 @@ async function searchWithTheDefect({
   machineModelId,
 }: {
   context: AiWorkContext;
-  readAiNow: () => Promise<AiState>;
+  openRouter: OpenRouterSession;
   title: string;
   descriptions: string[];
   note: string | undefined;
@@ -179,51 +177,29 @@ async function searchWithTheDefect({
   machineModelId: string;
 }): Promise<SearchOutcome> {
   const text = [title, ...descriptions, note ?? ""].filter((part) => part.trim()).join("\n\n");
-  let embeddingCost = 0;
-  let filesSearched: string[] = [];
-  let embeddingModel = "";
-  const scopes = async (): Promise<
-    | { key: string; model: string; scope: { machineId: string; machineModelId: string; embeddingModel: string } }
-    | "ai-off"
-  > => {
-    const aiNow = await readAiNow();
-    if (!aiNow.on) return "ai-off";
-    embeddingModel = aiNow.embeddingModel;
-    return {
-      key: aiNow.key,
-      model: aiNow.embeddingModel,
-      scope: { machineId, machineModelId, embeddingModel: aiNow.embeddingModel },
-    };
-  };
-  const first = await scopes();
-  if (first === "ai-off") return { ok: false, failure: "ai-off" };
-  const textAnswer = await context.ai.ai.embed(first.key, first.model, { kind: "text", text });
+  const scopeWith = (embeddingModel: string) => ({ machineId, machineModelId, embeddingModel });
+  const textAnswer = await openRouter.embed({ kind: "text", text });
+  if (textAnswer === "stopped") return { ok: false, failure: "ai-off" };
   if (textAnswer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
   if (textAnswer === "refused") return { ok: false, failure: "key-invalid" };
-  embeddingCost += textAnswer.cost;
-  filesSearched = await searchedFiles(context.db, first.scope);
-  const passageHits = await searchAiIndex(context.db, first.scope, textAnswer.embedding, "text");
-  const imageHits: AiIndexHit[] = [...(await searchAiIndex(context.db, first.scope, textAnswer.embedding, "image"))];
+  let embeddingModel = textAnswer.model;
+  const filesSearched = await searchedFiles(context.db, scopeWith(embeddingModel));
+  const passageHits = await searchAiIndex(context.db, scopeWith(embeddingModel), textAnswer.embedding, "text");
+  const imageHits = [...(await searchAiIndex(context.db, scopeWith(embeddingModel), textAnswer.embedding, "image"))];
   for (const photo of requestPhotos) {
     const bytes = await context.storage.readContent(photo);
     if (!bytes) continue;
-    const current = await scopes();
-    if (current === "ai-off") return { ok: false, failure: "ai-off" };
-    const answer = await context.ai.ai.embed(current.key, current.model, {
-      kind: "image",
-      bytes,
-      contentType: "image/jpeg",
-    });
+    const answer = await openRouter.embed({ kind: "image", bytes, contentType: "image/jpeg" });
+    if (answer === "stopped") return { ok: false, failure: "ai-off" };
     if (answer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
     if (answer === "refused") return { ok: false, failure: "key-invalid" };
-    embeddingCost += answer.cost;
-    imageHits.push(...(await searchAiIndex(context.db, current.scope, answer.embedding, "image")));
+    embeddingModel = answer.model;
+    imageHits.push(...(await searchAiIndex(context.db, scopeWith(embeddingModel), answer.embedding, "image")));
   }
   return {
     ok: true,
     passages: unique(passageHits),
     images: unique(imageHits).slice(0, AI_ASSESSMENT_FOUND_IMAGES),
-    embeddingCost,
     filesSearched,
     embeddingModel,
   };

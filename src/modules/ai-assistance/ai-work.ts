@@ -4,7 +4,8 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
-import type { AiDependencies } from "./ai-settings";
+import { aiState, type AiDependencies } from "./ai-settings";
+import { openRouterSession, type OpenRouterSession } from "./open-router-session";
 import { aiWorkHold } from "./schema";
 
 /**
@@ -32,10 +33,10 @@ export type HeldPiece = {
   /** Ends the hold without a result and without a failure (AI turned off meanwhile): the piece is waiting again. */
   giveUp(): Promise<void>;
   /**
-   * Adds what OpenRouter just charged for the piece to its hold, so a piece recorded broken off later still says what
+   * OpenRouter for this piece. What it charges goes on the hold, so a piece recorded broken off later can still say what
    * it cost (OPEN_QUESTIONS ST-109, user 2026-11-01).
    */
-  recordSpent(cost: number): Promise<void>;
+  openRouter: OpenRouterSession;
 };
 
 /**
@@ -196,7 +197,7 @@ async function anyWaiting(dependencies: AiWorkDependencies, run: Run): Promise<b
 }
 
 function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id: string): HeldPiece {
-  const { db, clock } = dependencies;
+  const { db, clock, ai } = dependencies;
   const thisHold = and(eq(aiWorkHold.kind, kind), eq(aiWorkHold.pieceId, id), eq(aiWorkHold.heldBy, run.id));
   return {
     storeResult: (store) =>
@@ -212,13 +213,16 @@ function heldPiece(dependencies: AiWorkDependencies, run: Run, kind: string, id:
     giveUp: async () => {
       await db.delete(aiWorkHold).where(thisHold);
     },
-    recordSpent: async (cost) => {
-      if (cost > 0)
+    openRouter: openRouterSession({
+      ai: ai.ai,
+      readAiNow: () => aiState(db, ai),
+      recordSpent: async (cost) => {
         await db
           .update(aiWorkHold)
           .set({ spent: sql`${aiWorkHold.spent} + ${cost}` })
           .where(thisHold);
-    },
+      },
+    }),
   };
 }
 
