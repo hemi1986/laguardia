@@ -47,6 +47,9 @@ Inside a module (flat until it grows):
   commands that don't exist yet, e.g. a page test that needs a machine with a changed status before ST-012, and the
   scenario steps a module offers its users' tests through its real commands (`aiScenario`, architecture review
   2026-11-01).
+  **A second one, for one test** (user, 2026-11-02): ST-110's integration test replaces the module's
+  `tokens-per-page-or-image.ts` with `vi.mock`, because its scenario states its own figure. Lint does not see a
+  `vi.mock`; no other test does this without the user's decision.
 - Direction: `app` → `modules` → `platform`. The platform imports no module or page code (its tests may drive a module command); a module imports no page code.
 - A module's `index.ts` exports commands and read-model queries – **never** its persistence functions or tables. Other modules change its data only through its commands.
 
