@@ -1,34 +1,114 @@
 import type { FileOfAiAssessmentMachine, MachineModelOfMachine } from "@/modules/collection";
 import type { DefectForAiAssessment } from "@/modules/repair";
-import type { AiAssessmentReference } from "./ai-assessment";
+import type { AiAssessmentReference, AssessmentFailureReason } from "./ai-assessment";
 import type { AiIndexHit } from "./ai-index-search";
+import type { ChatAnswer, ChatImage, ChatInput } from "./ai-seam";
+import type { SessionStopped } from "./open-router-session";
 
 /**
- * What CMD-WriteAiAssessment says to the chat model, and how its answer becomes an AI assessment (ST-107). The prompt is
- * built from what Repair and Collection publish – never from a table of theirs – and the answer is read as structured
- * data; OpenRouter's prose never reaches the domain (ADR 0014). The parser drops nothing by itself: the caller checks
- * references against the defect's files and drops the others (CMD-WriteAiAssessment rule).
+ * What CMD-WriteAiAssessment says to the chat model, and how its answer becomes an AI assessment (ST-107): what to search
+ * with and which photos to send, the chat request made of what was read, and the answer as the assessment's parts or the
+ * reason it failed. No I/O: the work reads and stores (`ai-assessment-work.ts`). The prompt is built from what Repair and
+ * Collection publish – never from a table of theirs – and the answer is read as structured data; OpenRouter's prose never
+ * reaches the domain (ADR 0014). The parser drops nothing by itself: the command checks references against the defect's
+ * files and drops the others (CMD-WriteAiAssessment rule).
  */
 
-/** Everything the prompt tells the chat model about the defect – read from Repair and Collection. */
-export type AiAssessmentSource = {
+/** How many of the newest problem report photos the chat model is sent (user, 2026-10-31). */
+const REPORT_PHOTOS = 10;
+/** How many found pages and images one AI assessment sends at most, merged and without duplicates (user, 2026-10-31). */
+const FOUND_IMAGES = 12;
+
+/** What was read for one chat request. What could not be read any more is undefined there, and is left out. */
+export type AiAssessmentMaterial = {
   defect: DefectForAiAssessment;
   machineModel: MachineModelOfMachine;
+  /** The defect's machine's and machine model's files – the only ones a reference may name. */
+  files: FileOfAiAssessmentMachine[];
+  note: string | undefined;
+  /** The found text passages, sent as text. */
+  passages: AiIndexHit[];
+  /** The found pages and images (`whatToRead`), each with its image. */
+  foundImages: { hit: AiIndexHit; image: ChatImage | undefined }[];
+  reportPhotos: (Uint8Array | undefined)[];
+  requestPhotos: (Uint8Array | undefined)[];
 };
 
-/** The fixed hits that go with a prompt: the text passages as text, the pages and images as images. */
-export type AiAssessmentHits = {
-  passages: AiIndexHit[];
-  /** Pages and images, already merged, unique and capped to the fixed number (user, 2026-10-31). */
-  images: AiIndexHit[];
-};
+/** What the AI index is searched with: the defect title, the descriptions of its problem reports and the note, as one. */
+export function searchTextOf(defect: DefectForAiAssessment, note: string | undefined): string {
+  return [defect.title, ...defect.problemReports.map((each) => each.description), note ?? ""]
+    .filter((part) => part.trim())
+    .join("\n\n");
+}
+
+/** What the searches found and the defect holds that is worth reading for the chat request – the caps are applied here. */
+export function whatToRead(
+  defect: DefectForAiAssessment,
+  found: { passages: readonly AiIndexHit[]; images: readonly AiIndexHit[] },
+): { passages: AiIndexHit[]; foundImages: AiIndexHit[]; reportPhotos: string[] } {
+  return {
+    passages: uniqueHits(found.passages),
+    foundImages: uniqueHits(found.images).slice(0, FOUND_IMAGES),
+    // The photos of the newest problem reports that have one, the newest first.
+    reportPhotos: defect.problemReports
+      .flatMap(({ photo, reportedAt }) => (photo ? [{ photo, reportedAt }] : []))
+      .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime())
+      .slice(0, REPORT_PHOTOS)
+      .map(({ photo }) => photo),
+  };
+}
+
+/** Each found index item once – distinct passages of one file or page are distinct hits. */
+function uniqueHits(hits: readonly AiIndexHit[]): AiIndexHit[] {
+  const seen = new Set<string>();
+  return hits.filter((hit) => {
+    if (seen.has(hit.id)) return false;
+    seen.add(hit.id);
+    return true;
+  });
+}
+
+/**
+ * The chat request of one AI assessment: the found pages and images, then the problem reports' photos, then the
+ * request's. The prompt names only what is really sent, so an image left out does not shift every later one.
+ */
+export function aiAssessmentChatRequest(material: AiAssessmentMaterial): ChatInput {
+  const found = material.foundImages.flatMap(({ hit, image }) => (image ? [{ hit, image }] : []));
+  const photos = (all: (Uint8Array | undefined)[]) =>
+    all.flatMap((bytes) => (bytes ? [{ bytes, contentType: "image/jpeg" }] : []));
+  const reportPhotos = photos(material.reportPhotos);
+  const requestPhotos = photos(material.requestPhotos);
+  const prompt = buildAiAssessmentPrompt({
+    ...material,
+    images: found.map(({ hit }) => hit),
+    reportPhotos: reportPhotos.length,
+    requestPhotos: requestPhotos.length,
+  });
+  return { ...prompt, images: [...found.map(({ image }) => image), ...reportPhotos, ...requestPhotos] };
+}
+
+/** Why a search stopped: its embedding request got no embedding. */
+export function failureOfEmbedding(answer: "stopped" | "refused" | "unreachable"): AssessmentFailureReason {
+  if (answer === "stopped") return "ai-off";
+  return answer === "unreachable" ? "openrouter-not-reachable" : "key-invalid";
+}
+
+/** What the chat model's request came to: the AI assessment's parts, or why it failed. */
+export function outcomeOfChat(
+  answer: ChatAnswer | SessionStopped,
+): AiAssessmentAnswer | { failure: AssessmentFailureReason } {
+  // AI turned off while searching: nothing more was sent (rule).
+  if (answer === "stopped") return { failure: "ai-off" };
+  if ("failure" in answer) return answer;
+  return parseAiAssessmentAnswer(answer.content) ?? { failure: "answer-unusable" };
+}
 
 /** The chat model's answer, read as the AI assessment's parts. */
-export type AiAssessmentAnswer = {
+type AiAssessmentAnswer = {
   summary: string;
   probableCauses: string[];
   whatToCheckFirst: string[];
-  /** The files and pages the model named – checked by the caller before they are stored. */
+  /** The files and pages the model named – checked by the command before they are stored. */
   references: AiAssessmentReference[];
 };
 
@@ -51,22 +131,22 @@ const systemPrompt = [
  * Builds the chat request's text for one AI assessment (ST-107). Everything is sent as data, the found passages as
  * text, and the found pages and images follow as images with the labels named here.
  */
-export function buildAiAssessmentPrompt({
-  source,
+function buildAiAssessmentPrompt({
+  defect,
+  machineModel,
   files,
-  hits,
+  passages,
+  images,
   note,
-  photos,
-}: {
-  source: AiAssessmentSource;
-  /** The defect's machine's and machine model's files – the only ones a reference may name. */
-  files: FileOfAiAssessmentMachine[];
-  hits: AiAssessmentHits;
-  note: string | undefined;
+  reportPhotos,
+  requestPhotos,
+}: Pick<AiAssessmentMaterial, "defect" | "machineModel" | "files" | "passages" | "note"> & {
+  /** The found pages and images really sent. */
+  images: AiIndexHit[];
   /** How many photos of problem reports and of the request follow the found pages and images. */
-  photos: { reportPhotos: number; requestPhotos: number };
+  reportPhotos: number;
+  requestPhotos: number;
 }): { system: string; text: string } {
-  const { defect, machineModel } = source;
   const sections = [
     `Defekt:\n${JSON.stringify({ titel: defect.title, priorität: defect.priority, pausiert: defect.holdReason ?? null }, null, 2)}`,
     `Meldungen:\n${JSON.stringify(
@@ -102,17 +182,17 @@ export function buildAiAssessmentPrompt({
       2,
     )}`,
     `Gefundene Textstellen:\n${JSON.stringify(
-      hits.passages.map(({ fileId, page, text }) => ({ datei: fileId, seite: page ?? null, text: text ?? "" })),
+      passages.map(({ fileId, page, text }) => ({ datei: fileId, seite: page ?? null, text: text ?? "" })),
       null,
       2,
     )}`,
     `Gefundene Seiten und Bilder (als Bilder mitgeschickt, in dieser Reihenfolge):\n${JSON.stringify(
-      hits.images.map(({ fileId, page }, index) => ({ bild: index + 1, datei: fileId, seite: page ?? null })),
+      images.map(({ fileId, page }, index) => ({ bild: index + 1, datei: fileId, seite: page ?? null })),
       null,
       2,
     )}`,
-    `Fotos der Meldungen (als Bilder mitgeschickt, danach): ${photos.reportPhotos}`,
-    `Fotos der Anfrage (als Bilder mitgeschickt, zuletzt): ${photos.requestPhotos}`,
+    `Fotos der Meldungen (als Bilder mitgeschickt, danach): ${reportPhotos}`,
+    `Fotos der Anfrage (als Bilder mitgeschickt, zuletzt): ${requestPhotos}`,
   ];
   return { system: systemPrompt, text: sections.join("\n\n") };
 }

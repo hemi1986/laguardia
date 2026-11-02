@@ -3,13 +3,19 @@ import { fileForIndexing, filesOfMachineAndModelForAi, machineModelOfMachineForA
 import { defectForAiAssessment } from "@/modules/repair";
 import type { AssessmentFailureReason } from "./ai-assessment";
 import { aiAssessmentById, requestedAiAssessmentIds } from "./ai-assessments";
-import { buildAiAssessmentPrompt, parseAiAssessmentAnswer } from "./ai-assessment-writing";
+import {
+  aiAssessmentChatRequest,
+  failureOfEmbedding,
+  outcomeOfChat,
+  searchTextOf,
+  whatToRead,
+} from "./ai-assessment-writing";
 import { aiState } from "./ai-settings";
 import { renderPdfPages } from "./file-indexing";
 import { searchAiIndex, searchedFiles, type AiIndexHit } from "./ai-index-search";
 import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
 import { failAiAssessmentCommand, writeAiAssessmentCommand } from "./write-ai-assessment-command";
-import type { ChatFailure, ChatImage } from "./ai-seam";
+import type { ChatImage } from "./ai-seam";
 import type { OpenRouterSession } from "./open-router-session";
 
 /**
@@ -20,11 +26,6 @@ import type { OpenRouterSession } from "./open-router-session";
  * next request and sends nothing more (CMD-WriteAiAssessment rule, the piece's OpenRouter session).
  */
 export const AI_ASSESSMENT_KIND = "ai-assessment";
-
-/** How many of the newest problem report photos the chat model is sent (user, 2026-10-31). */
-export const AI_ASSESSMENT_REPORT_PHOTOS = 10;
-/** How many found pages and images one AI assessment sends at most, merged and without duplicates (user, 2026-10-31). */
-export const AI_ASSESSMENT_FOUND_IMAGES = 12;
 
 export const aiAssessmentWork: AiWorkKind = {
   kind: AI_ASSESSMENT_KIND,
@@ -54,57 +55,41 @@ export const aiAssessmentWork: AiWorkKind = {
       machineModelId: machineModel.id,
     });
 
-    // The report photos go with the prompt – only the 10 newest (CMD-WriteAiAssessment's fixed number).
-    const reportPhotos = defect.problemReports
-      .flatMap(({ photo, reportedAt }) => (photo ? [{ photo, reportedAt }] : []))
-      .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime())
-      .slice(0, AI_ASSESSMENT_REPORT_PHOTOS)
-      .map(({ photo }) => photo);
-    const requestPhotos = assessment.photos;
-
     const searches = await searchWithTheDefect({
       context,
       openRouter: piece.openRouter,
-      title: defect.title,
-      descriptions: defect.problemReports.map((each) => each.description),
-      note: assessment.note,
-      requestPhotos,
+      text: searchTextOf(defect, assessment.note),
+      requestPhotos: assessment.photos,
       machineId: defect.machineId,
       machineModelId: machineModel.id,
     });
     if (!searches.ok) return fail(id, searches.failure, piece, context);
-    const { passages, images, filesSearched } = searches;
-    // The images are assembled first: the prompt names only those that are actually sent (a removed file or a page
-    // that cannot be rendered is left out rather than shifting every later image).
-    const sent = await imagesToSend(context, images, reportPhotos, requestPhotos);
-    const prompt = buildAiAssessmentPrompt({
-      source: { defect, machineModel },
+    const { filesSearched } = searches;
+    const toRead = whatToRead(defect, searches);
+    const foundImages = await readFoundImages(context, toRead.foundImages);
+    const request = aiAssessmentChatRequest({
+      defect,
+      machineModel,
       files,
-      hits: { passages, images: sent.found },
       note: assessment.note,
-      photos: { reportPhotos: sent.reportPhotos, requestPhotos: sent.requestPhotos },
+      passages: toRead.passages,
+      foundImages,
+      reportPhotos: await readPhotos(context, toRead.reportPhotos),
+      requestPhotos: await readPhotos(context, assessment.photos),
     });
     // The chat model is the one the assessment was requested with – never the one saved meanwhile (invariant).
-    const answer = await piece.openRouter.chat(assessment.chatModel, {
-      system: prompt.system,
-      text: prompt.text,
-      images: sent.images,
-    });
-    // AI turned off while searching: nothing more is sent (rule).
-    if (answer === "stopped") return fail(id, "ai-off", piece, context);
-    if ("failure" in answer) return fail(id, answer.failure, piece, context);
-    const parsed = parseAiAssessmentAnswer(answer.content);
-    if (!parsed) return fail(id, "answer-unusable", piece, context);
+    const outcome = outcomeOfChat(await piece.openRouter.chat(assessment.chatModel, request));
+    if ("failure" in outcome) return fail(id, outcome.failure, piece, context);
     await piece.storeResult((tx) =>
       executeCommand(
         writeAiAssessmentCommand,
         {
           aiAssessmentId: id,
-          summary: parsed.summary,
-          probableCauses: parsed.probableCauses,
-          whatToCheckFirst: parsed.whatToCheckFirst,
+          summary: outcome.summary,
+          probableCauses: outcome.probableCauses,
+          whatToCheckFirst: outcome.whatToCheckFirst,
           // The command owns the invariant: references to files outside the defect's machine and its model are dropped.
-          references: parsed.references,
+          references: outcome.references,
           filesSearched,
           embeddingModel: searches.embeddingModel,
           cost: piece.openRouter.spent(),
@@ -149,39 +134,31 @@ type SearchOutcome =
       filesSearched: string[];
       embeddingModel: string;
     }
-  | { ok: false; failure: ChatFailure | "ai-off" };
+  | { ok: false; failure: AssessmentFailureReason };
 
 /**
- * The AI index is searched with the text – the defect title, the descriptions of its problem reports and the note of
- * the request, as one search – and with each photo of the request, one search each (user, 2026-10-31). Each takes the
- * fixed number of best text passages and pages or images; the images are merged, each once, and cut to the fixed total.
- * AI off stops the search and sends nothing more.
+ * The AI index is searched with the text, as one search, and with each photo of the request, one search each (user,
+ * 2026-10-31). Each takes the fixed number of best text passages and pages or images. AI off stops the search and sends
+ * nothing more.
  */
 async function searchWithTheDefect({
   context,
   openRouter,
-  title,
-  descriptions,
-  note,
+  text,
   requestPhotos,
   machineId,
   machineModelId,
 }: {
   context: AiWorkContext;
   openRouter: OpenRouterSession;
-  title: string;
-  descriptions: string[];
-  note: string | undefined;
+  text: string;
   requestPhotos: readonly string[];
   machineId: string;
   machineModelId: string;
 }): Promise<SearchOutcome> {
-  const text = [title, ...descriptions, note ?? ""].filter((part) => part.trim()).join("\n\n");
   const scopeWith = (embeddingModel: string) => ({ machineId, machineModelId, embeddingModel });
   const textAnswer = await openRouter.embed({ kind: "text", text });
-  if (textAnswer === "stopped") return { ok: false, failure: "ai-off" };
-  if (textAnswer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
-  if (textAnswer === "refused") return { ok: false, failure: "key-invalid" };
+  if (typeof textAnswer === "string") return { ok: false, failure: failureOfEmbedding(textAnswer) };
   let embeddingModel = textAnswer.model;
   const filesSearched = await searchedFiles(context.db, scopeWith(embeddingModel));
   const passageHits = await searchAiIndex(context.db, scopeWith(embeddingModel), textAnswer.embedding, "text");
@@ -190,49 +167,32 @@ async function searchWithTheDefect({
     const bytes = await context.storage.readContent(photo);
     if (!bytes) continue;
     const answer = await openRouter.embed({ kind: "image", bytes, contentType: "image/jpeg" });
-    if (answer === "stopped") return { ok: false, failure: "ai-off" };
-    if (answer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
-    if (answer === "refused") return { ok: false, failure: "key-invalid" };
+    if (typeof answer === "string") return { ok: false, failure: failureOfEmbedding(answer) };
     embeddingModel = answer.model;
     imageHits.push(...(await searchAiIndex(context.db, scopeWith(embeddingModel), answer.embedding, "image")));
   }
   return {
     ok: true,
-    passages: unique(passageHits),
-    images: unique(imageHits).slice(0, AI_ASSESSMENT_FOUND_IMAGES),
+    passages: passageHits,
+    images: imageHits,
     filesSearched,
     embeddingModel,
   };
 }
 
-/** Each found index item once – distinct passages of one file or page are distinct hits. */
-function unique(hits: readonly AiIndexHit[]): AiIndexHit[] {
-  const seen = new Set<string>();
-  return hits.filter((hit) => {
-    if (seen.has(hit.id)) return false;
-    seen.add(hit.id);
-    return true;
-  });
-}
-
-/** What one chat request sends: the images, and the counts the prompt names for the photos actually attached. */
-type ImagesToSend = { images: ChatImage[]; found: AiIndexHit[]; reportPhotos: number; requestPhotos: number };
-
 /**
- * The images one chat request sends: the found pages, rendered again from their files (ADR 0014 – page images are not
- * kept; each file is read and opened once for all its found pages), then the photos of the problem reports and of the
- * request. An image that cannot be read any more is left out; the reference stays by its title (RM-DefectAiAssessments).
+ * The found pages and images, each with its image: pages rendered again from their files (ADR 0014 – page images are not
+ * kept; each file is read and opened once for all its found pages). What cannot be read any more has none; the reference
+ * stays by its title (RM-DefectAiAssessments).
  */
-async function imagesToSend(
+async function readFoundImages(
   context: AiWorkContext,
   found: readonly AiIndexHit[],
-  reportPhotos: readonly string[],
-  requestPhotos: readonly string[],
-): Promise<ImagesToSend> {
+): Promise<{ hit: AiIndexHit; image: ChatImage | undefined }[]> {
   const hitsByFile = new Map<string, AiIndexHit[]>();
   for (const hit of found) hitsByFile.set(hit.fileId, [...(hitsByFile.get(hit.fileId) ?? []), hit]);
   const pageImages = new Map<string, Map<number, Uint8Array>>();
-  const imageFiles = new Map<string, { bytes: Uint8Array; contentType: string }>();
+  const imageFiles = new Map<string, ChatImage>();
   for (const [fileId, hits] of hitsByFile) {
     const file = await fileForIndexing(context.db, fileId);
     if (!file) continue;
@@ -243,35 +203,16 @@ async function imagesToSend(
     const pages = hits.flatMap((hit) => (hit.kind !== "image" && hit.page !== undefined ? [hit.page] : []));
     if (pages.length > 0) pageImages.set(fileId, await renderPdfPages(bytes, pages));
   }
-
-  const images: ChatImage[] = [];
-  const sentFound: AiIndexHit[] = [];
-  for (const hit of found) {
-    if (hit.kind === "image") {
-      const image = imageFiles.get(hit.fileId);
-      if (!image) continue;
-      images.push(image);
-      sentFound.push(hit);
-      continue;
-    }
+  return found.map((hit) => {
+    if (hit.kind === "image") return { hit, image: imageFiles.get(hit.fileId) };
     const page = hit.page !== undefined ? pageImages.get(hit.fileId)?.get(hit.page) : undefined;
-    if (!page) continue;
-    images.push({ bytes: page, contentType: "image/jpeg" });
-    sentFound.push(hit);
-  }
-  let sentReportPhotos = 0;
-  for (const photo of reportPhotos) {
-    const bytes = await context.storage.readContent(photo);
-    if (!bytes) continue;
-    images.push({ bytes, contentType: "image/jpeg" });
-    sentReportPhotos += 1;
-  }
-  let sentRequestPhotos = 0;
-  for (const photo of requestPhotos) {
-    const bytes = await context.storage.readContent(photo);
-    if (!bytes) continue;
-    images.push({ bytes, contentType: "image/jpeg" });
-    sentRequestPhotos += 1;
-  }
-  return { images, found: sentFound, reportPhotos: sentReportPhotos, requestPhotos: sentRequestPhotos };
+    return { hit, image: page && { bytes: page, contentType: "image/jpeg" } };
+  });
+}
+
+/** Stored photos in the order given, one after the other – undefined for one that cannot be read any more. */
+async function readPhotos(context: AiWorkContext, names: readonly string[]): Promise<(Uint8Array | undefined)[]> {
+  const photos: (Uint8Array | undefined)[] = [];
+  for (const name of names) photos.push(await context.storage.readContent(name));
+  return photos;
 }
