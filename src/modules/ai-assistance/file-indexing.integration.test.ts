@@ -7,7 +7,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { aiIndexEntryOf } from "./ai-index-entries";
+import { aiIndexEntryOf, aiIndexStatesOfFiles } from "./ai-index-entries";
 import { aiIndexOverview } from "./ai-index-overview";
 import { withoutAiSettings } from "./ai-settings.test-support";
 import { fileIndexingWork } from "./file-indexing-work";
@@ -572,6 +572,34 @@ describe("a run and the files it finds", () => {
     expect(ai.requests.filter((each) => each.startsWith(`embed:${otherEmbedding.id}`))).toEqual([]);
     expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
     expect(await eventsOf(fileId)).not.toContain("EVT-FileIndexingFailed");
+  });
+
+  it("a file's state in the AI index holds for one embedding model: an entry of another model counts as none", async () => {
+    const otherEmbedding = { ...geminiEmbedding, id: "google/other-embedding", name: "Other Embedding" };
+    const ai = anAi({ models: [geminiFlash, geminiEmbedding, otherEmbedding] });
+    await saveAiSettings({ ai });
+    const indexed = await attach({
+      title: "Manual",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("The manual's only passage."),
+    });
+    const failed = await attach({ title: "Damaged", contentType: "application/pdf", bytes: aDamagedPdf() });
+    await run({ ai });
+    const notYet = await attach({
+      title: "Later file",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("Attached after the run."),
+    });
+    const fileIds = [indexed, failed, notYet];
+
+    expect([...(await aiIndexStatesOfFiles(db, EMBEDDING, fileIds)).values()]).toEqual([
+      { state: "indexed", version: expect.any(Number) },
+      { state: "failed", reason: "not readable", version: expect.any(Number) },
+      { state: "waiting" },
+    ]);
+    const ofOtherModel = await aiIndexStatesOfFiles(db, otherEmbedding.id, fileIds);
+    expect(fileIds.map((id) => ofOtherModel.get(id))).toEqual(fileIds.map(() => ({ state: "waiting" })));
+    expect(await aiIndexStatesOfFiles(db, EMBEDDING, [])).toEqual(new Map());
   });
 
   it("ST-106: A file is indexed once, even when two runs find it", async () => {

@@ -1,10 +1,9 @@
-import { and, eq, inArray } from "drizzle-orm";
 import { entriesOf, isId, lastCommandBy, readJournal, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import type { FileOwner, IndexingFailureReason } from "./ai-index-entry";
+import { aiIndexStatesOfFiles } from "./ai-index-entries";
 import { aiState, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
-import { aiIndexEntry } from "./schema";
 
 /** A file the AI cannot read (RM-AiSettings, *Files failed*): what it belongs to, its title and why. */
 export type FailedFile = {
@@ -22,35 +21,6 @@ export type FailedFile = {
  * entries included (summed from the journal, data model *AI index entry*).
  */
 export type AiIndexOverview = { indexed: number; waiting: number; failed: FailedFile[]; cost: number };
-
-type EntryOfCurrentModel = {
-  state: "indexed" | "failed";
-  failureReason: IndexingFailureReason | null;
-  version: number;
-};
-
-/** The AI index entries made with this embedding model, by file – of these files only, when given. */
-async function entriesFor(
-  db: Database,
-  embeddingModel: string,
-  fileIds?: readonly string[],
-): Promise<Map<string, EntryOfCurrentModel>> {
-  const rows = await db
-    .select({
-      id: aiIndexEntry.id,
-      state: aiIndexEntry.state,
-      failureReason: aiIndexEntry.failureReason,
-      version: aiIndexEntry.version,
-    })
-    .from(aiIndexEntry)
-    .where(
-      and(
-        eq(aiIndexEntry.embeddingModel, embeddingModel),
-        fileIds ? inArray(aiIndexEntry.id, [...fileIds]) : undefined,
-      ),
-    );
-  return new Map(rows.map(({ id, ...entry }) => [id, entry]));
-}
 
 /**
  * Everything OpenRouter charged for indexing – every EVT-FileIndexedForAi ever recorded, and what an indexing that
@@ -73,25 +43,25 @@ export async function aiIndexOverview(
 ): Promise<AiIndexOverview | undefined> {
   const aiNow = await aiState(db, dependencies);
   if (!aiNow.on) return undefined;
-  const [files, entries, cost] = await Promise.all([
-    filesForIndexing(db),
-    entriesFor(db, aiNow.embeddingModel),
-    costOfIndexingSoFar(db),
-  ]);
+  const [files, cost] = await Promise.all([filesForIndexing(db), costOfIndexingSoFar(db)]);
+  const states = await aiIndexStatesOfFiles(
+    db,
+    aiNow.embeddingModel,
+    files.map((file) => file.id),
+  );
   const overview: AiIndexOverview = { indexed: 0, waiting: 0, failed: [], cost };
   for (const file of files) {
-    const entry = entries.get(file.id);
-    if (!entry) overview.waiting += 1;
-    else if (entry.state === "indexed") overview.indexed += 1;
-    else {
+    const entry = states.get(file.id);
+    if (entry?.state === "indexed") overview.indexed += 1;
+    else if (entry?.state === "failed") {
       overview.failed.push({
         fileId: file.id,
         title: file.title,
         owner: file.owner,
-        reason: entry.failureReason!,
+        reason: entry.reason,
         version: entry.version,
       });
-    }
+    } else overview.waiting += 1;
   }
   return overview;
 }
@@ -108,8 +78,8 @@ export async function filesTheAiCannotRead(
   if (fileIds.length === 0) return new Set();
   const aiNow = await aiState(db, dependencies);
   if (!aiNow.on) return new Set();
-  const entries = await entriesFor(db, aiNow.embeddingModel, fileIds);
-  return new Set(fileIds.filter((id) => entries.get(id)?.state === "failed"));
+  const states = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
+  return new Set(fileIds.filter((id) => states.get(id)?.state === "failed"));
 }
 
 /**

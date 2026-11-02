@@ -1,6 +1,6 @@
 import { executeCommand, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
-import { aiIndexHasEntryFor, aiIndexedFileIds } from "./ai-index-entries";
+import { aiIndexStatesOfFiles } from "./ai-index-entries";
 import { aiState } from "./ai-settings";
 import type { IndexFileForAiInput } from "./ai-index-entry";
 import { indexFileForAiCommand } from "./index-file-for-ai-command";
@@ -26,15 +26,17 @@ export const fileIndexingWork: AiWorkKind = {
   async waiting(db, context) {
     const aiNow = await aiState(db, context.ai);
     if (!aiNow.on) return [];
-    const [files, known] = await Promise.all([filesForIndexing(db), aiIndexedFileIds(db, aiNow.embeddingModel)]);
-    return files.filter((file) => !known.has(file.id)).map((file) => file.id);
+    const fileIds = (await filesForIndexing(db)).map((file) => file.id);
+    const states = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
+    return fileIds.filter((id) => states.get(id)?.state === "waiting");
   },
 
   /** Asked again once the file is held: done, recorded broken off or removed meanwhile is no longer waited for. */
   async isWaiting(tx, id, context) {
     const aiNow = await aiState(tx, context.ai);
     if (!aiNow.on) return false;
-    if (await aiIndexHasEntryFor(tx, id, aiNow.embeddingModel)) return false;
+    const states = await aiIndexStatesOfFiles(tx, aiNow.embeddingModel, [id]);
+    if (states.get(id)?.state !== "waiting") return false;
     return !!(await fileForIndexing(tx, id));
   },
 
