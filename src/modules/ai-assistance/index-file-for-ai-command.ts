@@ -1,7 +1,7 @@
 import { aggregateCommand } from "@/platform/command";
 import { fileForIndexingWhileStoring } from "@/modules/collection";
 import { indexFileForAi, retryFileIndexing, type RetryFileIndexingInput } from "./ai-index-entry";
-import { aiIndexingSettings, type AiDependencies } from "./ai-settings";
+import { aiState, type AiDependencies } from "./ai-settings";
 import { aiIndexEntries } from "./ai-index-entries";
 import { aiAssistanceEvents } from "./events";
 
@@ -37,8 +37,8 @@ export function retryFileIndexingCommand(dependencies: Pick<AiDependencies, "enc
     store: aiIndexEntries,
     target: (input: RetryFileIndexingInput) => ({ id: input.fileId, version: input.version }),
     facts: async (tx) => {
-      const { aiOn, embeddingModel } = await aiIndexingSettings(tx, dependencies);
-      return { aiOn, embeddingModel };
+      const ai = await aiState(tx, dependencies);
+      return { embeddingModel: ai.on ? ai.embeddingModel : undefined };
     },
     decide: retryFileIndexing,
     removes: () => true,

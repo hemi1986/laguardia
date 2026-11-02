@@ -403,6 +403,13 @@ ignores `OPENROUTER_BASE_URL` (the local browser tests' address where nothing an
 refuse one (a re-sent form after a conflict). `?saved=ai` is confirmed without the journal like „Museum“;
 `?saved=ai-key-removed` only while no key is saved. RM-AiSettings (`aiSettingsForm(db, dependencies)`) reads
 OpenRouter's lists on every opening; a saved key that cannot be decrypted counts as none.
+**Whether AI is on has one answer** (architecture review 2026-11-01): `aiState(db, dependencies)` in `ai-settings.ts`. On
+carries the decrypted key and both models, off what is missing – so a reader that has checked holds everything it needs,
+and no reader combines the fields itself. The form „KI“ reads the same answer. `savedAiModels` is for what holds also
+while AI is off (the estimate before a model change). A decision gets no such answer, only the fact it needs, none while
+AI is off (`chatModel`, `embeddingModel`); the key stays out of the facts. `aiOn` of CMD-ChangeAiSettings stays for
+`EVT-AiSettingsChanged`: it says what was saved, whether or not this environment can read the key. What the page offers
+for a request is `requestRefusal` next to its decision, over the same `requestAiAssessmentFacts` the command reads.
 
 **The two exceptions:** the visitor's report form (`/m/<museum number>?gemeldet=1`): a visitor has no account, so there
 is nobody to bind the confirmation to – it says only that a report was sent, nothing stored. And the team members'

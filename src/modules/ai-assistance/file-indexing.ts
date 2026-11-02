@@ -45,7 +45,7 @@ export type IndexingOutcome =
   | { outcome: "given-up" };
 
 /** What the AI index work reads before every request – AI on, the key now, the model the index is built with. */
-export type IndexingSettings = { aiOn: boolean; key: string | undefined; embeddingModel: string | undefined };
+export type IndexingSettings = { on: false } | { on: true; key: string; embeddingModel: string };
 
 export type IndexFileOptions = {
   contentType: string;
@@ -344,7 +344,7 @@ async function embedItems(
         .slice(at, at + PARALLEL_REQUESTS)
         .map(async (item): Promise<Embedded | "given-up" | IndexingFailureReason> => {
           const now = await settings();
-          if (!now.aiOn || !now.key || now.embeddingModel !== embeddingModel) return "given-up";
+          if (!now.on || now.embeddingModel !== embeddingModel) return "given-up";
           const input: EmbedInput =
             item.kind === "passage"
               ? { kind: "text", text: item.text! }

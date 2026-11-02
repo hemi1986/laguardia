@@ -202,8 +202,8 @@ export type FileIndexingRetried = {
   embeddingModel: string;
 };
 
-/** What the retry must know besides the entry: whether AI is on and with which embedding model. */
-export type RetryFileIndexingFacts = { aiOn: boolean; embeddingModel: string | undefined };
+/** What the retry must know besides the entry: the current embedding model – none while AI is off. */
+export type RetryFileIndexingFacts = { embeddingModel: string | undefined };
 
 /** AI is off – nothing is indexed (user, 2026-10-31); the file is not failed with the current embedding model. */
 export type RetryFileIndexingError = "file-indexing-ai-off" | "file-indexing-not-failed";
@@ -214,7 +214,7 @@ export function retryFileIndexing(
   _context: DecisionContext,
   facts: RetryFileIndexingFacts,
 ): Decision<AiIndexEntryState, FileIndexingRetried, RetryFileIndexingError> {
-  if (!facts.aiOn || !facts.embeddingModel) return { ok: false, error: "file-indexing-ai-off" };
+  if (!facts.embeddingModel) return { ok: false, error: "file-indexing-ai-off" };
   // Only a file that failed with the current embedding model – one of an earlier model is waiting already.
   if (entry.state !== "failed" || entry.embeddingModel !== facts.embeddingModel) {
     return { ok: false, error: "file-indexing-not-failed" };

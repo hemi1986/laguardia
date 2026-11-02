@@ -47,51 +47,48 @@ function usableKey(state: AiSettingsState, encryptionKey: Buffer | undefined): s
   return state.key && encryptionKey ? decryptKey(encryptionKey, state.key.encrypted) : undefined;
 }
 
-/** What the AI index work needs from the AI settings (ST-106): whether AI is on, the key to send with, the model. */
-export type AiIndexingSettings = {
-  /** Key, chat model and embedding model all saved – and the key decryptable with this environment's key. */
-  aiOn: boolean;
-  /** The key, decrypted – undefined when there is none or it cannot be decrypted. */
-  key: string | undefined;
-  /** The embedding model the index is built with – also while AI is off (the models stay when the key is removed). */
-  embeddingModel: string | undefined;
-};
+/** A part of the AI settings that is missing while AI is off. */
+export type MissingPart = "key" | "chat-model" | "embedding-model";
 
-/** The AI settings as the AI index work reads them – before every request, so turning AI off stops an indexing at once. */
-export async function aiIndexingSettings(
-  db: Database,
-  { encryptionKey }: Pick<AiDependencies, "encryptionKey">,
-): Promise<AiIndexingSettings> {
-  const { state } = await storedAiSettings(db);
-  const key = usableKey(state, encryptionKey());
+/**
+ * Whether AI is on, the one answer (architecture review 2026-11-01). On: the key, decrypted, and both models – what a
+ * request needs, and nothing can be sent without having asked. Off: what is missing, in the order the form „KI“ names
+ * it; a saved key that cannot be decrypted with this environment's key counts as none and says so (ADR 0014, ST-110).
+ */
+export type AiState =
+  | { on: true; key: string; chatModel: string; embeddingModel: string }
+  | { on: false; missing: MissingPart[]; keyUnreadable: boolean };
+
+function aiStateOf(state: AiSettingsState, encryptionKey: Buffer | undefined): AiState {
+  const key = usableKey(state, encryptionKey);
+  const { chatModel, embeddingModel } = state;
+  if (key && chatModel && embeddingModel) return { on: true, key, chatModel, embeddingModel };
   return {
-    aiOn: !!key && !!state.chatModel && !!state.embeddingModel,
-    key,
-    embeddingModel: state.embeddingModel,
+    on: false,
+    missing: [
+      ...(key ? [] : (["key"] as const)),
+      ...(chatModel ? [] : (["chat-model"] as const)),
+      ...(embeddingModel ? [] : (["embedding-model"] as const)),
+    ],
+    keyUnreadable: !!state.key && !key,
   };
 }
 
-/** What writing an AI assessment needs from the AI settings (ST-107): AI on, the key to send with, both models. */
-export type AiAssessmentSettings = {
-  aiOn: boolean;
-  key: string | undefined;
-  chatModel: string | undefined;
-  embeddingModel: string | undefined;
-};
-
-/** The AI settings as the AI assessment work reads them – before it starts, and again before it stores. */
-export async function aiAssessmentSettings(
-  db: Database,
-  { encryptionKey }: AiDependencies,
-): Promise<AiAssessmentSettings> {
+/**
+ * Is AI on now? Read before every request, so turning AI off, a rotated key or a changed model takes effect at once.
+ * Not the same as `aiOn` of CMD-ChangeAiSettings, which says what was saved and cannot know whether the key is readable.
+ */
+export async function aiState(db: Database, { encryptionKey }: Pick<AiDependencies, "encryptionKey">): Promise<AiState> {
   const { state } = await storedAiSettings(db);
-  const key = usableKey(state, encryptionKey());
-  return {
-    aiOn: !!key && !!state.chatModel && !!state.embeddingModel,
-    key,
-    chatModel: state.chatModel,
-    embeddingModel: state.embeddingModel,
-  };
+  return aiStateOf(state, encryptionKey());
+}
+
+/** The saved models, also while AI is off – they stay when the key is removed. */
+export async function savedAiModels(
+  db: Database,
+): Promise<{ chatModel: string | undefined; embeddingModel: string | undefined }> {
+  const { state } = await storedAiSettings(db);
+  return { chatModel: state.chatModel, embeddingModel: state.embeddingModel };
 }
 
 /**
@@ -136,9 +133,6 @@ export async function aiSettingsFacts(
 /** A model of OpenRouter's list on the form „KI“ – one that does not fit is listed, marked, and cannot be chosen. */
 export type ListedModel = OfferedModel & { fits: boolean };
 
-/** A part of the AI settings that is missing while AI is off. */
-export type MissingPart = "key" | "chat-model" | "embedding-model";
-
 /** RM-AiSettings (ST-104): what the form „KI“ shows. */
 export type AiSettingsForm = {
   version: number;
@@ -179,21 +173,18 @@ export async function aiSettingsForm(db: Database, { ai, encryptionKey }: AiDepe
     listed(ai, "chat"),
     listed(ai, "embedding"),
   ]);
-  const keyUsable = !!usableKey(state, encryptionKey());
+  const now = aiStateOf(state, encryptionKey());
+  const missing = now.on ? [] : now.missing;
+  const keyUsable = !missing.includes("key");
   const offered = chat === "unavailable" || embedding === "unavailable" ? "unavailable" : { chat, embedding };
   const named = (id: string | undefined, models: ListedModel[] | "unavailable") =>
     id ? { id, name: models === "unavailable" ? undefined : models.find((model) => model.id === id)?.name } : undefined;
-  const missing: MissingPart[] = [
-    ...(keyUsable ? [] : (["key"] as const)),
-    ...(state.chatModel ? [] : (["chat-model"] as const)),
-    ...(state.embeddingModel ? [] : (["embedding-model"] as const)),
-  ];
   return {
     version,
-    aiOn: missing.length === 0,
+    aiOn: now.on,
     missing,
     keyLastFour: keyUsable ? state.key?.lastFour : undefined,
-    keyUnreadable: !!state.key && !keyUsable,
+    keyUnreadable: !now.on && now.keyUnreadable,
     chatModel: named(state.chatModel, chat),
     embeddingModel: named(state.embeddingModel, embedding),
     offered,

@@ -1,6 +1,6 @@
 import { and, count, eq, sum } from "drizzle-orm";
 import type { Database } from "@/platform/command";
-import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
+import { savedAiModels, type AiDependencies } from "./ai-settings";
 import { changedModel } from "./change-ai-settings";
 import { aiIndexEntry } from "./schema";
 
@@ -39,12 +39,11 @@ export type NoEmbeddingModelChange = "no-change" | "embedding-model-unknown" | "
  */
 export async function embeddingModelChange(
   db: Database,
-  dependencies: AiDependencies,
+  { ai }: Pick<AiDependencies, "ai">,
   chosen: { embeddingModel: string; chatModel?: string },
   tokensPerPageOrImage = TOKENS_PER_PAGE_OR_IMAGE,
 ): Promise<EmbeddingModelChange | NoEmbeddingModelChange> {
-  const { ai } = dependencies;
-  const saved = await aiAssessmentSettings(db, dependencies);
+  const saved = await savedAiModels(db);
   const embeddingModel = saved.embeddingModel;
   // Compared as the command compares them (`changedModel`): trimmed, and only when it differs from the saved one.
   const newModel = changedModel(embeddingModel, chosen.embeddingModel);

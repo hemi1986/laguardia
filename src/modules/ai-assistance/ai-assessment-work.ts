@@ -4,7 +4,7 @@ import { defectForAiAssessment } from "@/modules/repair";
 import type { AssessmentFailureReason } from "./ai-assessment";
 import { aiAssessmentById, requestedAiAssessmentIds } from "./ai-assessments";
 import { buildAiAssessmentPrompt, parseAiAssessmentAnswer } from "./ai-assessment-writing";
-import { aiAssessmentSettings, type AiAssessmentSettings } from "./ai-settings";
+import { aiState, type AiState } from "./ai-settings";
 import { renderPdfPages } from "./file-indexing";
 import { searchAiIndex, searchedFiles, type AiIndexHit } from "./ai-index-search";
 import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
@@ -39,10 +39,9 @@ export const aiAssessmentWork: AiWorkKind = {
   },
 
   async work(id, piece, context) {
-    const settings = () => aiAssessmentSettings(context.db, context.ai);
-    const now = await settings();
+    const settings = () => aiState(context.db, context.ai);
     // AI turned off before it started: nothing is sent, and the request is failed as *AI off* (rule).
-    if (!now.aiOn) return fail(id, "ai-off", piece, context);
+    if (!(await settings()).on) return fail(id, "ai-off", piece, context);
     const assessment = await aiAssessmentById(context.db, id);
     // Already written or failed meanwhile – a stale hold does nothing.
     if (!assessment || assessment.state !== "requested") return piece.giveUp();
@@ -87,7 +86,7 @@ export const aiAssessmentWork: AiWorkKind = {
     });
     const beforeChat = await settings();
     // AI turned off while searching: nothing more is sent (rule).
-    if (!beforeChat.aiOn || !beforeChat.key) return fail(id, "ai-off", piece, context);
+    if (!beforeChat.on) return fail(id, "ai-off", piece, context);
     // The chat model is the one the assessment was requested with – never the one saved meanwhile (invariant).
     const answer = await context.ai.ai.chat(beforeChat.key, assessment.chatModel, {
       system: prompt.system,
@@ -171,7 +170,7 @@ async function searchWithTheDefect({
   machineModelId,
 }: {
   context: AiWorkContext;
-  settings: () => Promise<AiAssessmentSettings>;
+  settings: () => Promise<AiState>;
   title: string;
   descriptions: string[];
   note: string | undefined;
@@ -188,7 +187,7 @@ async function searchWithTheDefect({
     | "ai-off"
   > => {
     const now = await settings();
-    if (!now.aiOn || !now.key || !now.embeddingModel) return "ai-off";
+    if (!now.on) return "ai-off";
     embeddingModel = now.embeddingModel;
     return {
       key: now.key,
