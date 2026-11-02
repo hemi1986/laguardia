@@ -830,6 +830,10 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   `waiting` and `isWaiting`, the overview and `filesTheAiCannotRead` read it; none of them looks at an entry's model or
   state itself. It takes the file IDs because which files there are is Collection's to say (`filesForIndexing`): a join
   over both modules' tables would break *Reading across modules – the page composes* below.
+- **The rules of writing an AI assessment** (architecture review 2026-11-01) live without I/O in
+  `ai-assessment-writing.ts`: what to search with, which photos and found images to send, the chat request made of what
+  was read, and the answer as the assessment's parts or its failure. The kind reads, asks and stores. A new rule about
+  what is sent goes there, with a unit test.
 - **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
   asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
   `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
