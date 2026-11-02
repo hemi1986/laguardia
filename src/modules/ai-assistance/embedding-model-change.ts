@@ -3,13 +3,7 @@ import type { Database } from "@/platform/command";
 import { savedAiModels, type AiDependencies } from "./ai-settings";
 import { changedModel } from "./change-ai-settings";
 import { aiIndexEntry } from "./schema";
-
-/**
- * Tokens per page or image indexed – what one costs at an embedding model, measured by the spike ST-105 with
- * `google/gemini-embedding-2` (2026-11-01): a page image 258 tokens, a PDF page's text passage 274 on average, so a PDF
- * page ≈ 530. One constant for both (ST-110): the PDF page's, so an image is rather over- than underestimated.
- */
-export const TOKENS_PER_PAGE_OR_IMAGE = 530;
+import { TOKENS_PER_PAGE_OR_IMAGE } from "./tokens-per-page-or-image";
 
 /** What changing the embedding model will cost (ST-110): every indexed file again, at the new model's price. */
 export type EmbeddingModelChange = {
@@ -32,7 +26,8 @@ export type EmbeddingModelChange = {
 export type NoEmbeddingModelChange = "no-change" | "embedding-model-unknown" | "openrouter-unreachable";
 
 /**
- * The estimate the warning before a change of the embedding model shows (CMD-ChangeAiSettings' rule, ADR 0014
+ * The estimate the warning before a change of the embedding model shows – part of RM-AiSettings (CMD-ChangeAiSettings'
+ * rule, ADR 0014
  * *Consequences*): **pages and images of the current AI index entries × tokens per page or image × the new model's
  * price per million tokens**. A PDF page is indexed as its text and its page image and counts once – its page images
  * are the entry's images –, an image file counts once; the passages of a text file are not counted (a few tokens).
@@ -41,7 +36,6 @@ export async function embeddingModelChange(
   db: Database,
   { ai }: Pick<AiDependencies, "ai">,
   chosen: { embeddingModel: string; chatModel?: string },
-  tokensPerPageOrImage = TOKENS_PER_PAGE_OR_IMAGE,
 ): Promise<EmbeddingModelChange | NoEmbeddingModelChange> {
   const saved = await savedAiModels(db);
   const embeddingModel = saved.embeddingModel;
@@ -65,6 +59,6 @@ export async function embeddingModelChange(
     ...(newChatModel && { chatModel: { id: newChatModel, name: typeof chat === "object" ? chat.name : newChatModel } }),
     files: indexed?.files ?? 0,
     pagesAndImages,
-    estimatedCost: (pagesAndImages * tokensPerPageOrImage * model.pricePerMillion.input) / 1_000_000,
+    estimatedCost: (pagesAndImages * TOKENS_PER_PAGE_OR_IMAGE * model.pricePerMillion.input) / 1_000_000,
   };
 }

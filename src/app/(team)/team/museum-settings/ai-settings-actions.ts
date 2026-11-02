@@ -6,15 +6,14 @@ import { formAction, type FormState } from "@/app/_actions/form-action";
 import type { CommandError } from "@/platform/command";
 import { requireTechnician } from "../../../team-session";
 import {
-  aiSaveLanding,
   aiSettingsFormDefinition,
   confirmEmbeddingModelDefinition,
-  embeddingModelWarning,
   removeAiKeyDefinition,
   type AiSettingsFormField,
   type ConfirmEmbeddingModelField,
 } from "./ai-settings-form-input";
 import { aiLanding } from "./ai-settings-data";
+import { aiSaveLanding, embeddingModelWarning } from "./embedding-modell-wechseln/embedding-model-change-address";
 
 type AiSettingsError = CommandError<ReturnType<typeof changeAiSettingsCommand>>;
 
@@ -28,13 +27,10 @@ const command = changeAiSettingsCommand(aiDependencies());
  * CMD-ChangeAiSettings from the form „KI“ (ST-104) – through the Server Action runner; the command asks OpenRouter
  * through the AI seam before it decides. The key is never sent back (`secret`). Afterwards the technician is on the
  * same page with the confirmation (G3) – „Schlüssel ersetzt.“ after „Ersetzen“ (ST-110). The runner starts the AI index
- * work once a change has committed (POL-AiIndexFollowsTheSettings, ST-106); a save without a change starts none.
+ * work once a change has committed (POL-AiIndexFollowsTheSettings, ST-106); a save without a change starts none. Where
+ * it lands depends on what was posted, so `saveAiSettingsAction` redirects.
  */
-const saveAiSettings = (landing: "saved" | "key-replaced") =>
-  formAction(command, {
-    ...aiSettingsFormDefinition,
-    onSuccess: async () => redirect(aiLanding(landing)),
-  });
+const saveAiSettings = formAction(command, { ...aiSettingsFormDefinition, onSuccess: async () => {} });
 
 /** „Embedding-Modell wechseln“ on the warning (ST-110): the change confirmed – every file is indexed again. */
 const confirmEmbeddingModel = formAction(command, {
@@ -54,7 +50,8 @@ export async function saveAiSettingsAction(
 ): Promise<AiSettingsFormState> {
   await requireTechnician(); // the page's access check; who may run the command is decided by its allowedActors
   const { keyTyped, landing } = aiSaveLanding(formData);
-  const state = await saveAiSettings(landing)(previous, formData);
+  const state = await saveAiSettings(previous, formData);
+  if (!state) redirect(aiLanding(landing));
   // A changed embedding model is asked about first, on a page of its own (ST-110).
   const warning = embeddingModelWarning(state, keyTyped);
   if (warning) redirect(warning);
