@@ -1,6 +1,6 @@
 import "server-only";
 import { after } from "next/server";
-import { makesAiWork } from "@/modules/ai-assistance";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import type { CommittedEvent } from "@/platform/command";
 import { startAiWork } from "./api/ai-work/start-ai-work";
 

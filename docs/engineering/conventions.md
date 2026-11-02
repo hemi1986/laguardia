@@ -763,7 +763,10 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   setting (`AI_WORK_BUDGET_SECONDS`, default 250, `docs/operations/ai-work.md`).
 - **Starting it** (architecture review 2026-11-01): no Server Action starts the work by hand. `formAction` hands every
   command the `afterCommit` of `src/app/ai-work.ts`, which asks AI assistance's `makesAiWork(events)` – the one list of the
-  events that make work – and starts a run after the response. A new way to make work is a new event in that list.
+  events that make work – and starts a run after the response. A new way to make work is a new event in that list. The
+  list is `ai-work-events.ts`, the module's second entry beside `index.ts` (`eslint.config.mjs`): every form reads it, and
+  `index.ts` would bring all of AI assistance, the native canvas among it, into every Server Action. A save that changes
+  nothing journals nothing and starts nothing.
   A page that shows AI work asks a domain question (`aiAssessmentLeftUnfinished`, `fileIndexingLeftUnfinished`) and
   calls `startAiWorkAfterResponse()` only when a hold ran out without a result, so a refreshing page never starts work on
   every load. Both go through
@@ -822,7 +825,7 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   reject with `file-removed` for a file removed meanwhile, so nothing is recorded and the hold still ends. The command
   is the rule's only place and runs as the system only. ST-109's „Erneut versuchen“ is CMD-IndexFileForAi run by hand
   (`retryFileIndexingCommand`, technicians only, at the entry's version): it removes the failed entry and records
-  EVT-FileIndexingRetried, so the file waits again (derived); its Server Action starts the work after the response.
+  EVT-FileIndexingRetried, so the file waits again (derived); that event starts the work after the response.
   „Einstellungen“ opened with AI on starts a run only when a file's hold ran out (`openingStartsAiWork`, HS-35). `recordBrokenOff` records nothing while
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. Every request goes through `piece.openRouter`: a rotated key is used for the next request,
@@ -1013,7 +1016,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Decision of a command – **only** where a rule has many cases (validation, invariants, derived values); everything else is tested at the command seam (Q3) | the decision function (`reportProblem(state, input, { actor, clock, newId })`) | unit | `src/modules/repair/report-problem.test.ts` |
 | Command – every command (authorization, load/decide/save, version check, created aggregates, journal, policies) | `executeCommand(command, input, { actor, db: testDatabase(), clock: fixedClock(…), newId })` against real PostgreSQL, observed through read models and `journalOf`; stand-ins for commands that don't exist yet live in the module's `*.test-support.ts` | integration | `src/modules/repair/report-problem-command.integration.test.ts`, `problem-report-version.integration.test.ts`, `problem-report-policies.integration.test.ts` |
 | Read model (query, filtering, sorting, time-based state) | the query function against real PostgreSQL, **data set up through commands** (`executeCommand`, Q3) – not through persistence functions | integration | `src/modules/repair/problem-reports.integration.test.ts` |
-| Server Action runner and its forms – acting person, `{ error, values }`, forged fields | `formRunner({ currentPerson, db, clock, newId })` against real PostgreSQL, observed through `journalOf` and read models; the input function of an action at its own seam | integration / unit | `src/app/_actions/form-runner.integration.test.ts`, `src/app/_actions/stand-in-input.test.ts` |
+| Server Action runner and its forms – acting person, `{ error, values }`, forged fields, what follows a commit | `formRunner({ currentPerson, db, clock, newId, afterCommit })` against real PostgreSQL, observed through `journalOf` and read models; the input function of an action at its own seam | integration / unit | `src/app/_actions/form-runner.integration.test.ts`, `src/app/_actions/stand-in-input.test.ts` |
 | The acting person from the session (`currentPerson()`) – roles, no/expired/forged session, deactivated account | `formRunner({ currentPerson: () => currentPersonOf({ db, headers }), … })` with the headers of a real login (`createAccount` + `logIn`), observed through `journalOf` and read models | integration | `src/app/_actions/current-person.integration.test.ts` |
 | Type rules (acting person per `allowedActors`, error codes with a text) | `expectTypeOf` / `@ts-expect-error`, checked by `tsc` | unit (types) | `src/platform/command/actor-types.test.ts` |
 | A rule over the whole repository that neither lint nor the type check reads (config, workflows, browser tests) – e.g. no spike leftovers (ST-078) | a scan of `git ls-files` (tracked and new files; `docs/`, `.claude/`, `drizzle/` excluded) with a self-test on sample lines | unit | `src/platform/spike-leftovers.test.ts` |

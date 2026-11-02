@@ -1,4 +1,5 @@
 import { Page } from "@/components/page";
+import { fileIndexingLeftUnfinished } from "@/modules/ai-assistance";
 import { startAiWorkAfterResponse } from "@/app/ai-work";
 import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
@@ -25,7 +26,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/team/mu
     loadAiSettings(db, params, { viewer: technician.id }),
   ]);
 
-  if (await openingStartsAiWork(ai, db, systemClock)) startAiWorkAfterResponse();
+  if (await openingStartsAiWork(ai, () => fileIndexingLeftUnfinished(db, systemClock))) startAiWorkAfterResponse();
 
   return (
     <Page title={teamMessages.terms.Settings}>

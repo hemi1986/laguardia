@@ -857,9 +857,9 @@ policies:
     when: [EVT-FileAttached]
     then: [CMD-IndexFileForAi]
     description: >-
-      Automatic, in the background, only while AI is on. Collection does not know it: the page that attaches a file
-      starts the AI work after its response, and the AI work finds the new file as waiting – no data passes from
-      Collection's command to AI assistance (ADR 0015).
+      Automatic, in the background, only while AI is on. Collection does not know it: AI assistance names the event as
+      making work, the form runner starts the AI work after the response, and the AI work finds the new file as waiting –
+      no data passes from Collection's command to AI assistance (ADR 0015).
   - id: POL-RemovedFileLeavesAiIndex
     name: A removed file leaves the AI index
     when: [EVT-FileRemoved]

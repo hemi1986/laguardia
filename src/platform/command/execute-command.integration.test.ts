@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
@@ -18,6 +18,41 @@ beforeAll(() => anExistingTeamMember(db, technician));
 function deps(actor: Actor, newId: () => string = randomUUID) {
   return { actor, db, clock, newId };
 }
+
+describe("what a command's runner is told after the commit", () => {
+  it("names the journaled events once – not after a rejection", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const told: unknown[] = [];
+    const afterCommit = (events: readonly unknown[]) => void told.push(events);
+
+    await executeCommand(reportProblemCommand, { machineId, description: "  " }, { ...deps(visitor), afterCommit });
+    expect(told).toEqual([]);
+
+    await executeCommand(reportProblemCommand, { machineId, description: "Weak" }, { ...deps(visitor), afterCommit });
+    expect(told).toEqual([[{ type: "EVT-ProblemReported", data: {} }]]);
+  });
+
+  it("keeps the command's success when what follows it throws: its changes are committed", async () => {
+    const machineId = await aRegisteredMachine(db);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const outcome = await executeCommand(
+      reportProblemCommand,
+      { machineId, description: "Weak" },
+      {
+        ...deps(visitor),
+        afterCommit: () => {
+          throw new Error("no request to run it after");
+        },
+      },
+    );
+
+    expect(outcome.ok).toBe(true);
+    expect(await problemReportsOfMachine(db, machineId)).toHaveLength(1);
+    expect(logged).toHaveBeenCalledOnce();
+    logged.mockRestore();
+  });
+});
 
 describe("command layer", () => {
   it("stores exactly the command's domain events in the journal with type, time, actor, aggregate and machine", async () => {

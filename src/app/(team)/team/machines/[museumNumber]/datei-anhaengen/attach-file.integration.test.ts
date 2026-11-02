@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { makesAiWork } from "@/modules/ai-assistance";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { attachFileCommand, machineRecord } from "@/modules/collection";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";

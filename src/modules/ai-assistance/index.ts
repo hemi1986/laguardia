@@ -17,7 +17,6 @@ export {
   type NoEmbeddingModelChange,
 } from "./embedding-model-change";
 export { runAiWork } from "./ai-work";
-export { makesAiWork } from "./ai-work-events";
 export {
   aiIndexOverview,
   fileIndexingRetriedBy,

@@ -2,7 +2,6 @@ import {
   aiDependencies,
   aiIndexOverview,
   aiSettingsForm,
-  fileIndexingLeftUnfinished,
   fileIndexingRetriedBy,
   type AiDependencies,
   type AiIndexOverview,
@@ -10,7 +9,6 @@ import {
   type IndexingFailureReason,
 } from "@/modules/ai-assistance";
 import { machineLabels, machineModelTitles } from "@/modules/collection";
-import type { Clock } from "@/platform/clock";
 import type { Database } from "@/platform/command";
 
 /** What the form „KI“ just did (ST-104): a save, „Entfernen“, or – ST-110 – „Ersetzen“ saved. */
@@ -58,7 +56,9 @@ export type AiSettingsData = {
 /** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
 async function shownOverview(db: Database, overview: AiIndexOverview): Promise<ShownAiIndexOverview> {
   const machineIds = overview.failed.flatMap(({ owner }) => ("machineId" in owner ? [owner.machineId] : []));
-  const machineModelIds = overview.failed.flatMap(({ owner }) => ("machineModelId" in owner ? [owner.machineModelId] : []));
+  const machineModelIds = overview.failed.flatMap(({ owner }) =>
+    "machineModelId" in owner ? [owner.machineModelId] : [],
+  );
   const [machines, machineModels] = await Promise.all([
     machineLabels(db, machineIds),
     machineModelTitles(db, machineModelIds),
@@ -116,6 +116,9 @@ export async function loadAiSettings(
  * overview is shown – when a file's indexing was left unfinished, never otherwise, so opening it does not start work on
  * every load.
  */
-export async function openingStartsAiWork(data: AiSettingsData, db: Database, clock: Clock): Promise<boolean> {
-  return !!data.overview && (await fileIndexingLeftUnfinished(db, clock));
+export async function openingStartsAiWork(
+  data: AiSettingsData,
+  fileIndexingLeftUnfinished: () => Promise<boolean>,
+): Promise<boolean> {
+  return !!data.overview && (await fileIndexingLeftUnfinished());
 }

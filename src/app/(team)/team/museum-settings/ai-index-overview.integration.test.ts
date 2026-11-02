@@ -4,7 +4,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
-import { makesAiWork, fileIndexingWork, retryFileIndexingCommand, type AiDependencies } from "@/modules/ai-assistance";
+import {
+  fileIndexingLeftUnfinished,
+  fileIndexingWork,
+  retryFileIndexingCommand,
+  type AiDependencies,
+} from "@/modules/ai-assistance";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { formRunner } from "@/app/_actions/form-runner";
 import type { Actor } from "@/platform/command";
 import { post } from "@/test-support/forms";
@@ -266,7 +272,8 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     );
     await embeddingStarted;
     // What „Einstellungen“ decides when it is opened.
-    const openingStartsARun = async () => openingStartsAiWork((await settingsPage()).data, db, clock);
+    const openingStartsARun = async () =>
+      openingStartsAiWork((await settingsPage()).data, () => fileIndexingLeftUnfinished(db, clock));
     // Until the hold has run out the manual is waiting, and opening the page starts nothing.
     expect(await openingStartsARun()).toBe(false);
     expect((await settingsPage()).data.overview).toMatchObject({ waiting: 1, failed: [] });
@@ -325,7 +332,7 @@ describe("the mark on the machine record (ST-109)", () => {
     const record = await machineRecord("LG-042");
 
     expect(settings.data.overview).toBeUndefined();
-    expect(await openingStartsAiWork(settings.data, db, clock)).toBe(false);
+    expect(await openingStartsAiWork(settings.data, async () => true)).toBe(false);
     expect(settings.html).not.toContain("KI-Erfassung");
     expect(settings.html).not.toContain("Erneut versuchen");
     expect(record.html).not.toContain("Für die KI nicht lesbar");

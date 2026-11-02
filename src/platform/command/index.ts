@@ -156,9 +156,9 @@ export type CommandDependencies = {
   clock?: Clock;
   newId?: () => string;
   /**
-   * Told what the command journaled, policies included, once its transaction has committed – not after a rejection, and
-   * not when it changed nothing. For whoever runs the command and must react outside it (the AI work, architecture
-   * review 2026-11-01); it must not throw.
+   * Told what the command journaled, policies included, once its transaction has ended – not after a rejection, and not
+   * when it changed nothing. For whoever runs the command and must react outside it (the AI work, architecture review
+   * 2026-11-01), so never with a `db` that is itself a transaction. What it throws is only logged: the command stands.
    */
   afterCommit?: (events: readonly CommittedEvent[]) => void;
 };
@@ -187,7 +187,7 @@ export async function executeCommand<Input, Result, Error extends string>(
       await tx.insert(eventJournal).values(rows.map((row) => ({ ...row, commandId })));
       return { result, rows };
     });
-    if (rows.length > 0) afterCommit?.(rows.map(({ type, data }) => ({ type, data })));
+    if (rows.length > 0) tellCommitted(afterCommit, command.id, rows);
     return { ok: true, result };
   } catch (error) {
     if (error instanceof Rejected) {
@@ -196,6 +196,18 @@ export async function executeCommand<Input, Result, Error extends string>(
     if (error instanceof NotFound) return { ok: false, error: "not-found" };
     if (error instanceof VersionConflict) return { ok: false, error: "version-conflict" };
     throw error;
+  }
+}
+
+/** Outside the command's `try`: an error here must not read as the command's, whose changes are committed. */
+function tellCommitted(afterCommit: CommandDependencies["afterCommit"], commandId: string, rows: JournalRow[]): void {
+  try {
+    afterCommit?.(rows.map(({ type, data }) => ({ type, data })));
+  } catch (error) {
+    console.error(
+      `${commandId} committed, but what follows it failed:`,
+      error instanceof Error ? error.name : "unknown",
+    );
   }
 }
 

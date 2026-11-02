@@ -4,6 +4,9 @@ import type { CommittedEvent } from "@/platform/command";
  * Whether what a command committed leaves AI work to do (POL-AttachedFileIsIndexedForAi, POL-RequestedAiAssessmentIsWritten,
  * POL-AiIndexFollowsTheSettings, ST-109, ADR 0015): a file attached, an AI assessment requested, a file tried again, or
  * the AI settings changed in any way but the key removed. AI assistance knows this; Collection never knows AI.
+ *
+ * A second entry of the module beside `index.ts`, imported from here alone: every form asks this, and the module's
+ * `index.ts` would bring all of AI assistance – the native canvas among it – into every Server Action, the visitor's too.
  */
 export function makesAiWork(events: readonly CommittedEvent[]): boolean {
   return events.some(({ type, data }) => {

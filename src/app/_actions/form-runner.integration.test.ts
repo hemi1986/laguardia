@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   changeMachinesOfMaintenanceTaskCommand,
   changeMaintenancePlanCommand,
@@ -8,7 +8,7 @@ import {
 } from "@/modules/maintenance";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
-import { journalOf, type Actor } from "@/platform/command";
+import { journalOf, type Actor, type CommittedEvent } from "@/platform/command";
 import { commandErrorText, teamMessages, visitorMessages } from "@/platform/messages";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -29,8 +29,15 @@ import { post } from "@/test-support/forms";
 const db = testDatabase();
 const clock = fixedClock("2026-09-29T10:00:00Z");
 
+/** What the runner's `afterCommit` was told – each step hands it to the command. */
+let committed: string[] = [];
+const afterCommit = (events: readonly CommittedEvent[]) => void committed.push(...events.map(({ type }) => type));
+beforeEach(() => {
+  committed = [];
+});
+
 function runnerActingAs(actor: Actor) {
-  return formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID });
+  return formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, afterCommit });
 }
 
 function reportProblemFor(machineId: string, actor: Actor, succeeded: (id: string) => void = () => {}) {
@@ -129,18 +136,22 @@ describe("the Server Action runner", () => {
       storage = memoryStorage(),
       succeeded: (photo?: string) => void = () => {},
     ) {
-      const action = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID, storage })(
-        withPhotoForTest,
-        {
-          fields: ["outcome"],
-          photo: { field: "photo", owner: "problem-reports" },
-          input: ({ outcome }, photo) => ({
-            photo,
-            outcome: outcome === "reject" ? ("reject" as const) : ("accept" as const),
-          }),
-          onSuccess: async ({ photo }) => succeeded(photo),
-        },
-      );
+      const action = formRunner({
+        currentPerson: async () => actor,
+        db,
+        clock,
+        newId: randomUUID,
+        storage,
+        afterCommit,
+      })(withPhotoForTest, {
+        fields: ["outcome"],
+        photo: { field: "photo", owner: "problem-reports" },
+        input: ({ outcome }, photo) => ({
+          photo,
+          outcome: outcome === "reject" ? ("reject" as const) : ("accept" as const),
+        }),
+        onSuccess: async ({ photo }) => succeeded(photo),
+      });
       return { action, storage };
     }
 
@@ -155,6 +166,7 @@ describe("the Server Action runner", () => {
       expect(await action(null, form)).toBeNull();
       expect(received).toEqual(storage.names());
       expect(storage.names()).toHaveLength(1);
+      expect(committed).toHaveLength(1);
     });
 
     it("returns { error, values } when the command is rejected, and no photo stays stored", async () => {
@@ -242,6 +254,7 @@ describe("the Server Action runner once per chosen item (ST-045)", () => {
     expect(outcome).toEqual({ done: [first, second], rejected: [`${unknown}: unknown-machine`], notRun: [] });
     expect(await problemReportsOfMachine(db, first)).toHaveLength(1);
     expect(await problemReportsOfMachine(db, second)).toHaveLength(1);
+    expect(committed).toEqual(["EVT-ProblemReported", "EVT-ProblemReported"]);
   });
 
   it("keeps the form when every item is rejected – with each item's reason only when the reasons differ", async () => {
@@ -336,6 +349,7 @@ describe("the Server Action runner for a field posted once per ticked checkbox (
     expect(state).toBeNull();
     const task = (await maintenancePlan(db)).maintenanceTasks.find((each) => each.id === outcome.added);
     expect(task?.machineCount).toBe(2);
+    expect(committed).toContain("EVT-MaintenancePlanChanged");
   });
 
   it("keeps what was ticked after a rejection – a value posted twice reaches the command twice", async () => {

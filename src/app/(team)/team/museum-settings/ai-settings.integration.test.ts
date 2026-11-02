@@ -4,7 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { formRunner } from "@/app/_actions/form-runner";
-import { aiSettingsForm, changeAiSettingsCommand, makesAiWork, type AiDependencies } from "@/modules/ai-assistance";
+import { aiSettingsForm, changeAiSettingsCommand, type AiDependencies } from "@/modules/ai-assistance";
+import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import {
   geminiEmbedding,
   geminiFlash,
