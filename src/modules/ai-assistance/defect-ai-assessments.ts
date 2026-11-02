@@ -1,15 +1,16 @@
 import { filesForAiReferences } from "@/modules/collection";
-import { defectForAiAssessmentRequest, type DefectForAiAssessmentRequest } from "@/modules/repair";
 import type { Database } from "@/platform/command";
 import type { Role } from "@/platform/command";
-import type {
-  AiAssessmentReference,
-  AiAssessmentState,
-  RequestAiAssessmentError,
-  RequestAiAssessmentInput,
+import {
+  requestRefusal,
+  type AiAssessmentReference,
+  type AiAssessmentState,
+  type RequestAiAssessmentError,
+  type RequestAiAssessmentInput,
 } from "./ai-assessment";
-import { aiAssessmentBeingWritten, aiAssessmentsOfDefect, endedAiAssessmentsOfDefects } from "./ai-assessments";
-import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
+import { aiAssessmentsOfDefect, endedAiAssessmentsOfDefects } from "./ai-assessments";
+import type { AiDependencies } from "./ai-settings";
+import { requestAiAssessmentFacts } from "./request-ai-assessment-command";
 
 /**
  * RM-DefectAiAssessments (ST-107, ST-111): the section „KI-Einschätzungen“ of a defect's page. It shows the newest AI
@@ -70,13 +71,11 @@ export async function defectAiAssessments(
     dependencies,
   }: { defectId: string; viewer: AiAssessmentViewer | undefined; dependencies: AiDependencies },
 ): Promise<DefectAiAssessments> {
-  const [settings, defect, beingWritten, all] = await Promise.all([
-    aiAssessmentSettings(db, dependencies),
-    defectForAiAssessmentRequest(db, defectId),
-    aiAssessmentBeingWritten(db, defectId),
+  const [facts, all] = await Promise.all([
+    requestAiAssessmentFacts(db, defectId, dependencies),
     aiAssessmentsOfDefect(db, defectId),
   ]);
-  const refusal = requestRefusal(settings, defect, viewer, beingWritten);
+  const refusal = requestRefusal(facts, viewer);
   const [current, ...earlier] = await shownAll(db, all, dependencies);
   return { shown: !refusal || all.length > 0, mayRequest: !refusal, refusal, current, earlier };
 }
@@ -113,21 +112,6 @@ export async function aiAssessmentRetryRequest(
   const [newest] = await aiAssessmentsOfDefect(db, defectId);
   if (!newest || newest.state !== "failed") return undefined;
   return { defectId, note: newest.note ?? "", photos: newest.photos };
-}
-
-/** The request command's rule as the page asks it: no control that can only be rejected (G11). */
-function requestRefusal(
-  settings: { aiOn: boolean; chatModel: string | undefined },
-  defect: DefectForAiAssessmentRequest | undefined,
-  viewer: AiAssessmentViewer | undefined,
-  beingWritten: boolean,
-): RequestAiAssessmentError | undefined {
-  if (!settings.aiOn || !settings.chatModel) return "ai-assessment-ai-off";
-  if (!defect || defect.state !== "open") return "ai-assessment-defect-not-open";
-  if (!viewer || (viewer.role === "helper" && !defect.suitableForHelpers))
-    return "ai-assessment-not-allowed-for-helpers";
-  if (beingWritten) return "ai-assessment-being-written";
-  return undefined;
 }
 
 /**

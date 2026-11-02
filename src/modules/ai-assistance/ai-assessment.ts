@@ -62,9 +62,7 @@ export type AiAssessmentState = {
 
 /** What CMD-RequestAiAssessment reads from the outside before it decides. */
 export type RequestAiAssessmentFacts = {
-  /** Key, chat model and embedding model saved and the key decryptable – AI is on (AGG-AiSettings). */
-  aiOn: boolean;
-  /** The chat model a request is made with – none while it is not chosen. */
+  /** The chat model a request is made with – none while AI is off (AGG-AiSettings). */
   chatModel: string | undefined;
   /** The defect as Repair knows it now – none for an unknown defect. */
   defect: { state: DefectState; suitableForHelpers: boolean } | undefined;
@@ -95,6 +93,22 @@ export type RequestAiAssessmentError =
   | "ai-assessment-too-many-photos";
 
 /**
+ * Why CMD-RequestAiAssessment refuses this person now – the decision applies it, and RM-DefectAiAssessments asks it for
+ * the team member looking at the page (G11), where nobody may be logged in. The number of photos is a matter of the form.
+ */
+export function requestRefusal(
+  facts: RequestAiAssessmentFacts,
+  person: Pick<RequestingPerson, "role"> | undefined,
+): Exclude<RequestAiAssessmentError, "ai-assessment-too-many-photos"> | undefined {
+  if (!facts.chatModel) return "ai-assessment-ai-off";
+  if (!facts.defect || facts.defect.state !== "open") return "ai-assessment-defect-not-open";
+  if (!person || (person.role === "helper" && !facts.defect.suitableForHelpers))
+    return "ai-assessment-not-allowed-for-helpers";
+  if (facts.beingWritten) return "ai-assessment-being-written";
+  return undefined;
+}
+
+/**
  * CMD-RequestAiAssessment (AGG-AiAssessment, ST-107): a team member asks for an AI assessment of an open defect –
  * technicians for any, helpers only for one suitable for helpers – while AI is on and none of the defect is being
  * written (HS-31). The request is all it stores; the writing starts after the response (POL-RequestedAiAssessmentIsWritten,
@@ -105,11 +119,8 @@ export function requestAiAssessment(
   input: RequestAiAssessmentInput,
   { actor, clock, newId }: DecisionContext<RequestingPerson>,
 ): Decision<AiAssessmentState, AiAssessmentRequested, RequestAiAssessmentError> {
-  if (!facts.aiOn || !facts.chatModel) return { ok: false, error: "ai-assessment-ai-off" };
-  if (!facts.defect || facts.defect.state !== "open") return { ok: false, error: "ai-assessment-defect-not-open" };
-  if (actor.role === "helper" && !facts.defect.suitableForHelpers)
-    return { ok: false, error: "ai-assessment-not-allowed-for-helpers" };
-  if (facts.beingWritten) return { ok: false, error: "ai-assessment-being-written" };
+  const refusal = requestRefusal(facts, actor);
+  if (refusal) return { ok: false, error: refusal };
   const photos = [...(input.photos ?? [])];
   if (photos.length > MAX_AI_ASSESSMENT_PHOTOS) return { ok: false, error: "ai-assessment-too-many-photos" };
   const note = input.note.trim();
@@ -120,7 +131,8 @@ export function requestAiAssessment(
     photos,
     requestedBy: actor.teamMemberId,
     requestedAt: clock.now(),
-    chatModel: facts.chatModel,
+    // `requestRefusal` lets no request through without one.
+    chatModel: facts.chatModel!,
     state: "requested",
   };
   return {

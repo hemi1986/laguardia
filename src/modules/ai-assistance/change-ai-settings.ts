@@ -73,7 +73,7 @@ export type ChangeAiSettingsError =
   | "embedding-model-needs-key"
   | "embedding-model-change-unconfirmed";
 
-/** AI is on exactly while a key, a chat model and an embedding model are saved (invariant). */
+/** Whether a key, a chat model and an embedding model are saved – what `EVT-AiSettingsChanged` records. Whether AI is on now is `aiState`'s answer: a saved key this environment cannot read counts as none. */
 export function aiOn(settings: Pick<AiSettingsState, "key" | "chatModel" | "embeddingModel">): boolean {
   return !!settings.key && !!settings.chatModel && !!settings.embeddingModel;
 }

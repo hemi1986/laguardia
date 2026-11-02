@@ -1,7 +1,7 @@
 import { executeCommand, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import { aiIndexHasEntryFor, aiIndexedFileIds } from "./ai-index-entries";
-import { aiIndexingSettings } from "./ai-settings";
+import { aiState } from "./ai-settings";
 import type { IndexFileForAiInput } from "./ai-index-entry";
 import { indexFileForAiCommand } from "./index-file-for-ai-command";
 import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
@@ -24,24 +24,24 @@ export const fileIndexingWork: AiWorkKind = {
    * tried again only by hand or with a new model (HS-32). While AI is off nothing waits.
    */
   async waiting(db, context) {
-    const settings = await aiIndexingSettings(db, context.ai);
-    if (!settings.aiOn || !settings.embeddingModel) return [];
-    const [files, known] = await Promise.all([filesForIndexing(db), aiIndexedFileIds(db, settings.embeddingModel)]);
+    const aiNow = await aiState(db, context.ai);
+    if (!aiNow.on) return [];
+    const [files, known] = await Promise.all([filesForIndexing(db), aiIndexedFileIds(db, aiNow.embeddingModel)]);
     return files.filter((file) => !known.has(file.id)).map((file) => file.id);
   },
 
   /** Asked again once the file is held: done, recorded broken off or removed meanwhile is no longer waited for. */
   async isWaiting(tx, id, context) {
-    const settings = await aiIndexingSettings(tx, context.ai);
-    if (!settings.aiOn || !settings.embeddingModel) return false;
-    if (await aiIndexHasEntryFor(tx, id, settings.embeddingModel)) return false;
+    const aiNow = await aiState(tx, context.ai);
+    if (!aiNow.on) return false;
+    if (await aiIndexHasEntryFor(tx, id, aiNow.embeddingModel)) return false;
     return !!(await fileForIndexing(tx, id));
   },
 
   async work(id, piece, context) {
-    const settings = await aiIndexingSettings(context.db, context.ai);
+    const aiNow = await aiState(context.db, context.ai);
     // AI turned off: nothing reaches OpenRouter, nothing is stored, the file stays waiting (rule of CMD-IndexFileForAi).
-    if (!settings.aiOn || !settings.key || !settings.embeddingModel) return piece.giveUp();
+    if (!aiNow.on) return piece.giveUp();
     const file = await fileForIndexing(context.db, id);
     // Removed before it was read: nothing to index. The removal policy has already taken its entry.
     if (!file) return piece.giveUp();
@@ -51,16 +51,16 @@ export const fileIndexingWork: AiWorkKind = {
           contentType: file.content.contentType,
           bytes: content,
           ai: context.ai.ai,
-          embeddingModel: settings.embeddingModel,
+          embeddingModel: aiNow.embeddingModel,
           // Asked before every request: AI turned off, a rotated key or a changed model stops the indexing at once.
-          settings: () => aiIndexingSettings(context.db, context.ai),
+          readAiNow: () => aiState(context.db, context.ai),
           // Kept with the hold, so an indexing that breaks off still says what it cost.
           spent: (cost) => piece.recordSpent(cost),
         })
       : // A file record whose content is missing from the store (ST-105): a damaged PDF fails the same way.
         { outcome: "failed", reason: "not readable", cost: 0 };
     if (outcome.outcome === "given-up") return piece.giveUp();
-    await storeOutcome(context, id, settings.embeddingModel, piece, outcome);
+    await storeOutcome(context, id, aiNow.embeddingModel, piece, outcome);
   },
 
   /**
@@ -70,11 +70,11 @@ export const fileIndexingWork: AiWorkKind = {
    * the shared removal lock.
    */
   async recordBrokenOff(tx, id, context, spent) {
-    const settings = await aiIndexingSettings(tx, context.ai);
-    if (!settings.aiOn || !settings.embeddingModel) return;
+    const aiNow = await aiState(tx, context.ai);
+    if (!aiNow.on) return;
     await runCommand(tx, context, {
       fileId: id,
-      embeddingModel: settings.embeddingModel,
+      embeddingModel: aiNow.embeddingModel,
       failure: "broken off",
       cost: spent,
     });

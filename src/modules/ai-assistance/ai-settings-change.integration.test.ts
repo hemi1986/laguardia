@@ -268,4 +268,19 @@ describe("changing the models", () => {
       "no-change",
     );
   });
+
+  it("estimates a change of the embedding model also while AI is off – without a chat model, and with the key removed", async () => {
+    const estimate = { model: { id: otherEmbedding.id }, files: 0, pagesAndImages: 0 };
+    await withoutAiSettings(db);
+    await change({ key: KEY, embeddingModel: geminiEmbedding.id });
+    expect(await embeddingModelChange(db, dependencies(), { embeddingModel: otherEmbedding.id })).toMatchObject(
+      estimate,
+    );
+
+    await change({ chatModel: geminiFlash.id });
+    await change({ removeKey: true });
+    expect(await embeddingModelChange(db, dependencies(), { embeddingModel: otherEmbedding.id })).toMatchObject(
+      estimate,
+    );
+  });
 });

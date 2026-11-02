@@ -1,9 +1,23 @@
-import { aggregateCommand } from "@/platform/command";
+import { aggregateCommand, type Database } from "@/platform/command";
 import { defectForAiAssessmentRequest } from "@/modules/repair";
 import { requestAiAssessment, type RequestAiAssessmentFacts } from "./ai-assessment";
 import { aiAssessmentBeingWritten, aiAssessments } from "./ai-assessments";
-import { aiAssessmentSettings, type AiDependencies } from "./ai-settings";
+import { aiState, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
+
+/** What the request's rule reads – in the command's facts, and for the page that asks the same rule (G11). */
+export async function requestAiAssessmentFacts(
+  db: Database,
+  defectId: string,
+  dependencies: Pick<AiDependencies, "encryptionKey">,
+): Promise<RequestAiAssessmentFacts> {
+  const [aiNow, defect, beingWritten] = await Promise.all([
+    aiState(db, dependencies),
+    defectForAiAssessmentRequest(db, defectId),
+    aiAssessmentBeingWritten(db, defectId),
+  ]);
+  return { chatModel: aiNow.on ? aiNow.chatModel : undefined, defect, beingWritten };
+}
 
 /**
  * CMD-RequestAiAssessment through the command layer (ST-107): a creating command on AGG-AiAssessment. Its facts read
@@ -17,14 +31,7 @@ export function requestAiAssessmentCommand(dependencies: AiDependencies) {
     allowedActors: ["helper", "technician"],
     store: aiAssessments,
     creates: true,
-    facts: async (tx, input): Promise<RequestAiAssessmentFacts> => {
-      const [settings, defect, beingWritten] = await Promise.all([
-        aiAssessmentSettings(tx, dependencies),
-        defectForAiAssessmentRequest(tx, input.defectId),
-        aiAssessmentBeingWritten(tx, input.defectId),
-      ]);
-      return { aiOn: settings.aiOn, chatModel: settings.chatModel, defect, beingWritten };
-    },
+    facts: (tx, input) => requestAiAssessmentFacts(tx, input.defectId, dependencies),
     decide: requestAiAssessment,
     journal: aiAssistanceEvents.journal,
     result: ({ id }) => ({ aiAssessmentId: id }),

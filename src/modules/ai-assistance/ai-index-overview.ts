@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { entriesOf, isId, lastCommandBy, readJournal, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import type { FileOwner, IndexingFailureReason } from "./ai-index-entry";
-import { aiIndexingSettings, type AiDependencies } from "./ai-settings";
+import { aiState, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
 import { aiIndexEntry } from "./schema";
 
@@ -71,11 +71,11 @@ export async function aiIndexOverview(
   db: Database,
   dependencies: Pick<AiDependencies, "encryptionKey">,
 ): Promise<AiIndexOverview | undefined> {
-  const settings = await aiIndexingSettings(db, dependencies);
-  if (!settings.aiOn || !settings.embeddingModel) return undefined;
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return undefined;
   const [files, entries, cost] = await Promise.all([
     filesForIndexing(db),
-    entriesFor(db, settings.embeddingModel),
+    entriesFor(db, aiNow.embeddingModel),
     costOfIndexingSoFar(db),
   ]);
   const overview: AiIndexOverview = { indexed: 0, waiting: 0, failed: [], cost };
@@ -106,9 +106,9 @@ export async function filesTheAiCannotRead(
   fileIds: readonly string[],
 ): Promise<Set<string>> {
   if (fileIds.length === 0) return new Set();
-  const settings = await aiIndexingSettings(db, dependencies);
-  if (!settings.aiOn || !settings.embeddingModel) return new Set();
-  const entries = await entriesFor(db, settings.embeddingModel, fileIds);
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return new Set();
+  const entries = await entriesFor(db, aiNow.embeddingModel, fileIds);
   return new Set(fileIds.filter((id) => entries.get(id)?.state === "failed"));
 }
 

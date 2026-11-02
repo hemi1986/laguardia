@@ -45,7 +45,7 @@ export type IndexingOutcome =
   | { outcome: "given-up" };
 
 /** What the AI index work reads before every request – AI on, the key now, the model the index is built with. */
-export type IndexingSettings = { aiOn: boolean; key: string | undefined; embeddingModel: string | undefined };
+export type IndexingSettings = { on: false } | { on: true; key: string; embeddingModel: string };
 
 export type IndexFileOptions = {
   contentType: string;
@@ -54,13 +54,13 @@ export type IndexFileOptions = {
   /** The embedding model this indexing was started with – every item of the entry must be made with it. */
   embeddingModel: string;
   /** Asked before every request to OpenRouter: AI off, a rotated key or a changed model stops the indexing at once. */
-  settings: () => Promise<IndexingSettings>;
+  readAiNow: () => Promise<IndexingSettings>;
   /** Told what OpenRouter charged after every few requests – the run keeps it in case the indexing breaks off. */
   spent?: (cost: number) => Promise<void>;
 };
 
 /** How embedding is done for one file – the seam, the model, the settings asked before each request, the cost told. */
-type Embedding = Pick<IndexFileOptions, "ai" | "embeddingModel" | "settings" | "spent">;
+type Embedding = Pick<IndexFileOptions, "ai" | "embeddingModel" | "readAiNow" | "spent">;
 
 /** One thing to embed, with where it came from. */
 type ItemToEmbed = {
@@ -87,10 +87,10 @@ export async function indexFileContent({
   bytes,
   ai,
   embeddingModel,
-  settings,
+  readAiNow,
   spent,
 }: IndexFileOptions): Promise<IndexingOutcome> {
-  const embedding: Embedding = { ai, embeddingModel, settings, spent };
+  const embedding: Embedding = { ai, embeddingModel, readAiNow, spent };
   if (isPdf(contentType)) return indexPdf(bytes, embedding);
   if (isText(contentType)) {
     const text = new TextDecoder().decode(bytes);
@@ -335,7 +335,7 @@ type EmbedAnswer =
  */
 async function embedItems(
   itemsToEmbed: ItemToEmbed[],
-  { ai, embeddingModel, settings, spent }: Embedding,
+  { ai, embeddingModel, readAiNow, spent }: Embedding,
 ): Promise<EmbedAnswer> {
   const embedded: Embedded[] = [];
   for (let at = 0; at < itemsToEmbed.length; at += PARALLEL_REQUESTS) {
@@ -343,13 +343,13 @@ async function embedItems(
       itemsToEmbed
         .slice(at, at + PARALLEL_REQUESTS)
         .map(async (item): Promise<Embedded | "given-up" | IndexingFailureReason> => {
-          const now = await settings();
-          if (!now.aiOn || !now.key || now.embeddingModel !== embeddingModel) return "given-up";
+          const aiNow = await readAiNow();
+          if (!aiNow.on || aiNow.embeddingModel !== embeddingModel) return "given-up";
           const input: EmbedInput =
             item.kind === "passage"
               ? { kind: "text", text: item.text! }
               : { kind: "image", bytes: item.bytes!, contentType: item.contentType! };
-          const answer = await ai.embed(now.key, embeddingModel, input);
+          const answer = await ai.embed(aiNow.key, embeddingModel, input);
           if (answer === "unreachable") return "OpenRouter not reachable";
           if (answer === "refused") return "OpenRouter refused";
           return {
