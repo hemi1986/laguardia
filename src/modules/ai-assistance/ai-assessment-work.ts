@@ -39,9 +39,9 @@ export const aiAssessmentWork: AiWorkKind = {
   },
 
   async work(id, piece, context) {
-    const settings = () => aiState(context.db, context.ai);
+    const readAiNow = () => aiState(context.db, context.ai);
     // AI turned off before it started: nothing is sent, and the request is failed as *AI off* (rule).
-    if (!(await settings()).on) return fail(id, "ai-off", piece, context);
+    if (!(await readAiNow()).on) return fail(id, "ai-off", piece, context);
     const assessment = await aiAssessmentById(context.db, id);
     // Already written or failed meanwhile – a stale hold does nothing.
     if (!assessment || assessment.state !== "requested") return piece.giveUp();
@@ -64,7 +64,7 @@ export const aiAssessmentWork: AiWorkKind = {
 
     const searches = await searchWithTheDefect({
       context,
-      settings,
+      readAiNow,
       title: defect.title,
       descriptions: defect.problemReports.map((each) => each.description),
       note: assessment.note,
@@ -84,11 +84,11 @@ export const aiAssessmentWork: AiWorkKind = {
       note: assessment.note,
       photos: { reportPhotos: sent.reportPhotos, requestPhotos: sent.requestPhotos },
     });
-    const beforeChat = await settings();
+    const aiNow = await readAiNow();
     // AI turned off while searching: nothing more is sent (rule).
-    if (!beforeChat.on) return fail(id, "ai-off", piece, context);
+    if (!aiNow.on) return fail(id, "ai-off", piece, context);
     // The chat model is the one the assessment was requested with – never the one saved meanwhile (invariant).
-    const answer = await context.ai.ai.chat(beforeChat.key, assessment.chatModel, {
+    const answer = await context.ai.ai.chat(aiNow.key, assessment.chatModel, {
       system: prompt.system,
       text: prompt.text,
       images: sent.images,
@@ -161,7 +161,7 @@ type SearchOutcome =
  */
 async function searchWithTheDefect({
   context,
-  settings,
+  readAiNow,
   title,
   descriptions,
   note,
@@ -170,7 +170,7 @@ async function searchWithTheDefect({
   machineModelId,
 }: {
   context: AiWorkContext;
-  settings: () => Promise<AiState>;
+  readAiNow: () => Promise<AiState>;
   title: string;
   descriptions: string[];
   note: string | undefined;
@@ -186,13 +186,13 @@ async function searchWithTheDefect({
     | { key: string; model: string; scope: { machineId: string; machineModelId: string; embeddingModel: string } }
     | "ai-off"
   > => {
-    const now = await settings();
-    if (!now.on) return "ai-off";
-    embeddingModel = now.embeddingModel;
+    const aiNow = await readAiNow();
+    if (!aiNow.on) return "ai-off";
+    embeddingModel = aiNow.embeddingModel;
     return {
-      key: now.key,
-      model: now.embeddingModel,
-      scope: { machineId, machineModelId, embeddingModel: now.embeddingModel },
+      key: aiNow.key,
+      model: aiNow.embeddingModel,
+      scope: { machineId, machineModelId, embeddingModel: aiNow.embeddingModel },
     };
   };
   const first = await scopes();

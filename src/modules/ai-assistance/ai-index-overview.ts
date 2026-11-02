@@ -71,11 +71,11 @@ export async function aiIndexOverview(
   db: Database,
   dependencies: Pick<AiDependencies, "encryptionKey">,
 ): Promise<AiIndexOverview | undefined> {
-  const ai = await aiState(db, dependencies);
-  if (!ai.on) return undefined;
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return undefined;
   const [files, entries, cost] = await Promise.all([
     filesForIndexing(db),
-    entriesFor(db, ai.embeddingModel),
+    entriesFor(db, aiNow.embeddingModel),
     costOfIndexingSoFar(db),
   ]);
   const overview: AiIndexOverview = { indexed: 0, waiting: 0, failed: [], cost };
@@ -106,9 +106,9 @@ export async function filesTheAiCannotRead(
   fileIds: readonly string[],
 ): Promise<Set<string>> {
   if (fileIds.length === 0) return new Set();
-  const ai = await aiState(db, dependencies);
-  if (!ai.on) return new Set();
-  const entries = await entriesFor(db, ai.embeddingModel, fileIds);
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return new Set();
+  const entries = await entriesFor(db, aiNow.embeddingModel, fileIds);
   return new Set(fileIds.filter((id) => entries.get(id)?.state === "failed"));
 }
 

@@ -37,8 +37,8 @@ export function retryFileIndexingCommand(dependencies: Pick<AiDependencies, "enc
     store: aiIndexEntries,
     target: (input: RetryFileIndexingInput) => ({ id: input.fileId, version: input.version }),
     facts: async (tx) => {
-      const ai = await aiState(tx, dependencies);
-      return { embeddingModel: ai.on ? ai.embeddingModel : undefined };
+      const aiNow = await aiState(tx, dependencies);
+      return { embeddingModel: aiNow.on ? aiNow.embeddingModel : undefined };
     },
     decide: retryFileIndexing,
     removes: () => true,

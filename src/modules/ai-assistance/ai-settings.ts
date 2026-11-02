@@ -173,18 +173,18 @@ export async function aiSettingsForm(db: Database, { ai, encryptionKey }: AiDepe
     listed(ai, "chat"),
     listed(ai, "embedding"),
   ]);
-  const now = aiStateOf(state, encryptionKey());
-  const missing = now.on ? [] : now.missing;
+  const aiNow = aiStateOf(state, encryptionKey());
+  const missing = aiNow.on ? [] : aiNow.missing;
   const keyUsable = !missing.includes("key");
   const offered = chat === "unavailable" || embedding === "unavailable" ? "unavailable" : { chat, embedding };
   const named = (id: string | undefined, models: ListedModel[] | "unavailable") =>
     id ? { id, name: models === "unavailable" ? undefined : models.find((model) => model.id === id)?.name } : undefined;
   return {
     version,
-    aiOn: now.on,
+    aiOn: aiNow.on,
     missing,
     keyLastFour: keyUsable ? state.key?.lastFour : undefined,
-    keyUnreadable: !now.on && now.keyUnreadable,
+    keyUnreadable: !aiNow.on && aiNow.keyUnreadable,
     chatModel: named(state.chatModel, chat),
     embeddingModel: named(state.embeddingModel, embedding),
     offered,

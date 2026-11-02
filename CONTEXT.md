@@ -311,7 +311,8 @@ _UI (de)_: Wartungseintrag (Erledigt / Teilweise erledigt)
 
 **AI settings**:
 What lets La Guardia ask an AI for help: the museum's OpenRouter API key, the chat model and the embedding model.
-AI is on exactly while a key and both models are saved; removing the key turns AI off and keeps the AI index. Only
+AI is on exactly while a key and both models are saved – a saved key this environment cannot read counts as none;
+removing the key turns AI off and keeps the AI index. Only
 technicians change them, on the settings page, and the saved key is never shown again – only its last four characters.
 _Avoid_: AI configuration, LLM settings, integration
 _UI (de)_: KI

@@ -11,12 +11,12 @@ export async function requestAiAssessmentFacts(
   defectId: string,
   dependencies: Pick<AiDependencies, "encryptionKey">,
 ): Promise<RequestAiAssessmentFacts> {
-  const [ai, defect, beingWritten] = await Promise.all([
+  const [aiNow, defect, beingWritten] = await Promise.all([
     aiState(db, dependencies),
     defectForAiAssessmentRequest(db, defectId),
     aiAssessmentBeingWritten(db, defectId),
   ]);
-  return { chatModel: ai.on ? ai.chatModel : undefined, defect, beingWritten };
+  return { chatModel: aiNow.on ? aiNow.chatModel : undefined, defect, beingWritten };
 }
 
 /**
