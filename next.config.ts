@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
     // Photos arrive downscaled (≤ 1 MB, ST-002; ≤ 600 KB each of a work log entry's 5, ST-032); the server check allows
     // 2 MB per photo – leave room for multipart overhead, below Vercel's 4.5 MB request body.
     serverActions: { bodySizeLimit: "4mb" },
+    // Opt the `next upgrade` agent into security-only automated upgrades.
+    agentUpgrade: "security",
   },
   // Indexing a file for AI (ST-106) parses PDFs with pdfjs and renders pages with a native canvas – both kept as
   // packages of their own, and pdfjs' wasm decoders, ICC profiles, fonts and CMaps traced into the worker's function
