@@ -43,22 +43,31 @@ async function turnAiOn(): Promise<void> {
   );
 }
 
-/** An AI assessment being written – no hold, so the page's refresh does not start a run. */
+/**
+ * An AI assessment being written, as a run does it: held first, for an hour. So a run that a form of another spec starts
+ * meanwhile leaves it alone – it would fail it, with no OpenRouter here – and the page's refresh starts none either.
+ */
 async function anAssessmentBeingWritten(defectId: string, note: string): Promise<string> {
   const id = randomUUID();
-  await withDatabase((client) =>
-    client.query(
+  await withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO ai_work_hold (kind, piece_id, held_by, held_until)
+       VALUES ('ai-assessment', $1, $2, now() + interval '1 hour')`,
+      [id, randomUUID()],
+    );
+    await client.query(
       `INSERT INTO ai_assessment (id, defect_id, note, photos, requested_by, requested_at, chat_model, state, version)
        SELECT $1, $2, $3, '{}', id, now(), 'google/gemini-2.5-flash', 'requested', 0 FROM team_member LIMIT 1`,
       [id, defectId, note],
-    ),
-  );
+    );
+  });
   return id;
 }
 
 /** Puts the AI settings back to "off" and removes the seeded AI assessments – other specs read them (ST-104). */
 async function restoreAiOff(): Promise<void> {
   await withDatabase(async (client) => {
+    await client.query("DELETE FROM ai_work_hold WHERE kind = 'ai-assessment'");
     await client.query("DELETE FROM ai_assessment");
     await client.query(
       `UPDATE ai_settings

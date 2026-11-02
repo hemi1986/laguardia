@@ -60,7 +60,16 @@ test("the progress of an upload is shown while it runs, up to 100 percent", asyn
   test.setTimeout(120_000);
   needsTechnician();
   await theAttachForm(page);
-  // Every text the status shows, however briefly – 100 % is replaced by "Hochgeladen" right away.
+  // A phone's connection, not the local store's: on it the bytes take seconds and the answer comes later, so 100 % is on
+  // the screen before "Hochgeladen" replaces it. Locally both can arrive before the page draws again.
+  const network = await page.context().newCDPSession(page);
+  await network.send("Network.emulateNetworkConditions", {
+    offline: false,
+    latency: 1_000,
+    downloadThroughput: -1,
+    uploadThroughput: 10 * MB,
+  });
+  // Every text the status shows, however briefly.
   await page.evaluate(() => {
     const shown: string[] = [];
     (window as { shownStatus?: string[] }).shownStatus = shown;
