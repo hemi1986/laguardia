@@ -13,7 +13,7 @@ import {
   type ConfirmEmbeddingModelField,
 } from "./ai-settings-form-input";
 import { aiLanding } from "./ai-settings-data";
-import { aiSaveLanding, embeddingModelWarning } from "./embedding-modell-wechseln/embedding-model-change-address";
+import { whereASaveGoes } from "./embedding-modell-wechseln/embedding-model-change-address";
 
 type AiSettingsError = CommandError<ReturnType<typeof changeAiSettingsCommand>>;
 
@@ -28,7 +28,7 @@ const command = changeAiSettingsCommand(aiDependencies());
  * through the AI seam before it decides. The key is never sent back (`secret`). Afterwards the technician is on the
  * same page with the confirmation (G3) – „Schlüssel ersetzt.“ after „Ersetzen“ (ST-110). The runner starts the AI index
  * work once a change has committed (POL-AiIndexFollowsTheSettings, ST-106); a save without a change starts none. Where
- * it lands depends on what was posted, so `saveAiSettingsAction` redirects.
+ * it goes depends on what was posted as well, which `onSuccess` does not get, so `saveAiSettingsAction` redirects.
  */
 const saveAiSettings = formAction(command, { ...aiSettingsFormDefinition, onSuccess: async () => {} });
 
@@ -49,12 +49,9 @@ export async function saveAiSettingsAction(
   formData: FormData,
 ): Promise<AiSettingsFormState> {
   await requireTechnician(); // the page's access check; who may run the command is decided by its allowedActors
-  const { keyTyped, landing } = aiSaveLanding(formData);
   const state = await saveAiSettings(previous, formData);
-  if (!state) redirect(aiLanding(landing));
-  // A changed embedding model is asked about first, on a page of its own (ST-110).
-  const warning = embeddingModelWarning(state, keyTyped);
-  if (warning) redirect(warning);
+  const next = whereASaveGoes(state, formData);
+  if (next) redirect(next);
   return state;
 }
 

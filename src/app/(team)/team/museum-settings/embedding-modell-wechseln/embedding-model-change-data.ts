@@ -42,7 +42,7 @@ export async function loadEmbeddingModelChange(
       version: chosen.version ?? "",
       chatModel: chosen.chatModel ?? "",
       embeddingModel: chosen.embeddingModel ?? "",
-    } satisfies Record<ConfirmEmbeddingModelField, string>,
+    },
     back: backToAiForm(chosen),
   };
 }

@@ -32,7 +32,7 @@ import { post } from "@/test-support/forms";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { aiSettingsFormDefinition, confirmEmbeddingModelDefinition } from "./ai-settings-form-input";
-import { aiSaveLanding, embeddingModelWarning } from "./embedding-modell-wechseln/embedding-model-change-address";
+import { whereASaveGoes } from "./embedding-modell-wechseln/embedding-model-change-address";
 import { AiSettingsFormContent } from "./ai-settings-form";
 import { aiLanding, loadAiSettings, REPLACE_KEY_ADDRESS } from "./ai-settings-data";
 import { AiSettingsSection, aiSettingsFormProps } from "./ai-settings-section";
@@ -126,12 +126,12 @@ function formsOf(actor: Actor, dependencies = openRouterWith()) {
   const run = formRunner({ currentPerson: async () => actor, db, clock, newId: randomUUID });
   const command = changeAiSettingsCommand(dependencies);
   return {
-    /** The form „KI“, landing as its action does (`aiSaveLanding`). */
-    save: async (formData: FormData) =>
-      run(command, {
-        ...aiSettingsFormDefinition,
-        onSuccess: async () => void landed.push(aiLanding(aiSaveLanding(formData).landing)),
-      })(null, formData),
+    /** The form „KI“, going where its action goes (`whereASaveGoes`) when it saved. */
+    save: async (formData: FormData) => {
+      const state = await run(command, { ...aiSettingsFormDefinition, onSuccess: async () => {} })(null, formData);
+      if (!state) landed.push(whereASaveGoes(state, formData)!);
+      return state;
+    },
     confirm: run(command, {
       ...confirmEmbeddingModelDefinition,
       onSuccess: async () => void landed.push(aiLanding("saved")),
@@ -305,7 +305,7 @@ describe("changing the embedding model", () => {
     const state = await save(posted);
 
     expect(landed).toEqual([]);
-    const address = embeddingModelWarning(state, aiSaveLanding(posted).keyTyped);
+    const address = whereASaveGoes(state, posted);
     expect(address).toBeDefined();
     const { html } = await warning(address!);
     expect(textOf(html)).toContain(
@@ -330,7 +330,7 @@ describe("changing the embedding model", () => {
     await attachedAndIndexed("Eight Ball Manual", 3);
     const indexedBefore = await aiIndexNow();
     const posted = await filledIn({ embeddingModel: otherEmbedding.id });
-    const address = embeddingModelWarning(await formsOf(tom).save(posted), false);
+    const address = whereASaveGoes(await formsOf(tom).save(posted), posted);
     const { data, html } = await warning(address!);
     expect(html).toContain(`href="${data.back.replaceAll("&", "&amp;")}"`);
 
@@ -351,7 +351,7 @@ describe("changing the embedding model", () => {
     const state = await formsOf(tom).save(posted);
 
     expect(state).toMatchObject({ error: "embedding-model-change-unconfirmed" });
-    expect(embeddingModelWarning(state, aiSaveLanding(posted).keyTyped)).toBeUndefined();
+    expect(whereASaveGoes(state, posted)).toBeUndefined();
     const html = await formAfter(state, REPLACE_KEY_ADDRESS);
     expect(textOf(html)).toContain(
       "Bitte den neuen Schlüssel zuerst allein speichern und danach das Embedding-Modell wechseln.",
@@ -364,7 +364,7 @@ describe("changing the embedding model", () => {
 
   it("changes the embedding model once confirmed, and lands like a save", async () => {
     const posted = await filledIn({ embeddingModel: otherEmbedding.id });
-    const address = embeddingModelWarning(await formsOf(tom).save(posted), false);
+    const address = whereASaveGoes(await formsOf(tom).save(posted), posted);
     const { data } = await warning(address!);
     const { confirm, landed } = formsOf(tom);
 

@@ -403,9 +403,10 @@ ignores `OPENROUTER_BASE_URL` (the local browser tests' address where nothing an
 refuse one (a re-sent form after a conflict). `?saved=ai` is confirmed without the journal like „Museum“;
 `?saved=ai-key-removed` only while no key is saved. RM-AiSettings (`aiSettingsForm(db, dependencies)`) reads
 OpenRouter's lists on every opening; a saved key that cannot be decrypted counts as none.
-**The warning before a change of the embedding model** (ST-110, architecture review 2026-11-01): where a save lands and
-the addresses of the warning are `embedding-modell-wechseln/embedding-model-change-address.ts`; the form input file only
-reads fields. What the warning passes on is `confirmEmbeddingModelFields`, the one list behind its address and hidden
+**The warning before a change of the embedding model** (ST-110, architecture review 2026-11-01): where a save goes is
+`whereASaveGoes` in `embedding-modell-wechseln/embedding-model-change-address.ts`; the form input file only reads fields.
+It depends on what was posted as well, which a runner's `onSuccess` does not get, so this one action redirects after the
+runner and its `onSuccess` is empty. What the warning passes on is `confirmEmbeddingModelFields`, the one list behind its address and hidden
 fields. `TOKENS_PER_PAGE_OR_IMAGE` has a file of its own, so ST-110's test can state the scenario's figure with `vi.mock`
 and no interface takes a test's value.
 **Whether AI is on has one answer** (architecture review 2026-11-01): `aiState(db, dependencies)` in `ai-settings.ts`. On

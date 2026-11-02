@@ -26,8 +26,7 @@ export type EmbeddingModelChange = {
 export type NoEmbeddingModelChange = "no-change" | "embedding-model-unknown" | "openrouter-unreachable";
 
 /**
- * The estimate the warning before a change of the embedding model shows – part of RM-AiSettings (CMD-ChangeAiSettings'
- * rule, ADR 0014
+ * The estimate the warning before a change of the embedding model shows (CMD-ChangeAiSettings' rule, ADR 0014
  * *Consequences*): **pages and images of the current AI index entries × tokens per page or image × the new model's
  * price per million tokens**. A PDF page is indexed as its text and its page image and counts once – its page images
  * are the entry's images –, an image file counts once; the passages of a text file are not counted (a few tokens).

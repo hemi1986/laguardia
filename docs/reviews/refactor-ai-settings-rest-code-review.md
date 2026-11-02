@@ -1,0 +1,52 @@
+# Code review – refactor-ai-settings-rest: candidate #7 of the architecture review 2026-11-01 (ST-110 findings #7–#10, #12)
+Base: main · Commits: 1 · Date: 2026-11-02
+
+Not a story, and it must be behaviour-neutral. I traced the behaviour by reading the code. I ran `ai-settings-change.integration.test.ts` (8 passed), `check-language.ts` (only the known `ai` false positive), an ESLint probe of `import` against `vi.mock`, and a search of the built client chunks in `.next`. I took verify, `next build` and the browser specs from the task and did not rerun them.
+
+| # | Severity | Area | File:line | Finding | Source (ADR, rule, glossary, smell) | Suggested direction |
+|---|---|---|---|---|---|---|
+| 1 | minor | Test quality | `ai-settings-actions.ts:52-58`, `ai-settings-change.integration.test.ts:129-134` | No test runs `saveAiSettingsAction`, so `if (!state) redirect(aiLanding(landing))` is uncovered. The integration test's `formsOf.save` puts the landing into its own `onSuccess`. Its comment says "landing as its action does", but since this change the action no longer lands in `onSuccess`. The browser specs do not cover it either: `e2e/settings.spec.ts:6` says no test saves the AI settings, and the helper's post is refused before the landing. If the line were lost, the technician would stay on the form without a confirmation and everything would stay green. The old `onSuccess` line was equally uncovered, so the gap is not larger (ST-110 #5). But the neutrality of this line rests on reading the code alone. | tdd (test at the seam the user crosses; a test that imitates the code); ST-110 #5 | Deepening: one function over the state and the post that answers where a save goes (landing, warning or stay), replacing `aiSaveLanding` + `embeddingModelWarning` and the `keyTyped` handed from one to the other. The action and the test would then cross the same interface. At the least, correct the test's comment. |
+| 2 | minor | Architecture / Test seams | `ai-settings-change.integration.test.ts:43`, `conventions.md:45-49`, `conventions.md:1017` | `vi.mock("@/modules/ai-assistance/tokens-per-page-or-image", …)` names a module's internal file from `src/app/`. Lint does not see it. Probed with ESLint on this test's path: an `import` of that path gives `boundaries/dependencies` (ADR 0002), the `vi.mock` gives nothing. The bypass does little harm: it is one datum, and a stale path fails loudly (see the judgement below). It is still a second exception to the import rule, recorded only in the AI settings paragraph (`conventions.md:406-410`). The first exception was the user's decision (2026-10-02), and the seam catalog sends anything not listed to the user. Existing mocks do not set a precedent: `ai-work.test.ts` mocks `next/server`, and `form-action.test.ts` mocks files in its own folder. | ADR 0002; conventions, *Import rules*, *Seam catalog*; tdd (mocked internal collaborator) | Keep the mock. Name it to the user at the PR, and on approval add it to *Import rules* as a named, single exception. |
+| 3 | minor | Conventions | `ai-settings-actions.ts:33`, `conventions.md:543,545` | `onSuccess: async () => {}` is the only empty `onSuccess` in production code; all others are in tests. Conventions say "Success goes through `onSuccess`" and that an action "only calls the runner"; the action's comment explains the deviation, the conventions do not. ST-110 #10's suggested direction, `onSuccess` taking the landing, cannot work because `onSuccess` receives only the command's result, so the deviation itself is acceptable. | Conventions, *Server Actions and forms*; Refused Bequest | Add one sentence to the new conventions paragraph: a landing that depends on what was posted is decided in the action. |
+| 4 | minor | Smell (Data Clumps) | `embedding-model-change-address.ts:47-48`, `embedding-model-change-data.ts:41-45` | ST-110 #9 is done in part, while conventions call the list "the one list behind its address and hidden fields". `embeddingModelWarning` still destructures the three names and passes them on, although `withChosen` already picks only the list's names. A new field in the list would compile and silently be missing from the warning's address. `posted` also spells them out, but the type check catches a new field there, which makes its `satisfies` redundant with the declared return type. | Data Clumps; ST-110 #9 | Pass `state.values` to `withChosen` directly and drop the `satisfies`. Behaviour stays the same; the list remains what keeps the key and `keyOffered` out. |
+| 5 | minor | Architecture (IDs) | `embedding-model-change.ts:29-30`, `docs/domain/events.yaml:1026-1034` | The comment now says the estimate is "part of RM-AiSettings", but RM-AiSettings in `events.yaml` describes the form „KI“ and its fields list neither the estimate nor the warning page. This follows ST-110 #12's direction, and no code depends on it, but the ID's source of truth does not back the claim. The comment's first lines are also not reflowed ("rule, ADR 0014" stands alone on a line). | Review criterion 1 (IDs from `events.yaml`); ST-110 #12 | Accept for now, and add the field at the next `/domain-model` pass. Reflow the comment. |
+
+## The deliberate decision: `vi.mock` instead of the parameter
+
+- **Better than the parameter? Yes.** The parameter widened two interfaces, one of them a page's data function, for one test, and any caller could pass another figure. Now no production caller can vary the figure. The cost is a seven-line file that exists because of a test, and a seam visible only in that test. Putting the figure in `AiDependencies` (ST-110 #7's other direction) would be worse, because every reader of those dependencies would carry a value that only the estimate uses.
+- **Does it reach the module's code? Yes.** `embedding-model-change.ts` imports the same file relatively, and the test passes with „0,60 $“: 1.200 × 2.500 × 0,20 / 1.000.000 = 0,60. With the real 530 the result is 0,1272, about 0,13 $, so the assertion could not pass without the mock. I did not run that mutation; this is arithmetic. The expected value comes from the scenario, so the test is not tautological. `vitest.config.ts` keeps Vitest's default file isolation, so the mock does not leak into other files.
+- **Does the import-rule bypass matter? Little, see #2.** If the constant moved, the mock would stop applying or the path would fail to resolve; either way the test fails rather than passing wrongly.
+- **Does it fit the seam catalog? In substance, yes.** The test still enters at the page data function with its view and the in-memory AI seam. The catalog's "not tested at" list names mocks of the database and of the command layer, and this is neither. The mock changes a Given, not the seam. The story's note (`ST-110`, line 138) calls the 2.500 a test value, which supports this. The catalog itself says nothing about such a mock, hence the question to the user in #2.
+- **The real 530 is pinned by no test.** That was already true before this change, and the figure's source is documented in its file.
+
+## Behaviour traced, no difference found
+
+- **Successful save:** `withoutContent` returns null only after `outcome.ok`, the removed-content step and `onSuccess`. Null therefore means success, and the redirect follows in the same order as before. No `try`/`catch` surrounds `redirect`. The AI work still starts inside `executeCommand`, through `afterCommit`.
+- **Rejection:** `{ error, values }` comes back as before, with the key emptied by `secret`.
+- **Warning:** same condition, same redirect.
+- **Key typed in the same save:** `keyTyped` is computed before the command as before, so there is no warning and the form stays with the rejection. A key-replaced landing still needs `keyOffered=replace`.
+- **Runner built once:** building the runner once instead of per request is safe, because it holds no per-request state.
+- **Order of parameters and hidden fields:** the list is `version, chatModel, embeddingModel`, the same as the old name list and the old hidden inputs.
+- **Param given as an array:** `one()` is unchanged, so an array is no value given. `Object.fromEntries` reads only the listed names.
+- **`back` without the version:** `backToAiForm` still passes only the two models, and the `#ki` stays. No test asserts the missing version directly; that was so before as well.
+- **Key in the address (G36):** the address is now built from the confirmation's list, which holds no key. `withChosen` copies nothing else, and the ST-110 test still asserts that the address and page hold no key.
+- **Client bundle:** `ai-settings-form-input.ts` has one runtime import, `@/app/_actions/version.ts`, which imports nothing. Its other imports are `import type` and are erased. In the built chunk only `u=["version","chatModel","embeddingModel"]` arrives; `embeddingModelConfirmed` is in no client chunk, and `aiSettingsFormInput`, `removeKey` and `drizzle` are absent from that chunk. `.next/BUILD_ID` is from 20:46, before the commit at 20:47; I assumed that build holds the committed code, and the list being inlined in the form's chunk fits this.
+- **Removed exports:** `TOKENS_PER_PAGE_OR_IMAGE`, `embeddingModelChangeAddress` and `EMBEDDING_MODEL_CHANGE_PAGE` have no importers left, and docs carry no stale reference outside the review history.
+- **Test imports:** they only follow the moved functions. No assertion was weakened; the 2.500 moved from the helper's default to the mock.
+- **Scope:** nothing beyond what was announced.
+
+## Counts
+blocker 0 · major 0 · minor 5 · follow-up 0
+
+ready to merge
+Most important: no test runs `saveAiSettingsAction`, and none of the three browser specs saves the form „KI“, so the neutrality of the moved redirect rests on reading the code (#1).
+
+## Resolution (main session, 2026-11-02)
+
+| # | Outcome |
+|---|---|
+| 1 | **fixed** – `whereASaveGoes` replaces `aiSaveLanding` and `embeddingModelWarning` and is what the action and the test call. The action's `redirect` line itself stays without a test. |
+| 2 | open for the user – the `vi.mock` stays, named at the pull request; *Import rules* changes only on their approval. |
+| 3 | **fixed** – a sentence in the conventions. |
+| 4 | **fixed** – the warning's address takes the state's values through the one list, and the `satisfies` is gone. |
+| 5 | **fixed** – "part of RM-AiSettings" is taken out again: `events.yaml` does not back it, and ST-110 #12 allows leaving it. |
