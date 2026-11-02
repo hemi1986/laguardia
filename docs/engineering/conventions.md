@@ -830,17 +830,13 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   `waiting` and `isWaiting`, the overview and `filesTheAiCannotRead` read it; none of them looks at an entry's model or
   state itself. It takes the file IDs because which files there are is Collection's to say (`filesForIndexing`): a join
   over both modules' tables would break *Reading across modules – the page composes* below.
-- **The rules of writing an AI assessment** (architecture review 2026-11-01) live without I/O in
-  `ai-assessment-writing.ts`: what to search with, which photos and found images to send, the chat request made of what
-  was read, and the answer as the assessment's parts or its failure. The kind reads, asks and stores. A new rule about
-  what is sent goes there, with a unit test.
 - **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
   asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
   `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
   AI index (`ai-index-search.ts`: only the defect's machine and machine model, only the current embedding model; one
   text search for the defect title, the problem report descriptions and the note, one image search per photo of the
   request; each search takes 8 text passages and 4 pages or images, merged and cut to 12 pages and images), renders the
-  found PDF pages again from their file (`renderPdfPage`) and sends everything through the chat seam
+  found PDF pages again from their file (`renderPdfPages`) and sends everything through the chat seam
   (`ai.chat`, `openrouter.ts`, no provider restriction – ADR 0016). The answer is read as structured
   data (`parseAiAssessmentAnswer`); references to files outside the defect's machine and its machine model are dropped,
   and the result is stored through CMD-WriteAiAssessment with only the aggregate still *requested* – a late result of a
@@ -917,6 +913,11 @@ Time-based states (due, overdue, stale claim, waiting) are **computed when a pag
 ## Security
 
 - Every command goes through a **Server Action** – never a route handler. `src/proxy.ts` rejects any POST to a page whose `Origin` is missing or foreign (CSRF); Next.js checks the Origin again. Route handlers under `/api/` are not behind the proxy: they check the Origin themselves (`isSameOrigin`) and the session (the upload address route, ST-085), or their own signature. No route accepts upload-completion callbacks from the store.
+- **The rules of writing an AI assessment** (architecture review 2026-11-01) live without I/O in
+  `ai-assessment-writing.ts`: what to search with, what to read for the chat request and its caps, the request made of
+  what was read, and the answer as the assessment's parts or its failure. The kind reads, asks and stores; what fails
+  before a search (no defect, no machine model) stays there, so no embedding is paid for. A rule of this kind goes in
+  the module, with a unit test.
 - **The worker route** `/api/ai-work` (ST-112) runs no command of a person and checks neither Origin nor session: its
   only key is the worker secret, which never leaves the server – sent only by `startAiWork` to the deployment's own
   address from its environment (see *Background work*).
@@ -1025,6 +1026,7 @@ Which seam each kind of code is tested at. A seam not listed here is a decision 
 | Code that stores content (ST-016, user 2026-10-04; uploads ST-085): the photo module's store-run-delete, a form with a photo, a page that shows a photo; the upload address, attaching uploaded content, the cleanup of abandoned uploads | `withStoredPhoto` / `formRunner({ …, storage: memoryStorage() })` with a `photo` step / the page data function with `{ storage: memoryStorage() }` against real PostgreSQL – observed through `storage.names()`/`read()` and read models; a stand-in command in `src/photo/photo-stand-in.test-support.ts`. Uploads: `grantUploadAddress` with `memoryStorage().upload(address, …)` playing the browser (it refuses what S3 refuses: another length or media type, a second upload, a late one), `withUploadedContent` with the stand-in `src/upload/attach-stand-in.test-support.ts`, `cleanUpAbandonedUploads` with `fixedClock` in an isolated database; the route as `uploadRoute({ … })` with real requests and a real login. The S3 adapter itself against SeaweedFS (`s3Storage({ settings, clock })` with `testStoreSettings()`, a plain `fetch` playing the browser, expiry by signing with a `fixedClock` in the past; always in CI), the browser-side `uploadFile` in the route's test (global `fetch` passed to `uploadRoute`) and in the browser tests on the attaching form | integration / e2e | `src/photo/store-photo.integration.test.ts`, `src/app/m/[museumNumber]/melden/report-problem.integration.test.ts`, `e2e/report-photo.spec.ts`, `src/upload/*.integration.test.ts`, `src/app/api/uploads/upload-route.integration.test.ts`, `src/platform/storage/s3-storage.integration.test.ts`, `e2e/file-upload.spec.ts` |
 | Code that talks to OpenRouter (ST-104, user 2026-11-01, ADR 0014): a command or read model of AI assistance | the **AI seam** with its in-memory adapter `memoryAi({ models, acceptedKeys, listsUnavailable, unreachable })` (`src/modules/ai-assistance/ai-seam.test-support.ts`), passed in `AiDependencies` with a random encryption key – never OpenRouter itself; observed through read models and `journalOf`, and – for the key only, which no interface shows – the stored row (`storedAiSettingsRow`), to prove the plain key is stored nowhere | integration | `src/app/(team)/team/museum-settings/ai-settings.integration.test.ts` |
 | The OpenRouter adapter itself (ST-104) | `openRouter({ baseUrl })` against a fake HTTP server (`node:http` on a free port) that answers like OpenRouter's API – the requests it sends (paths, `Authorization`, `provider` options) and how it turns answers into the domain's words; never the real API, also not in CI | unit | `src/modules/ai-assistance/openrouter.test.ts` |
+| What an AI assessment searches with and sends, and what its answer comes to (ST-107, architecture review 2026-11-01) | the pure functions of `ai-assessment-writing.ts` with plain data | unit | `src/modules/ai-assistance/ai-assessment-writing.test.ts` |
 | A held piece's way to OpenRouter (architecture review 2026-11-01): the guards and the metering | `openRouterSession({ ai, readAiNow, recordSpent })` with stand-ins for all three | unit | `src/modules/ai-assistance/open-router-session.test.ts` |
 | The run of the AI work (ST-112, user 2026-11-01): holds, budget, continuation, broken-off work, a kind's work | `runAiWork({ db, clock: steppingClock(…), budgetSeconds, ai: { ai: memoryAi(), … }, storage: memoryStorage(), continueWork, kinds })` driven directly against an **isolated** database, the kind a stand-in (`ai-work-stand-in.test-support.ts`) or the real one; observed through the kind's read models (stand-in: its table) and the calls of `continueWork` – never a real background run | integration | `src/modules/ai-assistance/ai-work.integration.test.ts` |
 | The worker route and starting the AI work (ST-112, user 2026-11-01) | `workerRoute({ secret, run, afterResponse })` with real requests, the run a recording stand-in and `after()` collected; `startAiWork({ env, fetch })` with its `fetch` handing the request to the route | unit | `src/app/api/ai-work/worker-route.test.ts` |

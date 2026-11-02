@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createMachineModelCommand, machineModelOfMachineForAi, registerMachineCommand } from "@/modules/collection";
+import {
+  createMachineModelCommand,
+  fileForIndexing,
+  machineModelOfMachineForAi,
+  registerMachineCommand,
+} from "@/modules/collection";
 import {
   defectDetails,
   linkProblemReportToDefectCommand,
@@ -485,6 +490,58 @@ describe("what an AI assessment does", () => {
 
     expect(await assessment(id)).toMatchObject({ state: "failed", failureReason: "ai-off" });
     expect(ai.chatRequests).toHaveLength(0);
+  });
+
+  it("sends a found image file as it is, and leaves out what cannot be read any more", async () => {
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const imageFile = await attach({
+      machineId,
+      title: "Wiring photo",
+      contentType: "image/png",
+      bytes: new Uint8Array([1, 2, 3]),
+    });
+    await index(imageFile, [{ kind: "image" }]);
+    const manual = await attach({
+      machineId,
+      title: "Manual",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["Seite 1"]),
+    });
+    // The second page cannot be rendered: the manual has only one.
+    await index(manual, [
+      { kind: "page-image", page: 1 },
+      { kind: "page-image", page: 99 },
+    ]);
+    // The other file's content is gone from the store.
+    const gone = await attach({
+      machineId,
+      title: "Schematic",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["Seite 1"]),
+    });
+    await index(gone, [{ kind: "page-image", page: 1 }]);
+    await storage.delete((await fileForIndexing(db, gone))!.content.name);
+    const kept = await aPhoto();
+    const lost = await aPhoto(1000);
+    const id = await request(defectId, { photos: [kept, lost] });
+    await storage.delete(lost);
+    const ai = anAi();
+
+    await run(ai);
+
+    expect((await assessment(id)).state).toBe("written");
+    const { images, text } = ai.chatRequests[0];
+    expect(images.map(({ contentType }) => contentType).sort()).toEqual(["image/jpeg", "image/jpeg", "image/png"]);
+    expect(images.find(({ contentType }) => contentType === "image/png")?.bytes).toEqual(new Uint8Array([1, 2, 3]));
+    expect(text).toContain(`"datei": "${imageFile}"`);
+    expect(text).toContain(`"datei": "${manual}"`);
+    expect(text).not.toContain(`"datei": "${gone}"`);
+    expect(text).not.toContain('"seite": 99');
+    // Numbered without a gap: an image left out shifts nothing.
+    expect(text).toContain('"bild": 2');
+    expect(text).not.toContain('"bild": 3');
+    expect(text).toContain("Fotos der Anfrage (als Bilder mitgeschickt, zuletzt): 1");
   });
 
   it("sends no chat request once AI is turned off after the last search", async () => {

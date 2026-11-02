@@ -5,18 +5,17 @@ import type { AssessmentFailureReason } from "./ai-assessment";
 import { aiAssessmentById, requestedAiAssessmentIds } from "./ai-assessments";
 import {
   aiAssessmentChatRequest,
-  foundImagesToSend,
+  failureOfEmbedding,
   outcomeOfChat,
-  reportPhotosToSend,
   searchTextOf,
-  uniqueHits,
+  whatToRead,
 } from "./ai-assessment-writing";
 import { aiState } from "./ai-settings";
 import { renderPdfPages } from "./file-indexing";
 import { searchAiIndex, searchedFiles, type AiIndexHit } from "./ai-index-search";
 import type { AiWorkContext, AiWorkKind, HeldPiece } from "./ai-work";
 import { failAiAssessmentCommand, writeAiAssessmentCommand } from "./write-ai-assessment-command";
-import type { ChatFailure, ChatImage } from "./ai-seam";
+import type { ChatImage } from "./ai-seam";
 import type { OpenRouterSession } from "./open-router-session";
 
 /**
@@ -65,16 +64,17 @@ export const aiAssessmentWork: AiWorkKind = {
       machineModelId: machineModel.id,
     });
     if (!searches.ok) return fail(id, searches.failure, piece, context);
-    const { passages, images, filesSearched } = searches;
-    const foundImages = await readFoundImages(context, images);
+    const { filesSearched } = searches;
+    const toRead = whatToRead(defect, searches);
+    const foundImages = await readFoundImages(context, toRead.foundImages);
     const request = aiAssessmentChatRequest({
       defect,
       machineModel,
       files,
       note: assessment.note,
-      passages,
+      passages: toRead.passages,
       foundImages,
-      reportPhotos: await readPhotos(context, reportPhotosToSend(defect)),
+      reportPhotos: await readPhotos(context, toRead.reportPhotos),
       requestPhotos: await readPhotos(context, assessment.photos),
     });
     // The chat model is the one the assessment was requested with – never the one saved meanwhile (invariant).
@@ -134,7 +134,7 @@ type SearchOutcome =
       filesSearched: string[];
       embeddingModel: string;
     }
-  | { ok: false; failure: ChatFailure | "ai-off" };
+  | { ok: false; failure: AssessmentFailureReason };
 
 /**
  * The AI index is searched with the text, as one search, and with each photo of the request, one search each (user,
@@ -158,9 +158,7 @@ async function searchWithTheDefect({
 }): Promise<SearchOutcome> {
   const scopeWith = (embeddingModel: string) => ({ machineId, machineModelId, embeddingModel });
   const textAnswer = await openRouter.embed({ kind: "text", text });
-  if (textAnswer === "stopped") return { ok: false, failure: "ai-off" };
-  if (textAnswer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
-  if (textAnswer === "refused") return { ok: false, failure: "key-invalid" };
+  if (typeof textAnswer === "string") return { ok: false, failure: failureOfEmbedding(textAnswer) };
   let embeddingModel = textAnswer.model;
   const filesSearched = await searchedFiles(context.db, scopeWith(embeddingModel));
   const passageHits = await searchAiIndex(context.db, scopeWith(embeddingModel), textAnswer.embedding, "text");
@@ -169,16 +167,14 @@ async function searchWithTheDefect({
     const bytes = await context.storage.readContent(photo);
     if (!bytes) continue;
     const answer = await openRouter.embed({ kind: "image", bytes, contentType: "image/jpeg" });
-    if (answer === "stopped") return { ok: false, failure: "ai-off" };
-    if (answer === "unreachable") return { ok: false, failure: "openrouter-not-reachable" };
-    if (answer === "refused") return { ok: false, failure: "key-invalid" };
+    if (typeof answer === "string") return { ok: false, failure: failureOfEmbedding(answer) };
     embeddingModel = answer.model;
     imageHits.push(...(await searchAiIndex(context.db, scopeWith(embeddingModel), answer.embedding, "image")));
   }
   return {
     ok: true,
-    passages: uniqueHits(passageHits),
-    images: foundImagesToSend(imageHits),
+    passages: passageHits,
+    images: imageHits,
     filesSearched,
     embeddingModel,
   };
