@@ -71,7 +71,7 @@ Most important: #1 – nothing tests the `cost` and `embeddingModel` a run store
 | 3 | **fixed** – a chat's cost is only summed, not written to the hold, so a failed write cannot lose an answer already paid for. An embedding of an AI assessment still writes to its hold. |
 | 4 | **fixed** – both lines of the conventions. |
 | 5 | **fixed** – the comment says what the assertion proves. |
-| 6 | **partly fixed** – a test covers the stop right before the chat. A cut-off mid-batch stays untested: it waits for the user's decision on the cost per request. |
+| 6 | **fixed** – tests cover the stop right before the chat and a cut-off mid-batch. The user accepted the cost per request (2026-11-02). |
 | 7 | skipped – `IndexingOutcome` stays a complete answer; reading `spent()` in `storeOutcome` would only move it. |
 | 8 | **fixed** – `AiWorkContext.ai` carries only `encryptionKey`, so the type check enforces the rule. |
 | 9 | **fixed** – a row in the seam catalog. |
