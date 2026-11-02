@@ -1,6 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { aggregateStore, replaces, type Database } from "@/platform/command";
-import { ownerColumns, ownerOf, type AiIndexEntryState, type AiIndexItem } from "./ai-index-entry";
+import {
+  ownerColumns,
+  ownerOf,
+  type AiIndexEntryState,
+  type AiIndexItem,
+  type IndexingFailureReason,
+} from "./ai-index-entry";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
@@ -62,31 +68,46 @@ export async function aiIndexEntryOf(db: Database, fileId: string): Promise<AiIn
   return (await aiIndexEntries.load(db, fileId))?.state;
 }
 
-/** The IDs of the entries matching the filter – one query for the four questions below. */
-async function entryIds(db: Database, { fileId, embeddingModel }: { fileId?: string; embeddingModel?: string }) {
-  const rows = await db
-    .select({ id: aiIndexEntry.id })
-    .from(aiIndexEntry)
-    .where(
-      and(
-        fileId === undefined ? undefined : eq(aiIndexEntry.id, fileId),
-        embeddingModel === undefined ? undefined : eq(aiIndexEntry.embeddingModel, embeddingModel),
-      ),
-    );
-  return rows.map((row) => row.id);
-}
+/**
+ * Where a file stands in the AI index for one embedding model, the one answer (architecture review 2026-11-01): failed or
+ * indexed when it has an entry made with that model, otherwise waiting – an entry of another model counts as none.
+ */
+export type AiIndexStateOfFile =
+  { state: "waiting" } | { state: "indexed" } | { state: "failed"; reason: IndexingFailureReason; version: number };
 
-/** Whether the file already has an entry made with this embedding model – indexed or failed (never retried by a run). */
-export async function aiIndexHasEntryFor(db: Database, fileId: string, embeddingModel: string): Promise<boolean> {
-  return (await entryIds(db, { fileId, embeddingModel })).length > 0;
-}
-
-/** The files that already have an entry for this embedding model – what a run leaves out when it looks for waiting files. */
-export async function aiIndexedFileIds(db: Database, embeddingModel: string): Promise<Set<string>> {
-  return new Set(await entryIds(db, { embeddingModel }));
+/**
+ * The states of these files for this embedding model, to be asked by file. Which files there are is Collection's to
+ * say; a file without an entry is waiting.
+ */
+export async function aiIndexStatesOfFiles(
+  db: Database,
+  embeddingModel: string,
+  fileIds: readonly string[],
+): Promise<(fileId: string) => AiIndexStateOfFile> {
+  const rows =
+    fileIds.length === 0
+      ? []
+      : await db
+          .select({
+            id: aiIndexEntry.id,
+            state: aiIndexEntry.state,
+            failureReason: aiIndexEntry.failureReason,
+            version: aiIndexEntry.version,
+          })
+          .from(aiIndexEntry)
+          .where(and(eq(aiIndexEntry.embeddingModel, embeddingModel), inArray(aiIndexEntry.id, [...fileIds])));
+  const entries = new Map(rows.map((row) => [row.id, row]));
+  return (fileId) => {
+    const entry = entries.get(fileId);
+    if (!entry) return { state: "waiting" };
+    if (entry.state === "indexed") return { state: "indexed" };
+    // A failed entry has exactly one reason (check constraint).
+    return { state: "failed", reason: entry.failureReason!, version: entry.version };
+  };
 }
 
 /** Whether the file has any AI index entry – the removal policy asks before it removes one (EVT-FileLeftAiIndex). */
 export async function hasAiIndexEntry(db: Database, fileId: string): Promise<boolean> {
-  return (await entryIds(db, { fileId })).length > 0;
+  const rows = await db.select({ id: aiIndexEntry.id }).from(aiIndexEntry).where(eq(aiIndexEntry.id, fileId));
+  return rows.length > 0;
 }

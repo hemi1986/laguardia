@@ -825,6 +825,11 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   AI is off (key, chat model or embedding model missing), so the file stays waiting instead of failing because someone
   turned AI off after a crash. Every request goes through `piece.openRouter`: a rotated key is used for the next request,
   and a changed embedding model gives the file up so an entry never mixes two models.
+- **Where a file stands in the AI index** (architecture review 2026-11-01): `aiIndexStatesOfFiles(db, embeddingModel,
+  fileIds)` answers waiting, indexed or failed for one model, and an entry of another model counts as none. The kind's
+  `waiting` and `isWaiting`, the overview and `filesTheAiCannotRead` read it; none of them looks at an entry's model or
+  state itself. It takes the file IDs because which files there are is Collection's to say (`filesForIndexing`): a join
+  over both modules' tables would break *Reading across modules – the page composes* below.
 - **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
   asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
   `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
