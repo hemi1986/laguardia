@@ -73,36 +73,37 @@ export async function aiIndexEntryOf(db: Database, fileId: string): Promise<AiIn
  * indexed when it has an entry made with that model, otherwise waiting – an entry of another model counts as none.
  */
 export type AiIndexStateOfFile =
-  | { state: "waiting" }
-  | { state: "indexed"; version: number }
-  | { state: "failed"; reason: IndexingFailureReason; version: number };
+  { state: "waiting" } | { state: "indexed" } | { state: "failed"; reason: IndexingFailureReason; version: number };
 
-/** The state of each of these files for this embedding model. Which files there are is Collection's to say. */
+/**
+ * The states of these files for this embedding model, to be asked by file. Which files there are is Collection's to
+ * say; a file without an entry is waiting.
+ */
 export async function aiIndexStatesOfFiles(
   db: Database,
   embeddingModel: string,
   fileIds: readonly string[],
-): Promise<Map<string, AiIndexStateOfFile>> {
-  if (fileIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      id: aiIndexEntry.id,
-      state: aiIndexEntry.state,
-      failureReason: aiIndexEntry.failureReason,
-      version: aiIndexEntry.version,
-    })
-    .from(aiIndexEntry)
-    .where(and(eq(aiIndexEntry.embeddingModel, embeddingModel), inArray(aiIndexEntry.id, [...fileIds])));
+): Promise<(fileId: string) => AiIndexStateOfFile> {
+  const rows =
+    fileIds.length === 0
+      ? []
+      : await db
+          .select({
+            id: aiIndexEntry.id,
+            state: aiIndexEntry.state,
+            failureReason: aiIndexEntry.failureReason,
+            version: aiIndexEntry.version,
+          })
+          .from(aiIndexEntry)
+          .where(and(eq(aiIndexEntry.embeddingModel, embeddingModel), inArray(aiIndexEntry.id, [...fileIds])));
   const entries = new Map(rows.map((row) => [row.id, row]));
-  return new Map(
-    fileIds.map((id): [string, AiIndexStateOfFile] => {
-      const entry = entries.get(id);
-      if (!entry) return [id, { state: "waiting" }];
-      if (entry.state === "indexed") return [id, { state: "indexed", version: entry.version }];
-      // A failed entry has exactly one reason (check constraint).
-      return [id, { state: "failed", reason: entry.failureReason!, version: entry.version }];
-    }),
-  );
+  return (fileId) => {
+    const entry = entries.get(fileId);
+    if (!entry) return { state: "waiting" };
+    if (entry.state === "indexed") return { state: "indexed" };
+    // A failed entry has exactly one reason (check constraint).
+    return { state: "failed", reason: entry.failureReason!, version: entry.version };
+  };
 }
 
 /** Whether the file has any AI index entry – the removal policy asks before it removes one (EVT-FileLeftAiIndex). */

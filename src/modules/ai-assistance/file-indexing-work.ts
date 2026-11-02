@@ -27,16 +27,16 @@ export const fileIndexingWork: AiWorkKind = {
     const aiNow = await aiState(db, context.ai);
     if (!aiNow.on) return [];
     const fileIds = (await filesForIndexing(db)).map((file) => file.id);
-    const states = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
-    return fileIds.filter((id) => states.get(id)?.state === "waiting");
+    const stateOf = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
+    return fileIds.filter((id) => stateOf(id).state === "waiting");
   },
 
   /** Asked again once the file is held: done, recorded broken off or removed meanwhile is no longer waited for. */
   async isWaiting(tx, id, context) {
     const aiNow = await aiState(tx, context.ai);
     if (!aiNow.on) return false;
-    const states = await aiIndexStatesOfFiles(tx, aiNow.embeddingModel, [id]);
-    if (states.get(id)?.state !== "waiting") return false;
+    const stateOf = await aiIndexStatesOfFiles(tx, aiNow.embeddingModel, [id]);
+    if (stateOf(id).state !== "waiting") return false;
     return !!(await fileForIndexing(tx, id));
   },
 

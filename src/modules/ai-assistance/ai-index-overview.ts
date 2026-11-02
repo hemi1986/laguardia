@@ -44,24 +44,25 @@ export async function aiIndexOverview(
   const aiNow = await aiState(db, dependencies);
   if (!aiNow.on) return undefined;
   const [files, cost] = await Promise.all([filesForIndexing(db), costOfIndexingSoFar(db)]);
-  const states = await aiIndexStatesOfFiles(
+  const stateOf = await aiIndexStatesOfFiles(
     db,
     aiNow.embeddingModel,
     files.map((file) => file.id),
   );
   const overview: AiIndexOverview = { indexed: 0, waiting: 0, failed: [], cost };
   for (const file of files) {
-    const entry = states.get(file.id);
-    if (entry?.state === "indexed") overview.indexed += 1;
-    else if (entry?.state === "failed") {
+    const inIndex = stateOf(file.id);
+    if (inIndex.state === "waiting") overview.waiting += 1;
+    else if (inIndex.state === "indexed") overview.indexed += 1;
+    else {
       overview.failed.push({
         fileId: file.id,
         title: file.title,
         owner: file.owner,
-        reason: entry.reason,
-        version: entry.version,
+        reason: inIndex.reason,
+        version: inIndex.version,
       });
-    } else overview.waiting += 1;
+    }
   }
   return overview;
 }
@@ -78,8 +79,8 @@ export async function filesTheAiCannotRead(
   if (fileIds.length === 0) return new Set();
   const aiNow = await aiState(db, dependencies);
   if (!aiNow.on) return new Set();
-  const states = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
-  return new Set(fileIds.filter((id) => states.get(id)?.state === "failed"));
+  const stateOf = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
+  return new Set(fileIds.filter((id) => stateOf(id).state === "failed"));
 }
 
 /**

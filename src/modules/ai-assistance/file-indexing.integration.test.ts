@@ -575,16 +575,14 @@ describe("a run and the files it finds", () => {
   });
 
   it("a file's state in the AI index holds for one embedding model: an entry of another model counts as none", async () => {
-    const otherEmbedding = { ...geminiEmbedding, id: "google/other-embedding", name: "Other Embedding" };
-    const ai = anAi({ models: [geminiFlash, geminiEmbedding, otherEmbedding] });
-    await saveAiSettings({ ai });
+    await saveAiSettings();
     const indexed = await attach({
       title: "Manual",
       contentType: "text/plain",
       bytes: new TextEncoder().encode("The manual's only passage."),
     });
     const failed = await attach({ title: "Damaged", contentType: "application/pdf", bytes: aDamagedPdf() });
-    await run({ ai });
+    await run();
     const notYet = await attach({
       title: "Later file",
       contentType: "text/plain",
@@ -592,14 +590,15 @@ describe("a run and the files it finds", () => {
     });
     const fileIds = [indexed, failed, notYet];
 
-    expect([...(await aiIndexStatesOfFiles(db, EMBEDDING, fileIds)).values()]).toEqual([
-      { state: "indexed", version: expect.any(Number) },
-      { state: "failed", reason: "not readable", version: expect.any(Number) },
+    const stateOf = await aiIndexStatesOfFiles(db, EMBEDDING, fileIds);
+    expect(fileIds.map(stateOf)).toEqual([
+      { state: "indexed" },
+      { state: "failed", reason: "not readable", version: 0 },
       { state: "waiting" },
     ]);
-    const ofOtherModel = await aiIndexStatesOfFiles(db, otherEmbedding.id, fileIds);
-    expect(fileIds.map((id) => ofOtherModel.get(id))).toEqual(fileIds.map(() => ({ state: "waiting" })));
-    expect(await aiIndexStatesOfFiles(db, EMBEDDING, [])).toEqual(new Map());
+    const ofOtherModel = await aiIndexStatesOfFiles(db, "google/other-embedding", fileIds);
+    expect(fileIds.map(ofOtherModel)).toEqual(fileIds.map(() => ({ state: "waiting" })));
+    expect((await aiIndexStatesOfFiles(db, EMBEDDING, []))(indexed)).toEqual({ state: "waiting" });
   });
 
   it("ST-106: A file is indexed once, even when two runs find it", async () => {
