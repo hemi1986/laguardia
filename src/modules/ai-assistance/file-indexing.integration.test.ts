@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { executeCommand, journalOf } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -362,6 +362,31 @@ describe("what is indexed", () => {
     expect((await costOfIndexingSoFar()) - before).toBeCloseTo(0.04);
   });
 
+  it("what OpenRouter charged for the requests answered before a run was cut off mid-batch is its cost", async () => {
+    await saveAiSettings();
+    // Two pages are one batch of four requests: two are answered, the other two never return.
+    const cutOff = anAi({
+      embeddingCost: 0.01,
+      beforeEmbed: (requestNumber) => (requestNumber <= 2 ? undefined : new Promise<never>(() => {})),
+    });
+    const fileId = await attach({
+      title: "Two pages",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["one", "two"]),
+    });
+    void run({ ai: cutOff });
+    await vi.waitFor(async () => {
+      const { rows } = await db.execute<{ spent: number }>(sql`SELECT spent FROM ai_work_hold`);
+      expect(rows[0]?.spent).toBeCloseTo(0.02);
+    });
+
+    clock.advance(2 * 250 + 1);
+    await run();
+
+    expect(await entryOf(fileId)).toMatchObject({ state: "failed", failureReason: "broken off" });
+    expect((await entryOf(fileId)).cost).toBeCloseTo(0.02);
+  });
+
   it("ST-106: A failure at OpenRouter keeps nothing of the file", async () => {
     for (const [what, reason] of [
       ["stops answering", "OpenRouter not reachable"],
@@ -527,6 +552,28 @@ describe("when a file is indexed", () => {
 });
 
 describe("a run and the files it finds", () => {
+  it("gives a file up when the embedding model changes while it is indexed, so an entry never mixes two models", async () => {
+    const otherEmbedding = { ...geminiEmbedding, id: "google/other-embedding", name: "Other Embedding" };
+    const ai: ScenarioOpenRouter = anAi({
+      models: [geminiFlash, geminiEmbedding, otherEmbedding],
+      beforeEmbed: async (request) => {
+        if (request === 4) await saveAiSettings({ ai, embeddingModel: otherEmbedding.id });
+      },
+    });
+    await saveAiSettings({ ai });
+    const fileId = await attach({
+      title: "Eight Ball Schematic",
+      contentType: "application/pdf",
+      bytes: await aPdfOfText(["one", "two", "three", "four", "five"]),
+    });
+
+    await run({ ai });
+
+    expect(ai.requests.filter((each) => each.startsWith(`embed:${otherEmbedding.id}`))).toEqual([]);
+    expect(await aiIndexEntryOf(db, fileId)).toBeUndefined();
+    expect(await eventsOf(fileId)).not.toContain("EVT-FileIndexingFailed");
+  });
+
   it("ST-106: A file is indexed once, even when two runs find it", async () => {
     await saveAiSettings();
     const fileId = await attach({

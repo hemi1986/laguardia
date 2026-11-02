@@ -487,6 +487,44 @@ describe("what an AI assessment does", () => {
     expect(ai.chatRequests).toHaveLength(0);
   });
 
+  it("sends no chat request once AI is turned off after the last search", async () => {
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const id = await request(defectId);
+    const ai = anAi({ beforeEmbed: () => removeTheKey() });
+
+    await run(ai);
+
+    expect(ai.embeddingRequests).toBe(1);
+    expect(await assessment(id)).toMatchObject({ state: "failed", failureReason: "ai-off" });
+    expect(ai.chatRequests).toHaveLength(0);
+  });
+
+  it("records what its searches and the chat cost, and the embedding model of its last search", async () => {
+    const otherEmbedding = { ...geminiEmbedding, id: "other/embedding", name: "Other Embedding" };
+    const ai = anAi({
+      models: [geminiFlash, geminiEmbedding, otherEmbedding],
+      embeddingCost: 0.01,
+      // A technician changes the embedding model between the search with the text and the one with the photo.
+      beforeEmbed: async (requestNumber) => {
+        if (requestNumber === 1) await scenario.turnAiOn({ with: ai, embeddingModel: otherEmbedding.id });
+      },
+    });
+    const machineId = await aMachine(eightBall, "LG-042");
+    const { defectId } = await anOpenDefect(machineId);
+    const id = await request(defectId, { photos: [await aPhoto()] });
+
+    await run(ai);
+
+    expect(ai.requests.filter((each) => each.startsWith("embed:"))).toEqual([
+      `embed:${EMBEDDING}:text`,
+      `embed:${otherEmbedding.id}:image`,
+    ]);
+    const written = await assessment(id);
+    expect(written).toMatchObject({ state: "written", embeddingModel: otherEmbedding.id });
+    expect(written.cost).toBeCloseTo(0.01 + 0.01 + 0.04);
+  });
+
   it("writes with the chat model the assessment was requested with, not the one saved meanwhile", async () => {
     const otherChat = { ...geminiFlash, id: "other/chat", name: "Other Chat" };
     const withOther = anAi({ models: [geminiFlash, geminiEmbedding, otherChat] });
