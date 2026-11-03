@@ -326,8 +326,7 @@ rewriting history rather than changing a setting – a correction is its own com
 undo button. Deleted bytes we simply no longer have.
 *Files* (user, 2026-11-02, feature `files`): detaching a file from a machine or a machine model („Lösen“) is one tap
 with no question, because attaching it again undoes it – it is a setting a person made, not a recorded fact. A retired
-machine is detached the same way although it cannot be attached again: a deliberately accepted small risk, since the
-file itself stays. Removing a
+machine is detached the same way; attaching it again undoes it (user, 2026-11-03). Removing a
 file stays under G10 and G10b (the bytes are gone).
 *Why:* a mistap in a list of ten names locks a colleague out, and the only repair today is a second account for the
 same person – which splits their work history in two. Without the boundary written down, the same rule would be
@@ -489,7 +488,7 @@ the later stories, so a reader knows which story to look at.
   off, G37) · „Datei entfernen“ at the end, for technicians (G11).
 - „Angehängt an“ names what the file is attached to; a retired machine shows „LG-042 · Ausgemustert“; a file attached
   to nothing shows „Nirgends angehängt“ (G7). Each entry offers „Lösen“ (G10a). The attach choice uses G27 in two
-  parts, „Geräte“ and „Modelle“, and offers only what is not attached yet and no retired machine.
+  parts, „Geräte“ and „Modelle“, and offers only what is not attached yet; retired machines at the end of their group as „LG-041 · Ausgemustert“ (user, 2026-11-03).
 - **On the machine record** each file additionally offers „Details“. „Datei anhängen“ with the choice „nur LG-042 /
   alle Geräte des Modells“ stays there. A file is not removed from the record any more.
 *Why:* eleven stories add to the machine record (ST-009, 011, 012, 015, 021, 033, 034, 035, 037, 039, 047) and four
