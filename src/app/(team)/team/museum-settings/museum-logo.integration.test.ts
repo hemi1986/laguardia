@@ -222,7 +222,8 @@ it("ST-102: A technician removes the logo without being asked", async () => {
 it("ST-102: The stored logo is scaled down, carries no metadata and keeps its transparency", async () => {
   // Transparent left half, red right half – and a camera's EXIF data with a location.
   const pixels = Buffer.alloc(2400 * 1200 * 4);
-  for (let y = 0; y < 1200; y++) for (let x = 1200; x < 2400; x++) pixels.set([200, 0, 0, 255], (y * 2400 + x) * 4);
+  for (let y = 0; y < 1200; y++)
+    for (let x = 1200; x < 2400; x++) pixels.set([200, 0, 0, 255], (y * 2400 + x) * 4);
   const sent = await sharp(pixels, { raw: { width: 2400, height: 1200, channels: 4 } })
     .withExif({
       IFD0: { Make: "Fotokamera", Model: "Museum 1" },
@@ -277,10 +278,7 @@ it("ST-102: Anything but a PNG, JPEG or WebP image within the pixel limit is rej
   const kept = await aLogo();
   const huge = await aHugePng();
   expect(huge.size).toBeLessThan(2_000_000);
-  expect(await sharp(Buffer.from(await huge.arrayBuffer()), { limitInputPixels: false }).metadata()).toMatchObject({
-    width: 20_000,
-    height: 20_000,
-  });
+  expect(await sharp(Buffer.from(await huge.arrayBuffer()), { limitInputPixels: false }).metadata()).toMatchObject({ width: 20_000, height: 20_000 });
 
   for (const file of [svg, pdfNamedPng, huge]) {
     const state = await logoFormsOf(tom).upload(null, await uploaded(file));

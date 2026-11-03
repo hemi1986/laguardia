@@ -27,7 +27,7 @@ import { loadMachineRecord } from "../../../machines/[museumNumber]/machine-reco
 import { MachineRecordView } from "../../../machines/[museumNumber]/machine-record";
 import { loadFileDetails } from "./file-details-data";
 import { FileDetailsView } from "./file-details-view";
-import { retriedOnDetails } from "./retried-on-details";
+import { fileDetailsAddress } from "./file-origin";
 
 /**
  * ST-114: the file details page – Collection's file, AI assistance's state and Team's name composed by the page data
@@ -155,7 +155,7 @@ async function retry(
   })(
     retryFileIndexingCommand(dependencies),
     retryFileIndexingForm(async ({ fileId }) => {
-      result.landed = retriedOnDetails(fileId, from);
+      result.landed = fileDetailsAddress(fileId, from, { retried: true });
     }),
   );
   const state = await action(null, post({ fileId: fields.fileId, version: String(fields.version) }));
@@ -266,6 +266,10 @@ describe("the file details (ST-114)", () => {
     const machineId = await aMachine("LG-042");
     const schematic = await attach(machineId, "Eight Ball Schematic");
     await run(ai({ unreachable: true }));
+    // A forged `retried` confirms nothing: the journal says nobody tried the file again yet.
+    expect((await details(schematic, { params: { retried: "1" } })).html).not.toContain(
+      "wird erneut für die KI erfasst",
+    );
     const before = await details(schematic, { params: { from: "settings" } });
     expect(before.html).toContain("Für die KI nicht lesbar: OpenRouter war nicht erreichbar");
     expect(before.html).toContain("Erneut versuchen");

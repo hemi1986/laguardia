@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileIndexingRetried]
 depends_on: [ST-113, ST-038, ST-109]
 labels: [feature:files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

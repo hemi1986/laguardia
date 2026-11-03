@@ -8,7 +8,7 @@ import {
   retryFileIndexingForm,
   type RetryFileIndexingState,
 } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
-import { retriedOnDetails } from "./retried-on-details";
+import { fileDetailsAddress } from "./file-origin";
 
 /**
  * „Erneut versuchen“ on the file details (ST-114): the same CMD-IndexFileForAi by hand as on the form „KI“, through the
@@ -24,7 +24,7 @@ export async function retryFileFromDetailsAction(
   await requireTeamMember(); // the page's access check; who may run the command is decided by its allowedActors
   const retry = formAction(
     retryFileIndexingCommand(aiDependencies()),
-    retryFileIndexingForm(async ({ fileId }) => redirect(retriedOnDetails(fileId, origin))),
+    retryFileIndexingForm(async ({ fileId }) => redirect(fileDetailsAddress(fileId, origin, { retried: true }))),
   );
   return retry(previous, formData);
 }

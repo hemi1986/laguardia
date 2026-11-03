@@ -166,7 +166,7 @@ export const collectionTexts = {
     machine: (museumNumber: string, machineModelTitle: string) => `${museumNumber} · ${machineModelTitle}`,
     retiredMachine: (museumNumber: string) => `${museumNumber} · Ausgemustert`,
     machineModel: (title: string) => `Alle Geräte des Modells ${title}`,
-    /** Only until a file can be attached to nothing (ST-115) – a file has at least one attachment before. */
+    /** A file attached to nothing – the data model allows it; ST-115 is where it first occurs. */
     nowhere: "Nirgends angehängt",
     /** The way back, by where the person came from (G17, closed set of origins). */
     backToMachine: "Zurück zum Gerät",

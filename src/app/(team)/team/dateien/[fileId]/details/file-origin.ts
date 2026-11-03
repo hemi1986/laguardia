@@ -9,32 +9,50 @@ import { teamMachinePage } from "@/app/museum-number-address";
  */
 export type FileOrigin = { kind: "machine"; museumNumber: string } | { kind: "settings" } | { kind: "none" };
 
-/** What a page that links to the file details names as the place it is on. */
-export type OriginOfLink = { machine: string } | "settings";
+/** The place a page names when it links to the file details – the machine record or the form „KI“. */
+export type PlaceOfPage = { machine: string } | "settings";
 
 /** The query parameter that carries the origin. */
 export const ORIGIN_PARAM = "from";
 
 const MACHINE_PREFIX = "machine:";
 
-/** The address's value for an origin – none for no origin. */
-export function originValue(origin: FileOrigin | OriginOfLink | undefined): string | undefined {
-  if (origin === "settings") return "settings";
-  if (origin && typeof origin === "object" && "machine" in origin) return `${MACHINE_PREFIX}${origin.machine}`;
-  if (origin && typeof origin === "object" && "kind" in origin) {
-    if (origin.kind === "settings") return "settings";
-    if (origin.kind === "machine") return `${MACHINE_PREFIX}${origin.museumNumber}`;
-  }
+/** The address's value for a place – or the value an address carried, handed on as it was (the page checks it again). */
+export function originValue(origin: FileOrigin | PlaceOfPage | string | undefined): string | undefined {
+  if (typeof origin === "string") return origin;
+  if (!origin) return undefined;
+  if ("machine" in origin) return MACHINE_PREFIX + origin.machine;
+  if (origin.kind === "settings") return "settings";
+  if (origin.kind === "machine") return MACHINE_PREFIX + origin.museumNumber;
   return undefined;
 }
 
-/** A file's details, reached from this place (G17) – the one way a page builds the address. */
-export function fileDetailsAddress(fileId: string, origin?: FileOrigin | OriginOfLink, extra?: Record<string, string>) {
+/**
+ * A file's details, reached from this place (G17) – the one place that builds the address, for the links of the machine
+ * record and the form „KI“ and for where „Erneut versuchen“ lands (`retried`, G3). ST-117 adds „Dateien“ here.
+ */
+export function fileDetailsAddress(
+  fileId: string,
+  origin?: FileOrigin | PlaceOfPage | string,
+  { retried = false }: { retried?: boolean } = {},
+): string {
   const search = new URLSearchParams();
   const value = originValue(origin);
   if (value) search.set(ORIGIN_PARAM, value);
-  for (const [key, each] of Object.entries(extra ?? {})) search.set(key, each);
+  if (retried) search.set("retried", "1");
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
+}
+
+/** Where the way back leads, from the checked origin – an address of this site built here, never taken from the request. */
+export function wayBack(origin: FileOrigin): { href: string; kind: FileOrigin["kind"] } {
+  switch (origin.kind) {
+    case "machine":
+      return { href: teamMachinePage()(origin.museumNumber), kind: "machine" };
+    case "settings":
+      return { href: "/team/museum-settings", kind: "settings" };
+    case "none":
+      return { href: "/team/machines", kind: "none" };
+  }
 }
 
 /**
@@ -53,16 +71,4 @@ export async function originOf(
     if (machine) return { kind: "machine", museumNumber: machine.museumNumber };
   }
   return { kind: "none" };
-}
-
-/** Where the way back leads, from the checked origin – an address of this site built here, never taken from the request. */
-export function wayBack(origin: FileOrigin): { href: string; kind: FileOrigin["kind"]; museumNumber?: string } {
-  switch (origin.kind) {
-    case "machine":
-      return { href: teamMachinePage()(origin.museumNumber), kind: "machine", museumNumber: origin.museumNumber };
-    case "settings":
-      return { href: "/team/museum-settings", kind: "settings" };
-    case "none":
-      return { href: "/team/machines", kind: "none" };
-  }
 }

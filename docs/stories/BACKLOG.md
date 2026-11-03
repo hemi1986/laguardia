@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 79 of 87 domain stories done** · scenarios 739 of 813
+**Progress: 80 of 87 domain stories done** · scenarios 749 of 813
 
-**118 stories** · In Progress: 1 · Ready: 7 · In Review: 0 · Draft: 0 · Done: 99 · Superseded: 11
+**118 stories** · In Progress: 0 · Ready: 7 · In Review: 0 · Draft: 0 · Done: 100 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 
 ## Ready
 
@@ -122,9 +116,10 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-111](ST-111-earlier-ai-assessments.md) | Earlier AI assessments on the defect page and in the repair history | story | AI assistance | should | S | low | ST-107, ST-108 |
 | [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
 | [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
+| [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
+| [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
-| [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |
 | [ST-057](ST-057-overdue-count-in-machine-overview.md) | Number of overdue maintenance tasks in the machine overview | story | Maintenance | could | XS | low | ST-008, ST-043 |
 | [ST-070](ST-070-content-security-policy-for-scripts.md) | Full Content Security Policy for scripts | tech-task | Repair | could | M | medium | ST-003, ST-013, ST-085 |
