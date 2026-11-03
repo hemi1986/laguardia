@@ -1,4 +1,4 @@
-import { collectionChangesIn, fileAttachedIn, machineFile, fileRemovedIn } from "@/modules/collection";
+import { collectionChangesIn, fileAddedIn, machineFile, fileRemovedIn } from "@/modules/collection";
 import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintenance";
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
@@ -43,7 +43,7 @@ export async function loadMachineConfirmation(
   if (fileId) {
     const file = record.files.find((shown) => shown.id === fileId);
     const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
-    return file && command && fileAttachedIn(command, fileId)
+    return file && command && fileAddedIn(command, fileId)
       ? { kind: "file-attached", title: file.title }
       : undefined;
   }

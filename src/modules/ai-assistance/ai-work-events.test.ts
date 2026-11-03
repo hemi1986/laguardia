@@ -5,7 +5,8 @@ const settingsChanged = (...changedParts: string[]) => ({ type: "EVT-AiSettingsC
 
 describe("which committed events leave AI work to do", () => {
   it.each([
-    ["a file attached", { type: "EVT-FileAttached", data: {} }, true],
+    ["a file added", { type: "EVT-FileAdded", data: {} }, true],
+    ["a file attached (ADR 0018: attaching causes no indexing)", { type: "EVT-FileAttached", data: {} }, false],
     ["an AI assessment requested", { type: "EVT-AiAssessmentRequested", data: {} }, true],
     ["a file tried again", { type: "EVT-FileIndexingRetried", data: {} }, true],
     ["a key saved", settingsChanged("key-saved"), true],
@@ -22,7 +23,7 @@ describe("which committed events leave AI work to do", () => {
     expect(
       makesAiWork([
         { type: "EVT-DefectClaimed", data: {} },
-        { type: "EVT-FileAttached", data: {} },
+        { type: "EVT-FileAdded", data: {} },
       ]),
     ).toBe(true);
     expect(makesAiWork([])).toBe(false);

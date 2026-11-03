@@ -262,6 +262,7 @@ describe("RM-MachineRecord", () => {
 
     expect(await machineRecord(db, "LG-042")).toEqual({
       id: machineId,
+      machineModelId: expect.any(String),
       museumNumber: "LG-042",
       serialNumber: undefined,
       machineModel: {

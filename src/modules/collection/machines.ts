@@ -225,6 +225,8 @@ export async function visitorMachine(db: Database, museumNumber: string): Promis
 /** The machine record (RM-MachineRecord) as ST-009 builds it – later stories add its further sections (G18). */
 export type MachineRecord = {
   id: string;
+  /** The machine model's ID – what a file attached to "all machines of the model" is attached to (ST-113). */
+  machineModelId: string;
   museumNumber: string;
   serialNumber?: string;
   machineModel: {
@@ -252,6 +254,7 @@ export async function machineRecord(db: Database, museumNumber: string): Promise
   const { machine: m, model } = row;
   return {
     id: m.id,
+    machineModelId: m.machineModelId,
     museumNumber: m.museumNumber,
     serialNumber: m.serialNumber ?? undefined,
     machineModel: {

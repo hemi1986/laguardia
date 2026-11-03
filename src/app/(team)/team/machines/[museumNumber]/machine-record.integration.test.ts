@@ -4,7 +4,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  attachFileCommand,
   changeMachineStatusCommand,
   createMachineModelCommand,
   registerMachineCommand,
@@ -22,6 +21,7 @@ import {
   type Priority,
 } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
+import { aFileAdded } from "@/test-support/files";
 import { executeCommand } from "@/platform/command";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { statusChangedAt } from "@/test-support/machines";
@@ -518,19 +518,11 @@ async function attached(
   title: string,
   fileCategory: FileCategory,
 ) {
-  const outcome = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo,
-      title,
-      fileCategory,
-      content: { name: `files/${randomUUID()}`, size: 1000, contentType: "application/pdf" },
-    },
-    { actor: eva, db, clock: fixedClock(NOW), newId: randomUUID },
+  return aFileAdded(
+    db,
+    { actor: eva, clock: fixedClock(NOW) },
+    { machineId, to: attachTo, title, fileCategory },
   );
-  if (!outcome.ok) throw new Error(outcome.error);
-  return outcome.result.fileId;
 }
 
 /** The class of the link or button with exactly that text – which component drew it. */

@@ -82,6 +82,7 @@ beforeEach(async () => {
   await db.execute("DELETE FROM ai_work_hold");
   await db.execute("DELETE FROM ai_assessment");
   await db.execute("DELETE FROM ai_index_entry");
+  await db.execute("DELETE FROM file_attachment");
   await db.execute("DELETE FROM file");
   await withoutAiSettings(db);
   clock.set("2026-11-04T10:00:00Z");
@@ -183,6 +184,7 @@ describe("changing the models", () => {
     await run([fileIndexingWork], ai);
     expect((await aiIndexEntryOf(db, manual))?.at).toEqual(indexedAt);
     expect((await journalOf(db, { aggregateId: manual })).map((entry) => entry.type)).toEqual([
+      "EVT-FileAdded",
       "EVT-FileAttached",
       "EVT-FileIndexedForAi",
     ]);

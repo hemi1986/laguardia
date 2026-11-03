@@ -71,6 +71,7 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   await db.delete(aiWorkHold);
   await db.execute("DELETE FROM ai_index_entry");
+  await db.execute("DELETE FROM file_attachment");
   await db.execute("DELETE FROM file");
   await withoutAiSettings(db);
   clock.set("2026-11-02T10:00:00Z");

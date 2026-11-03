@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
+import { aFileAdded } from "@/test-support/files";
 import { executeCommand, lastCommandBy } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
-  attachFileCommand,
   correctMachineModelCommand,
   createMachineModelCommand,
-  fileAttachedIn,
+  fileAddedIn,
   machineModelChangeIn,
   machineRegisteredIn,
   registerMachineCommand,
@@ -76,20 +76,13 @@ describe("what a command did in Collection", () => {
     expect(machineRegisteredIn(registering, machineId)).toBe(true);
     expect(machineRegisteredIn(registering, randomUUID())).toBe(false);
 
-    const attached = await executeCommand(
-      attachFileCommand,
-      {
-        machineId,
-        attachTo: "machine",
-        title: "Wiring",
-        fileCategory: "schematic",
-        content: { name: `files/${randomUUID()}`, size: 10, contentType: "application/pdf" },
-      },
-      { actor: eva, ...at },
+    const fileId = await aFileAdded(
+      db,
+      { actor: eva, clock: at.clock },
+      { machineId, title: "Wiring", fileCategory: "schematic" },
     );
-    if (!attached.ok) throw new Error(attached.error);
-    const attaching = (await lastCommandBy(db, { aggregateId: attached.result.fileId }, eva.teamMemberId))!;
-    expect(fileAttachedIn(attaching, attached.result.fileId)).toBe(true);
-    expect(fileAttachedIn(registering, attached.result.fileId)).toBe(false);
+    const attaching = (await lastCommandBy(db, { aggregateId: fileId }, eva.teamMemberId))!;
+    expect(fileAddedIn(attaching, fileId)).toBe(true);
+    expect(fileAddedIn(registering, fileId)).toBe(false);
   });
 });

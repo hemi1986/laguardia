@@ -4,4 +4,3 @@
  */
 export { uploadFile, type UploadError } from "./upload-file";
 export { FILE_SIZE_LIMIT } from "./limits";
-export type { UploadOwner } from "./pending-uploads";

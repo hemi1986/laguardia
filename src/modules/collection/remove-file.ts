@@ -1,5 +1,5 @@
 import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
-import type { FileState } from "./attach-file";
+import type { Attachment, FileState } from "./add-file";
 
 /**
  * CMD-RemoveFile (AGG-File, ST-038): a technician removes a wrong or outdated file. The record of which file was
@@ -50,6 +50,18 @@ export function removeFile(
   return {
     ok: true,
     state: { ...file, removed: { by: actor.teamMemberId, at: clock.now() } },
-    events: [{ type: "EVT-FileRemoved", fileId: file.id, ...file.owner, removedBy: actor.teamMemberId }],
+    events: [
+      {
+        type: "EVT-FileRemoved",
+        fileId: file.id,
+        // What the file was attached to – until ST-115 at most one thing (ST-113); the journal names it as before.
+        ...(file.attachments[0] && withoutId(file.attachments[0])),
+        removedBy: actor.teamMemberId,
+      },
+    ],
   };
+}
+
+function withoutId(attachment: Attachment): { machineId: string } | { machineModelId: string } {
+  return "machineId" in attachment ? { machineId: attachment.machineId } : { machineModelId: attachment.machineModelId };
 }

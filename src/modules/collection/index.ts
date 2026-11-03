@@ -1,14 +1,14 @@
 /** Public interface of the Collection module (BC-Collection: machines, machine models, files) – ADR 0002. */
-export { attachFileCommand } from "./attach-file-command";
-export { attachFileRefusal, attachTargets, fileCategories } from "./attach-file";
+export { addFileCommand } from "./add-file-command";
+export { addFileRefusal, attachTargets, fileCategories } from "./add-file";
 export type {
-  AttachFileError,
-  AttachFileInput,
-  AttachFileInputError,
+  AddFileError,
+  AddFileInput,
+  AddFileInputError,
   AttachTarget,
   FileCategory,
   FileContent,
-} from "./attach-file";
+} from "./add-file";
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
@@ -109,7 +109,7 @@ export {
 } from "./machines";
 export {
   collectionChangesIn,
-  fileAttachedIn,
+  fileAddedIn,
   fileRemovedIn,
   machineModelChangeIn,
   machineRegisteredIn,

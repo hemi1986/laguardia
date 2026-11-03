@@ -3,7 +3,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { isId, type CommandResult } from "@/platform/command";
 import type { ContentStorage } from "@/platform/storage";
 import { abandonedUntil } from "./limits";
-import type { UploadDependencies, UploadOwner } from "./pending-uploads";
+import type { UploadDependencies } from "./pending-uploads";
 import { pendingUpload } from "./schema";
 
 /** Why uploaded content cannot be attached – each needs a text in the attaching form (ST-037). */
@@ -15,20 +15,19 @@ export type UploadedContent = { name: string; size: number; contentType: string 
 
 /**
  * The one way to attach content uploaded from the browser (ST-085, ADR 0009, for CMD-AttachFile in ST-037): take the
- * pending upload – it must name this content, belong to this owner and be younger than the fixed age –, then run the
+ * pending upload – it must name this content, be issued to this team member and be younger than the fixed age –, then run the
  * command with the content's name, and delete the content if the command is rejected or throws (ADR 0007).
  * Content larger than its pending upload allowed is deleted and refused as `too-large`; the command does not run.
- * Without such a pending upload the command does not run: the content is gone (cleaned up as abandoned) or was never
- * this owner's – `content-gone`, so the form says that the file must be chosen again.
+ * Without such a pending upload the command does not run: the content is gone (cleaned up as abandoned) or was issued to
+ * another team member (ADR 0018) – `content-gone`, so the form says that the file must be chosen again.
  */
 export async function withUploadedContent<Result, Error extends string>(
   { db, storage, clock }: UploadDependencies,
-  uploaded: { name: string; owner: UploadOwner },
+  uploaded: { name: string; issuedTo: string },
   run: (content: UploadedContent) => Promise<CommandResult<Result, Error>>,
 ): Promise<CommandResult<Result, Error> | { ok: false; error: UploadedContentError }> {
-  // An owner that is no ID names no pending upload – a forged form field, not a database error.
-  const ownerId = "machineId" in uploaded.owner ? uploaded.owner.machineId : uploaded.owner.machineModelId;
-  if (!isId(ownerId)) return { ok: false, error: "content-gone" };
+  // A team member that is no ID names no pending upload – not a database error.
+  if (!isId(uploaded.issuedTo)) return { ok: false, error: "content-gone" };
   const youngest = abandonedUntil(clock.now());
   // Taking the record is a row-level delete: the cleanup of abandoned uploads deletes it the same way, so the content
   // is either attached or cleaned up, never both (ADR 0009).
@@ -37,9 +36,7 @@ export async function withUploadedContent<Result, Error extends string>(
     .where(
       and(
         eq(pendingUpload.name, uploaded.name),
-        "machineId" in uploaded.owner
-          ? eq(pendingUpload.machineId, uploaded.owner.machineId)
-          : eq(pendingUpload.machineModelId, uploaded.owner.machineModelId),
+        eq(pendingUpload.issuedTo, uploaded.issuedTo),
         gt(pendingUpload.issuedAt, youngest),
       ),
     )

@@ -85,10 +85,10 @@ describe("the browser-test database", () => {
         model AS (INSERT INTO machine_model (title, manufacturer, machine_category) VALUES ('M', 'X', 'other') RETURNING id),
         lg AS (INSERT INTO machine (id, museum_number, machine_model_id, location, machine_status, registered_at)
           SELECT gen_random_uuid(), 'LG-001', model.id, 'Hall 1', 'playable', now() FROM model RETURNING id),
-        attached AS (INSERT INTO file (id, machine_model_id, title, file_category, content, size, content_type, attached_by, attached_at)
-          SELECT gen_random_uuid(), model.id, 'Manual', 'manual', 'files/attached', 1, 'application/pdf', tech.id, now() FROM model, tech),
-        pending AS (INSERT INTO pending_upload (name, machine_model_id, issued_to, issued_at, maximum_size, declared_size)
-          SELECT 'files/pending', model.id, tech.id, now(), 1, 1 FROM model, tech)
+        attached AS (INSERT INTO file (id, title, file_category, content, size, content_type, added_by, added_at)
+          SELECT gen_random_uuid(), 'Manual', 'manual', 'files/attached', 1, 'application/pdf', tech.id, now() FROM tech),
+        pending AS (INSERT INTO pending_upload (name, issued_to, issued_at, maximum_size, declared_size)
+          SELECT 'files/pending', tech.id, now(), 1, 1 FROM tech)
       INSERT INTO problem_report (machine_id, reporter_kind, reported_at, description, photo)
         SELECT lg.id, 'visitor', now(), 'Flipper sticks', 'problem-reports/photo' FROM lg`);
     const storage = memoryStorage();

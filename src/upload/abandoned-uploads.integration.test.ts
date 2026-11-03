@@ -6,7 +6,6 @@ import { fixedClock } from "@/platform/clock";
 import type { Actor } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { cleanUpAbandonedUploads, grantUploadAddress, withUploadedContent } from ".";
 
@@ -22,12 +21,10 @@ const anna: Extract<Actor, { kind: "team-member" }> = {
   teamMemberId: randomUUID(),
   role: "helper",
 };
-let machineId: string;
 
 beforeAll(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, anna);
-  machineId = await aRegisteredMachine(db);
 });
 afterAll(() => isolated.close());
 beforeEach(async () => {
@@ -45,7 +42,6 @@ const at = (instant: string, storage: MemoryStorage) => ({
 async function uploadedAt(instant: string, storage: MemoryStorage): Promise<string> {
   const issued = await grantUploadAddress(at(instant, storage), {
     issuedTo: anna.teamMemberId,
-    owner: { machineId },
     size: 1,
     contentType: "application/pdf",
   });
@@ -68,7 +64,7 @@ describe("cleaning up abandoned uploads", () => {
     expect(storage.read(young)).toBeDefined();
     const attached = await withUploadedContent(
       at(now, storage),
-      { name: young, owner: { machineId } },
+      { name: young, issuedTo: anna.teamMemberId },
       async (content) => ({
         ok: true as const,
         result: content.name,

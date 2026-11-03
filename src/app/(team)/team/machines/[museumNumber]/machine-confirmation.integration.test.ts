@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  attachFileCommand,
   changeMachineStatusCommand,
   moveMachineCommand,
   removeFileCommand,
@@ -10,6 +9,7 @@ import { reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
+import { aFileAdded } from "@/test-support/files";
 import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadMachineConfirmation } from "./machine-confirmation";
@@ -50,33 +50,22 @@ describe("the machine record's confirmation", () => {
   it("confirms a file the team member just attached, naming it", async () => {
     await anExistingTeamMember(db, anna);
     const machineId = await aRegisteredMachine(db);
-    const attached = await executeCommand(
-      attachFileCommand,
-      {
-        machineId,
-        attachTo: "machine",
-        title: "Wiring notes",
-        fileCategory: "other",
-        content: { name: `files/${randomUUID()}`, size: 10, contentType: "application/pdf" },
-      },
-      { actor: anna, db, clock, newId: randomUUID },
-    );
-    if (!attached.ok) throw new Error(attached.error);
+    const fileId = await aFileAdded(db, { actor: anna, clock }, { machineId, title: "Wiring notes" });
     const record = {
       id: machineId,
       files: [
-        { id: attached.result.fileId, title: "Wiring notes", fileCategory: "other" as const, ofMachineModel: false },
+        { id: fileId, title: "Wiring notes", fileCategory: "other" as const, ofMachineModel: false },
       ],
     };
 
     expect(
-      await loadMachineConfirmation(db, clock, anna.teamMemberId, record, { attached: attached.result.fileId }),
+      await loadMachineConfirmation(db, clock, anna.teamMemberId, record, { attached: fileId }),
     ).toEqual({
       kind: "file-attached",
       title: "Wiring notes",
     });
     expect(
-      await loadMachineConfirmation(db, clock, tom.teamMemberId, record, { attached: attached.result.fileId }),
+      await loadMachineConfirmation(db, clock, tom.teamMemberId, record, { attached: fileId }),
     ).toBeUndefined();
   });
 
@@ -84,19 +73,11 @@ describe("the machine record's confirmation", () => {
     for (const member of [anna, tom]) await anExistingTeamMember(db, member);
     const machineId = await aRegisteredMachine(db);
     const at = { db, clock, newId: randomUUID };
-    const attached = await executeCommand(
-      attachFileCommand,
-      {
-        machineId,
-        attachTo: "machine-model",
-        title: "MM Manual (wrong edition)",
-        fileCategory: "manual",
-        content: { name: `files/${randomUUID()}`, size: 10, contentType: "application/pdf" },
-      },
-      { actor: anna, ...at },
+    const fileId = await aFileAdded(
+      db,
+      { actor: anna, clock },
+      { machineId, to: "machine-model", title: "MM Manual (wrong edition)", fileCategory: "manual" },
     );
-    if (!attached.ok) throw new Error(attached.error);
-    const { fileId } = attached.result;
     await executeCommand(removeFileCommand, { fileId, version: 0 }, { actor: tom, ...at });
 
     expect(await confirmationOf(machineId, { fileRemoved: fileId }, tom.teamMemberId)).toEqual({

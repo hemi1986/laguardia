@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, describe, expect, it } from "vitest";
+import { machineRecord } from "@/modules/collection";
 import { dueMaintenance, maintenancePlan } from "@/modules/maintenance";
 import { fixedClock } from "@/platform/clock";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -208,5 +209,129 @@ describe("migration 0039_ai_work", () => {
       sql`SELECT (array_fill(0.5, ARRAY[1536])::vector(1536) <=> array_fill(0.5, ARRAY[1536])::vector(1536)) AS distance`,
     );
     expect(rows).toEqual([{ distance: 0 }]);
+  });
+});
+
+describe("migrations 0043_file_attachments and 0044_file_owner_dropped", () => {
+  /** Files as production had them before the feature `files`: each owned by a machine or a machine model. */
+  async function beforeFiles(db: NodePgDatabase) {
+    const tom = randomUUID();
+    await db.execute(sql`
+      INSERT INTO team_member (id, name, email, username, role)
+      VALUES (${tom}, 'Tom', 'tom@example.org', 'tom', 'technician')`);
+    const model = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${model}, 'Medieval Madness', 'Williams', 'pinball', 'dmd')`);
+    const machine = async (museumNumber: string, retired = false) => {
+      const id = randomUUID();
+      await db.execute(sql`
+        INSERT INTO machine (id, museum_number, machine_model_id, location, machine_status, registered_at, retired_at,
+          retired_by, retirement_reason)
+        VALUES (${id}, ${museumNumber}, ${model}, 'Hall 1', 'playable', '2026-01-01T10:00:00Z',
+          ${retired ? "2026-03-01T00:00:00Z" : null}, ${retired ? tom : null}, ${retired ? "Sold" : null})`);
+      return id;
+    };
+    const file = async (
+      title: string,
+      owner: { machineId: string } | { machineModelId: string },
+      { removed = false, attachedAt = "2026-02-01T10:00:00Z" } = {},
+    ) => {
+      const id = randomUUID();
+      await db.execute(sql`
+        INSERT INTO file (id, machine_id, machine_model_id, title, file_category, content, size, content_type,
+          attached_by, attached_at, removed_by, removed_at, version)
+        VALUES (${id}, ${"machineId" in owner ? owner.machineId : null}, ${"machineModelId" in owner ? owner.machineModelId : null},
+          ${title}, 'manual', ${`files/${id}`}, 1000, 'application/pdf', ${tom}, ${attachedAt},
+          ${removed ? tom : null}, ${removed ? "2026-04-01T10:00:00Z" : null}, ${removed ? 1 : 0})`);
+      return id;
+    };
+    /** An entry of the AI index as the AI work stored it – copying the file's owner (ST-106). */
+    const entry = async (
+      fileId: string,
+      owner: { machineId: string } | { machineModelId: string },
+      { failed = false, embeddingModel = "google/gemini-embedding-001" } = {},
+    ) => {
+      await db.execute(sql`
+        INSERT INTO ai_index_entry (id, machine_id, machine_model_id, state, embedding_model, changed_at, failure_reason,
+          pages_indexed, images_indexed, cost)
+        VALUES (${fileId}, ${"machineId" in owner ? owner.machineId : null}, ${"machineModelId" in owner ? owner.machineModelId : null},
+          ${failed ? "failed" : "indexed"}, ${embeddingModel}, '2026-02-01T11:00:00Z', ${failed ? "unreadable" : null},
+          ${failed ? null : 2}, ${failed ? null : 0}, ${failed ? null : 0.01})`);
+      if (!failed)
+        await db.execute(sql`
+          INSERT INTO ai_index_item (id, file_id, kind, page, text, embedding)
+          VALUES (${randomUUID()}, ${fileId}, 'passage', 1, 'Replace the left flipper coil', array_fill(0.1, ARRAY[1536])::vector(1536))`);
+    };
+    return { tom, model, machine, file, entry };
+  }
+
+  it("ST-113: Existing files stay where they were and nothing is indexed again", async () => {
+    const db = await isolated.reset("0042_yellow_bushwacker");
+    const before = await beforeFiles(db);
+    const lg042 = await before.machine("LG-042");
+    await before.machine("LG-043");
+    const lg007 = await before.machine("LG-007", true);
+    const manual = await before.file("MM Operations Manual", { machineModelId: before.model });
+    const wiring = await before.file("Wiring notes", { machineId: lg042 }, { attachedAt: "2026-02-02T10:00:00Z" });
+    await before.file("Old manual", { machineId: lg042 }, { removed: true });
+    const unreadable = await before.file("Unreadable scan", { machineModelId: before.model });
+    await before.file("Notes of a retired machine", { machineId: lg007 });
+    await before.file("Not indexed yet", { machineId: lg042 });
+    await before.entry(manual, { machineModelId: before.model });
+    await before.entry(wiring, { machineId: lg042 }, { embeddingModel: "openai/text-embedding-3-small" });
+    await before.entry(unreadable, { machineModelId: before.model }, { failed: true });
+    await db.execute(sql`
+      INSERT INTO pending_upload (name, machine_id, machine_model_id, issued_to, issued_at, maximum_size, declared_size)
+      VALUES ('files/pending', ${lg042}, null, ${before.tom}, '2026-02-03T10:00:00Z', 100000000, 10)`);
+    const index = async () =>
+      (await db.execute(sql`SELECT * FROM ai_index_entry ORDER BY id`)).rows;
+    const items = async () => (await db.execute(sql`SELECT * FROM ai_index_item ORDER BY id`)).rows;
+    const journal = async () => (await db.execute(sql`SELECT count(*)::int AS count FROM event_journal`)).rows;
+    const [indexBefore, itemsBefore, journalBefore] = [await index(), await items(), await journal()];
+
+    await isolated.migrate();
+
+    // The machine records of both machines of the model show the model's manual; only LG-042 shows its own file.
+    const titles = async (museumNumber: string) =>
+      (await machineRecord(db, museumNumber))!.files.map((file) => file.title).sort();
+    expect(await titles("LG-042")).toEqual(
+      ["MM Operations Manual", "Not indexed yet", "Unreadable scan", "Wiring notes"].sort(),
+    );
+    expect(await titles("LG-043")).toEqual(["MM Operations Manual", "Unreadable scan"]);
+    expect((await machineRecord(db, "LG-042"))!.files.find((file) => file.title === "MM Operations Manual")).toMatchObject(
+      { ofMachineModel: true },
+    );
+    // A retired machine keeps its file's attachment, a removed file keeps its attachment too (it counts for nothing).
+    const attachments = await db.execute<{ title: string; machine_id: string | null; machine_model_id: string | null }>(
+      sql`SELECT f.title, a.machine_id, a.machine_model_id FROM file_attachment a JOIN file f ON f.id = a.file_id ORDER BY a.position`,
+    );
+    expect(attachments.rows).toHaveLength(6);
+    expect(attachments.rows.find((row) => row.title === "Notes of a retired machine")).toMatchObject({ machine_id: lg007 });
+    expect(attachments.rows.find((row) => row.title === "Old manual")).toMatchObject({ machine_id: lg042 });
+    expect(attachments.rows.find((row) => row.title === "MM Operations Manual")).toMatchObject({
+      machine_id: null,
+      machine_model_id: before.model,
+    });
+    // "Attached by" and "attached at" are now "added by" and "added at"; there is no original file name.
+    const added = await db.execute(
+      sql`SELECT added_by, added_at = '2026-02-02T10:00:00Z'::timestamptz AS added_when_attached, original_file_name, removed_at IS NOT NULL AS removed FROM file WHERE id = ${wiring}`,
+    );
+    expect(added.rows).toEqual([
+      { added_by: before.tom, added_when_attached: true, original_file_name: null, removed: false },
+    ]);
+    // The AI index is untouched – the same entries and items, an entry of an old embedding model and a failed one included –
+    // and the migration wrote no journal entry and asked no AI (it is SQL), so no file became waiting that was not.
+    expect(await index()).toEqual(indexBefore);
+    expect(await items()).toEqual(itemsBefore);
+    expect(await journal()).toEqual(journalBefore);
+    expect((await index()).filter((row) => (row as { state: string }).state === "indexed")).toHaveLength(2);
+    // A pending upload loses its machine and keeps its team member.
+    const pending = await db.execute(sql`SELECT name, issued_to FROM pending_upload`);
+    expect(pending.rows).toEqual([{ name: "files/pending", issued_to: before.tom }]);
+    const columns = await db.execute(
+      sql`SELECT column_name FROM information_schema.columns WHERE table_name IN ('file', 'pending_upload') AND column_name IN ('machine_id', 'machine_model_id', 'attached_by', 'attached_at')`,
+    );
+    expect(columns.rows).toEqual([]);
   });
 });

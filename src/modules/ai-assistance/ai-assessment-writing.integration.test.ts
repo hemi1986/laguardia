@@ -416,6 +416,35 @@ describe("what an AI assessment does", () => {
     expect(written.filesSearched).not.toContain(foreign);
   });
 
+  it("ST-113: A file added on the machine record is searched by an AI assessment as before", async () => {
+    const lg042 = await aMachine(eightBall, "LG-042");
+    const lg043 = await aMachine(eightBall, "LG-043");
+    const { defectId } = await anOpenDefect(lg043);
+    const wiring = await attach({
+      machineId: lg042,
+      title: "Wiring notes",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("wiring"),
+    });
+    const manual = await attach({
+      machineId: lg042,
+      to: "machine-model",
+      title: "MM Operations Manual",
+      contentType: "text/plain",
+      bytes: new TextEncoder().encode("manual"),
+    });
+    await index(wiring, [{ kind: "passage", text: "Die Schaltpläne von LG-042" }]);
+    await index(manual, [{ kind: "passage", text: "Das Handbuch des Modells" }]);
+    const id = await request(defectId, { note: "Coil gets hot", photos: [await aPhoto()] });
+    const ai = anAi();
+
+    await run(ai);
+
+    expect(ai.chatRequests[0].text).toContain("Das Handbuch des Modells");
+    expect(ai.chatRequests[0].text).not.toContain("Die Schaltpläne von LG-042");
+    expect((await assessment(id)).filesSearched).toEqual([manual]);
+  });
+
   it("ST-107: A reference to a file outside the defect's machine and its machine model is dropped", async () => {
     const machineId = await aMachine(eightBall, "LG-042");
     const otherMachine = await aMachine(eightBall, "LG-043");

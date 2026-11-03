@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
-import { attachFileCommand, machineRecord } from "@/modules/collection";
+import { addFileCommand, machineRecord } from "@/modules/collection";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { teamMessages } from "@/platform/messages";
@@ -23,22 +23,27 @@ import { rejectionWithFile } from "./attach-file-form-view";
 const db = testDatabase();
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const uploadedAt = "2026-10-18T10:00:00Z";
+const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 let machineId: string;
+let machineModelId: string;
 let museumNumber: string;
 
 beforeAll(async () => {
-  await anExistingTeamMember(db, anna);
+  for (const member of [anna, tom]) await anExistingTeamMember(db, member);
   machineId = await aRegisteredMachine(db);
   const [registered] = await journalOf(db, { aggregateId: machineId });
   museumNumber = registered.data.museumNumber as string;
+  machineModelId = (await machineRecord(db, museumNumber))!.machineModelId;
 });
 
-/** A PDF Anna chose on the form: uploaded for the machine, as the browser does it with the upload address. */
-async function aChosenPdf(storage: MemoryStorage, { bytes = 3, maximumSize = undefined as number | undefined } = {}) {
+/** A PDF a team member chose on the form (Anna unless said): uploaded, as the browser does it with the upload address. */
+async function aChosenPdf(
+  storage: MemoryStorage,
+  { bytes = 3, maximumSize = undefined as number | undefined, by = anna as typeof anna | typeof tom } = {},
+) {
   const at = { db, storage, clock: fixedClock(uploadedAt), newId: randomUUID };
   const issued = await grantUploadAddress(at, {
-    issuedTo: anna.teamMemberId,
-    owner: { machineId },
+    issuedTo: by.teamMemberId,
     size: bytes,
     contentType: "application/pdf",
     maximumSize,
@@ -48,11 +53,11 @@ async function aChosenPdf(storage: MemoryStorage, { bytes = 3, maximumSize = und
   return issued.name;
 }
 
-function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}) {
+function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z", by = anna as typeof anna | typeof tom } = {}) {
   const attached: string[] = [];
   const work = { started: 0 };
   const action = formRunner({
-    currentPerson: async () => anna,
+    currentPerson: async () => by,
     db,
     clock: fixedClock(when),
     newId: randomUUID,
@@ -61,13 +66,13 @@ function sendForm(storage: MemoryStorage, { when = "2026-10-18T10:05:00Z" } = {}
       if (makesAiWork(events)) work.started += 1;
     },
   })(
-    attachFileCommand,
+    addFileCommand,
     attachFileForm(async ({ fileId }) => void attached.push(fileId)),
   );
   return {
     attached,
     work,
-    send: (fields: Record<string, string>) => action(null, post({ machineId, fileName: "manual.pdf", ...fields })),
+    send: (fields: Record<string, string>) => action(null, post({ machineId, machineModelId, fileName: "manual.pdf", ...fields })),
   };
 }
 
@@ -138,7 +143,15 @@ describe("the form that attaches a file", () => {
 
     expect(state).toEqual({
       error: "content-gone",
-      values: { machineId, attachTo: "machine", title: "Too late", fileCategory: "manual", content: "", fileName: "" },
+      values: {
+        machineId,
+        machineModelId,
+        attachTo: "machine",
+        title: "Too late",
+        fileCategory: "manual",
+        content: "",
+        fileName: "",
+      },
     });
     // The form says the file must be chosen again; its chooser starts empty, as no content is named any more.
     expect(rejectionWithFile(state!, texts)).toBe(
@@ -158,13 +171,35 @@ describe("the form that attaches a file", () => {
     expect(storage.read(content)).toBeUndefined();
   });
 
-  it("finds no uploaded content for a machine that is no machine ID", async () => {
+  it("refuses a machine that is no machine ID and deletes the content", async () => {
     const storage = memoryStorage();
     const content = await aChosenPdf(storage);
 
     const state = await sendForm(storage).send({ ...complete, title: "Forged", content, machineId: "not-an-id" });
 
-    expect(state).toMatchObject({ error: "content-gone" });
+    expect(state).toMatchObject({ error: "unknown-machine" });
+    expect(storage.read(content)).toBeUndefined();
+  });
+
+  it("ST-113: Content uploaded by another team member is not added", async () => {
+    const storage = memoryStorage();
+    const annasUpload = await aChosenPdf(storage, { by: anna });
+    const toms = sendForm(storage, { by: tom });
+
+    const state = await toms.send({ ...complete, title: "Tom's try", content: annasUpload });
+
+    expect(state).toMatchObject({
+      error: "content-gone",
+      values: { title: "Tom's try", fileCategory: "manual", content: "" },
+    });
+    expect(rejectionWithFile(state!, texts)).toBe(
+      "Die hochgeladene Datei ist nicht mehr da. Die Datei muss erneut ausgewählt werden.",
+    );
+    expect(toms.attached).toEqual([]);
+    expect(await titles()).not.toContain("Tom's try");
+    // Anna's pending upload is untouched: she can still add it herself.
+    expect(storage.read(annasUpload)).toBeDefined();
+    expect(await sendForm(storage, { by: anna }).send({ ...complete, title: "Anna's own", content: annasUpload })).toBeNull();
   });
 
   it("says nothing about a file when none was chosen and the form's own fields are rejected", async () => {

@@ -1,5 +1,5 @@
 import { eventCatalogue } from "@/platform/command";
-import type { FileAttached } from "./attach-file";
+import type { FileAdded, FileAttached } from "./add-file";
 import type { FileRemoved } from "./remove-file";
 import type { MachineStatusChanged } from "./change-machine-status";
 import type { MachineDetailsCorrected } from "./correct-machine-details";
@@ -76,13 +76,24 @@ export const collectionEvents = eventCatalogue({
     // The reason is typed text and stays in the aggregate; the journal names the machine and who retired it.
     project: (event: MachineRetired) => ({ aggregateId: event.machineId, machineId: event.machineId, data: {} }),
   },
+  "EVT-FileAdded": {
+    aggregate: "AGG-File",
+    // The title and the original file name are typed text and stay in the aggregate (ST-003); the file category is a
+    // fact from a fixed list. A file belongs to no machine – what it is attached to is EVT-FileAttached (ST-113).
+    project: (event: FileAdded) => ({
+      aggregateId: event.fileId,
+      machineId: null,
+      data: { fileCategory: event.fileCategory },
+    }),
+  },
   "EVT-FileAttached": {
     aggregate: "AGG-File",
-    // The title is typed text and stays in the aggregate (ST-003). A file of a machine model belongs to no one machine.
+    // One event per machine or machine model (ST-113). Journal entries from before carry the file category too and
+    // stand for adding the file as well. A machine model belongs to no one machine.
     project: (event: FileAttached) => ({
       aggregateId: event.fileId,
       machineId: event.machineId ?? null,
-      data: { fileCategory: event.fileCategory, machineModelId: event.machineModelId ?? null },
+      data: { machineModelId: event.machineModelId ?? null },
     }),
   },
   "EVT-FileRemoved": {

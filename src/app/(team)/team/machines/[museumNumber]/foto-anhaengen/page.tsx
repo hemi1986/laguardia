@@ -26,7 +26,7 @@ export default async function AttachPhotoPage({
     <Page title={texts.title(museumNumber)}>
       {record ? (
         <AttachPhotoForm
-          action={attachPhotoAction.bind(null, { id: record.id, museumNumber: record.museumNumber })}
+          action={attachPhotoAction.bind(null, { id: record.id, machineModelId: record.machineModelId, museumNumber: record.museumNumber })}
           museumNumber={record.museumNumber}
           machineModel={record.machineModel.title}
           attachTargets={attachTargets}
