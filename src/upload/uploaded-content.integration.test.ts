@@ -4,14 +4,13 @@ import { fixedClock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import { grantUploadAddress, withUploadedContent, type UploadOwner } from ".";
+import { grantUploadAddress, withUploadedContent } from ".";
 import { attachForTest, type AttachInput } from "./attach-stand-in.test-support";
 
 /**
- * Attaching uploaded content (ST-085, ADR 0007 → 0009): the attaching step takes the pending upload – same owner,
- * younger than the fixed age of 24 hours – and runs the command with the content's name; a rejected or throwing
+ * Attaching uploaded content (ST-085, ADR 0007 → 0009): the attaching step takes the pending upload – issued to the same team
+ * member (ADR 0018), younger than the fixed age of 24 hours – and runs the command with the content's name; a rejected or throwing
  * command deletes the content through the seam. Without such a pending upload the command does not run. A stand-in
  * command (CMD-AttachFile comes with ST-037) and the in-memory storage adapter.
  */
@@ -22,13 +21,15 @@ const anna: Extract<Actor, { kind: "team-member" }> = {
   teamMemberId: randomUUID(),
   role: "helper",
 };
-let machineId: string;
-let otherMachineId: string;
+const tom: Extract<Actor, { kind: "team-member" }> = {
+  kind: "team-member",
+  teamMemberId: randomUUID(),
+  role: "technician",
+};
 
 beforeAll(async () => {
   await anExistingTeamMember(db, anna);
-  machineId = await aRegisteredMachine(db);
-  otherMachineId = await aRegisteredMachine(db);
+  await anExistingTeamMember(db, tom);
 });
 
 const at = (instant: string, storage: MemoryStorage) => ({
@@ -38,11 +39,10 @@ const at = (instant: string, storage: MemoryStorage) => ({
   newId: randomUUID,
 });
 
-/** A file Anna uploaded for the machine with the upload address she was given. */
+/** A file Anna uploaded with the upload address she was given. */
 async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Promise<string> {
   const issued = await grantUploadAddress(at(uploadedAt, storage), {
     issuedTo: anna.teamMemberId,
-    owner: { machineId },
     size: 3,
     contentType: "application/pdf",
     maximumSize,
@@ -55,10 +55,10 @@ async function anUploadedFile(storage: MemoryStorage, maximumSize?: number): Pro
 function attach(
   storage: MemoryStorage,
   outcome: AttachInput["outcome"],
-  { when = "2026-10-18T10:10:00Z", owner = { machineId } as UploadOwner } = {},
+  { when = "2026-10-18T10:10:00Z", issuedTo = anna.teamMemberId } = {},
 ) {
   return (name: string) =>
-    withUploadedContent(at(when, storage), { name, owner }, (content) =>
+    withUploadedContent(at(when, storage), { name, issuedTo }, (content) =>
       executeCommand(
         attachForTest,
         { content: content.name, outcome },
@@ -107,11 +107,11 @@ describe("attaching uploaded content", () => {
     expect(await attach(storage, "throw")(`files/${randomUUID()}`)).toEqual({ ok: false, error: "content-gone" });
   });
 
-  it("does not run the command for another owner's content, and leaves that content alone", async () => {
+  it("does not run the command for content issued to another team member, and leaves that content alone", async () => {
     const storage = memoryStorage();
     const name = await anUploadedFile(storage);
 
-    expect(await attach(storage, "throw", { owner: { machineId: otherMachineId } })(name)).toEqual({
+    expect(await attach(storage, "throw", { issuedTo: tom.teamMemberId })(name)).toEqual({
       ok: false,
       error: "content-gone",
     });
@@ -143,7 +143,6 @@ describe("attaching uploaded content", () => {
     const storage = memoryStorage();
     const issued = await grantUploadAddress(at(uploadedAt, storage), {
       issuedTo: anna.teamMemberId,
-      owner: { machineId },
       size: 3,
       contentType: "application/pdf",
     });
@@ -160,7 +159,7 @@ describe("attaching uploaded content", () => {
     await expect(
       withUploadedContent(
         { ...at("2026-10-18T10:10:00Z", storage), storage: failing },
-        { name, owner: { machineId } },
+        { name, issuedTo: anna.teamMemberId },
         () => {
           throw new Error("the command must not run");
         },

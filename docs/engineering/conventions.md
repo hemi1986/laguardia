@@ -589,7 +589,7 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
   A set delta (ST-095) passes `many: { field, seen: true }`: the form posts a `SeenField` (`form-parts.tsx`), the input
   gets those entries as `seen` (`[]` without the option), and a rejection keeps them as `state.seen`. When the decision
   names its subjects, the state holds them as `state.subjects` (IDs) – the action says them in words.
-- **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo) => …`: the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
+- **A form with a photo** (ST-016) passes `photo: { field, owner }` and `input: (fields, photo, stored, originalName) => …` (the name the chosen file had, ST-113), and may pass `refusal: (fields) => …` – its own rejections that need only the fields, asked before the photo is stored (ST-113): the command runs through the photo module's `withStoredPhoto` – a rejected or throwing command leaves no stored photo, and a photo that cannot be accepted or stored (`too-large`, `not-an-image`, `unsupported-format`, `not-stored`) comes back as `{ error, values }` like a command rejection. The form state type is `PhotoFormState<CommandError<typeof command> | PhotoError, Field>`; the photo errors have texts in every catalog. The form shows `PhotoField` (`src/app/photo-field.tsx`), keyed on the state like the text fields.
 - **A form with several photos** (ST-032) passes `photos: { field, owner, atMost: { count, error } }` and
   `input: (fields, photos) => …` – the browser posts the file field once per photo (`PhotosField`,
   `src/app/photos-field.tsx`, prepares each to 600 KB and offers no picker once `max` are chosen, so 5 fit one
@@ -634,10 +634,10 @@ const [state, action, pending] = useActionState(registerMachineAction, null);
 Files (up to 100 MB, `FILE_SIZE_LIMIT`) never pass through a function: the browser uploads them straight to the private
 store before the attaching form is sent. The upload module (`src/upload/`, below the modules like the photo module) is
 the only way:
-- **One request, one PUT** (`src/app/api/uploads/`, ST-099): the browser half `uploadFile(file, { owner, onProgress })`
+- **One request, one PUT** (`src/app/api/uploads/`, ST-099): the browser half `uploadFile(file, { onProgress })`
   (`src/upload/browser.ts`) declares the file's size and media type to the route (`grantUploadAddress`): a size above
   the limit gets 413 before anything is recorded or signed (`too-large`); otherwise the server names the content
-  `files/<newId()>`, records a **pending upload** – owner, team member, time, size limit, declared size – and only then
+  `files/<newId()>`, records a **pending upload** – team member, time, size limit, declared size; no machine and no machine model (ADR 0018) – and only then
   signs one presigned PUT for exactly that name, valid 30 minutes, whose signature binds the `Content-Length`, the
   `Content-Type` and `If-None-Match: *` (a name is written once). The browser sends it with `XMLHttpRequest` (upload
   progress) – no SDK in the browser, no upload in parts. It resolves with the name – what the attaching form sends –
@@ -646,8 +646,8 @@ the only way:
 - **The route is not behind the page proxy** (`/api/` is not matched): it checks the Origin (`isSameOrigin` from
   `src/platform/same-origin.ts`, shared with `src/proxy.ts`) and the team session itself, before anything else. It
   is written as `uploadRoute(dependencies)` so its tests can pass real requests and the in-memory storage.
-- **Attaching** (CMD-AttachFile, ST-037) goes through `withUploadedContent(dependencies, { name, owner }, run)`: it
-  takes the pending upload (same owner, younger than 24 hours – a row-level delete), checks the stored size, runs the
+- **Adding** (CMD-AddFile, ST-037, ST-113) goes through `withUploadedContent(dependencies, { name, issuedTo }, run)`: it
+  takes the pending upload (issued to the same team member, younger than 24 hours – a row-level delete), checks the stored size, runs the
   command with the name and deletes the content if the command is rejected or throws. Its own rejections are
   `uploadedContentErrors`: `content-gone` (no such pending upload, or nothing uploaded – the form says to choose the
   file again) and `too-large`.
@@ -663,7 +663,7 @@ the only way:
   to a fresh 5-minute address, so a link on a page never expires. Only PDF and JPEG/PNG/WebP/GIF open in the browser
   (`opensInBrowser`, by the media type the store kept); everything else gets an address that asks the store for `Content-Disposition: attachment` (signed `response-content-disposition`).
 - **A form that attaches uploaded content** (first: ST-037, `…/[museumNumber]/datei-anhaengen/`) uses
-  `formAction(command, { fields, upload: { field, clearedWith, owner }, refusal, input, onSuccess })`: the
+  `formAction(command, { fields, upload: { field, clearedWith }, refusal, input, onSuccess })`: the
   chosen file is uploaded when it is chosen (`uploadFile`), the form posts its name in a hidden field. `refusal` – the
   command's rules that need only the fields (`attachFileRefusal`) – is asked first and keeps the uploaded content: the
   form says the chosen file is still attached (user, 2026-10-18). Every later rejection (`content-gone`, `too-large`,

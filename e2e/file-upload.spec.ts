@@ -92,14 +92,12 @@ test("a file above the size limit gets no upload address, and the address takes 
   needsTechnician();
   await theAttachForm(page);
   const origin = new URL(page.url()).origin;
-  const machineId = (await page.locator("form[data-machine-id]").getAttribute("data-machine-id"))!;
   // A limit of 1 KB, which only the server knows – no form between the file and the store.
   const ask = (size: number) =>
     page.request.post("/api/uploads", {
       headers: { origin },
       data: {
         type: "laguardia.upload-address",
-        owner: { machineId },
         size,
         contentType: "application/pdf",
         maximumSize: 1024,

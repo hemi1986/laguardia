@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { attachFileCommand, machineRecord, removeFileCommand } from "@/modules/collection";
+import { machineRecord, removeFileCommand } from "@/modules/collection";
+import { aFileAdded } from "@/test-support/files";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
-import { executeCommand, journalOf } from "@/platform/command";
+import { journalOf } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
 import { post } from "@/test-support/forms";
@@ -32,19 +33,12 @@ beforeAll(async () => {
 async function aStoredFile(storage: ReturnType<typeof memoryStorage>, title: string) {
   const content = `files/${randomUUID()}`;
   await storage.write(content, new Uint8Array(3), "application/pdf");
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId,
-      attachTo: "machine-model",
-      title,
-      fileCategory: "manual",
-      content: { name: content, size: 3, contentType: "application/pdf" },
-    },
-    { actor: tom, db, clock: fixedClock("2026-10-18T10:00:00Z"), newId: randomUUID },
+  const fileId = await aFileAdded(
+    db,
+    { actor: tom, clock: fixedClock("2026-10-18T10:00:00Z") },
+    { machineId, to: "machine-model", title, fileCategory: "manual", content: { name: content, size: 3, contentType: "application/pdf" } },
   );
-  if (!attached.ok) throw new Error(attached.error);
-  return { fileId: attached.result.fileId, content };
+  return { fileId, content };
 }
 
 function sendForm(storage: ReturnType<typeof memoryStorage>, fileId: string) {

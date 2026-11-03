@@ -91,7 +91,6 @@ export function AttachFileForm({
     <form action={action} className="flex flex-col gap-5" data-machine-id={machineId}>
       <ChosenFile
         key={`content-${kept}`}
-        machineId={machineId}
         keptContent={state?.values.content}
         keptFileName={state?.values.fileName}
         texts={texts}
@@ -165,7 +164,6 @@ export function rejectionWithFile(state: NonNullable<AttachFileState>, texts: Te
 }
 
 function ChosenFile({
-  machineId,
   keptContent,
   keptFileName,
   texts,
@@ -174,7 +172,6 @@ function ChosenFile({
   onUploading,
 }: {
   onUploading: (uploading: boolean) => void;
-  machineId: string;
   keptContent: string | undefined;
   keptFileName: string | undefined;
   texts: Texts;
@@ -190,7 +187,6 @@ function ChosenFile({
     setChosen({ state: "uploading", percent: 0 });
     onUploading(true);
     const uploaded = await uploadFile(file, {
-      owner: { machineId },
       onProgress: (percent) => setChosen({ state: "uploading", percent }),
     });
     onUploading(false);

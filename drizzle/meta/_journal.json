@@ -302,6 +302,20 @@
       "when": 1793564700118,
       "tag": "0042_yellow_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793727029755,
+      "tag": "0043_file_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793727039546,
+      "tag": "0044_file_owner_dropped",
+      "breakpoints": true
     }
   ]
 }

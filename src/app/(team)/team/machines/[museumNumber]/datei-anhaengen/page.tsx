@@ -26,7 +26,7 @@ export default async function AttachFilePage({
     <Page title={texts.title(museumNumber)}>
       {record ? (
         <AttachFileForm
-          action={attachFileAction.bind(null, { id: record.id, museumNumber: record.museumNumber })}
+          action={attachFileAction.bind(null, { id: record.id, machineModelId: record.machineModelId, museumNumber: record.museumNumber })}
           machineId={record.id}
           museumNumber={record.museumNumber}
           machineModel={record.machineModel.title}

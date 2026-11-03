@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { attachFileCommand, type FileCategory } from "@/modules/collection";
+import type { FileCategory } from "@/modules/collection";
+import { aFileAdded } from "@/test-support/files";
 import type { Clock } from "@/platform/clock";
 import { executeCommand, type Actor } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
@@ -22,7 +23,7 @@ export type ScenarioAi = AiDependencies & { ai: ScenarioOpenRouter };
 
 /**
  * The steps of an AI scenario as a technician takes them (architecture review 2026-11-01): AI turned on and the key
- * removed through CMD-ChangeAiSettings, a file attached through CMD-AttachFile with its content in the store, an AI
+ * removed through CMD-ChangeAiSettings, a file added through CMD-AddFile with its content in the store, an AI
  * assessment requested, and one run of the background work driven directly (ADR 0015, the seam catalog's run seam).
  *
  * A test binds its database, store, clock and technician once; `db` and `storage` are read at each step, so a test
@@ -102,7 +103,7 @@ export function aiScenario({
     if (!removed.ok) throw new Error(removed.error);
   }
 
-  /** A file attached through CMD-AttachFile to a machine or to its machine model, its content already in the store. */
+  /** A file added through CMD-AddFile and attached to a machine or to its machine model, its content already in the store. */
   async function attachFile(
     machineId: string,
     {
@@ -121,13 +122,11 @@ export function aiScenario({
   ): Promise<string> {
     const name = `files/${randomUUID()}`;
     await store().write(name, bytes, contentType);
-    const attached = await executeCommand(
-      attachFileCommand,
-      { machineId, attachTo: to, title, fileCategory, content: { name, size: bytes.length, contentType } },
-      { ...context, db: db() },
+    return aFileAdded(
+      db(),
+      { actor: context.actor, clock: context.clock, newId: context.newId },
+      { machineId, title, fileCategory, to, content: { name, size: bytes.length, contentType } },
     );
-    if (!attached.ok) throw new Error(attached.error);
-    return attached.result.fileId;
   }
 
   /** A photo for an AI assessment in the store, as the form uploads it – `padding` makes it that many bytes larger. */

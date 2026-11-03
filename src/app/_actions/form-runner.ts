@@ -16,7 +16,7 @@ import {
   type StoredLogo,
   type PhotoError, type PhotoOwner, type PhotoReference, type StoredPhoto } from "@/photo";
 import { s3Storage, deleteRemovedContent, type ContentStorage } from "@/platform/storage";
-import { withUploadedContent, type UploadedContent, type UploadedContentError, type UploadOwner } from "@/upload";
+import { withUploadedContent, type UploadedContent, type UploadedContentError } from "@/upload";
 import { SEEN_FIELD, seenOf } from "./form-parts";
 
 /**
@@ -57,14 +57,22 @@ export type RunnerDependencies = Omit<CommandDependencies, "actor"> & {
 
 /**
  * A form with a photo (ST-016) – its file field and whom the photo belongs to; the input gets the photo's reference,
- * and the stored photo with its size and media type for a command that keeps them (a file, ST-054).
+ * and the stored photo with its size and media type for a command that keeps them (a file, ST-054), and the name the
+ * chosen file had (ST-113: a file keeps its original file name).
  */
-export type PhotoFormDefinition<Input, Result, Field extends string> = Omit<
+export type PhotoFormDefinition<Input, Result, Field extends string, Refusal extends string = never> = Omit<
   FormDefinition<Input, Result, Field>,
   "input"
 > & {
   photo: { field: string; owner: PhotoOwner };
-  input: (fields: FormFields<Field>, photo: PhotoReference | undefined, stored: StoredPhoto | undefined) => Input;
+  /** The form's own rejections that need nothing but the fields – asked before the photo is stored (ST-113). */
+  refusal?: (fields: FormFields<Field>) => Refusal | undefined;
+  input: (
+    fields: FormFields<Field>,
+    photo: PhotoReference | undefined,
+    stored: StoredPhoto | undefined,
+    originalName: string | undefined,
+  ) => Input;
 };
 
 /**
@@ -99,8 +107,9 @@ export type PhotoFormState<Error extends string, Field extends string> =
   (NonNullable<FormState<Error, Field>> & { photoAgain?: true }) | null;
 
 /**
- * A form that attaches content uploaded from the browser (ST-037): the field that carries the content's name, whom the
- * pending upload belongs to, the form's own rejections (checked first), and the input with the uploaded content.
+ * A form that adds content uploaded from the browser (ST-037): the field that carries the content's name, the form's own
+ * rejections (checked first), and the input with the uploaded content. The pending upload belongs to the acting team
+ * member (ADR 0018), nobody else can add it.
  */
 export type UploadFormDefinition<Input, Result, Field extends string, Refusal extends string> = Omit<
   FormDefinition<Input, Result, Field>,
@@ -111,7 +120,6 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
     field: Field;
     /** Fields emptied together with it when the content is gone – those that only describe the chosen file. */
     clearedWith?: readonly Field[];
-    owner: (fields: FormFields<Field>) => UploadOwner;
   };
   /** The command's rejections that need nothing but the fields – asked before the content is handed over. */
   refusal: (fields: FormFields<Field>) => Refusal | undefined;
@@ -226,18 +234,18 @@ export function formRunner(dependencies: RunnerDependencies) {
     command: Command<Input, Result, Error>,
     definition: ManyFormDefinition<Input, Result, Field>,
   ): FormStateAction<ManyFormState<CommandError<typeof command>, Field>>;
-  function formAction<Input, Result, Error extends string, Refusal extends Error, const Field extends string>(
+  function formAction<Input, Result, Error extends string, Refusal extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: UploadFormDefinition<Input, Result, Field, Refusal>,
-  ): FormStateAction<UploadFormState<CommandError<typeof command>, Field>>;
+  ): FormStateAction<UploadFormState<CommandError<typeof command> | Refusal, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: LogoFormDefinition<Input, Result, Field>,
   ): FormStateAction<FormState<CommandError<typeof command> | LogoError, Field>>;
-  function formAction<Input, Result, Error extends string, const Field extends string>(
+  function formAction<Input, Result, Error extends string, Refusal extends string = never, const Field extends string = string>(
     command: Command<Input, Result, Error>,
-    definition: PhotoFormDefinition<Input, Result, Field>,
-  ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>>;
+    definition: PhotoFormDefinition<Input, Result, Field, Refusal>,
+  ): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError | Refusal, Field>>;
   function formAction<Input, Result, Error extends string, const Field extends string>(
     command: Command<Input, Result, Error>,
     definition: PhotosFormDefinition<Input, Result, NoInfer<Error>, Field>,
@@ -250,7 +258,7 @@ export function formRunner(dependencies: RunnerDependencies) {
     command: Command<Input, Result, Error>,
     definition:
       | FormDefinition<Input, Result, Field>
-      | PhotoFormDefinition<Input, Result, Field>
+      | PhotoFormDefinition<Input, Result, Field, string>
       | PhotosFormDefinition<Input, Result, Error, Field>
       | UploadFormDefinition<Input, Result, Field, Error>
       | LogoFormDefinition<Input, Result, Field>
@@ -267,7 +275,7 @@ export function formRunner(dependencies: RunnerDependencies) {
       return photosStep(dependencies, command, {
         ...rest,
         photos: photo,
-        input: (fields, [one], [stored]) => input(fields, one, stored),
+        input: (fields, [one], [stored], [name]) => input(fields, one, stored, name),
       });
     }
     if ("photos" in definition) return photosStep(dependencies, command, definition);
@@ -300,30 +308,39 @@ function withoutContent<Input, Result, Error extends string, Field extends strin
   };
 }
 
-function photosStep<Input, Result, Error extends string, Field extends string>(
+function photosStep<Input, Result, Error extends string, Field extends string, Refusal extends string = never>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
   definition: Omit<PhotosFormDefinition<Input, Result, Error, Field>, "photos" | "input"> & {
     photos: { field: string; owner: PhotoOwner; atMost?: { count: number; error: Error } };
-    input: (fields: FormFields<Field>, photos: PhotoReference[], stored: StoredPhoto[]) => Input;
+    refusal?: (fields: FormFields<Field>) => Refusal | undefined;
+    input: (
+      fields: FormFields<Field>,
+      photos: PhotoReference[],
+      stored: StoredPhoto[],
+      originalNames: (string | undefined)[],
+    ) => Input;
   },
-): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError, Field>> {
+): FormStateAction<PhotoFormState<CommandError<typeof command> | PhotoError | Refusal, Field>> {
   const { field, owner, atMost } = definition.photos;
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
     const posted = postedPhotos(formData, field);
+    const refusal = definition.refusal?.(fields);
+    // The photo is not stored: a rejection of the form says it must be chosen again, like after the command's own.
+    if (refusal) return { error: refusal, values: valuesOf(fields, definition.secret), ...(posted.length > 0 && { photoAgain: true as const }) };
     if (atMost && posted.length > atMost.count) return { error: atMost.error, values: valuesOf(fields, definition.secret) };
     const actor = await currentPerson();
     // Without a rule on how many, the form has one photo: the first file posted in its field.
-    const photos = await Promise.all(
-      (atMost ? posted : posted.slice(0, 1)).map(async (file) => new Uint8Array(await file.arrayBuffer())),
-    );
+    const sent = atMost ? posted : posted.slice(0, 1);
+    const photos = await Promise.all(sent.map(async (file) => new Uint8Array(await file.arrayBuffer())));
+    const originalNames = sent.map((file) => (file instanceof File && file.name ? file.name : undefined));
     const outcome = await withStoredPhotos(
       photos,
       owner,
       { storage: storage ?? s3Storage(), newId: dependencies.newId ?? randomUUID },
       (references, stored) =>
-        executeCommand(command, definition.input(fields, references, stored), { ...dependencies, actor }),
+        executeCommand(command, definition.input(fields, references, stored, originalNames), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
       const state = { error: outcome.error, values: valuesOf(fields, definition.secret) };
@@ -360,11 +377,11 @@ function logoStep<Input, Result, Error extends string, Field extends string>(
   };
 }
 
-function uploadStep<Input, Result, Error extends string, Refusal extends Error, Field extends string>(
+function uploadStep<Input, Result, Error extends string, Refusal extends string, Field extends string>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
   command: Command<Input, Result, Error>,
   definition: UploadFormDefinition<Input, Result, Field, Refusal>,
-): FormStateAction<UploadFormState<CommandError<typeof command>, Field>> {
+): FormStateAction<UploadFormState<CommandError<typeof command> | Refusal, Field>> {
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
     const name = fields[definition.upload.field];
@@ -379,7 +396,7 @@ function uploadStep<Input, Result, Error extends string, Refusal extends Error, 
         clock: dependencies.clock ?? systemClock,
         newId: dependencies.newId ?? randomUUID,
       },
-      { name, owner: definition.upload.owner(fields) },
+      { name, issuedTo: "teamMemberId" in actor ? actor.teamMemberId : "" },
       (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
     );
     if (!outcome.ok) {

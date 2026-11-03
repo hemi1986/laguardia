@@ -1,6 +1,5 @@
 import type { UploadAddress } from "@/platform/storage";
 import { FILE_SIZE_LIMIT } from "./limits";
-import type { UploadOwner } from "./pending-uploads";
 
 /** The route that issues upload addresses (`src/app/api/uploads/route.ts`). */
 const UPLOAD_ADDRESS_ROUTE = "/api/uploads";
@@ -11,7 +10,7 @@ export type UploadError = "too-large" | "not-uploaded";
 /**
  * Uploads a chosen file from the browser straight to the private bucket (ST-085, ST-099, ADR 0009/0012) – the
  * counterpart of the photo module's `preparePhoto`. Declares the file's size and media type to the server, which names
- * the content for its owner and signs one PUT for exactly that; the file never passes through a function. Reports
+ * the content for the team member and signs one PUT for exactly that; the file never passes through a function. Reports
  * progress in percent while it runs and resolves with the content's name – what the attaching form sends – or the
  * reason it failed. `too-large` comes only from the file size limit here or from the server refusing the declared size:
  * a store's refusal of the PUT looks the same in a browser whatever its reason, so it is `not-uploaded`.
@@ -19,11 +18,7 @@ export type UploadError = "too-large" | "not-uploaded";
  */
 export async function uploadFile(
   file: File,
-  {
-    owner,
-    maximumSize,
-    onProgress,
-  }: { owner: UploadOwner; maximumSize?: number; onProgress?: (percent: number) => void },
+  { maximumSize, onProgress }: { maximumSize?: number; onProgress?: (percent: number) => void } = {},
 ): Promise<{ ok: true; name: string } | { ok: false; error: UploadError }> {
   if (file.size > FILE_SIZE_LIMIT) return { ok: false, error: "too-large" };
   try {
@@ -32,7 +27,6 @@ export async function uploadFile(
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         type: "laguardia.upload-address",
-        owner,
         size: file.size,
         contentType: file.type || "application/octet-stream",
         maximumSize,

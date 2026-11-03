@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAccount, loggedInTeamMember, logIn } from "@/modules/team";
 import { fixedClock } from "@/platform/clock";
 import { memoryStorage } from "@/platform/storage";
 import { testDatabase } from "@/test-support/database";
-import { aRegisteredMachine } from "@/test-support/machines";
 import { uploadFile } from "@/upload/browser";
 import { uploadRoute } from "./upload-route";
 
@@ -18,11 +17,6 @@ const db = testDatabase();
 const PASSWORD = "secret-for-tests-85";
 const accountManager = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const ORIGIN = "https://laguardia.example";
-let machineId: string;
-
-beforeAll(async () => {
-  machineId = await aRegisteredMachine(db);
-});
 
 async function aLoggedInTeamMember(role: "helper" | "technician" = "helper"): Promise<string> {
   const username = `up_${randomUUID().slice(0, 8)}`;
@@ -55,12 +49,8 @@ function post(body: unknown, { cookie, origin = ORIGIN }: { cookie?: string; ori
 }
 
 const MB = 1024 * 1024;
-const askFor = (
-  owner: object,
-  { size = 3, contentType = "application/pdf", maximumSize = undefined as number | undefined } = {},
-) => ({
+const askFor = ({ size = 3, contentType = "application/pdf", maximumSize = undefined as number | undefined } = {}) => ({
   type: "laguardia.upload-address",
-  owner,
   size,
   contentType,
   maximumSize,
@@ -73,7 +63,7 @@ describe("the upload address route", () => {
     const handle = route();
     const cookie = await aLoggedInTeamMember();
 
-    const issued = await handle(post(askFor({ machineId }, { size: 1234, contentType: "image/jpeg" }), { cookie }));
+    const issued = await handle(post(askFor({ size: 1234, contentType: "image/jpeg" }), { cookie }));
 
     expect(issued.status).toBe(200);
     const { name, address } = (await issued.json()) as { name: string; address: { url: string; headers: object } };
@@ -99,7 +89,7 @@ describe("the upload address route", () => {
     );
     const file = new File([new Uint8Array(2 * MB)], "manual.pdf", { type: "application/pdf" });
 
-    const uploaded = await uploadFile(file, { owner: { machineId }, maximumSize: 1 * MB });
+    const uploaded = await uploadFile(file, { maximumSize: 1 * MB });
 
     expect(uploaded).toEqual({ ok: false, error: "too-large" });
     // The upload module keeps its table to itself – read as the e2e database reads it.
@@ -112,7 +102,7 @@ describe("the upload address route", () => {
     const cookie = await aLoggedInTeamMember();
 
     const refused = await handle(
-      post(askFor({ machineId }, { size: 100 * MB + 1, maximumSize: 200 * MB }), { cookie }),
+      post(askFor({ size: 100 * MB + 1, maximumSize: 200 * MB }), { cookie }),
     );
 
     expect(refused.status).toBe(413);
@@ -122,7 +112,7 @@ describe("the upload address route", () => {
   it("gives a request without a session no upload address", async () => {
     const handle = route();
 
-    const issued = await handle(post(askFor({ machineId })));
+    const issued = await handle(post(askFor()));
 
     expect(issued.status).toBe(401);
     expect(await issued.text()).not.toContain("files/");
@@ -133,18 +123,17 @@ describe("the upload address route", () => {
     const cookie = await aLoggedInTeamMember();
 
     for (const origin of ["https://evil.example", null]) {
-      const issued = await handle(post(askFor({ machineId }), { cookie, origin }));
+      const issued = await handle(post(askFor(), { cookie, origin }));
       expect(issued.status).toBe(403);
       expect(await issued.text()).not.toContain("files/");
     }
   });
 
-  it("refuses an owner that does not exist and a request it does not know", async () => {
+  it("refuses a request it does not know", async () => {
     const handle = route();
     const cookie = await aLoggedInTeamMember();
 
-    expect((await handle(post(askFor({ machineId: randomUUID() }), { cookie }))).status).toBe(400);
-    expect((await handle(post(askFor({ somethingElse: "x" }), { cookie }))).status).toBe(400);
+    expect((await handle(post({ ...askFor(), type: "laguardia.something-else" }, { cookie }))).status).toBe(400);
     expect((await handle(post({ type: "blob.generate-presigned-url", payload: {} }, { cookie }))).status).toBe(400);
   });
 
@@ -160,7 +149,7 @@ describe("the upload address route", () => {
       { contentType: "text/html\r\nX-Injected: 1" },
       { contentType: "application/pdf; charset=binary" },
     ]) {
-      expect((await handle(post(askFor({ machineId }, declared), { cookie }))).status).toBe(400);
+      expect((await handle(post(askFor(declared), { cookie }))).status).toBe(400);
     }
   });
 
@@ -169,7 +158,7 @@ describe("the upload address route", () => {
     const handle = route((work) => void scheduled.push(work));
     const cookie = await aLoggedInTeamMember();
 
-    await handle(post(askFor({ machineId }), { cookie }));
+    await handle(post(askFor(), { cookie }));
 
     expect(scheduled).toHaveLength(1);
   });

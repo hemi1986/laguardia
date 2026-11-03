@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it } from "vitest";
-import { attachFileCommand, machineRecord } from "@/modules/collection";
+import { addFileCommand, machineModelOfMachineForAi, machineRecord } from "@/modules/collection";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
@@ -47,10 +47,13 @@ function photoForm(machineId: string, storage: MemoryStorage) {
     newId: randomUUID,
     storage,
   })(
-    attachFileCommand,
+    addFileCommand,
     attachPhotoForm(async () => {}),
   );
-  return (fields: Record<string, string>, photo?: File) => action(null, post({ machineId, ...fields }, photo));
+  return async (fields: Record<string, string>, photo?: File) => {
+    const machineModelId = (await machineModelOfMachineForAi(db, machineId))!.id;
+    return action(null, post({ machineId, machineModelId, ...fields }, photo));
+  };
 }
 
 const filesOf = async (museumNumber: string) =>
@@ -61,7 +64,8 @@ describe("the form that attaches a camera photo", () => {
     const [lg042, lg043] = await machinesOfOneModel(db, 2);
     const storage = memoryStorage();
 
-    const state = await photoForm(lg042.machineId, storage)(
+    const state = await photoForm(lg042.machineId, storage
+    )(
       { attachTo: "machine", title: "Backbox wiring 2026" },
       await aPhonePhoto(),
     );
@@ -80,7 +84,8 @@ describe("the form that attaches a camera photo", () => {
   it("ST-054: Photo of a machine model", async () => {
     const [lg042, lg043] = await machinesOfOneModel(db, 2);
 
-    const state = await photoForm(lg042.machineId, memoryStorage())(
+    const state = await photoForm(lg042.machineId, memoryStorage()
+    )(
       { attachTo: "machine-model", title: "Original playfield" },
       await aPhonePhoto(),
     );

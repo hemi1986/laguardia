@@ -1,5 +1,5 @@
 import { aggregateCommand, type ActorOf, type DecisionContext } from "@/platform/command";
-import type { FileState } from "./attach-file";
+import type { FileState } from "./add-file";
 import { collectionEvents } from "./events";
 import { fileRemovalLock } from "./file-removal-lock";
 import { files } from "./files";

@@ -98,6 +98,7 @@ let journalBefore = 0;
 
 beforeEach(async () => {
   await db.execute("DELETE FROM ai_index_entry");
+  await db.execute("DELETE FROM file_attachment");
   await db.execute("DELETE FROM file");
   attached = [];
   await withoutAiSettings(db);

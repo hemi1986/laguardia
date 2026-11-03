@@ -1,5 +1,5 @@
-import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { fileCategories } from "./attach-file";
+import { bigint, bigserial, boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { fileCategories } from "./add-file";
 import { machineCategories, technologies } from "./create-machine-model";
 import { machineStatuses } from "./register-machine";
 import { DEFAULT_PRIVACY_NOTICE_DE, DEFAULT_PRIVACY_NOTICE_EN } from "./default-legal-texts";
@@ -89,31 +89,54 @@ export const machineStatusChange = pgTable(
 );
 
 /**
- * AGG-File – current state (ST-037, docs/architecture/data-model.md): attached to exactly one machine or one machine
- * model (check constraint in the migration). `content` is the content's name in the storage seam; size and media type
- * are what the store said when the file was attached. `attached_by` and `removed_by` refer to team_member.id
- * (hand-written foreign keys).
+ * AGG-File – current state (ST-037, ST-113, docs/architecture/data-model.md): a file exists on its own, with no owner
+ * (ADR 0018) – what it is attached to is `file_attachment`. `content` is the content's name in the storage seam; size
+ * and media type are what the store said when the file was added. `added_by` and `removed_by` refer to team_member.id
+ * (hand-written foreign keys). `original_file_name` is the name the chosen file had; files from before the feature
+ * `files` have none.
  */
-export const file = pgTable(
-  "file",
+export const file = pgTable("file", {
+  id: uuid("id").primaryKey(),
+  title: text("title").notNull(),
+  fileCategory: text("file_category", { enum: fileCategories }).notNull(),
+  /** Typed text of the browser's file, kept for the search and the download name (ST-118, ST-119) – none before the feature. */
+  originalFileName: text("original_file_name"),
+  content: text("content").notNull().unique(),
+  size: bigint("size", { mode: "number" }).notNull(),
+  contentType: text("content_type").notNull(),
+  addedBy: uuid("added_by").notNull(),
+  addedAt: timestamp("added_at", { withTimezone: true }).notNull(),
+  /** Who removed the file and when (ST-038) – both or neither (check constraint); the record stays, its content not. */
+  removedBy: uuid("removed_by"),
+  removedAt: timestamp("removed_at", { withTimezone: true }),
+  /** Optimistic version check (HS-16) – removing a file (ST-038) saves at the version the team member saw. */
+  version: integer("version").notNull().default(0),
+});
+
+/**
+ * An attachment of AGG-File (ST-113, data model *File*): the file shows on one machine or on every machine of one
+ * machine model – exactly one of the two columns (check constraint in the migration), unique within the file. Saved
+ * with the file as a whole (`replaces`). Who attached it and when is journal-only.
+ */
+export const fileAttachment = pgTable(
+  "file_attachment",
   {
+    /** The attachment's ID from the command's ID generator. */
     id: uuid("id").primaryKey(),
+    position: bigserial("position", { mode: "number" }).notNull(),
+    fileId: uuid("file_id")
+      .notNull()
+      .references(() => file.id),
     machineId: uuid("machine_id").references(() => machine.id),
     machineModelId: uuid("machine_model_id").references(() => machineModel.id),
-    title: text("title").notNull(),
-    fileCategory: text("file_category", { enum: fileCategories }).notNull(),
-    content: text("content").notNull().unique(),
-    size: bigint("size", { mode: "number" }).notNull(),
-    contentType: text("content_type").notNull(),
-    attachedBy: uuid("attached_by").notNull(),
-    attachedAt: timestamp("attached_at", { withTimezone: true }).notNull(),
-    /** Who removed the file and when (ST-038) – both or neither (check constraint); the record stays, its content not. */
-    removedBy: uuid("removed_by"),
-    removedAt: timestamp("removed_at", { withTimezone: true }),
-    /** Optimistic version check (HS-16) – removing a file (ST-038) saves at the version the team member saw. */
-    version: integer("version").notNull().default(0),
   },
-  (t) => [index("file_machine_idx").on(t.machineId), index("file_machine_model_idx").on(t.machineModelId)],
+  (t) => [
+    index("file_attachment_file_idx").on(t.fileId),
+    index("file_attachment_machine_idx").on(t.machineId),
+    index("file_attachment_machine_model_idx").on(t.machineModelId),
+    uniqueIndex("file_attachment_file_machine_unique").on(t.fileId, t.machineId),
+    uniqueIndex("file_attachment_file_machine_model_unique").on(t.fileId, t.machineModelId),
+  ],
 );
 
 /**

@@ -33,10 +33,10 @@ export function collectionChangesIn(command: readonly JournalEntry[], machineId:
   };
 }
 
-/** Whether the command attached this file (ST-037). */
-export function fileAttachedIn(command: readonly JournalEntry[], fileId: string): boolean {
+/** Whether the command added this file (ST-037, ST-113) – a file from before the feature `files` was attached instead. */
+export function fileAddedIn(command: readonly JournalEntry[], fileId: string): boolean {
   return entriesOf(collectionEvents, command).some(
-    (entry) => entry.type === "EVT-FileAttached" && entry.aggregate.id === fileId,
+    (entry) => (entry.type === "EVT-FileAdded" || entry.type === "EVT-FileAttached") && entry.aggregate.id === fileId,
   );
 }
 

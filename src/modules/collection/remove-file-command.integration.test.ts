@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
+import { aFileAdded } from "@/test-support/files";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import {
-  attachFileCommand,
   createMachineModelCommand,
   fileToOpen,
   machineFile,
@@ -48,22 +48,15 @@ async function aMachineWithFile(title: string, attachTo: "machine" | "machine-mo
     { actor: tom, ...at },
   );
   if (!machine.ok) throw new Error(machine.error);
-  const attached = await executeCommand(
-    attachFileCommand,
-    {
-      machineId: machine.result.machineId,
-      attachTo,
-      title,
-      fileCategory: "manual",
-      content: { name: `files/${randomUUID()}`, size: 4_200_000, contentType: "application/pdf" },
-    },
-    { actor: tom, ...at },
+  const fileId = await aFileAdded(
+    db,
+    { actor: tom, clock: at.clock },
+    { machineId: machine.result.machineId, to: attachTo, title, fileCategory: "manual" },
   );
-  if (!attached.ok) throw new Error(attached.error);
   return {
     museumNumber: machine.result.museumNumber,
     machineId: machine.result.machineId,
-    fileId: attached.result.fileId,
+    fileId,
   };
 }
 
