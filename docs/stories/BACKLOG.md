@@ -4,15 +4,20 @@
 
 **Progress: 79 of 87 domain stories done** · scenarios 739 of 813
 
-**118 stories** · In Progress: 0 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 99 · Superseded: 11
+**118 stories** · In Progress: 1 · Ready: 7 · In Review: 0 · Draft: 0 · Done: 99 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 | [ST-120](ST-120-an-ai-assessment-follows-what-a-file-is-attached-to.md) | An AI assessment follows what a file is attached to | story | AI assistance | should | M | medium | ST-113, ST-107, ST-109 |
 | [ST-121](ST-121-remove-a-file-on-its-details-page.md) | Remove a file on its details page | story | Collection | should | M | medium | ST-114, ST-038 |
 | [ST-115](ST-115-attach-and-detach-from-file-details.md) | Attach a file to further machines and machine models, and detach it | story | Collection | should | L | medium | ST-114, ST-094, ST-120, ST-121 |
