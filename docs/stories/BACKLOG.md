@@ -4,15 +4,20 @@
 
 **Progress: 78 of 87 domain stories done** · scenarios 734 of 813
 
-**118 stories** · In Progress: 0 · Ready: 9 · In Review: 0 · Draft: 0 · Done: 98 · Superseded: 11
+**118 stories** · In Progress: 1 · Ready: 8 · In Review: 0 · Draft: 0 · Done: 98 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
 | [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 | [ST-120](ST-120-an-ai-assessment-follows-what-a-file-is-attached-to.md) | An AI assessment follows what a file is attached to | story | AI assistance | should | M | medium | ST-113, ST-107, ST-109 |
 | [ST-121](ST-121-remove-a-file-on-its-details-page.md) | Remove a file on its details page | story | Collection | should | M | medium | ST-114, ST-038 |
