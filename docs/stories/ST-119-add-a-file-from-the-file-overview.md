@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAdded, EVT-FileAttached, EVT-FileIndexedForAi]
 depends_on: [ST-115, ST-116, ST-117]
 labels: [feature:files, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -34,15 +34,16 @@ sentence.
   stays empty.
 - **„Dateikategorie“:** required: „Handbuch“, „Schaltplan“, „Foto“, „Sonstiges“, in this order, none preselected (G20, as in
   ST-037).
-- **„Anhängen an“, optional:** the choice of ST-115 (RM-AttachmentChoice, G27, two parts „Geräte“ and „Modelle“, no retired
-  machines), with „Freiwillig. Eine Datei darf auch erst einmal nirgends angehängt sein.“
+- **„Anhängen an“, optional:** the choice of ST-115 (RM-AttachmentChoice, G27, two parts „Geräte“ and „Modelle“, retired
+  machines at the end of their group as „LG-041 · Ausgemustert“ – user, 2026-11-03), with „Freiwillig. Eine Datei darf auch erst einmal nirgends angehängt sein.“
 
 **Landing (G3):** the new file's details, with „„MM Operations Manual“ hinzugefügt.“. File and everything it is attached to
 are stored together or not at all.
 
-**Rejections (G8, G8a, G27):** no title, „Bitte einen Titel angeben.“; no file category, „Bitte eine Dateikategorie wählen.“;
-a chosen machine retired meanwhile or no longer known, „LG-042 ist inzwischen ausgemustert. Bitte die Auswahl ändern.“. Each
-is followed by what happened to the chosen file, in ST-037's wording: „Die Datei muss erneut ausgewählt werden.“ with an
+**Rejections (G8, G8a, G27):** no title, „Bitte einen Titel angeben.“; no file category, „Bitte eine Dateikategorie wählen.“.
+A retired machine is never refused and no retirement lock is taken (user, 2026-11-03); an unknown machine or machine model
+still rejects the whole command (CMD-AddFile) – no command removes either, so the form itself does not meet it. Each
+rejection is followed by what happened to the chosen file, in ST-037's wording: „Die Datei muss erneut ausgewählt werden.“ with an
 empty chooser, or „Die gewählte Datei ist noch angehängt: <name>“. Above 100 MB: „Dateien dürfen höchstens 100 MB groß
 sein.“ alone (G8a's exception). A pending upload that is gone behaves as in ST-037.
 
@@ -112,13 +113,6 @@ Scenario Outline: A rejected form says what happened to the chosen file
     | no title                | Bitte einen Titel angeben.           |
     | no file category        | Bitte eine Dateikategorie wählen.    |
 
-Scenario: A machine retired meanwhile rejects the whole form
-  Given a team member chose "LG-042" and "LG-050" under „Anhängen an“, and "LG-042" has been retired since
-  When the team member sends the form
-  Then it is rejected with „LG-042 ist inzwischen ausgemustert. Bitte die Auswahl ändern.“, followed by what happened to the chosen file
-  And no file is added and nothing is attached to "LG-050"
-  And "LG-050" is still ticked, in an open group
-
 Scenario: The machine record keeps adding through the same command
   When a team member adds the file "wiring.pdf" under „Datei anhängen“ on the machine record of "LG-042"
   Then the team member is back on the machine record with its confirmation
@@ -138,7 +132,8 @@ Scenario: Someone not logged in cannot add a file
 - none
 
 ## Notes
-- From ST-085's code review (`docs/reviews/ST-085-code-review.md`, #9, noted in ST-037): check the form's own input – title, file category, chosen things – before taking the uploaded content, which is deleted when a command rejects. The check of chosen machines sits in the command, under the retirement lock, so its rejection does delete the content: the sentence „… erneut ausgewählt werden“ is what the form says then.
+- From ST-085's code review (`docs/reviews/ST-085-code-review.md`, #9, noted in ST-037): check the form's own input – title, file category, chosen things – before taking the uploaded content, which is deleted when a command rejects. The check that the chosen machines and machine models exist sits in the command (no retirement lock), so its rejection does delete the content: the sentence „… erneut ausgewählt werden“ is what the form says then.
 - Definition of done: `/security-review` – a name typed by a browser reaches a response header and a page, hostile names included (quotes, CR/LF, path parts).
 - **Done scenario this story supersedes** (`docs/engineering/conventions.md`, *A scenario of a done story that a later story supersedes*): ST-117 "No file yet says what to do" quotes the interim sentence this story replaces, so it goes into `docs/stories/superseded-scenarios.json` and its test goes with this story's change. The empty overview is covered by "A helper adds the first file, attached to nothing".
 - Depends on ST-116 because the scenario "The original file name is kept …" corrects a title first.
+- **Revised 2026-11-03 (requirements engineer, `OPEN_QUESTIONS.md` row "ST-113, ST-119"):** files may be attached to retired machines everywhere. „Anhängen an“ offers them, and the rejection „LG-042 ist inzwischen ausgemustert …“ and the scenario "A machine retired meanwhile rejects the whole form" are gone. Back to `review` because the scenarios changed.

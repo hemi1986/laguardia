@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAttached, EVT-FileDetached]
 depends_on: [ST-114, ST-094, ST-120, ST-121]
 labels: [feature:files, ui]
-status: ready
+status: review
 ---
 
 ## Story
@@ -26,24 +26,25 @@ section „Angehängt an“ of the page ST-114 owns. The file details keep their
 - **Choice (RM-AttachmentChoice, G27, G20):** two parts, „Geräte“ and „Modelle“. In each, folding groups by machine
   category and technology in `CONTEXT.md`'s order (e.g. „Flipper · EM – 1 von 6 ausgewählt“), closed on opening, none
   ticked. A machine reads „LG-042 · Medieval Madness“, by museum number; a machine model reads „Medieval Madness“, by title.
-  Only machines that are not retired and only what the file is not attached to yet are offered. A machine of a machine model
+  Retired machines are offered too, at the end of their group as „LG-041 · Ausgemustert“, as the file details show them
+  (user, 2026-11-03). Only what the file is not attached to yet is offered. A machine of a machine model
   the file is attached to is still offered: it is a different thing to be attached to. Nothing to offer: „Es gibt
   nichts mehr, woran sich diese Datei anhängen lässt.“ (G7), with „Zurück zur Datei“ and no submit.
 - **Landing (G3, G33):** the file details, with a confirmation of the resulting state: „„MM Operations Manual“ hängt jetzt
   an 2 Geräten und 1 Modell.“ („an 1 Gerät“, „an 3 Modellen“; only the parts there are). It lands the same when nothing
   changed.
 - **Rejections (G8; the whole command, nothing attached; choices kept, groups with a choice open – G27):** nothing chosen,
-  „Bitte mindestens ein Gerät oder Modell wählen.“; a chosen machine retired meanwhile or no longer known,
-  „LG-042 ist inzwischen ausgemustert. Bitte die Auswahl ändern.“ (read through the retirement lock, data model).
+  „Bitte mindestens ein Gerät oder Modell wählen.“. A retired machine is never refused and no retirement lock is taken
+  (user, 2026-11-03); an unknown machine or machine model still rejects the whole command (CMD-AttachFile) – no command
+  removes either, so the form itself does not meet it.
 - **It is a set delta:** no version is sent. What is already attached is nothing to do – no event, no conflict.
 
 **„Lösen“ (CMD-DetachFile, technicians only – helpers see no control, G11):** on each entry of „Angehängt an“, machines
 and machine models, retired machines too. **One tap, no question (G10a):** back on the file details with „„MM Operations
 Manual“ von LG-042 gelöst.“ / „… von Medieval Madness gelöst.“ Detaching what is already detached lands the same.
 Nothing left: „Angehängt an“ says **„Nirgends angehängt“** (G7), the file stays a file, can be opened, stays in the AI index
-and counts on the form „KI“. Removing it is a different action (ST-121). A retired machine is detached with one tap too,
-although it cannot be attached again (RM-AttachmentChoice, CMD-AttachFile): a deliberately accepted small risk, since the
-file itself stays (user, 2026-11-02; G10a).
+and counts on the form „KI“. Removing it is a different action (ST-121). A retired machine is detached with one tap too
+(user, 2026-11-02; G10a); attaching it again undoes it, since retired machines are offered (user, 2026-11-03).
 
 **Removed file (AGG-File invariant):** it rejects both, „Diese Datei wurde schon entfernt.“
 
@@ -68,18 +69,13 @@ Scenario: Only what can be attached is offered
   Given "MM Operations Manual" is attached to "LG-042", and "LG-041" is retired
   When a team member opens „Anhängen“ on its file details
   Then „Geräte“ and „Modelle“ are offered in closed groups by machine category and technology, with nothing ticked
-  And neither "LG-042" nor "LG-041" is offered
+  And "LG-042" is not offered, and "LG-041" is offered as „LG-041 · Ausgemustert“ at the end of its group
   And when nothing is left to offer, the page says so and has no submit button
 
-Scenario Outline: A rejected attach attaches nothing and keeps the choice
-  Given "MM Operations Manual" is on the form „Anhängen“ with <what was chosen>
-  When the team member sends the form after <what happened>
-  Then it is rejected with „<reason>“ and nothing is attached
-
-  Examples:
-    | what was chosen          | what happened             | reason                                                     |
-    | nothing                  | choosing nothing          | Bitte mindestens ein Gerät oder Modell wählen.             |
-    | "LG-042" and "LG-050"    | "LG-042" was retired      | LG-042 ist inzwischen ausgemustert. Bitte die Auswahl ändern. |
+Scenario: A rejected attach attaches nothing and keeps the choice
+  Given "MM Operations Manual" is on the form „Anhängen“ with nothing chosen
+  When the team member sends the form
+  Then it is rejected with „Bitte mindestens ein Gerät oder Modell wählen.“ and nothing is attached
 
 Scenario: Attaching what is already attached changes nothing
   Given a team member has the form „Anhängen“ of "MM Operations Manual" open with "LG-050" offered
@@ -147,3 +143,4 @@ Scenario: A removal asked before a change asks again with the current list
 - Depends on ST-120 so that the first file attached to a second thing finds the machine columns of the AI index entry gone, and on ST-121 for the question in the rejected-removal scenario.
 - Two requests sent at the very same moment are covered by the command's integration test; the scenario "Attaching what is already attached …" is the sequence a test controls.
 - G27's grouped choice exists since ST-094; the choice here is one more use, with two parts, and ST-119 reuses it. Its folding and „Alle auswählen“ are tested where they were built.
+- **Revised 2026-11-03 (requirements engineer, `OPEN_QUESTIONS.md` row "ST-113, ST-119"):** files may be attached to retired machines everywhere. The choice offers them, the rejection „LG-042 ist inzwischen ausgemustert …“ and its example row are gone, and „A rejected attach …“ is a plain scenario with its title kept. Back to `review` because the scenarios changed.

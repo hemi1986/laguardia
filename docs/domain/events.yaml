@@ -678,7 +678,7 @@ commands:
     rules:
       - Files are visible to team members only, like photos
       - A title and a file category are required; one file at a time, at most 100 MB, any format
-      - Only registered machines that are not retired and existing machine models can be chosen
+      - Only registered machines, retired ones included, and existing machine models can be chosen (user, 2026-11-03)
       - The same content added twice is not recognised – it becomes two files
   - id: CMD-AttachFile
     aggregate: AGG-File
@@ -687,7 +687,7 @@ commands:
     produces: [EVT-FileAttached]
     description: Attaches an existing file to further machines and machine models, from its file details.
     rules:
-      - Only registered machines that are not retired and existing machine models can be chosen; what the file is already attached to is not offered and attaching it again changes nothing
+      - Only registered machines, retired ones included, and existing machine models can be chosen (user, 2026-11-03); what the file is already attached to is not offered and attaching it again changes nothing
       - Attaching starts no indexing and costs nothing – the AI index holds the file once, whatever it is attached to
   - id: CMD-DetachFile
     aggregate: AGG-File
@@ -1142,7 +1142,7 @@ read_models:
     name: Machines and machine models to attach a file to
     description: >-
       The choice on „Datei hinzufügen“ and „Anhängen“: „Geräte“ and „Modelle“ in folding groups by machine category and
-      technology (G27). Offers only machines that are not retired and only what the file is not attached to yet.
+      technology (G27). Offers retired machines too, as „LG-041 · Ausgemustert“ after the others (user, 2026-11-03), and only what the file is not attached to yet.
     fed_by: [EVT-MachineRegistered, EVT-MachineRetired, EVT-MachineDetailsCorrected, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-FileAttached, EVT-FileDetached]
     used_by: [ACT-TeamMember]
     fields: [Machines (museum number, machine model title), Machine models (title), Machine category, Technology, Chosen]
