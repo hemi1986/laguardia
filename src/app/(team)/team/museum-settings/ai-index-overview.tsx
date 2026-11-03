@@ -1,4 +1,5 @@
 import { Confirmation } from "@/components/ui/message";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
 import { teamMessages } from "@/platform/messages";
 import type { ShownAiIndexOverview } from "./ai-settings-data";
 import type { FailedFileRow } from "./retry-file-indexing-form";
@@ -25,23 +26,23 @@ export function AiIndexOverviewView({
     <div className="flex flex-col gap-2">
       <h3 className="font-medium">{texts.title}</h3>
       {retried && <Confirmation>{texts.retrying(retried)}</Confirmation>}
-      {empty ? (
-        <p>{texts.empty}</p>
-      ) : (
-        <p>
-          {texts.counts(overview.indexed, overview.waiting, overview.failed.length)}
-        </p>
-      )}
+      {empty ? <p>{texts.empty}</p> : <p>{texts.counts(overview.indexed, overview.waiting, overview.failed.length)}</p>}
       <p>{texts.cost(dollars.format(overview.cost))}</p>
     </div>
   );
 }
 
-/** The failed files' rows: „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“ – none while AI is off. */
+/**
+ * The failed files' rows: „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“, the title leading to the file
+ * details with the form „KI“ as its origin (ST-114) – none while AI is off.
+ */
 export function failedFileRows(overview: ShownAiIndexOverview | undefined): FailedFileRow[] {
   return (overview?.failed ?? []).map((file) => ({
     fileId: file.fileId,
     version: file.version,
-    text: texts.failedFile(file.owner, file.title, texts.failureReasons[file.reason]),
+    title: file.title,
+    href: fileDetailsAddress(file.fileId, "settings"),
+    before: texts.failedFile.before(file.owner),
+    after: texts.failedFile.after(texts.failureReasons[file.reason]),
   }));
 }

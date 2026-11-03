@@ -67,7 +67,8 @@ export const aiAssistanceTexts = {
       ].join(" · "),
     cost: (dollars: string) => `Kosten der KI-Erfassung bisher: ${dollars} $`,
     empty: "Noch keine Datei für die KI erfasst.",
-    failedFile: (owner: string, title: string, reason: string) => `${owner} · ${title} – ${reason}`,
+    /** „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“, the title being the link to the file details (ST-114). */
+    failedFile: { before: (owner: string) => `${owner} · `, after: (reason: string) => ` – ${reason}` },
     failureReasons: {
       "not readable": "Datei lässt sich nicht lesen",
       "format not indexed": "Dateiformat wird nicht erfasst",
@@ -79,6 +80,12 @@ export const aiAssistanceTexts = {
     retrying: (title: string) => `${title} wird erneut für die KI erfasst.`,
     /** The mark on the machine record's list of files (RM-MachineRecord). */
     unreadable: "Für die KI nicht lesbar",
+    /** The section on the file details (RM-FileDetails, ST-114) – how far the AI index got. */
+    fileState: {
+      indexed: "Für die KI erfasst",
+      waiting: "Wartet auf KI-Erfassung",
+      failed: (reason: string) => `Für die KI nicht lesbar: ${reason}`,
+    },
   },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
@@ -149,5 +156,6 @@ export const aiAssistanceErrors = {
   "ai-assessment-being-written": "Für diesen Defekt läuft schon eine KI-Einschätzung.",
   "ai-assessment-too-many-photos": "Bitte höchstens 5 Fotos mitschicken.",
   "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
-  "file-indexing-not-failed": "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",
+  "file-indexing-not-failed":
+    "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",
 } as const;

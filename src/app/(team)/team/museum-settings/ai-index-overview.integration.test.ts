@@ -111,6 +111,12 @@ async function machineRecord(museumNumber: string, viewer: Actor & { kind: "team
   return { record, html: renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber })) };
 }
 
+/**
+ * The words of the markup without its tags – a failed file's title is a link to its file details since ST-114, so the
+ * row's words are no longer one run of characters in the markup.
+ */
+const visibleText = (html: string) => html.replace(/<[^>]+>/g, "");
+
 /** The list item of a file on the machine record. */
 function fileItem(html: string, title: string): string {
   const at = html.indexOf(`>${title}</a>`);
@@ -192,8 +198,8 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
         version: 0,
       },
     ]);
-    expect(html).toContain("LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst");
-    expect(html).toContain("Eight Ball · Eight Ball Schematic – OpenRouter war nicht erreichbar");
+    expect(visibleText(html)).toContain("LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst");
+    expect(visibleText(html)).toContain("Eight Ball · Eight Ball Schematic – OpenRouter war nicht erreichbar");
     expect(html.match(/Erneut versuchen/g)).toHaveLength(2);
   });
 
@@ -286,7 +292,7 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
 
     expect(started.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
     const { html } = await settingsPage();
-    expect(html).toContain("Eight Ball · Eight Ball Manual – Erfassung abgebrochen");
+    expect(visibleText(html)).toContain("Eight Ball · Eight Ball Manual – Erfassung abgebrochen");
     expect(html).toContain("Erneut versuchen");
 
     // No later run indexes it again until a technician taps „Erneut versuchen“.

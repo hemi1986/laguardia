@@ -5,6 +5,7 @@ import { Section } from "@/components/ui/section";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
 import { fileCategories } from "@/modules/collection";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, ShownEndedRepairHistoryEntry } from "./machine-record-data";
@@ -195,6 +196,13 @@ export function MachineRecordView({
                           <span className="text-muted-foreground"> · {teamMessages.aiIndex.unreadable}</span>
                         )}
                       </span>
+                      <Link
+                        href={fileDetailsAddress(file.id, { machine: record.museumNumber })}
+                        aria-label={texts.fileDetailsLabel(file.title)}
+                        className={buttonVariants({ variant: "outline" })}
+                      >
+                        {texts.fileDetails}
+                      </Link>
                       {/* A way to the question, so the shape of any other secondary button – not red (G30). */}
                       {actions.removeFile && (
                         <Link
