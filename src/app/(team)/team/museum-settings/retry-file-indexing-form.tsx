@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { VersionField } from "@/app/_actions/form-parts";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,16 @@ import type { RetryFileIndexingState } from "./retry-file-indexing-definition";
 const { aiIndex: texts } = teamMessages;
 
 /** A failed file as its row shows it – the words already put together on the server. */
-export type FailedFileRow = { fileId: string; version: number; text: string };
+export type FailedFileRow = {
+  fileId: string;
+  version: number;
+  title: string;
+  /** The file details, reached from here (ST-114). */
+  href: string;
+  /** The words before and after the title. */
+  before: string;
+  after: string;
+};
 
 /**
  * The failed files of the overview „KI-Erfassung“, each with „Erneut versuchen“ (ST-109): one tap posts the file and
@@ -36,7 +46,13 @@ export function FailedFiles({
         <ul className="flex flex-col gap-2">
           {failed.map((file) => (
             <li key={file.fileId} className="flex flex-col gap-1">
-              <span>{file.text}</span>
+              <span>
+                {file.before}
+                <Link href={file.href} className="underline underline-offset-4">
+                  {file.title}
+                </Link>
+                {file.after}
+              </span>
               <form action={submit}>
                 <input type="hidden" name="fileId" value={file.fileId} />
                 <VersionField version={file.version} />

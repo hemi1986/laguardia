@@ -3,7 +3,13 @@ import type { FormFields } from "@/app/_actions/form-action";
 import { versionSeen } from "@/app/_actions/version";
 
 /** The form's own fields – only these are read and echoed after a rejection (ST-073). */
-export const legalTextsFormFields = ["version", "privacyNoticeDe", "privacyNoticeEn", "imprintDe", "imprintEn"] as const;
+export const legalTextsFormFields = [
+  "version",
+  "privacyNoticeDe",
+  "privacyNoticeEn",
+  "imprintDe",
+  "imprintEn",
+] as const;
 
 export type LegalTextsFormField = (typeof legalTextsFormFields)[number];
 

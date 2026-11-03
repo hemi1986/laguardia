@@ -1,7 +1,7 @@
 import { entriesOf, isId, lastCommandBy, readJournal, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
 import type { FileOwner, IndexingFailureReason } from "./ai-index-entry";
-import { aiIndexStatesOfFiles } from "./ai-index-entries";
+import { aiIndexStatesOfFiles, type AiIndexStateOfFile } from "./ai-index-entries";
 import { aiState, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
 
@@ -99,4 +99,20 @@ export async function fileIndexingRetriedBy(
   }
   const file = await fileForIndexing(db, fileId);
   return file && { title: file.title };
+}
+
+/**
+ * Where one file stands in the AI index (RM-FileDetails, ST-114): the section „KI-Erfassung“ of its details – none while
+ * AI is off (G37). The same answer as the overview and the machine record give, for the current embedding model; a file
+ * without an entry is waiting. Reading it starts no run.
+ */
+export async function aiIndexStateOfFile(
+  db: Database,
+  dependencies: Pick<AiDependencies, "encryptionKey">,
+  fileId: string,
+): Promise<AiIndexStateOfFile | undefined> {
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return undefined;
+  const stateOf = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, [fileId]);
+  return stateOf(fileId);
 }

@@ -18,11 +18,13 @@ export {
 export { runAiWork } from "./ai-work";
 export {
   aiIndexOverview,
+  aiIndexStateOfFile,
   fileIndexingRetriedBy,
   filesTheAiCannotRead,
   type AiIndexOverview,
   type FailedFile,
 } from "./ai-index-overview";
+export type { AiIndexStateOfFile } from "./ai-index-entries";
 export type {
   FileOwner,
   IndexingFailureReason,

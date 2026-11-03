@@ -140,7 +140,38 @@ export const collectionTexts = {
     /** Next to each file, technicians only (ST-038) – leads to the question before removing it (G10b). */
     removeFile: "Entfernen",
     removeFileLabel: (title: string) => `„${title}“ entfernen`,
+    /** Next to each file, the whole team (ST-114, G18) – leads to the file details. */
+    fileDetails: "Details",
+    fileDetailsLabel: (title: string) => `Details zu „${title}“`,
     fileRemoved: (title: string) => `„${title}“ entfernt.`,
+  },
+  /** The file details (RM-FileDetails, ST-114, G18): one file's page – what it is, what it is attached to, how far the AI index got. */
+  fileDetails: {
+    /** „Handbuch · PDF · 12,4 MB“ (G13). */
+    head: (category: string, mediaType: string, size: string) => `${category} · ${mediaType} · ${size}`,
+    mediaTypes: {
+      pdf: "PDF",
+      png: "PNG",
+      jpeg: "JPEG",
+      webp: "WebP",
+      markdown: "Markdown",
+      text: "Text",
+      video: "Video",
+      audio: "Audio",
+      other: "Anderes Format",
+    },
+    addedBy: (name: string, date: string) => `Hinzugefügt von ${name} am ${date}`,
+    open: "Datei öffnen",
+    attachedTo: "Angehängt an",
+    machine: (museumNumber: string, machineModelTitle: string) => `${museumNumber} · ${machineModelTitle}`,
+    retiredMachine: (museumNumber: string) => `${museumNumber} · Ausgemustert`,
+    machineModel: (title: string) => `Alle Geräte des Modells ${title}`,
+    /** Only until a file can be attached to nothing (ST-115) – a file has at least one attachment before. */
+    nowhere: "Nirgends angehängt",
+    /** The way back, by where the person came from (G17, closed set of origins). */
+    backToMachine: "Zurück zum Gerät",
+    backToSettings: "Zurück zu den Einstellungen",
+    backToMachines: "Zurück zu den Geräten",
   },
   /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
   fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },

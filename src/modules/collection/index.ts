@@ -23,6 +23,14 @@ export {
   type FileOfMachine,
   type MachineFile,
 } from "./files";
+export {
+  fileDetails,
+  fileMediaTypeOf,
+  fileMediaTypes,
+  type FileAttachedTo,
+  type FileDetails,
+  type FileMediaType,
+} from "./file-details";
 export { removeFileCommand } from "./remove-file-command";
 export { mayRemoveFiles, removeFileRefusal } from "./remove-file";
 export type { RemoveFileError, RemoveFileInput } from "./remove-file";

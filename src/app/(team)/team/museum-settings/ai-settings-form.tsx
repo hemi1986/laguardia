@@ -100,38 +100,32 @@ export function AiSettingsFormContent({
     // What was sent, else what was chosen before the warning, else the saved model (ST-110).
     const value = state ? state.values[part] : (chosen[part] ?? model.savedId ?? "");
     return (
-    <Field data-invalid={invalid === part}>
-      <FieldLabel htmlFor={part}>{label}</FieldLabel>
-      {model.choose === "typed" ? (
-        <Input
-          id={part}
-          name={part}
-          defaultValue={value}
-          key={`${part}-${kept}`}
-          placeholder={part === "chatModel" ? "google/gemini-2.5-flash" : "google/gemini-embedding-2"}
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          {...fieldProps(part)}
-        />
-      ) : (
-        <NativeSelect
-          id={part}
-          name={part}
-          defaultValue={value}
-          key={`${part}-${kept}`}
-          {...fieldProps(part)}
-        >
-          <option value="">{texts.chooseModel}</option>
-          {model.choose.map((option) => (
-            <option key={option.id} value={option.id} disabled={!option.fits}>
-              {option.entry}
-            </option>
-          ))}
-        </NativeSelect>
-      )}
-      {at(part)}
-    </Field>
+      <Field data-invalid={invalid === part}>
+        <FieldLabel htmlFor={part}>{label}</FieldLabel>
+        {model.choose === "typed" ? (
+          <Input
+            id={part}
+            name={part}
+            defaultValue={value}
+            key={`${part}-${kept}`}
+            placeholder={part === "chatModel" ? "google/gemini-2.5-flash" : "google/gemini-embedding-2"}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            {...fieldProps(part)}
+          />
+        ) : (
+          <NativeSelect id={part} name={part} defaultValue={value} key={`${part}-${kept}`} {...fieldProps(part)}>
+            <option value="">{texts.chooseModel}</option>
+            {model.choose.map((option) => (
+              <option key={option.id} value={option.id} disabled={!option.fits}>
+                {option.entry}
+              </option>
+            ))}
+          </NativeSelect>
+        )}
+        {at(part)}
+      </Field>
     );
   };
 
