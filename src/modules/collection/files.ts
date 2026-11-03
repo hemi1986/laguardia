@@ -217,12 +217,13 @@ function fileForIndexingOf(row: {
 
 /** The files that are not removed – what the AI index can hold (ST-106), in the order they were added. */
 export async function filesForIndexing(db: Database): Promise<FileForIndexing[]> {
+  // One row per file: the first attachment is the one the AI index entry copies (see `FileOwnerForAi`).
   const rows = await db
-    .select(fileForIndexingColumns)
+    .selectDistinctOn([file.id, file.addedAt], fileForIndexingColumns)
     .from(file)
     .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
     .where(isNull(file.removedAt))
-    .orderBy(asc(file.addedAt), asc(fileAttachment.position));
+    .orderBy(asc(file.addedAt), asc(file.id), asc(fileAttachment.position));
   return rows.map(fileForIndexingOf);
 }
 

@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import sharp from "sharp";
-import { beforeAll, describe, expect, it } from "vitest";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { aiIndexOverview, fileIndexingWork } from "@/modules/ai-assistance";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { addFileCommand, filesForIndexing, machineModelOfMachineForAi, machineRecord } from "@/modules/collection";
 import { formRunner } from "@/app/_actions/form-runner";
 import { fixedClock } from "@/platform/clock";
 import { journalOf, lastCommandBy, type CommittedEvent } from "@/platform/command";
 import { memoryStorage } from "@/platform/storage";
-import { testDatabase } from "@/test-support/database";
+import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
 import { machinesOfOneModel } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -22,13 +25,23 @@ import { loadMachineConfirmation } from "./machine-confirmation";
  * runner – the file added and attached in one step, its original file name stored, the AI work started by what the
  * command committed. Against real PostgreSQL and the in-memory storage adapter.
  */
-const db = testDatabase();
+// A database of its own: the test turns AI on, which is settings for the whole database.
+const isolated = isolatedTestDatabase("add_file_on_machine_record");
+let db: NodePgDatabase;
+// One store for the forms and the AI work, as in the running application.
+const storage = memoryStorage();
 const anna = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
+const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const at = "2026-11-02T10:00:00Z";
 
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock: fixedClock(at), technician: tom });
+
 beforeAll(async () => {
-  await anExistingTeamMember(db, anna);
+  db = await isolated.reset();
+  for (const member of [anna, tom]) await anExistingTeamMember(db, member);
+  await scenario.turnAiOn();
 });
+afterAll(() => isolated.close());
 
 async function aPhonePhoto(name: string): Promise<File> {
   const bytes = await sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 200, g: 120, b: 40 } } })
@@ -42,13 +55,12 @@ const forms = [
   {
     form: "„Datei anhängen“",
     send: async (machine: { machineId: string; machineModelId: string }, name: string, committed: CommittedEvent[][]) => {
-      const storage = memoryStorage();
       const issued = await grantUploadAddress(
         { db, storage, clock: fixedClock(at), newId: randomUUID },
-        { issuedTo: anna.teamMemberId, size: 3, contentType: "application/pdf" },
+        { issuedTo: anna.teamMemberId, size: 16, contentType: "text/plain" },
       );
       if (!issued.ok) throw new Error(issued.error);
-      await storage.upload(issued.address, new Uint8Array(3), "application/pdf", new Date(at));
+      await storage.upload(issued.address, new TextEncoder().encode("Replace the coil"), "text/plain", new Date(at));
       const fileIds: string[] = [];
       const action = formRunner({
         currentPerson: async () => anna,
@@ -84,7 +96,7 @@ const forms = [
         db,
         clock: fixedClock(at),
         newId: randomUUID,
-        storage: memoryStorage(),
+        storage,
         afterCommit: (events) => void committed.push([...events]),
       })(
         addFileCommand,
@@ -135,6 +147,10 @@ describe("adding a file on the machine record", () => {
       expect(committed.flat().some((event) => event.type === "EVT-FileAdded")).toBe(true);
       expect(committed.some((events) => makesAiWork(events))).toBe(true);
       expect((await filesForIndexing(db)).map((file) => file.id)).toContain(fileId);
+      // The run it starts indexes the file: in a database of its own, one more file is indexed and none waits.
+      expect(await aiIndexOverview(db, scenario.ai())).toMatchObject({ indexed: index, waiting: 1 });
+      await scenario.run({ kinds: [fileIndexingWork] });
+      expect(await aiIndexOverview(db, scenario.ai())).toMatchObject({ indexed: index + 1, waiting: 0, failed: [] });
     }
   });
 });

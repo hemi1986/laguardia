@@ -131,7 +131,7 @@ export const sharedErrors = {
   /** Collection, Repair and Maintenance. */
   "title-required": "Bitte einen Titel angeben.",
   "unknown-machine": "Dieses Gerät gibt es nicht.",
-  "unknown-machine-model": "Dieses Gerätemodell gibt es nicht.",
+  "unknown-machine-model": "Dieses Modell gibt es nicht.",
   "technology-does-not-fit-machine-category": "Diese Technik passt nicht zu dieser Kategorie.",
   "machine-retired": "Dieses Gerät ist ausgemustert – daran lässt sich nichts mehr ändern oder melden.",
   /** The command layer. */
