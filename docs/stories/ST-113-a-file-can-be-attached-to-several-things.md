@@ -9,7 +9,7 @@ risk: high
 events: [EVT-FileAdded, EVT-FileAttached]
 depends_on: [ST-037, ST-054, ST-085, ST-106]
 labels: [feature:files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
