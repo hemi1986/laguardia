@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAdded, EVT-FileAttached, EVT-FileIndexedForAi]
 depends_on: [ST-115, ST-116, ST-117]
 labels: [feature:files, ui]
-status: review
+status: ready
 ---
 
 ## Story
@@ -42,7 +42,7 @@ are stored together or not at all.
 
 **Rejections (G8, G8a, G27):** no title, „Bitte einen Titel angeben.“; no file category, „Bitte eine Dateikategorie wählen.“.
 A retired machine is never refused and no retirement lock is taken (user, 2026-11-03); an unknown machine or machine model
-still rejects the whole command (CMD-AddFile) – no command removes either, so the form itself does not meet it. Each
+still rejects the whole command (CMD-AddFile) – no command removes either, so the form itself does not meet it; it is a forged request, tested at the command only (ST-113). Each
 rejection is followed by what happened to the chosen file, in ST-037's wording: „Die Datei muss erneut ausgewählt werden.“ with an
 empty chooser, or „Die gewählte Datei ist noch angehängt: <name>“. Above 100 MB: „Dateien dürfen höchstens 100 MB groß
 sein.“ alone (G8a's exception). A pending upload that is gone behaves as in ST-037.
@@ -71,10 +71,10 @@ Scenario: A helper adds the first file, attached to nothing
   And „Dateien“ lists it
 
 Scenario: Adding and attaching happen in one step
-  Given the machine "LG-042" and the machine model "Eight Ball"
-  When a team member adds a file with both chosen under „Anhängen an“
-  Then the machine records of "LG-042" and of every machine of "Eight Ball" show it
-  And the journal records the file added and attached to both in one step
+  Given the machine "LG-042", the retired machine "LG-041" and the machine model "Eight Ball"
+  When a team member adds a file with all three chosen under „Anhängen an“
+  Then the machine records of "LG-042", of "LG-041" and of every machine of "Eight Ball" show it
+  And the journal records the file added and attached to all three in one step
 
 Scenario: The title is filled in from the file name
   Given a team member's browser runs JavaScript and „Titel“ is empty
@@ -132,7 +132,7 @@ Scenario: Someone not logged in cannot add a file
 - none
 
 ## Notes
-- From ST-085's code review (`docs/reviews/ST-085-code-review.md`, #9, noted in ST-037): check the form's own input – title, file category, chosen things – before taking the uploaded content, which is deleted when a command rejects. The check that the chosen machines and machine models exist sits in the command (no retirement lock), so its rejection does delete the content: the sentence „… erneut ausgewählt werden“ is what the form says then.
+- From ST-085's code review (`docs/reviews/ST-085-code-review.md`, #9, noted in ST-037): check the form's own input – title, file category, chosen things – before taking the uploaded content, which is deleted when a command rejects. The check that the chosen machines and machine models exist sits in the command (no retirement lock). Only a forged request can fail it, so it is a command-level test (ST-113), not a form scenario.
 - Definition of done: `/security-review` – a name typed by a browser reaches a response header and a page, hostile names included (quotes, CR/LF, path parts).
 - **Done scenario this story supersedes** (`docs/engineering/conventions.md`, *A scenario of a done story that a later story supersedes*): ST-117 "No file yet says what to do" quotes the interim sentence this story replaces, so it goes into `docs/stories/superseded-scenarios.json` and its test goes with this story's change. The empty overview is covered by "A helper adds the first file, attached to nothing".
 - Depends on ST-116 because the scenario "The original file name is kept …" corrects a title first.
