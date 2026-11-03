@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAttached, EVT-FileDetached]
 depends_on: [ST-114, ST-094, ST-120, ST-121]
 labels: [feature:files, ui]
-status: review
+status: ready
 ---
 
 ## Story
@@ -36,7 +36,7 @@ section „Angehängt an“ of the page ST-114 owns. The file details keep their
 - **Rejections (G8; the whole command, nothing attached; choices kept, groups with a choice open – G27):** nothing chosen,
   „Bitte mindestens ein Gerät oder Modell wählen.“. A retired machine is never refused and no retirement lock is taken
   (user, 2026-11-03); an unknown machine or machine model still rejects the whole command (CMD-AttachFile) – no command
-  removes either, so the form itself does not meet it.
+  removes either, so the form itself does not meet it; it is a forged request, tested at the command only.
 - **It is a set delta:** no version is sent. What is already attached is nothing to do – no event, no conflict.
 
 **„Lösen“ (CMD-DetachFile, technicians only – helpers see no control, G11):** on each entry of „Angehängt an“, machines
@@ -60,17 +60,23 @@ assessments and their references stay as they are; a reference still opens a fil
 
 Scenario: A helper attaches a file to several machines and machine models
   Given "MM Operations Manual" is attached to the machine model "Medieval Madness"
-  When a helper chooses the machine "LG-050" and the machine model "Eight Ball" under „Anhängen“ on its file details and sends the form
-  Then the machine records of "LG-050" and of every machine of "Eight Ball" show it, and those of "Medieval Madness" still do
-  And „Angehängt an“ lists all three
-  And the helper is on the file details with the confirmation „„MM Operations Manual“ hängt jetzt an 1 Gerät und 2 Modellen.“
+  And "LG-041" is retired
+  When a helper chooses the machines "LG-050" and "LG-041" and the machine model "Eight Ball" under „Anhängen“ on its file details and sends the form
+  Then the machine records of "LG-050", of "LG-041" and of every machine of "Eight Ball" show it, and those of "Medieval Madness" still do
+  And „Angehängt an“ lists all four, "LG-041" as „LG-041 · Ausgemustert“
+  And the helper is on the file details with the confirmation „„MM Operations Manual“ hängt jetzt an 2 Geräten und 2 Modellen.“
 
 Scenario: Only what can be attached is offered
   Given "MM Operations Manual" is attached to "LG-042", and "LG-041" is retired
+  And the active "LG-050" has the same machine category and technology as "LG-041"
   When a team member opens „Anhängen“ on its file details
   Then „Geräte“ and „Modelle“ are offered in closed groups by machine category and technology, with nothing ticked
-  And "LG-042" is not offered, and "LG-041" is offered as „LG-041 · Ausgemustert“ at the end of its group
-  And when nothing is left to offer, the page says so and has no submit button
+  And "LG-042" is not offered, and "LG-050" is offered before „LG-041 · Ausgemustert“, which closes its group even though its museum number is lower
+
+Scenario: Nothing left to offer says so
+  Given "MM Operations Manual" is attached to every machine and every machine model
+  When a team member opens „Anhängen“ on its file details
+  Then the page says that there is nothing left to attach and has no submit button
 
 Scenario: A rejected attach attaches nothing and keeps the choice
   Given "MM Operations Manual" is on the form „Anhängen“ with nothing chosen
