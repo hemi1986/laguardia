@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileRemoved, EVT-FileLeftAiIndex]
 depends_on: [ST-114, ST-038]
 labels: [feature:files, ui]
-status: ready
+status: in-progress
 ---
 
 ## Story

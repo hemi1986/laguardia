@@ -4,15 +4,20 @@
 
 **Progress: 81 of 87 domain stories done** · scenarios 756 of 813
 
-**118 stories** · In Progress: 0 · Ready: 6 · In Review: 0 · Draft: 0 · Done: 101 · Superseded: 11
+**118 stories** · In Progress: 1 · Ready: 5 · In Review: 0 · Draft: 0 · Done: 101 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-121](ST-121-remove-a-file-on-its-details-page.md) | Remove a file on its details page | story | Collection | should | M | medium | ST-114, ST-038 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-121](ST-121-remove-a-file-on-its-details-page.md) | Remove a file on its details page | story | Collection | should | M | medium | ST-114, ST-038 |
 | [ST-115](ST-115-attach-and-detach-from-file-details.md) | Attach a file to further machines and machine models, and detach it | story | Collection | should | L | medium | ST-114, ST-094, ST-120, ST-121 |
 | [ST-116](ST-116-correct-title-and-file-category.md) | Correct a file's title and file category | story | Collection | should | M | low | ST-114 |
 | [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
