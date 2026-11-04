@@ -172,8 +172,11 @@ async function overviewPage({ fileRemoved }: { fileRemoved?: string } = {}) {
 }
 
 /** The file details as a team member opens them – params are the address's query. */
-async function detailsPage(fileId: string, { params = {} }: { params?: Record<string, string> } = {}) {
-  const file = await loadFileDetails(db, fileId, { params, viewer: viewerOf(tom), ai: ai() });
+async function detailsPage(
+  fileId: string,
+  { params = {}, person = tom }: { params?: Record<string, string>; person?: Viewer } = {},
+) {
+  const file = await loadFileDetails(db, fileId, { params, viewer: viewerOf(person), ai: ai() });
   if (!file) return "";
   return renderToStaticMarkup(createElement(FileDetailsView, { file, retry: async () => null }));
 }
@@ -338,6 +341,24 @@ describe("the question before removing a file (ST-121)", () => {
     expect(await action(null, post({ version: String(question.version) }))).toBeNull();
     expect(landed).toBe(`/team/machines?fileRemoved=${manual}`);
     expect(await overviewPage({ fileRemoved: manual })).toContain("„MM Operations Manual“ entfernt.");
+  });
+
+  it("ST-121: A helper cannot remove a file", async () => {
+    const machineId = await aMachine("LG-042");
+    const manual = await aFileAttachedTo({ machines: [machineId] }, "MM Operations Manual");
+
+    const details = await detailsPage(manual, { person: ben });
+    expect(details).toContain("MM Operations Manual");
+    expect(details).not.toContain("Datei entfernen");
+    expect(details).not.toContain("/details/entfernen");
+
+    // Sent anyway: the command's own authorization refuses it and nothing changes. The question page itself is
+    // technicians-only – its shared `requireTechnician` guard is shown by the browser test.
+    const attempt = await removeOnDetails(manual, { person: ben });
+    expect(await attempt.send()).toMatchObject({ error: "not-authorized" });
+    expect(attempt.done).toEqual([]);
+    expect(await fileDetails(db, manual)).toBeDefined();
+    expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).toContain("MM Operations Manual");
   });
 });
 
