@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, isId, replaces, type Database } from "@/platform/command";
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { aggregateStore, isId, lastCommandBy, replaces, type Database } from "@/platform/command";
 import {
   fileCategories,
   type AddFileInput,
@@ -9,6 +9,7 @@ import {
   type FileState,
 } from "./add-file";
 import { fileRemovalLock } from "./file-removal-lock";
+import { fileRemovedIn } from "./in-command";
 import { opensInBrowser } from "./open-file";
 import { file, fileAttachment, machine, machineModel } from "./schema";
 
@@ -68,7 +69,9 @@ export async function addingFacts(tx: Database, input: AddFileInput): Promise<Ad
       ? tx.select({ id: machineModel.id }).from(machineModel).where(inArray(machineModel.id, machineModelIds))
       : [],
   ]);
-  return { everythingExists: foundMachines.length === machineIds.length && foundModels.length === machineModelIds.length };
+  return {
+    everythingExists: foundMachines.length === machineIds.length && foundModels.length === machineModelIds.length,
+  };
 }
 
 /** A file as the machine record lists it (RM-MachineRecord, ST-037). */
@@ -103,7 +106,12 @@ export async function filesOfMachine(
     .orderBy(asc(file.title), asc(file.addedAt));
   // A file attached to both shows once, with the mark of its machine model: every machine of the model shows it.
   return rows
-    .map((row) => ({ id: row.id, title: row.title, fileCategory: row.fileCategory, ofMachineModel: row.ofMachineModel }))
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      fileCategory: row.fileCategory,
+      ofMachineModel: row.ofMachineModel,
+    }))
     .sort((a, b) => fileCategories.indexOf(a.fileCategory) - fileCategories.indexOf(b.fileCategory));
 }
 
@@ -167,6 +175,25 @@ export async function machineFile(
       ...(row.ofMachineModel && { machineModel: owner.machineModelTitle }),
     }
   );
+}
+
+/**
+ * The file a technician just removed (ST-121, G3): its title, only when the latest step on the file was their own
+ * CMD-RemoveFile and the file is really removed – never from the address alone.
+ */
+export async function fileRemovedBy(
+  db: Database,
+  fileId: string,
+  teamMemberId: string,
+): Promise<{ title: string } | undefined> {
+  if (!isId(fileId)) return undefined;
+  const command = await lastCommandBy(db, { aggregateId: fileId }, teamMemberId);
+  if (!command || !fileRemovedIn(command, fileId)) return undefined;
+  const [row] = await db
+    .select({ title: file.title })
+    .from(file)
+    .where(and(eq(file.id, fileId), isNotNull(file.removedAt)));
+  return row && { title: row.title };
 }
 
 /** The attachments to a machine or to its machine model – what makes a file show on the machine's record. */

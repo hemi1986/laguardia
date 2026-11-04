@@ -23,6 +23,11 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadMachineConfirmation } from "../../../../machines/[museumNumber]/machine-confirmation";
 import { loadMachineRecord } from "../../../../machines/[museumNumber]/machine-record-data";
 import { MachineRecordView } from "../../../../machines/[museumNumber]/machine-record";
+import { loadAiSettings } from "../../../../museum-settings/ai-settings-data";
+import { AiSettingsSection } from "../../../../museum-settings/ai-settings-section";
+import { loadFileDetails } from "../file-details-data";
+import { FileDetailsView } from "../file-details-view";
+import { removalLanding, removeFileAddress, type FileOrigin } from "../file-origin";
 import { loadRemoveFile } from "./remove-file-data";
 import { removeFileForm } from "./remove-file-form";
 import { RemoveFileView } from "./remove-file-view";
@@ -147,6 +152,22 @@ async function machineRecordPage(museumNumber: string, { fileRemoved }: { fileRe
   };
 }
 
+/** The file details as a team member opens them – params are the address's query. */
+async function detailsPage(fileId: string, { params = {} }: { params?: Record<string, string> } = {}) {
+  const file = await loadFileDetails(db, fileId, { params, viewer: viewerOf(tom), ai: ai() });
+  if (!file) return "";
+  return renderToStaticMarkup(createElement(FileDetailsView, { file, retry: async () => null }));
+}
+
+/** „Einstellungen“ as Tom opens it. */
+async function settingsPage(params: Record<string, string> = {}) {
+  const data = await loadAiSettings(db, params, { dependencies: ai(), viewer: tom.teamMemberId });
+  return renderToStaticMarkup(createElement(AiSettingsSection, data));
+}
+
+/** The query of an address a page offered – what the person's next request carries. */
+const queryOf = (href: string) => Object.fromEntries(new URL(href, "http://museum.test").searchParams);
+
 /** The address of the link with this text in the markup. */
 function hrefOf(html: string, linkText: string): string {
   const at = html.indexOf(`>${linkText}</a>`);
@@ -215,5 +236,68 @@ describe("the question before removing a file (ST-121)", () => {
     });
     const { html } = await machineRecordPage("LG-042", { fileRemoved: wrong });
     expect(html).toContain("„MM Manual (wrong edition)“ entfernt.");
+  });
+
+  it("ST-121: A removal lands where the person came from", async () => {
+    await turnAiOn();
+    const machineId = await aMachine("LG-042");
+    const video = () => new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]);
+    const examples: {
+      title: string;
+      origin: FileOrigin;
+      place: () => Promise<string>;
+      link: string;
+      landing: (fileId: string) => string;
+    }[] = [
+      {
+        title: "Attract mode.mp4",
+        origin: { kind: "machine", museumNumber: "LG-042" },
+        place: async () => (await machineRecordPage("LG-042")).html,
+        link: "Details",
+        landing: (fileId) => `/team/machines/LG-042?fileRemoved=${fileId}`,
+      },
+      {
+        title: "Attract mode (Einstellungen).mp4",
+        origin: { kind: "settings" },
+        place: () => settingsPage(),
+        link: "Attract mode (Einstellungen).mp4",
+        landing: (fileId) => `/team/museum-settings?fileRemoved=${fileId}`,
+      },
+    ];
+
+    for (const example of examples) {
+      const fileId = await scenario.attachFile(machineId, {
+        title: example.title,
+        bytes: video(),
+        contentType: "video/mp4",
+      });
+      await run();
+      const detailsAddress = hrefOf(await example.place(), example.link);
+      const details = await detailsPage(fileId, { params: queryOf(detailsAddress) });
+      const questionAddress = hrefOf(details, "Datei entfernen");
+      const question = (await loadRemoveFile(db, fileId, {
+        params: queryOf(questionAddress),
+        viewer: viewerOf(tom),
+      }))!;
+      expect(questionAddress).toBe(removeFileAddress(fileId, example.origin));
+      expect(question.origin).toEqual(example.origin);
+      expect(question.back).toBe(detailsAddress);
+
+      let landed: string | undefined;
+      const action = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
+        removeFileCommandWithAiIndex,
+        removeFileForm(fileId, async () => {
+          landed = removalLanding(question.origin, fileId);
+        }),
+      );
+      expect(await action(null, post({ version: String(question.version) }))).toBeNull();
+      expect(landed).toBe(example.landing(fileId));
+
+      const landing =
+        example.origin.kind === "settings"
+          ? await settingsPage({ fileRemoved: fileId })
+          : (await machineRecordPage("LG-042", { fileRemoved: fileId })).html;
+      expect(landing).toContain(`„${example.title}“ entfernt.`);
+    }
   });
 });

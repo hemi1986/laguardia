@@ -5,14 +5,14 @@ import {
   type AiDependencies,
   type IndexingFailureReason,
 } from "@/modules/ai-assistance";
-import { fileDetails, type FileAttachedTo, type FileMediaType } from "@/modules/collection";
+import { fileDetails, mayRemoveFiles, type FileAttachedTo, type FileMediaType } from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
 import type { Database } from "@/platform/command";
 import { isId } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { calendarDate, formatCalendarDate } from "@/platform/time";
 import { fileSizeText } from "./file-size";
-import { originOf, wayBack, type FileOrigin } from "./file-origin";
+import { originOf, removeFileAddress, wayBack, type FileOrigin } from "./file-origin";
 
 /** Section „KI-Erfassung“ (RM-FileDetails, G37): none while AI is off. */
 export type FileAiState =
@@ -30,6 +30,8 @@ export type FileDetailsData = {
   ai: FileAiState | undefined;
   /** „Erneut versuchen“ is offered – only a technician, only on a failed file (AI is on then). */
   retryOffered: boolean;
+  /** „Datei entfernen“ is offered – technicians only (G11), with the origin kept (ST-121). */
+  removalHref: string | undefined;
   /** The title of the file the viewer just tried again (G3) – from the journal, never from the address alone. */
   retried: string | undefined;
   /** The origin the address named, checked – what the actions hand on. */
@@ -75,6 +77,7 @@ export async function loadFileDetails(
     attachedTo: details.attachedTo,
     ai: aiState,
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",
+    removalHref: mayRemoveFiles(viewer) ? removeFileAddress(details.id, origin) : undefined,
     retried: retried?.title,
     origin,
     back: wayBack(origin),

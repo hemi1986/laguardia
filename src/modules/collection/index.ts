@@ -12,6 +12,7 @@ export type {
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
+  fileRemovedBy,
   filesForAiReferences,
   filesForIndexing,
   filesOfMachineAndModelForAi,
