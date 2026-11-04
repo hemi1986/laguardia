@@ -316,6 +316,13 @@
       "when": 1793727039546,
       "tag": "0044_file_owner_dropped",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793803573801,
+      "tag": "0045_ai_index_entry_owner_dropped",
+      "breakpoints": true
     }
   ]
 }

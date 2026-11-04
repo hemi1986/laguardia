@@ -26,7 +26,6 @@ export {
 } from "./ai-index-overview";
 export type { AiIndexStateOfFile } from "./ai-index-entries";
 export type {
-  FileOwner,
   IndexingFailureReason,
   RetryFileIndexingError,
   RetryFileIndexingInput,

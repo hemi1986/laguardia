@@ -156,6 +156,12 @@ export type WriteAiAssessmentInput = {
   probableCauses: string[];
   whatToCheckFirst: string[];
   references: AiAssessmentReference[];
+  /**
+   * The files attached to the defect's machine or its machine model, read once when the writing began (ST-120) – what
+   * references are checked against. Only the system runs the command, so the list passes through its input instead of
+   * being read again when the result is stored.
+   */
+  files: readonly string[];
   filesSearched: string[];
   embeddingModel: string;
   cost: number;
@@ -173,24 +179,20 @@ export type AiAssessmentWritten = {
   cost: number;
 };
 
-/** What CMD-WriteAiAssessment reads to keep its reference invariant: the files of the defect's machine and model. */
-export type WriteAiAssessmentFacts = { files: readonly string[] };
-
 /**
  * CMD-WriteAiAssessment (ST-107): the AI assessment still requested takes the chat model's answer. A late result – the
  * assessment was failed as broken off meanwhile – records nothing (rule, version check; HS-33). The written text is
  * free text and stays out of the journal; the event names the models and the cost. The command enforces the aggregate's
- * invariant itself: a reference to a file outside the defect's machine and its machine model is dropped, and every
- * reference is kept once.
+ * invariant itself: a reference to a file that was not attached to the defect's machine or its machine model when the
+ * writing began is dropped – a file detached meanwhile keeps its reference (ST-120) – and every reference is kept once.
  */
 export function writeAiAssessment(
   state: AiAssessmentState,
   input: WriteAiAssessmentInput,
   { clock }: DecisionContext,
-  facts: WriteAiAssessmentFacts,
 ): Decision<AiAssessmentState, AiAssessmentWritten, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
-  const allowed = new Set(facts.files);
+  const allowed = new Set(input.files);
   const references = input.references
     .filter((reference) => allowed.has(reference.fileId))
     .filter(

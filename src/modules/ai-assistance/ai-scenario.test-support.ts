@@ -103,7 +103,10 @@ export function aiScenario({
     if (!removed.ok) throw new Error(removed.error);
   }
 
-  /** A file added through CMD-AddFile and attached to a machine or to its machine model, its content already in the store. */
+  /**
+   * A file added through CMD-AddFile and attached to a machine, to its machine model, to both or to nothing, its content
+   * already in the store.
+   */
   async function attachFile(
     machineId: string,
     {
@@ -116,7 +119,7 @@ export function aiScenario({
       title: string;
       bytes: Uint8Array;
       contentType: string;
-      to?: "machine" | "machine-model";
+      to?: "machine" | "machine-model" | "both" | "nothing";
       fileCategory?: FileCategory;
     },
   ): Promise<string> {

@@ -1,7 +1,7 @@
 import { Confirmation } from "@/components/ui/message";
 import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
 import { teamMessages } from "@/platform/messages";
-import type { ShownAiIndexOverview } from "./ai-settings-data";
+import type { AiIndexOverview } from "@/modules/ai-assistance";
 import type { FailedFileRow } from "./retry-file-indexing-form";
 
 const { aiIndex: texts } = teamMessages;
@@ -17,7 +17,7 @@ export function AiIndexOverviewView({
   overview,
   retried,
 }: {
-  overview: ShownAiIndexOverview;
+  overview: AiIndexOverview;
   /** The title of the file the technician just tried again (G3). */
   retried: string | undefined;
 }) {
@@ -33,16 +33,16 @@ export function AiIndexOverviewView({
 }
 
 /**
- * The failed files' rows: „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“, the title leading to the file
- * details with the form „KI“ as its origin (ST-114) – none while AI is off.
+ * The failed files' rows: „Attract mode.mp4 – Dateiformat wird nicht erfasst“ – title and reason only, since a file has
+ * no one owner (ST-120) – the title leading to the file details with the form „KI“ as its origin (ST-114), which say
+ * what it is attached to. None while AI is off.
  */
-export function failedFileRows(overview: ShownAiIndexOverview | undefined): FailedFileRow[] {
+export function failedFileRows(overview: AiIndexOverview | undefined): FailedFileRow[] {
   return (overview?.failed ?? []).map((file) => ({
     fileId: file.fileId,
     version: file.version,
     title: file.title,
     href: fileDetailsAddress(file.fileId, "settings"),
-    before: texts.failedFile.before(file.owner),
     after: texts.failedFile.after(texts.failureReasons[file.reason]),
   }));
 }

@@ -30,5 +30,8 @@
     "Deactivating one's own account says so": "ST-088",
     "Going back from the question changes nothing": "ST-088",
     "The last active technician account offers neither deactivating nor the change to helper": "ST-088"
+  },
+  "ST-109": {
+    "Failed files are listed with what they belong to and why": "ST-120"
   }
 }

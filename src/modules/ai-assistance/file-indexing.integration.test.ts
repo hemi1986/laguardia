@@ -155,7 +155,6 @@ describe("what is indexed", () => {
       embeddingModel: EMBEDDING,
       pagesIndexed: 3,
       imagesIndexed: 3,
-      owner: { machineModelId },
     });
     expect(entry.items.filter((item) => item.kind === "passage").map((item) => item.page)).toEqual([1, 3]);
     expect(entry.items.filter((item) => item.kind === "page-image").map((item) => item.page)).toEqual([1, 2, 3]);

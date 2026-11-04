@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -178,31 +179,6 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     expect(html).toContain("Kosten der KI-Erfassung bisher: 1,23 $");
   });
 
-  it("ST-109: Failed files are listed with what they belong to and why", async () => {
-    await turnAiOn();
-    const machineId = await aMachine("LG-042");
-    const attract = await attach(machineId, "Attract mode.mp4", { kind: "video" });
-    await run();
-    const schematic = await attach(machineId, "Eight Ball Schematic", { to: "machine-model" });
-    await run(ai({ unreachable: true }));
-
-    const { data, html } = await settingsPage();
-
-    expect(data.overview?.failed).toEqual([
-      { fileId: attract, owner: "LG-042", title: "Attract mode.mp4", reason: "format not indexed", version: 0 },
-      {
-        fileId: schematic,
-        owner: "Eight Ball",
-        title: "Eight Ball Schematic",
-        reason: "OpenRouter not reachable",
-        version: 0,
-      },
-    ]);
-    expect(visibleText(html)).toContain("LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst");
-    expect(visibleText(html)).toContain("Eight Ball · Eight Ball Schematic – OpenRouter war nicht erreichbar");
-    expect(html.match(/Erneut versuchen/g)).toHaveLength(2);
-  });
-
   it("ST-109: Nothing indexed yet", async () => {
     await turnAiOn();
 
@@ -292,7 +268,7 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
 
     expect(started.ai.requests.filter((request) => request.startsWith("embed:"))).toEqual([]);
     const { html } = await settingsPage();
-    expect(visibleText(html)).toContain("Eight Ball · Eight Ball Manual – Erfassung abgebrochen");
+    expect(visibleText(html)).toContain("Eight Ball Manual – Erfassung abgebrochen");
     expect(html).toContain("Erneut versuchen");
 
     // No later run indexes it again until a technician taps „Erneut versuchen“.
@@ -305,6 +281,41 @@ describe("the overview „KI-Erfassung“ (ST-109)", () => {
     ]);
     // Opening „Einstellungen“ again starts no run: no hold has run out.
     expect(await openingStartsARun()).toBe(false);
+  });
+});
+
+describe("the form „KI“ once a file has no one owner (ST-120)", () => {
+  it("ST-120: The cost so far counts journal entries from before and after the change", async () => {
+    await turnAiOn();
+    const lg042 = await aMachine("LG-042");
+    // An indexing journaled before this change – it named the file's machine (ST-106).
+    await db.execute(sql`
+      INSERT INTO event_journal (type, occurred_at, actor_kind, aggregate_type, aggregate_id, machine_id, data)
+      VALUES ('EVT-FileIndexedForAi', '2026-11-01T10:00:00Z', 'system', 'AGG-AiIndexEntry', ${randomUUID()}, ${lg042},
+        ${JSON.stringify({ machineModelId: null, embeddingModel: "google/gemini-embedding-001", pagesIndexed: 3, imagesIndexed: 3, cost: 0.1 })}::jsonb)`);
+    // An indexing that names no machine: one text file, one embedding request of 0.05 $.
+    const wiring = await attach(lg042, "Wiring notes");
+    await run(ai({ embeddingCost: 0.05 }));
+    expect((await journalOfFile(wiring)).find((entry) => entry.type === "EVT-FileIndexedForAi")?.machineId).toBeNull();
+
+    const { html } = await settingsPage();
+
+    expect(html).toContain("Kosten der KI-Erfassung bisher: 0,15 $");
+  });
+
+  it("ST-120: Failed files no longer name a machine", async () => {
+    await turnAiOn();
+    const attract = await attach(await aMachine("LG-042"), "Attract mode.mp4", { kind: "video" });
+    await run();
+
+    const { data, html } = await settingsPage();
+
+    expect(data.overview?.failed).toEqual([
+      { fileId: attract, title: "Attract mode.mp4", reason: "format not indexed", version: 0 },
+    ]);
+    expect(visibleText(html)).toContain("Attract mode.mp4 – Dateiformat wird nicht erfasst");
+    expect(visibleText(html)).not.toContain("LG-042");
+    expect(html.match(/Erneut versuchen/g)).toHaveLength(1);
   });
 });
 

@@ -365,7 +365,7 @@ describe("the file details (ST-114)", () => {
     const page = await details(attract, { params: queryOf(address) });
 
     expect(address).toBe(`/team/dateien/${attract}/details?from=settings`);
-    expect(settings).toContain("LG-042 · <a");
+    expect(settings).toContain(">Attract mode.mp4</a> – Dateiformat wird nicht erfasst");
     expect(page.html).toContain("LG-042 · Medieval Madness");
     expect(page.html).toContain("Für die KI nicht lesbar: Dateiformat wird nicht erfasst");
   });

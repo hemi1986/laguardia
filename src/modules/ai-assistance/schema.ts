@@ -59,17 +59,15 @@ export const aiWorkHold = pgTable(
 /**
  * AGG-AiIndexEntry (ST-106, data model *AI index entry*): what the AI index holds of one file and how far it got –
  * indexed with one embedding model, or failed with exactly one reason. Its ID is the file's ID, so a file has at most
- * one entry; it copies the file's owner (machine or machine model) because the owner never changes. Waiting is derived,
- * never stored: a file without an entry for the current embedding model waits.
+ * one entry; it names no machine and no machine model (ST-120, ADR 0018) – an AI assessment limits its search with
+ * Collection's files of the machine and its machine model. Waiting is derived, never stored: a file without an entry
+ * for the current embedding model waits.
  */
 export const aiIndexEntry = pgTable(
   "ai_index_entry",
   {
     /** The file's ID – the aggregate's identity. */
     id: uuid("id").primaryKey(),
-    /** Exactly one of the two, copied from the file (check constraint in the migration). */
-    machineId: uuid("machine_id"),
-    machineModelId: uuid("machine_model_id"),
     state: text("state", { enum: ["indexed", "failed"] }).notNull(),
     embeddingModel: text("embedding_model").notNull(),
     /** Indexed or failed at. */

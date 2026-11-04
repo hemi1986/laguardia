@@ -67,8 +67,8 @@ export const aiAssistanceTexts = {
       ].join(" · "),
     cost: (dollars: string) => `Kosten der KI-Erfassung bisher: ${dollars} $`,
     empty: "Noch keine Datei für die KI erfasst.",
-    /** „LG-042 · Attract mode.mp4 – Dateiformat wird nicht erfasst“, the title being the link to the file details (ST-114). */
-    failedFile: { before: (owner: string) => `${owner} · `, after: (reason: string) => ` – ${reason}` },
+    /** „Attract mode.mp4 – Dateiformat wird nicht erfasst“, the title being the link to the file details (ST-114, ST-120). */
+    failedFile: { after: (reason: string) => ` – ${reason}` },
     failureReasons: {
       "not readable": "Datei lässt sich nicht lesen",
       "format not indexed": "Dateiformat wird nicht erfasst",

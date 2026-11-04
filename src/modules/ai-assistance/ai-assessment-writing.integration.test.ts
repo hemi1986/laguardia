@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   createMachineModelCommand,
   fileForIndexing,
+  filesOfMachineAndModelForAi,
   machineModelOfMachineForAi,
   registerMachineCommand,
 } from "@/modules/collection";
@@ -127,7 +129,7 @@ const attach = ({
   bytes,
 }: {
   machineId: string;
-  to?: "machine" | "machine-model";
+  to?: "machine" | "machine-model" | "both" | "nothing";
   title: string;
   contentType: string;
   bytes: Uint8Array;
@@ -360,7 +362,8 @@ describe("what an AI assessment does", () => {
     const model = await machineModelOfMachineForAi(db, machineId);
     if (!model) throw new Error("no machine model");
     const query = Array.from({ length: geminiEmbedding.embeddingSize ?? 1536 }, () => 0.1);
-    const scope = { machineId, machineModelId: model.id, embeddingModel: EMBEDDING };
+    const files = await filesOfMachineAndModelForAi(db, { machineId, machineModelId: model.id });
+    const scope = { fileIds: files.map((file) => file.id), embeddingModel: EMBEDDING };
     expect(await searchAiIndex(db, scope, query, "text")).toHaveLength(SEARCH_TEXT_HITS);
     expect(await searchAiIndex(db, scope, query, "image")).toHaveLength(SEARCH_IMAGE_HITS);
   });
@@ -626,5 +629,103 @@ describe("what an AI assessment does", () => {
 
     expect(ai.chatRequests[0].model).toBe(CHAT);
     expect((await assessment(id)).state).toBe("written");
+  });
+});
+
+/**
+ * ST-120: an AI assessment finds a file through what the file is attached to when the writing begins – the AI index entry
+ * names no machine. CMD-AttachFile and CMD-DetachFile arrive with ST-115, so a test changes the attachments in the data
+ * while the fake OpenRouter answers.
+ */
+describe("what an AI assessment finds follows the attachments (ST-120)", () => {
+  /** The files the chat model is told – the section „Dateien“ of the request. */
+  function filesTold(text: string): { id: string; titel: string }[] {
+    const section = text.split("\n\n").find((part) => part.startsWith("Dateien:\n"));
+    if (!section) throw new Error("no section „Dateien“");
+    return JSON.parse(section.slice("Dateien:\n".length));
+  }
+
+  const aText = (text: string) => ({ contentType: "text/plain", bytes: new TextEncoder().encode(text) });
+
+  const answerNaming = (...fileIds: string[]) => ({
+    chatAnswer: {
+      content: JSON.stringify({
+        summary: "Die Spule ist schwach.",
+        probableCauses: ["Die Spule ist verschlissen."],
+        whatToCheckFirst: ["Die Spule messen."],
+        references: fileIds.map((file) => ({ file })),
+      }),
+      cost: 0.04,
+    },
+  });
+
+  it("ST-120: An AI assessment searches only what is attached to the machine or its machine model", async () => {
+    const lg042 = await aMachine(otherModel, "LG-042");
+    const lg050 = await aMachine(eightBall, "LG-050");
+    const { defectId } = await anOpenDefect(lg042);
+    const manual = await attach({ machineId: lg042, to: "machine-model", title: "MM Operations Manual", ...aText("mm") });
+    const wiring = await attach({ machineId: lg042, title: "Wiring notes", ...aText("wiring") });
+    const eightBallManual = await attach({ machineId: lg050, to: "machine-model", title: "Eight Ball Manual", ...aText("eb") });
+    await index(manual, [{ kind: "passage", text: "Das Handbuch des Modells" }]);
+    await index(wiring, [{ kind: "passage", text: "Die Verdrahtung von LG-042" }]);
+    await index(eightBallManual, [{ kind: "passage", text: "Das Handbuch von Eight Ball" }]);
+    const id = await request(defectId, { note: "Coil gets hot" });
+    const ai = anAi(answerNaming(wiring, eightBallManual));
+
+    await run(ai);
+
+    const written = await assessment(id);
+    expect(written.filesSearched?.sort()).toEqual([manual, wiring].sort());
+    expect(ai.chatRequests[0].text).toContain("Das Handbuch des Modells");
+    expect(ai.chatRequests[0].text).toContain("Die Verdrahtung von LG-042");
+    expect(ai.chatRequests[0].text).not.toContain("Das Handbuch von Eight Ball");
+    expect(filesTold(ai.chatRequests[0].text).map((file) => file.titel)).toEqual(["MM Operations Manual", "Wiring notes"]);
+    expect(written.references).toEqual([{ fileId: wiring }]);
+  });
+
+  it("ST-120: A file attached to both is searched and offered once", async () => {
+    const lg042 = await aMachine(otherModel, "LG-042");
+    const { defectId } = await anOpenDefect(lg042);
+    const manual = await attach({ machineId: lg042, to: "both", title: "MM Operations Manual", ...aText("mm") });
+    await index(manual, [{ kind: "passage", text: "Das Handbuch des Modells" }]);
+    const id = await request(defectId, { note: "Coil gets hot" });
+    const ai = anAi();
+
+    await run(ai);
+
+    expect(filesTold(ai.chatRequests[0].text)).toEqual([{ id: manual, titel: "MM Operations Manual", entfernt: false }]);
+    expect(ai.chatRequests[0].text.match(/Das Handbuch des Modells/g)).toHaveLength(1);
+    expect((await assessment(id)).filesSearched).toEqual([manual]);
+  });
+
+  it("ST-120: The files read when the writing begins count for the whole AI assessment", async () => {
+    const lg042 = await aMachine(otherModel, "LG-042");
+    const { defectId } = await anOpenDefect(lg042);
+    const wiring = await attach({ machineId: lg042, title: "Wiring notes", ...aText("wiring") });
+    const backbox = await attach({ machineId: lg042, to: "nothing", title: "Backbox schematic", ...aText("backbox") });
+    await index(wiring, [{ kind: "passage", text: "Die Verdrahtung von LG-042" }]);
+    await index(backbox, [{ kind: "passage", text: "Der Schaltplan der Backbox" }]);
+    const id = await request(defectId, { note: "Coil gets hot" });
+    // Once the writing has begun – before the first search – "Wiring notes" is detached and "Backbox schematic" attached.
+    const ai = anAi({
+      ...answerNaming(wiring, backbox),
+      beforeEmbed: async (requestNumber) => {
+        if (requestNumber !== 1) return;
+        await db.execute(sql`DELETE FROM file_attachment WHERE file_id = ${wiring}`);
+        await db.execute(
+          sql`INSERT INTO file_attachment (id, file_id, machine_id) VALUES (${randomUUID()}, ${backbox}, ${lg042})`,
+        );
+      },
+    });
+
+    await run(ai);
+
+    const written = await assessment(id);
+    expect(written.state).toBe("written");
+    expect(written.references).toEqual([{ fileId: wiring }]);
+    expect(written.filesSearched).toEqual([wiring]);
+    expect(ai.chatRequests[0].text).toContain("Die Verdrahtung von LG-042");
+    expect(ai.chatRequests[0].text).not.toContain("Der Schaltplan der Backbox");
+    expect(filesTold(ai.chatRequests[0].text).map((file) => file.id)).toEqual([wiring]);
   });
 });

@@ -56,18 +56,20 @@ export const aiAssessmentWork: AiWorkKind = {
     if (!defect) return fail(id, "answer-unusable", piece, context);
     const machineModel = await machineModelOfMachineForAi(context.db, defect.machineId);
     if (!machineModel) return fail(id, "answer-unusable", piece, context);
+    // Read once, when the writing begins (ST-120): this list limits the search, is what the chat model is told and is
+    // what the command checks references against – a file attached or detached meanwhile changes nothing.
     const files = await filesOfMachineAndModelForAi(context.db, {
       machineId: defect.machineId,
       machineModelId: machineModel.id,
     });
+    const fileIds = files.map((file) => file.id);
 
     const searches = await searchWithTheDefect({
       context,
       openRouter: piece.openRouter,
       text: searchTextOf(defect, assessment.note),
       requestPhotos: assessment.photos,
-      machineId: defect.machineId,
-      machineModelId: machineModel.id,
+      fileIds,
     });
     if (!searches.ok) return fail(id, searches.failure, piece, context);
     const { filesSearched } = searches;
@@ -94,8 +96,9 @@ export const aiAssessmentWork: AiWorkKind = {
           summary: outcome.summary,
           probableCauses: outcome.probableCauses,
           whatToCheckFirst: outcome.whatToCheckFirst,
-          // The command owns the invariant: references to files outside the defect's machine and its model are dropped.
+          // The command owns the invariant: references to files outside the list read when the writing began are dropped.
           references: outcome.references,
+          files: fileIds,
           filesSearched,
           embeddingModel: searches.embeddingModel,
           cost: piece.openRouter.spent(),
@@ -152,17 +155,15 @@ async function searchWithTheDefect({
   openRouter,
   text,
   requestPhotos,
-  machineId,
-  machineModelId,
+  fileIds,
 }: {
   context: AiWorkContext;
   openRouter: OpenRouterSession;
   text: string;
   requestPhotos: readonly string[];
-  machineId: string;
-  machineModelId: string;
+  fileIds: readonly string[];
 }): Promise<SearchOutcome> {
-  const scopeWith = (embeddingModel: string) => ({ machineId, machineModelId, embeddingModel });
+  const scopeWith = (embeddingModel: string) => ({ fileIds, embeddingModel });
   const textAnswer = await openRouter.embed({ kind: "text", text });
   if (typeof textAnswer === "string") return { ok: false, failure: failureOfEmbedding(textAnswer) };
   let embeddingModel = textAnswer.model;

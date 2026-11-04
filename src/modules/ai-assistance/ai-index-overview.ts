@@ -1,15 +1,17 @@
 import { entriesOf, isId, lastCommandBy, readJournal, type Database } from "@/platform/command";
 import { fileForIndexing, filesForIndexing } from "@/modules/collection";
-import type { FileOwner, IndexingFailureReason } from "./ai-index-entry";
+import type { IndexingFailureReason } from "./ai-index-entry";
 import { aiIndexStatesOfFiles, type AiIndexStateOfFile } from "./ai-index-entries";
 import { aiState, type AiDependencies } from "./ai-settings";
 import { aiAssistanceEvents } from "./events";
 
-/** A file the AI cannot read (RM-AiSettings, *Files failed*): what it belongs to, its title and why. */
+/**
+ * A file the AI cannot read (RM-AiSettings, *Files failed*): its title and why – no longer what it belongs to, since a
+ * file has no one owner; its file details say what it is attached to (ST-120).
+ */
 export type FailedFile = {
   fileId: string;
   title: string;
-  owner: FileOwner;
   reason: IndexingFailureReason;
   /** The AI index entry's version – what „Erneut versuchen“ posts (CMD-IndexFileForAi by hand). */
   version: number;
@@ -18,7 +20,8 @@ export type FailedFile = {
 /**
  * The AI index overview „KI-Erfassung“ (RM-AiSettings, ST-109): how many files that are not removed are indexed with
  * the current embedding model, how many wait and which failed – and what indexing has cost so far, replaced and removed
- * entries included (summed from the journal, data model *AI index entry*).
+ * entries included (summed from the journal, data model *AI index entry*). Every file that is not removed counts, also
+ * one attached to nothing (ST-120).
  */
 export type AiIndexOverview = { indexed: number; waiting: number; failed: FailedFile[]; cost: number };
 
@@ -58,7 +61,6 @@ export async function aiIndexOverview(
       overview.failed.push({
         fileId: file.id,
         title: file.title,
-        owner: file.owner,
         reason: inIndex.reason,
         version: inIndex.version,
       });

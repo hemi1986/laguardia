@@ -1,12 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { aggregateStore, replaces, type Database } from "@/platform/command";
-import {
-  ownerColumns,
-  ownerOf,
-  type AiIndexEntryState,
-  type AiIndexItem,
-  type IndexingFailureReason,
-} from "./ai-index-entry";
+import type { AiIndexEntryState, AiIndexItem, IndexingFailureReason } from "./ai-index-entry";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
@@ -40,7 +34,6 @@ export const aiIndexEntries = aggregateStore({
   replaces: { items },
   toState: (row, lists): AiIndexEntryState => ({
     id: row.id,
-    owner: ownerOf(row),
     state: row.state,
     embeddingModel: row.embeddingModel,
     at: row.changedAt,
@@ -52,7 +45,6 @@ export const aiIndexEntries = aggregateStore({
   }),
   toRow: (state: AiIndexEntryState) => ({
     id: state.id,
-    ...ownerColumns(state.owner),
     state: state.state,
     embeddingModel: state.embeddingModel,
     changedAt: state.at,

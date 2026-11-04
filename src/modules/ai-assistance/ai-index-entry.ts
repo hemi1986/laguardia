@@ -21,22 +21,6 @@ export type IndexingFailureReason = (typeof indexingFailureReasons)[number];
 export const indexItemKinds = ["passage", "page-image", "image"] as const;
 export type IndexItemKind = (typeof indexItemKinds)[number];
 
-/** The file's owner, copied once: a file belongs to exactly one machine or one machine model and never changes. */
-export type FileOwner = { machineId: string } | { machineModelId: string };
-
-/** The owner of a stored AI index entry row – one of its two columns is set (CHECK constraint). */
-export function ownerOf(row: { machineId: string | null; machineModelId: string | null }): FileOwner {
-  return row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! };
-}
-
-/** The two owner columns of an AI index entry, for its row and its journal projection. */
-export function ownerColumns(owner: FileOwner): { machineId: string | null; machineModelId: string | null } {
-  return {
-    machineId: "machineId" in owner ? owner.machineId : null,
-    machineModelId: "machineModelId" in owner ? owner.machineModelId : null,
-  };
-}
-
 /** One thing the AI index holds of a file, with where it came from and its embedding. Never journaled. */
 export type AiIndexItem = {
   id: string;
@@ -51,9 +35,8 @@ export type AiIndexItem = {
 
 /** AGG-AiIndexEntry – current state (docs/architecture/data-model.md). */
 export type AiIndexEntryState = {
-  /** The file's ID – a file has at most one AI index entry. */
+  /** The file's ID – a file has at most one AI index entry. It names no machine and no machine model (ST-120). */
   id: string;
-  owner: FileOwner;
   state: "indexed" | "failed";
   /** The one embedding model everything of this entry was made with. */
   embeddingModel: string;
@@ -74,7 +57,6 @@ export type AiIndexEntryState = {
 export type FileIndexedForAi = {
   type: "EVT-FileIndexedForAi";
   fileId: string;
-  owner: FileOwner;
   embeddingModel: string;
   pagesIndexed: number;
   imagesIndexed: number;
@@ -84,7 +66,6 @@ export type FileIndexedForAi = {
 export type FileIndexingFailed = {
   type: "EVT-FileIndexingFailed";
   fileId: string;
-  owner: FileOwner;
   embeddingModel: string;
   reason: IndexingFailureReason;
   /** What OpenRouter charged before it failed or broke off (user, 2026-11-01) – absent in events recorded before. */
@@ -93,8 +74,8 @@ export type FileIndexingFailed = {
 
 /**
  * What the background work hands CMD-IndexFileForAi: the file's ID, the model it indexed with and the result. The
- * command's facts read the file in its own transaction – under the removal lock – so its owner is never trusted from
- * the caller and a file removed meanwhile records nothing.
+ * command's facts read the file in its own transaction – under the removal lock – so a file removed meanwhile records
+ * nothing.
  */
 export type IndexFileForAiInput =
   | {
@@ -110,8 +91,8 @@ export type IndexFileForAiInput =
       cost: number;
     };
 
-/** The file the command's facts read under its removal lock – what the decision copies the owner from. */
-export type IndexingFile = { owner: FileOwner };
+/** The file the command's facts read under its removal lock – none when it was removed meanwhile. */
+export type IndexingFile = { id: string };
 
 /** The file was removed (or no longer exists) before the result was stored – nothing is recorded. */
 export type IndexFileForAiError = "file-removed";
@@ -122,8 +103,7 @@ export function indexFileForAi(
   { clock, newId }: DecisionContext,
 ): Decision<AiIndexEntryState, FileIndexedForAi | FileIndexingFailed, IndexFileForAiError> {
   if (!file) return { ok: false, error: "file-removed" };
-  const owner = file.owner;
-  const base = { id: input.fileId, owner, embeddingModel: input.embeddingModel, at: clock.now() };
+  const base = { id: input.fileId, embeddingModel: input.embeddingModel, at: clock.now() };
   if ("failure" in input) {
     const state: AiIndexEntryState = {
       ...base,
@@ -141,7 +121,6 @@ export function indexFileForAi(
         {
           type: "EVT-FileIndexingFailed",
           fileId: input.fileId,
-          owner,
           embeddingModel: input.embeddingModel,
           reason: input.failure,
           cost: input.cost,
@@ -164,7 +143,6 @@ export function indexFileForAi(
       {
         type: "EVT-FileIndexedForAi",
         fileId: input.fileId,
-        owner,
         embeddingModel: input.embeddingModel,
         pagesIndexed: state.pagesIndexed,
         imagesIndexed: state.imagesIndexed,
@@ -177,13 +155,13 @@ export function indexFileForAi(
 /** CMD-RemoveFileFromAiIndex (POL-RemovedFileLeavesAiIndex): the file's entry and everything of it leaves the index. */
 export type RemoveFileFromAiIndexInput = { fileId: string };
 
-export type FileLeftAiIndex = { type: "EVT-FileLeftAiIndex"; fileId: string; owner: FileOwner };
+export type FileLeftAiIndex = { type: "EVT-FileLeftAiIndex"; fileId: string };
 
 export function removeFileFromAiIndex(entry: AiIndexEntryState): Decision<AiIndexEntryState, FileLeftAiIndex, never> {
   return {
     ok: true,
     state: entry,
-    events: [{ type: "EVT-FileLeftAiIndex", fileId: entry.id, owner: entry.owner }],
+    events: [{ type: "EVT-FileLeftAiIndex", fileId: entry.id }],
   };
 }
 
@@ -198,7 +176,6 @@ export type RetryFileIndexingInput = { fileId: string; version: number };
 export type FileIndexingRetried = {
   type: "EVT-FileIndexingRetried";
   fileId: string;
-  owner: FileOwner;
   embeddingModel: string;
 };
 
@@ -223,7 +200,7 @@ export function retryFileIndexing(
     ok: true,
     state: entry,
     events: [
-      { type: "EVT-FileIndexingRetried", fileId: input.fileId, owner: entry.owner, embeddingModel: entry.embeddingModel },
+      { type: "EVT-FileIndexingRetried", fileId: input.fileId, embeddingModel: entry.embeddingModel },
     ],
   };
 }
