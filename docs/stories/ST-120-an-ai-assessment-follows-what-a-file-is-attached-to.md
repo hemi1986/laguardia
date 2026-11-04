@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-AiAssessmentWritten, EVT-FileIndexedForAi, EVT-FileIndexingFailed, EVT-FileIndexingRetried, EVT-FileLeftAiIndex]
 depends_on: [ST-113, ST-107, ST-109]
 labels: [feature:files, ui]
-status: ready
+status: done
 ---
 
 ## Story

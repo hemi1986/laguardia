@@ -1,25 +1,16 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
-import {
-  ownerColumns,
-  type FileIndexedForAi,
-  type FileIndexingFailed,
-  type FileIndexingRetried,
-  type FileLeftAiIndex,
-} from "./ai-index-entry";
+import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
 /**
  * AI assistance's event catalogue (ST-079): per event its aggregate and what reaches the journal. The OpenRouter key is
  * never part of it – only that it was saved or removed, and its last four characters (EVT-AiSettingsChanged). The AI
  * index's passages, page images and embeddings never reach it either: it names the file, the model, the counts and the
- * cost (ST-106).
+ * cost (ST-106). Since ST-120 the AI index's events name no machine and no machine model – a file is indexed once,
+ * whatever it is attached to; entries recorded before still carry `machineId` and `data.machineModelId`, and every
+ * reader of the journal accepts them.
  */
-const ownerData = (owner: { machineId: string } | { machineModelId: string }) => {
-  const { machineId, machineModelId } = ownerColumns(owner);
-  return { machineId, machineModelId };
-};
-
 export const aiAssistanceEvents = eventCatalogue({
   "EVT-AiSettingsChanged": {
     aggregate: "AGG-AiSettings",
@@ -37,45 +28,36 @@ export const aiAssistanceEvents = eventCatalogue({
   },
   "EVT-FileIndexedForAi": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileIndexedForAi) => {
-      const { machineId, machineModelId } = ownerData(event.owner);
-      return {
-        aggregateId: event.fileId,
-        machineId,
-        data: {
-          machineModelId,
-          embeddingModel: event.embeddingModel,
-          pagesIndexed: event.pagesIndexed,
-          imagesIndexed: event.imagesIndexed,
-          cost: event.cost,
-        },
-      };
-    },
+    project: (event: FileIndexedForAi) => ({
+      aggregateId: event.fileId,
+      machineId: null,
+      data: {
+        embeddingModel: event.embeddingModel,
+        pagesIndexed: event.pagesIndexed,
+        imagesIndexed: event.imagesIndexed,
+        cost: event.cost,
+      },
+    }),
   },
   "EVT-FileIndexingFailed": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileIndexingFailed) => {
-      const { machineId, machineModelId } = ownerData(event.owner);
-      return {
-        aggregateId: event.fileId,
-        machineId,
-        data: { machineModelId, embeddingModel: event.embeddingModel, reason: event.reason, cost: event.cost },
-      };
-    },
+    project: (event: FileIndexingFailed) => ({
+      aggregateId: event.fileId,
+      machineId: null,
+      data: { embeddingModel: event.embeddingModel, reason: event.reason, cost: event.cost },
+    }),
   },
   "EVT-FileIndexingRetried": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileIndexingRetried) => {
-      const { machineId, machineModelId } = ownerData(event.owner);
-      return { aggregateId: event.fileId, machineId, data: { machineModelId, embeddingModel: event.embeddingModel } };
-    },
+    project: (event: FileIndexingRetried) => ({
+      aggregateId: event.fileId,
+      machineId: null,
+      data: { embeddingModel: event.embeddingModel },
+    }),
   },
   "EVT-FileLeftAiIndex": {
     aggregate: "AGG-AiIndexEntry",
-    project: (event: FileLeftAiIndex) => {
-      const { machineId, machineModelId } = ownerData(event.owner);
-      return { aggregateId: event.fileId, machineId, data: { machineModelId } };
-    },
+    project: (event: FileLeftAiIndex) => ({ aggregateId: event.fileId, machineId: null, data: {} }),
   },
   // An AI assessment never changes a defect, so its journal entries name no machine. The note and the written text
   // stay out of the journal – only that it was requested or written, with the models and the cost (ST-107).

@@ -10,8 +10,8 @@ import { aiAssistanceEvents } from "./events";
  * file's ID – a first indexing creates the entry, a later one replaces it as a whole (`insertReplaces`). It runs in the
  * background as the system only (the run's `storeResult` transaction, ADR 0015); a technician's „Erneut versuchen“ is
  * `retryFileIndexingCommand` below. Its facts read the file in the same transaction under the file's removal lock taken
- * shared (ADR 0014) and the decision copies the owner from them – a file removed meanwhile rejects with
- * `file-removed` and records nothing.
+ * shared (ADR 0014) – a file removed meanwhile rejects with `file-removed` and records nothing. The entry names no
+ * machine (ST-120).
  */
 export const indexFileForAiCommand = aggregateCommand({
   id: "CMD-IndexFileForAi",

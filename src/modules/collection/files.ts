@@ -174,24 +174,15 @@ function ofMachineOrModel({ machineId, machineModelId }: { machineId: string; ma
   return or(eq(fileAttachment.machineId, machineId), eq(fileAttachment.machineModelId, machineModelId));
 }
 
-/**
- * Where a file stands as AI assistance copies it onto the AI index entry for now (ADR 0018, ST-113): the one thing it
- * is attached to. Nothing can attach a second thing before ST-115, and ST-115 depends on ST-120, which removes the copy.
- */
-export type FileOwnerForAi = { machineId: string } | { machineModelId: string };
-
-/** A file as AI assistance reads it to index it (ST-106) – only a file that is not removed. */
+/** A file as AI assistance reads it to index it (ST-106) – only a file that is not removed, whatever it is attached to. */
 export type FileForIndexing = {
   id: string;
-  owner: FileOwnerForAi;
   title: string;
   content: { name: string; size: number; contentType: string };
 };
 
 const fileForIndexingColumns = {
   id: file.id,
-  machineId: fileAttachment.machineId,
-  machineModelId: fileAttachment.machineModelId,
   title: file.title,
   content: file.content,
   size: file.size,
@@ -200,33 +191,25 @@ const fileForIndexingColumns = {
 
 function fileForIndexingOf(row: {
   id: string;
-  machineId: string | null;
-  machineModelId: string | null;
   title: string;
   content: string;
   size: number;
   contentType: string;
 }): FileForIndexing {
-  return {
-    id: row.id,
-    owner: row.machineId ? { machineId: row.machineId } : { machineModelId: row.machineModelId! },
-    title: row.title,
-    content: { name: row.content, size: row.size, contentType: row.contentType },
-  };
+  return { id: row.id, title: row.title, content: { name: row.content, size: row.size, contentType: row.contentType } };
 }
 
-/** The files that are not removed – what the AI index can hold (ST-106), in the order they were added. */
+/**
+ * The files that are not removed – what the AI index can hold (ST-106), also one attached to nothing (ADR 0018) – in the
+ * order they were added; files added at the same instant by their ID, so the order is stable.
+ */
 export async function filesForIndexing(db: Database): Promise<FileForIndexing[]> {
-  // In the order the files were added – files added at the same instant by the order they were stored, which their
-  // attachments' position follows. One row per file: its first attachment is the one the AI index entry copies.
   const rows = await db
     .select(fileForIndexingColumns)
     .from(file)
-    .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
     .where(isNull(file.removedAt))
-    .orderBy(asc(file.addedAt), asc(fileAttachment.position));
-  const seen = new Set<string>();
-  return rows.filter((row) => !seen.has(row.id) && seen.add(row.id)).map(fileForIndexingOf);
+    .orderBy(asc(file.addedAt), asc(file.id));
+  return rows.map(fileForIndexingOf);
 }
 
 /**
@@ -237,10 +220,7 @@ export async function fileForIndexing(db: Database, fileId: string): Promise<Fil
   const [row] = await db
     .select(fileForIndexingColumns)
     .from(file)
-    .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
-    .where(and(eq(file.id, fileId), isNull(file.removedAt)))
-    .orderBy(asc(fileAttachment.position))
-    .limit(1);
+    .where(and(eq(file.id, fileId), isNull(file.removedAt)));
   return row && fileForIndexingOf(row);
 }
 
@@ -254,18 +234,13 @@ export async function fileForIndexingWhileStoring(tx: Database, fileId: string):
   return fileForIndexing(tx, fileId);
 }
 
-/** A file as an AI assessment's reference needs it (ST-107): its title, whether it was removed, and what it is attached to. */
-export type FileForAiReference = {
-  title: string;
-  removed: boolean;
-  machineId: string | null;
-  machineModelId: string | null;
-};
+/** A file as an AI assessment's reference needs it (ST-107): its title and whether it was removed. */
+export type FileForAiReference = { title: string; removed: boolean };
 
 /**
  * The files an AI assessment's references name, removed or not (ST-107): a removed file keeps its title and is shown
- * without a link (RM-DefectAiAssessments). What the file is attached to lets AI assistance drop a reference to a file of
- * another machine or another machine model (ST-113: its one attachment; the AI side follows with ST-120).
+ * without a link (RM-DefectAiAssessments). What a file is attached to now plays no part – a reference stays as it was
+ * written (ST-120).
  */
 export async function filesForAiReferences(
   db: Database,
@@ -273,52 +248,30 @@ export async function filesForAiReferences(
 ): Promise<Map<string, FileForAiReference>> {
   if (fileIds.length === 0) return new Map();
   const rows = await db
-    .select({
-      id: file.id,
-      title: file.title,
-      removedAt: file.removedAt,
-      machineId: fileAttachment.machineId,
-      machineModelId: fileAttachment.machineModelId,
-    })
+    .select({ id: file.id, title: file.title, removedAt: file.removedAt })
     .from(file)
-    .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
-    .where(inArray(file.id, [...new Set(fileIds)]))
-    .orderBy(asc(fileAttachment.position));
-  const references = new Map<string, FileForAiReference>();
-  for (const { id, title, removedAt, machineId, machineModelId } of rows) {
-    if (!references.has(id)) references.set(id, { title, removed: removedAt !== null, machineId, machineModelId });
-  }
-  return references;
+    .where(inArray(file.id, [...new Set(fileIds)]));
+  return new Map(rows.map(({ id, title, removedAt }) => [id, { title, removed: removedAt !== null }]));
 }
 
-/** A file of the defect's machine or its machine model, as an AI assessment sends and checks it (ST-107). */
+/** A file attached to the defect's machine or its machine model, as an AI assessment sends and checks it (ST-107). */
 export type FileOfAiAssessmentMachine = FileForAiReference & { id: string };
 
 /**
  * Every file attached to the defect's machine or to its machine model, removed ones included (a reference to a removed
- * file is kept by its title, ST-108), each once: the candidate files a chat answer may name. Only such a file may be
- * referenced – a reference to any other file is dropped (CMD-WriteAiAssessment rule).
+ * file is kept by its title, ST-108), each once, also when attached to both (ST-120). AI assistance reads it once, when
+ * an AI assessment's writing begins: it limits the search, is what the chat model is told and is what references are
+ * checked against (CMD-WriteAiAssessment rule, ADR 0018).
  */
 export async function filesOfMachineAndModelForAi(
   db: Database,
   { machineId, machineModelId }: { machineId: string; machineModelId: string },
 ): Promise<FileOfAiAssessmentMachine[]> {
   const rows = await db
-    .select({
-      id: file.id,
-      title: file.title,
-      removedAt: file.removedAt,
-      machineId: fileAttachment.machineId,
-      machineModelId: fileAttachment.machineModelId,
-    })
+    .selectDistinct({ id: file.id, title: file.title, removedAt: file.removedAt, addedAt: file.addedAt })
     .from(file)
     .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
     .where(ofMachineOrModel({ machineId, machineModelId }))
-    .orderBy(asc(file.title), asc(file.addedAt), asc(fileAttachment.position));
-  const seen = new Set<string>();
-  return rows.flatMap(({ id, title, removedAt, machineId: ofMachine, machineModelId: ofModel }) =>
-    seen.has(id)
-      ? []
-      : (seen.add(id), [{ id, title, removed: removedAt !== null, machineId: ofMachine, machineModelId: ofModel }]),
-  );
+    .orderBy(asc(file.title), asc(file.addedAt), asc(file.id));
+  return rows.map(({ id, title, removedAt }) => ({ id, title, removed: removedAt !== null }));
 }

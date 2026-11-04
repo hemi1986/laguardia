@@ -846,13 +846,16 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   over both modules' tables would break *Reading across modules – the page composes* below.
 - **Writing an AI assessment** (ST-107) is the second kind (`ai-assessment-work.ts`, `kind: "ai-assessment"`): `waiting`
   asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
-  `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi`, searches the
-  AI index (`ai-index-search.ts`: only the defect's machine and machine model, only the current embedding model; one
+  `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi` – the files
+  attached to the machine or its machine model, read **once, when the writing begins** (ST-120, ADR 0018): that list
+  limits the search, is what the chat model is told, and passes through CMD-WriteAiAssessment's input (`filesAttached`) as what
+  references are checked against, so an attach or detach during the writing changes nothing. The AI index entry names
+  no machine; the search (`ai-index-search.ts`) looks only among those file IDs, only the current embedding model; one
   text search for the defect title, the problem report descriptions and the note, one image search per photo of the
   request; each search takes 8 text passages and 4 pages or images, merged and cut to 12 pages and images), renders the
   found PDF pages again from their file (`renderPdfPages`) and sends everything through the chat seam
   (`ai.chat`, `openrouter.ts`, no provider restriction – ADR 0016). The answer is read as structured
-  data (`parseAiAssessmentAnswer`); references to files outside the defect's machine and its machine model are dropped,
+  data (`parseAiAssessmentAnswer`); references to files outside that list are dropped,
   and the result is stored through CMD-WriteAiAssessment with only the aggregate still *requested* – a late result of a
   run records nothing. The note and photos belong to the AI assessment; its photos are stored like a work log entry's
   (`owner: "ai-assessments"`). The model's name in the read model is read from `ai.model("chat", id)` when the defect

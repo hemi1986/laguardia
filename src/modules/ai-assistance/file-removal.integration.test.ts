@@ -191,3 +191,26 @@ describe("a removed file and the AI index", () => {
     expect(await eventsOf(fileId)).not.toContain("EVT-FileLeftAiIndex");
   });
 });
+
+describe("the AI index's journal (ST-120)", () => {
+  it("ST-120: The events of the AI index name no machine", async () => {
+    await saveAiSettings();
+    const wiring = await attach("Wiring notes", new TextEncoder().encode("The flipper coil."), "text/plain");
+    await run();
+
+    await remove(wiring);
+
+    const steps = (await journalOf(db, { aggregateId: wiring })).filter((entry) =>
+      ["EVT-FileIndexedForAi", "EVT-FileLeftAiIndex"].includes(entry.type),
+    );
+    expect(steps.map((entry) => entry.type)).toEqual(["EVT-FileIndexedForAi", "EVT-FileLeftAiIndex"]);
+    for (const step of steps) {
+      expect(step.machineId).toBeNull();
+      expect(JSON.stringify(step.data)).not.toContain(machineId);
+      expect(step.data).not.toHaveProperty("machineModelId");
+    }
+    expect(await journalOf(db, { machineId })).not.toContainEqual(
+      expect.objectContaining({ type: expect.stringMatching(/^EVT-File(IndexedForAi|LeftAiIndex)$/) }),
+    );
+  });
+});

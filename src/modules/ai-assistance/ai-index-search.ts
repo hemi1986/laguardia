@@ -4,10 +4,11 @@ import type { IndexItemKind } from "./ai-index-entry";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
- * Searching the AI index for an AI assessment (ST-107, ADR 0014): only the entries of the defect's machine and its
- * machine model, and only those made with the current embedding model. A search is exact – the index of one machine and
- * its model is small enough – ordered by cosine distance, and takes a fixed number of the best text passages and the
- * best pages or images (not a setting).
+ * Searching the AI index for an AI assessment (ST-107, ADR 0014): only the entries of the files attached to the defect's
+ * machine or its machine model – the list Collection gave when the writing began (ST-120, ADR 0018) – and only those
+ * made with the current embedding model. A search is exact – the index of one machine and its model is small enough –
+ * ordered by cosine distance, and takes a fixed number of the best text passages and the best pages or images (not a
+ * setting).
  */
 
 /** How many of the best text passages one search takes (user, 2026-10-31). */
@@ -28,8 +29,8 @@ export type AiIndexHit = {
 
 export type AiIndexSearch = { passages: AiIndexHit[]; images: AiIndexHit[] };
 
-/** Where a search looks: the defect's machine, its machine model and the current embedding model. */
-export type AiIndexScope = { machineId: string; machineModelId: string; embeddingModel: string };
+/** Where a search looks: the files attached to the defect's machine or its machine model, and the current embedding model. */
+export type AiIndexScope = { fileIds: readonly string[]; embeddingModel: string };
 
 const vectorOf = (embedding: readonly number[]) => sql.raw(`'[${embedding.map(Number).join(",")}]'::vector`);
 
@@ -43,6 +44,7 @@ export async function searchAiIndex(
   query: readonly number[],
   kind: "text" | "image",
 ): Promise<AiIndexHit[]> {
+  if (scope.fileIds.length === 0) return [];
   const distance = sql<number>`${aiIndexItem.embedding} <=> ${vectorOf(query)}`;
   const kinds: readonly IndexItemKind[] = kind === "text" ? ["passage"] : ["page-image", "image"];
   const rows = await db
@@ -61,7 +63,7 @@ export async function searchAiIndex(
         eq(aiIndexEntry.state, "indexed"),
         eq(aiIndexEntry.embeddingModel, scope.embeddingModel),
         inArray(aiIndexItem.kind, kinds),
-        sql`(${aiIndexEntry.machineId} = ${scope.machineId} OR ${aiIndexEntry.machineModelId} = ${scope.machineModelId})`,
+        inArray(aiIndexEntry.id, [...scope.fileIds]),
       ),
     )
     .orderBy(distance)
@@ -77,6 +79,7 @@ export async function searchAiIndex(
 
 /** The files whose entries a search over this scope could find – "Files searched" of EVT-AiAssessmentWritten. */
 export async function searchedFiles(db: Database, scope: AiIndexScope): Promise<string[]> {
+  if (scope.fileIds.length === 0) return [];
   const rows = await db
     .selectDistinct({ fileId: aiIndexEntry.id })
     .from(aiIndexEntry)
@@ -84,7 +87,7 @@ export async function searchedFiles(db: Database, scope: AiIndexScope): Promise<
       and(
         eq(aiIndexEntry.state, "indexed"),
         eq(aiIndexEntry.embeddingModel, scope.embeddingModel),
-        sql`(${aiIndexEntry.machineId} = ${scope.machineId} OR ${aiIndexEntry.machineModelId} = ${scope.machineModelId})`,
+        inArray(aiIndexEntry.id, [...scope.fileIds]),
       ),
     )
     .orderBy(desc(aiIndexEntry.id));

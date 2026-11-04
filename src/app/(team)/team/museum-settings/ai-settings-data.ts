@@ -6,9 +6,7 @@ import {
   type AiDependencies,
   type AiIndexOverview,
   type AiSettingsForm,
-  type IndexingFailureReason,
 } from "@/modules/ai-assistance";
-import { machineLabels, machineModelTitles } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 
 /** What the form „KI“ just did (ST-104): a save, „Entfernen“, or – ST-110 – „Ersetzen“ saved. */
@@ -28,23 +26,11 @@ export function aiLanding(confirmed: AiConfirmed): string {
   return `/team/museum-settings?saved=${savedParam[confirmed]}`;
 }
 
-/** A failed file as the overview lists it: what it belongs to – a museum number or a machine model's title – and why. */
-export type ShownFailedFile = {
-  fileId: string;
-  owner: string;
-  title: string;
-  reason: IndexingFailureReason;
-  version: number;
-};
-
-/** The overview „KI-Erfassung“ (ST-109) with its failed files named. */
-export type ShownAiIndexOverview = Omit<AiIndexOverview, "failed"> & { failed: ShownFailedFile[] };
-
 export type AiSettingsData = {
   form: AiSettingsForm;
   confirmed: AiConfirmed | undefined;
   /** None while AI is off (user, 2026-10-31). */
-  overview: ShownAiIndexOverview | undefined;
+  overview: AiIndexOverview | undefined;
   /** The file the technician just tried again (G3) – its title. */
   retried: string | undefined;
   /** „Ersetzen“ was tapped: the form offers the field „Neuer API-Schlüssel“ (ST-110). */
@@ -52,29 +38,6 @@ export type AiSettingsData = {
   /** The models chosen before the warning, when the technician came back from it (G10b, ST-110). */
   chosen: { chatModel?: string; embeddingModel?: string };
 };
-
-/** Names the failed files' owners – Collection's machine labels and machine model titles (the page composes, ST-009). */
-async function shownOverview(db: Database, overview: AiIndexOverview): Promise<ShownAiIndexOverview> {
-  const machineIds = overview.failed.flatMap(({ owner }) => ("machineId" in owner ? [owner.machineId] : []));
-  const machineModelIds = overview.failed.flatMap(({ owner }) =>
-    "machineModelId" in owner ? [owner.machineModelId] : [],
-  );
-  const [machines, machineModels] = await Promise.all([
-    machineLabels(db, machineIds),
-    machineModelTitles(db, machineModelIds),
-  ]);
-  // A file's owner is registered (foreign keys) – a missing one is a bug, never a blank (`named`).
-  const ownerOf = (owner: AiIndexOverview["failed"][number]["owner"]) => {
-    const label =
-      "machineId" in owner ? machines.get(owner.machineId)?.museumNumber : machineModels.get(owner.machineModelId);
-    if (label === undefined) throw new Error("A failed file's machine or machine model is missing");
-    return label;
-  };
-  return {
-    ...overview,
-    failed: overview.failed.map(({ owner, ...file }) => ({ ...file, owner: ownerOf(owner) })),
-  };
-}
 
 /**
  * The section „KI“'s data (ST-104): RM-AiSettings, with OpenRouter's models read now, and what was just done. Like
@@ -104,7 +67,7 @@ export async function loadAiSettings(
   return {
     form,
     confirmed,
-    overview: overview && (await shownOverview(db, overview)),
+    overview,
     retried: retried?.title,
     replacingKey: params.replace === "key" && !!form.keyLastFour,
     chosen: { chatModel: chosen("chatModel"), embeddingModel: chosen("embeddingModel") },

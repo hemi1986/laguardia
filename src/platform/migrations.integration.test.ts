@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, describe, expect, it } from "vitest";
+import { aiAssessmentWork, aiIndexOverview } from "@/modules/ai-assistance";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
+import { geminiEmbedding } from "@/modules/ai-assistance/ai-seam.test-support";
 import { machineRecord } from "@/modules/collection";
+import { reportProblemAndTriageCommand } from "@/modules/repair";
+import { executeCommand, journalOf } from "@/platform/command";
 import { dueMaintenance, maintenancePlan } from "@/modules/maintenance";
 import { fixedClock } from "@/platform/clock";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
@@ -284,8 +289,13 @@ describe("migrations 0043_file_attachments and 0044_file_owner_dropped", () => {
     await db.execute(sql`
       INSERT INTO pending_upload (name, machine_id, machine_model_id, issued_to, issued_at, maximum_size, declared_size)
       VALUES ('files/pending', ${lg042}, null, ${before.tom}, '2026-02-03T10:00:00Z', 100000000, 10)`);
+    // Without the owner columns, which migration 0045 drops (ST-120).
     const index = async () =>
-      (await db.execute(sql`SELECT * FROM ai_index_entry ORDER BY id`)).rows;
+      (
+        await db.execute(
+          sql`SELECT id, state, embedding_model, changed_at, failure_reason, pages_indexed, images_indexed, cost, version FROM ai_index_entry ORDER BY id`,
+        )
+      ).rows;
     const items = async () => (await db.execute(sql`SELECT * FROM ai_index_item ORDER BY id`)).rows;
     const journal = async () => (await db.execute(sql`SELECT count(*)::int AS count FROM event_journal`)).rows;
     const [indexBefore, itemsBefore, journalBefore] = [await index(), await items(), await journal()];
@@ -333,5 +343,99 @@ describe("migrations 0043_file_attachments and 0044_file_owner_dropped", () => {
       sql`SELECT column_name FROM information_schema.columns WHERE table_name IN ('file', 'pending_upload') AND column_name IN ('machine_id', 'machine_model_id', 'attached_by', 'attached_at')`,
     );
     expect(columns.rows).toEqual([]);
+  });
+});
+
+describe("migration 0045_ai_index_entry_owner_dropped", () => {
+  const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+  const clock = fixedClock("2026-11-04T10:00:00Z");
+
+  it("ST-120: The AI index stays whole when its entries lose their machine", async () => {
+    const db = await isolated.reset("0044_file_owner_dropped");
+    await db.execute(sql`
+      INSERT INTO team_member (id, name, email, username, role)
+      VALUES (${tom.teamMemberId}, 'Tom', 'tom@example.org', 'tom', 'technician')`);
+    const model = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine_model (id, title, manufacturer, machine_category, technology)
+      VALUES (${model}, 'Medieval Madness', 'Williams', 'pinball', 'dmd')`);
+    const lg042 = randomUUID();
+    await db.execute(sql`
+      INSERT INTO machine (id, museum_number, machine_model_id, location, machine_status, registered_at)
+      VALUES (${lg042}, 'LG-042', ${model}, 'Hall 1', 'playable', '2026-01-01T10:00:00Z')`);
+    /** A file with its one attachment, as ST-113 left it. */
+    const file = async (title: string, owner: { machineId: string } | { machineModelId: string }) => {
+      const id = randomUUID();
+      await db.execute(sql`
+        INSERT INTO file (id, title, file_category, content, size, content_type, added_by, added_at, version)
+        VALUES (${id}, ${title}, 'manual', ${`files/${id}`}, 1000, 'application/pdf', ${tom.teamMemberId}, '2026-02-01T10:00:00Z', 0)`);
+      await db.execute(sql`
+        INSERT INTO file_attachment (id, file_id, machine_id, machine_model_id)
+        VALUES (${randomUUID()}, ${id}, ${"machineId" in owner ? owner.machineId : null},
+          ${"machineModelId" in owner ? owner.machineModelId : null})`);
+      return id;
+    };
+    /** An entry of the AI index as the AI work stored it – copying the file's owner (ST-106). */
+    const entry = async (
+      fileId: string,
+      owner: { machineId: string } | { machineModelId: string },
+      { failed, embeddingModel = geminiEmbedding.id }: { failed?: string; embeddingModel?: string } = {},
+    ) => {
+      await db.execute(sql`
+        INSERT INTO ai_index_entry (id, machine_id, machine_model_id, state, embedding_model, changed_at, failure_reason,
+          pages_indexed, images_indexed, cost)
+        VALUES (${fileId}, ${"machineId" in owner ? owner.machineId : null}, ${"machineModelId" in owner ? owner.machineModelId : null},
+          ${failed ? "failed" : "indexed"}, ${embeddingModel}, '2026-02-01T11:00:00Z', ${failed ?? null},
+          ${failed ? null : 1}, ${failed ? null : 1}, ${failed ? null : 0.01})`);
+      if (!failed)
+        await db.execute(sql`
+          INSERT INTO ai_index_item (id, file_id, kind, page, text, embedding)
+          VALUES (${randomUUID()}, ${fileId}, 'passage', 1, 'Replace the left flipper coil', array_fill(0.1, ARRAY[1536])::vector(1536))`);
+    };
+    const manual = await file("MM Operations Manual", { machineModelId: model });
+    await file("Wiring notes", { machineId: lg042 });
+    const attract = await file("Attract mode.mp4", { machineId: lg042 });
+    const oldScan = await file("Old scan", { machineId: lg042 });
+    await entry(manual, { machineModelId: model });
+    await entry(attract, { machineId: lg042 }, { failed: "format not indexed" });
+    await entry(oldScan, { machineId: lg042 }, { embeddingModel: "openai/text-embedding-3-small" });
+    const scenario = aiScenario({ db: () => db, clock, technician: tom });
+    await scenario.turnAiOn();
+    const before = await aiIndexOverview(db, scenario.ai());
+    const openRouter = scenario.openRouter();
+
+    await isolated.migrate();
+
+    const after = await aiIndexOverview(db, scenario.ai(openRouter));
+    expect(after).toEqual(before);
+    expect(after).toMatchObject({
+      indexed: 1,
+      waiting: 2,
+      failed: [{ fileId: attract, title: "Attract mode.mp4", reason: "format not indexed" }],
+    });
+    expect(openRouter.requests).toEqual([]);
+    expect(openRouter.chatRequests).toEqual([]);
+    // An AI assessment of a defect of LG-042, which the manual's machine model is attached to, finds it.
+    const reported = await executeCommand(
+      reportProblemAndTriageCommand,
+      {
+        machineId: lg042,
+        description: "Left flipper weak",
+        triage: {
+          outcome: "defect-recorded",
+          title: "Left flipper weak",
+          priority: undefined,
+          suitableForHelpers: false,
+          machineStatus: undefined,
+          machineVersion: undefined,
+        },
+      },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!reported.ok || !reported.result.defectId) throw new Error("no defect recorded");
+    const id = await scenario.requestAiAssessment(reported.result.defectId);
+    await scenario.run({ kinds: [aiAssessmentWork] });
+    const written = (await journalOf(db, { aggregateId: id })).find((each) => each.type === "EVT-AiAssessmentWritten");
+    expect(written?.data.filesSearched).toEqual([manual]);
   });
 });

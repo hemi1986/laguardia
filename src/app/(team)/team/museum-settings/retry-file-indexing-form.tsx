@@ -17,8 +17,7 @@ export type FailedFileRow = {
   title: string;
   /** The file details, reached from here (ST-114). */
   href: string;
-  /** The words before and after the title. */
-  before: string;
+  /** The words after the title – the reason. */
   after: string;
 };
 
@@ -47,7 +46,6 @@ export function FailedFiles({
           {failed.map((file) => (
             <li key={file.fileId} className="flex flex-col gap-1">
               <span>
-                {file.before}
                 <Link href={file.href} className="underline underline-offset-4">
                   {file.title}
                 </Link>
