@@ -10,7 +10,6 @@ import {
   type MachineRecord,
   machineRecord,
   machineStatusesToChangeTo,
-  mayRemoveFiles,
   type FileOfMachine,
   type Retirement,
   retireRefusal,
@@ -66,8 +65,6 @@ export type MachineRecordActions = {
   correctDetails: boolean;
   /** Section 8 (ST-037): every team member, a retired machine's record too. */
   attachFile: boolean;
-  /** Section 8 (ST-038): technicians only, a retired machine's record too – Collection's own rule. */
-  removeFile: boolean;
   /** Section 9 (ST-039): technicians only, not for a retired machine – Collection's own rule. */
   retire: boolean;
 };
@@ -192,7 +189,6 @@ function actionsOf(record: MachineRecord, viewer: Viewer): MachineRecordActions 
       machineStatusesToChangeTo(viewer.role, { machineStatus: record.machineStatus, retired: !active }).length > 0,
     correctDetails: correctDetailsRefusal({ retired: !active }, viewer) === undefined,
     attachFile: true,
-    removeFile: mayRemoveFiles(viewer),
     retire: retireRefusal({ retired: !active }, viewer) === undefined,
   };
 }

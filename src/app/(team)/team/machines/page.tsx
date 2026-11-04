@@ -29,7 +29,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
   const registered = registering && machineRegisteredIn(registering, registeredId) ? registeredId : undefined;
   // A file removed without a known origin lands here (ST-121), confirmed from the journal like any other action.
   const removedId = single(params.fileRemoved);
-  const removed = removedId && (await fileRemovedBy(database(), removedId, member.id));
+  const removed = removedId ? await fileRemovedBy(database(), removedId, member.id) : undefined;
 
   return (
     <Page title={teamMessages.machines.title}>

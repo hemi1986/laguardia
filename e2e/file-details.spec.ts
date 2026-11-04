@@ -62,8 +62,7 @@ test("a file that was removed has no details page", async ({ page }) => {
   await aMachineWithFile(page, "MM Manual (wrong edition)");
   await page.getByRole("link", { name: "Details zu „MM Manual (wrong edition)“" }).click();
   const detailsAddress = page.url();
-  await page.goBack();
-  await page.getByRole("link", { name: "„MM Manual (wrong edition)“ entfernen" }).click();
+  await page.getByRole("link", { name: "Datei entfernen" }).click();
   await page.getByRole("button", { name: "Endgültig entfernen" }).click();
   await expect(page.getByRole("main").getByRole("status")).toHaveText("„MM Manual (wrong edition)“ entfernt.");
 

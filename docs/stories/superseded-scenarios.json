@@ -33,5 +33,8 @@
   },
   "ST-109": {
     "Failed files are listed with what they belong to and why": "ST-120"
+  },
+  "ST-091": {
+    "The question before removing a file names the machine in its heading": "ST-121"
   }
 }

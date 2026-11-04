@@ -171,7 +171,8 @@ export function MachineRecordView({
           )}
         </LatestWithAll>
       </Section>
-      {/* Section 8 (ST-037): the files of the machine and its machine model, by file category in glossary order. */}
+      {/* Section 8 (ST-037): the files of the machine and its machine model, by file category in glossary order. A file is
+          removed only on its details page (ST-121); the record offers „Details“. */}
       <Section title={texts.files}>
         {record.files.length === 0 ? (
           <p className="text-sm">{texts.noFiles}</p>
@@ -203,16 +204,6 @@ export function MachineRecordView({
                       >
                         {texts.fileDetails}
                       </Link>
-                      {/* A way to the question, so the shape of any other secondary button – not red (G30). */}
-                      {actions.removeFile && (
-                        <Link
-                          href={`/team/machines/${encodeURIComponent(record.museumNumber)}/datei-entfernen/${file.id}`}
-                          aria-label={texts.removeFileLabel(file.title)}
-                          className={buttonVariants({ variant: "outline" })}
-                        >
-                          {texts.removeFile}
-                        </Link>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -269,7 +260,7 @@ function confirmationText(confirmation: MachineRecordConfirmation, record: Machi
     case "problem-reported":
       return texts.problemReported(record.museumNumber);
     case "file-removed":
-      return texts.fileRemoved(confirmation.title);
+      return teamMessages.removeFile.removed(confirmation.title);
     case "file-attached":
       return texts.fileAttached(confirmation.title);
     case "maintenance-recorded":

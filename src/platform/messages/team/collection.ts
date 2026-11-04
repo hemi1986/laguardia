@@ -137,13 +137,9 @@ export const collectionTexts = {
     /** Next to a file of the machine model – every machine of that model shows it. */
     ofMachineModel: "Modell",
     fileAttached: (title: string) => `„${title}“ angehängt.`,
-    /** Next to each file, technicians only (ST-038) – leads to the question before removing it (G10b). */
-    removeFile: "Entfernen",
-    removeFileLabel: (title: string) => `„${title}“ entfernen`,
     /** Next to each file, the whole team (ST-114, G18) – leads to the file details. */
     fileDetails: "Details",
     fileDetailsLabel: (title: string) => `Details zu „${title}“`,
-    fileRemoved: (title: string) => `„${title}“ entfernt.`,
   },
   /** The file details (RM-FileDetails, ST-114, G18): one file's page – what it is, what it is attached to, how far the AI index got. */
   fileDetails: {

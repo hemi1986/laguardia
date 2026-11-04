@@ -340,3 +340,46 @@ describe("the question before removing a file (ST-121)", () => {
     expect(await overviewPage({ fileRemoved: manual })).toContain("„MM Operations Manual“ entfernt.");
   });
 });
+
+describe("removing a file (ST-038)", () => {
+  it("ST-038: Technician removes a file", async () => {
+    const machineId = await aMachine("LG-042");
+    const wrong = await scenario.attachFile(machineId, {
+      title: "MM Manual (wrong edition)",
+      bytes: new TextEncoder().encode("The wrong edition's flipper coil."),
+      contentType: "text/plain",
+      to: "machine-model",
+    });
+    const content = (await fileToOpen(db, wrong))!.content;
+    const removal = await removeOnDetails(wrong);
+
+    expect(await removal.send()).toBeNull();
+
+    expect(removal.done).toEqual([wrong]);
+    expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).not.toContain(
+      "MM Manual (wrong edition)",
+    );
+    expect(storage.read(content)).toBeUndefined();
+    expect((await journalOf(db, { aggregateId: wrong })).at(-1)).toMatchObject({
+      type: "EVT-FileRemoved",
+      aggregate: { type: "AGG-File", id: wrong },
+      actor: { kind: "team-member", teamMemberId: tom.teamMemberId },
+      occurredAt: clock.now(),
+    });
+  });
+
+  it("keeps the content when the file changed since the question showed it", async () => {
+    const machineId = await aMachine("LG-042");
+    const flyer = await scenario.attachFile(machineId, {
+      title: "MM Flyer (kept)",
+      bytes: new TextEncoder().encode("Still the right flyer."),
+      contentType: "text/plain",
+      to: "machine",
+    });
+    const content = (await fileToOpen(db, flyer))!.content;
+
+    expect(await (await removeOnDetails(flyer, { version: 4 })).send()).toMatchObject({ error: "version-conflict" });
+    expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).toContain("MM Flyer (kept)");
+    expect(storage.read(content)).toBeDefined();
+  });
+});
