@@ -3,11 +3,28 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { addFileCommand, createMachineModelCommand, fileDetails, registerMachineCommand } from "@/modules/collection";
-import { executeCommand } from "@/platform/command";
+import {
+  addFileCommand,
+  createMachineModelCommand,
+  fileDetails,
+  fileToOpen,
+  machineRecord,
+  registerMachineCommand,
+} from "@/modules/collection";
+import { aiIndexStateOfFile, fileIndexingWork, removeFileCommandWithAiIndex } from "@/modules/ai-assistance";
+import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
+import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
+import { formRunner } from "@/app/_actions/form-runner";
+import { executeCommand, journalOf } from "@/platform/command";
+import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
+import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { loadMachineConfirmation } from "../../../../machines/[museumNumber]/machine-confirmation";
+import { loadMachineRecord } from "../../../../machines/[museumNumber]/machine-record-data";
+import { MachineRecordView } from "../../../../machines/[museumNumber]/machine-record";
 import { loadRemoveFile } from "./remove-file-data";
+import { removeFileForm } from "./remove-file-form";
 import { RemoveFileView } from "./remove-file-view";
 
 /**
@@ -17,9 +34,11 @@ import { RemoveFileView } from "./remove-file-view";
  */
 const isolated = isolatedTestDatabase("remove_file_page");
 let db: NodePgDatabase;
+let storage: MemoryStorage;
+const clock = steppingClock("2026-11-02T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
-const at = () => ({ db, newId: randomUUID });
+const at = () => ({ db, clock, newId: randomUUID });
 let medievalMadness: string;
 
 afterAll(() => isolated.close());
@@ -28,6 +47,8 @@ beforeEach(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
   await anExistingTeamMember(db, ben, "Ben");
+  clock.set("2026-11-02T10:00:00Z");
+  storage = memoryStorage();
   const created = await executeCommand(
     createMachineModelCommand,
     { title: "Medieval Madness", manufacturer: "Williams", year: "1997", machineCategory: "pinball" },
@@ -74,7 +95,32 @@ async function aFileAttachedTo(
   return added.result.fileId;
 }
 
+const scenario = aiScenario({ db: () => db, storage: () => storage, clock, technician: tom });
+const { ai, turnAiOn } = scenario;
+
+/** One run of the background work, indexing the files it finds. */
+const run = () => scenario.run({ kinds: [fileIndexingWork], with: ai() });
+
 type Viewer = typeof tom | typeof ben;
+
+/** „Endgültig entfernen“ through the Server Action runner – the form the question page shows. */
+async function removeOnDetails(
+  fileId: string,
+  { version = 0, person = tom }: { version?: number; person?: Viewer } = {},
+) {
+  const done: string[] = [];
+  const action = formRunner({
+    currentPerson: async () => person,
+    db,
+    clock,
+    newId: randomUUID,
+    storage,
+  })(
+    removeFileCommandWithAiIndex,
+    removeFileForm(fileId, async () => void done.push(fileId)),
+  );
+  return { done, send: (fields: Record<string, string> = { version: String(version) }) => action(null, post(fields)) };
+}
 
 /** The question as a team member opens it – params are the address's query. */
 async function question(
@@ -87,6 +133,18 @@ async function question(
     createElement(RemoveFileView, { file, action: async () => null, refusal: undefined }),
   );
   return { file, html };
+}
+
+const viewerOf = (person: Viewer) => ({ id: person.teamMemberId, role: person.role });
+
+/** The machine record as a team member opens it, with the confirmation the address asks for. */
+async function machineRecordPage(museumNumber: string, { fileRemoved }: { fileRemoved?: string } = {}) {
+  const record = await loadMachineRecord(db, museumNumber, { clock, viewer: viewerOf(tom), ai: ai(), storage });
+  const confirmation = record && (await loadMachineConfirmation(db, clock, tom.teamMemberId, record, { fileRemoved }));
+  return {
+    record,
+    html: renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber, confirmation })),
+  };
 }
 
 /** The address of the link with this text in the markup. */
@@ -123,5 +181,39 @@ describe("the question before removing a file (ST-121)", () => {
     expect(html).toContain("„Wiring notes“ entfernen? Die Datei wird endgültig gelöscht.");
     expect(html).not.toContain("Sie verschwindet bei:");
     expect(lines(html)).toEqual([]);
+  });
+
+  it("ST-121: A technician removes a file on its details page", async () => {
+    await turnAiOn();
+    const machineId = await aMachine("LG-042");
+    const wrong = await scenario.attachFile(machineId, {
+      title: "MM Manual (wrong edition)",
+      bytes: new TextEncoder().encode("The wrong edition's flipper coil."),
+      contentType: "text/plain",
+      to: "machine-model",
+    });
+    await run();
+    const content = (await fileToOpen(db, wrong))!.content;
+    expect(await aiIndexStateOfFile(db, ai(), wrong)).toMatchObject({ state: "indexed" });
+    expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).toContain("MM Manual (wrong edition)");
+
+    const removal = await removeOnDetails(wrong);
+
+    expect(await removal.send()).toBeNull();
+    expect(removal.done).toEqual([wrong]);
+    expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).not.toContain(
+      "MM Manual (wrong edition)",
+    );
+    expect(storage.read(content)).toBeUndefined();
+    expect(await fileToOpen(db, wrong)).toBeUndefined();
+    const steps = await journalOf(db, { aggregateId: wrong });
+    expect(steps.map((step) => step.type)).toContain("EVT-FileLeftAiIndex");
+    expect(steps.find((step) => step.type === "EVT-FileRemoved")).toMatchObject({
+      aggregate: { type: "AGG-File", id: wrong },
+      actor: { kind: "team-member", teamMemberId: tom.teamMemberId },
+      occurredAt: clock.now(),
+    });
+    const { html } = await machineRecordPage("LG-042", { fileRemoved: wrong });
+    expect(html).toContain("„MM Manual (wrong edition)“ entfernt.");
   });
 });
