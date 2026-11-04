@@ -7,6 +7,7 @@ import {
   addFileCommand,
   createMachineModelCommand,
   fileDetails,
+  fileRemovedBy,
   fileToOpen,
   machineRecord,
   registerMachineCommand,
@@ -23,6 +24,8 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadMachineConfirmation } from "../../../../machines/[museumNumber]/machine-confirmation";
 import { loadMachineRecord } from "../../../../machines/[museumNumber]/machine-record-data";
 import { MachineRecordView } from "../../../../machines/[museumNumber]/machine-record";
+import { loadMachineOverview } from "../../../../machines/machine-overview-data";
+import { MachineOverview } from "../../../../machines/machine-overview";
 import { loadAiSettings } from "../../../../museum-settings/ai-settings-data";
 import { AiSettingsSection } from "../../../../museum-settings/ai-settings-section";
 import { loadFileDetails } from "../file-details-data";
@@ -150,6 +153,22 @@ async function machineRecordPage(museumNumber: string, { fileRemoved }: { fileRe
     record,
     html: renderToStaticMarkup(createElement(MachineRecordView, { record, museumNumber, confirmation })),
   };
+}
+
+/** The machine overview as a team member opens it, with the confirmation the address asks for. */
+async function overviewPage({ fileRemoved }: { fileRemoved?: string } = {}) {
+  const { machines, counts, retiredCount } = await loadMachineOverview(db, clock, {});
+  const removed = fileRemoved ? await fileRemovedBy(db, fileRemoved, tom.teamMemberId) : undefined;
+  return renderToStaticMarkup(
+    createElement(MachineOverview, {
+      machines,
+      counts,
+      retiredCount,
+      query: {},
+      canRegister: true,
+      removedFile: removed?.title,
+    }),
+  );
 }
 
 /** The file details as a team member opens them – params are the address's query. */
@@ -299,5 +318,25 @@ describe("the question before removing a file (ST-121)", () => {
           : (await machineRecordPage("LG-042", { fileRemoved: fileId })).html;
       expect(landing).toContain(`„${example.title}“ entfernt.`);
     }
+  });
+
+  it("ST-121: A removal without a known origin lands on the machine overview", async () => {
+    const manual = await aFileAttachedTo({}, "MM Operations Manual");
+    const question = (await loadRemoveFile(db, manual, {
+      params: { from: "https://evil.example/phish" },
+      viewer: viewerOf(tom),
+    }))!;
+    expect(question.origin).toEqual({ kind: "none" });
+
+    let landed: string | undefined;
+    const action = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
+      removeFileCommandWithAiIndex,
+      removeFileForm(manual, async () => {
+        landed = removalLanding(question.origin, manual);
+      }),
+    );
+    expect(await action(null, post({ version: String(question.version) }))).toBeNull();
+    expect(landed).toBe(`/team/machines?fileRemoved=${manual}`);
+    expect(await overviewPage({ fileRemoved: manual })).toContain("„MM Operations Manual“ entfernt.");
   });
 });
