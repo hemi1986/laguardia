@@ -11,12 +11,14 @@ import {
   fileToOpen,
   machineRecord,
   registerMachineCommand,
+  removeFileRefusal,
 } from "@/modules/collection";
 import { aiIndexStateOfFile, fileIndexingWork, removeFileCommandWithAiIndex } from "@/modules/ai-assistance";
 import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
 import { formRunner } from "@/app/_actions/form-runner";
 import { executeCommand, journalOf } from "@/platform/command";
+import { commandErrorText, teamMessages } from "@/platform/messages";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
@@ -45,6 +47,7 @@ let db: NodePgDatabase;
 let storage: MemoryStorage;
 const clock = steppingClock("2026-11-02T10:00:00Z");
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+const eva = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
 const ben = { kind: "team-member", teamMemberId: randomUUID(), role: "helper" } as const;
 const at = () => ({ db, clock, newId: randomUUID });
 let medievalMadness: string;
@@ -54,6 +57,7 @@ afterAll(() => isolated.close());
 beforeEach(async () => {
   db = await isolated.reset();
   await anExistingTeamMember(db, tom, "Tom");
+  await anExistingTeamMember(db, eva, "Eva");
   await anExistingTeamMember(db, ben, "Ben");
   clock.set("2026-11-02T10:00:00Z");
   storage = memoryStorage();
@@ -137,8 +141,13 @@ async function question(
 ) {
   const file = await loadRemoveFile(db, fileId, { params, viewer: { id: person.teamMemberId, role: person.role } });
   if (!file) return { file, html: "" };
+  const refusal = removeFileRefusal({ removed: file.removed }, { role: person.role });
   const html = renderToStaticMarkup(
-    createElement(RemoveFileView, { file, action: async () => null, refusal: undefined }),
+    createElement(RemoveFileView, {
+      file,
+      action: async () => null,
+      refusal: refusal && commandErrorText(teamMessages, refusal),
+    }),
   );
   return { file, html };
 }
@@ -359,6 +368,35 @@ describe("the question before removing a file (ST-121)", () => {
     expect(attempt.done).toEqual([]);
     expect(await fileDetails(db, manual)).toBeDefined();
     expect((await machineRecord(db, "LG-042"))!.files.map((file) => file.title)).toContain("MM Operations Manual");
+  });
+
+  it("ST-121: A file already removed cannot be removed again", async () => {
+    const machineId = await aMachine("LG-042");
+    const old = await aFileAttachedTo({ machines: [machineId] }, "Old manual");
+    const seen = (await question(old)).file!;
+    expect(seen.removed).toBe(false);
+    const removed = await executeCommand(
+      removeFileCommandWithAiIndex,
+      { fileId: old, version: seen.version },
+      { actor: eva, db, clock, newId: randomUUID },
+    );
+    if (!removed.ok) throw new Error(removed.error);
+    const journal = await journalOf(db, { aggregateId: old });
+
+    const attempt = await removeOnDetails(old, { version: seen.version });
+
+    expect(await attempt.send()).toMatchObject({ error: "file-removed" });
+    expect(attempt.done).toEqual([]);
+    // Nothing else changes: the removal made meanwhile stays the only one.
+    expect(await journalOf(db, { aggregateId: old })).toEqual(journal);
+    expect(journal.at(-1)).toMatchObject({
+      type: "EVT-FileRemoved",
+      actor: { teamMemberId: eva.teamMemberId },
+    });
+    const after = await question(old);
+    expect(after.file?.removed).toBe(true);
+    expect(after.html).toContain("Diese Datei wurde schon entfernt.");
+    expect(after.html).not.toContain("Endgültig entfernen");
   });
 });
 
