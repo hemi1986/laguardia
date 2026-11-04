@@ -8,6 +8,7 @@ import {
   type FileCategory,
   type FileState,
 } from "./add-file";
+import type { AttachFileInput, AttachingFacts } from "./attach-file";
 import { fileRemovalLock } from "./file-removal-lock";
 import { fileRemovedIn } from "./in-command";
 import { opensInBrowser } from "./open-file";
@@ -57,21 +58,36 @@ export const files = aggregateStore({
   }),
 });
 
-/** CMD-AddFile's facts: whether every machine and machine model the input names exists. */
-export async function addingFacts(tx: Database, input: AddFileInput): Promise<AddingFacts> {
-  const machineIds = [...new Set(input.machineIds)];
-  const machineModelIds = [...new Set(input.machineModelIds)];
+/** Whether every machine and machine model the input names exists – CMD-AddFile's and CMD-AttachFile's one rule. */
+async function targetsExist(
+  tx: Database,
+  machineIds: readonly string[],
+  machineModelIds: readonly string[],
+): Promise<{ machinesExist: boolean; machineModelsExist: boolean }> {
+  const machines = [...new Set(machineIds)];
+  const models = [...new Set(machineModelIds)];
   // An ID that is no ID names nothing – a forged form field, not a database error.
-  if (![...machineIds, ...machineModelIds].every(isId)) return { everythingExists: false };
+  if (![...machines, ...models].every(isId)) return { machinesExist: false, machineModelsExist: false };
   const [foundMachines, foundModels] = await Promise.all([
-    machineIds.length ? tx.select({ id: machine.id }).from(machine).where(inArray(machine.id, machineIds)) : [],
-    machineModelIds.length
-      ? tx.select({ id: machineModel.id }).from(machineModel).where(inArray(machineModel.id, machineModelIds))
-      : [],
+    machines.length ? tx.select({ id: machine.id }).from(machine).where(inArray(machine.id, machines)) : [],
+    models.length ? tx.select({ id: machineModel.id }).from(machineModel).where(inArray(machineModel.id, models)) : [],
   ]);
   return {
-    everythingExists: foundMachines.length === machineIds.length && foundModels.length === machineModelIds.length,
+    machinesExist: foundMachines.length === machines.length,
+    machineModelsExist: foundModels.length === models.length,
   };
+}
+
+/** CMD-AddFile's facts: whether every machine and machine model the input names exists. */
+export async function addingFacts(tx: Database, input: AddFileInput): Promise<AddingFacts> {
+  const { machinesExist, machineModelsExist } = await targetsExist(tx, input.machineIds, input.machineModelIds);
+  return { everythingExists: machinesExist && machineModelsExist };
+}
+
+/** CMD-AttachFile's facts (ST-115): which of the named machines and machine models does not exist – retired machines included. */
+export async function attachingFacts(tx: Database, input: AttachFileInput): Promise<AttachingFacts> {
+  const { machinesExist, machineModelsExist } = await targetsExist(tx, input.machineIds, input.machineModelIds);
+  return { missingMachines: !machinesExist, missingMachineModels: !machineModelsExist };
 }
 
 /** A file as the machine record lists it (RM-MachineRecord, ST-037). */

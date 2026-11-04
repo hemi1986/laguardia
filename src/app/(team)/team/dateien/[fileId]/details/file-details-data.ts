@@ -5,14 +5,24 @@ import {
   type AiDependencies,
   type IndexingFailureReason,
 } from "@/modules/ai-assistance";
-import { fileDetails, mayRemoveFiles, type FileAttachedTo, type FileMediaType } from "@/modules/collection";
+import {
+  fileDetails,
+  fileDetachedIn,
+  machineLabels,
+  machineModelTitles,
+  mayDetachFiles,
+  mayRemoveFiles,
+  type AttachedTo,
+  type FileAttachedTo,
+  type FileMediaType,
+} from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
-import type { Database } from "@/platform/command";
-import { isId } from "@/platform/command";
+import { isId, lastCommandBy, type Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { calendarDate, formatCalendarDate } from "@/platform/time";
 import { fileSizeText } from "./file-size";
-import { originOf, removeFileAddress, wayBack, type FileOrigin } from "./file-origin";
+import { targetOf, targetValue } from "./file-attachments";
+import { attachToFileAddress, originOf, removeFileAddress, wayBack, type FileOrigin } from "./file-origin";
 
 /** Section „KI-Erfassung“ (RM-FileDetails, G37): none while AI is off. */
 export type FileAiState =
@@ -30,6 +40,14 @@ export type FileDetailsData = {
   ai: FileAiState | undefined;
   /** „Erneut versuchen“ is offered – only a technician, only on a failed file (AI is on then). */
   retryOffered: boolean;
+  /** „Anhängen“ at the end of „Angehängt an“ (ST-115) – every team member. */
+  attachHref: string;
+  /** „Lösen“ on each entry (ST-115) – technicians only (G11). */
+  detachOffered: boolean;
+  /** The confirmation after attaching (ST-115, G3, G33): the resulting state, never from the journal alone. */
+  attachedConfirmation: string | undefined;
+  /** The confirmation after detaching one thing (ST-115, G3), with the target's name. */
+  detachedConfirmation: string | undefined;
   /** „Datei entfernen“ is offered – technicians only (G11), with the origin kept (ST-121). */
   removalHref: string | undefined;
   /** The title of the file the viewer just tried again (G3) – from the journal, never from the address alone. */
@@ -60,12 +78,20 @@ export async function loadFileDetails(
   if (!isId(fileId)) return undefined;
   const details = await fileDetails(db, fileId);
   if (!details) return undefined;
-  const [names, aiState, origin, retried] = await Promise.all([
+  const wantsConfirmation = params.attached === "1" || typeof params.detached === "string";
+  const [names, aiState, origin, retried, detached, lastCommand] = await Promise.all([
     teamMemberNames(db, [details.addedBy]),
     aiIndexStateOfFile(db, ai, fileId),
     originOf(db, params.from, viewer),
     params.retried === "1" ? fileIndexingRetriedBy(db, fileId, viewer.id) : undefined,
+    detachedTargetOf(db, params.detached),
+    wantsConfirmation ? lastCommandBy(db, { aggregateId: fileId }, viewer.id) : undefined,
   ]);
+  const machineCount = details.attachedTo.filter((target) => target.kind === "machine").length;
+  const machineModelCount = details.attachedTo.filter((target) => target.kind === "machine-model").length;
+  const stillAttached =
+    detached !== undefined && details.attachedTo.some((target) => targetValue(target) === targetValue(detached.target));
+  const detachedByViewer = lastCommand !== undefined && fileDetachedIn(lastCommand, fileId);
   return {
     id: details.id,
     title: details.title,
@@ -77,9 +103,41 @@ export async function loadFileDetails(
     attachedTo: details.attachedTo,
     ai: aiState,
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",
+    attachHref: attachToFileAddress(details.id, origin),
+    detachOffered: mayDetachFiles(viewer),
+    // A resulting-state confirmation (G3, G33): the counts are true whichever command wrote them.
+    attachedConfirmation:
+      params.attached === "1"
+        ? teamMessages.fileDetails.attachedNow(details.title, machineCount, machineModelCount)
+        : undefined,
+    // Only a technician, and only when the target is no longer attached – or their latest command was this detach. So the
+    // sentence never claims a state that is not there, and a helper sees no control and no confirmation (G11, G3).
+    detachedConfirmation:
+      detached !== undefined && mayDetachFiles(viewer) && (detachedByViewer || !stillAttached)
+        ? teamMessages.fileDetails.detachedFrom(details.title, detached.name)
+        : undefined,
     removalHref: mayRemoveFiles(viewer) ? removeFileAddress(details.id, origin) : undefined,
     retried: retried?.title,
     origin,
     back: wayBack(origin),
   };
+}
+
+/**
+ * What a detach named in the address, with the name the confirmation shows (ST-115): a machine by museum number, a
+ * machine model by title. None for a malformed value or an ID that is no ID – an address is untrusted input.
+ */
+async function detachedTargetOf(
+  db: Database,
+  value: string | string[] | undefined,
+): Promise<{ target: AttachedTo; name: string } | undefined> {
+  if (typeof value !== "string") return undefined;
+  const target = targetOf(value);
+  if (!target) return undefined;
+  if ("machineId" in target) {
+    const label = (await machineLabels(db, [target.machineId])).get(target.machineId);
+    return label && { target, name: label.museumNumber };
+  }
+  const title = (await machineModelTitles(db, [target.machineModelId])).get(target.machineModelId);
+  return title ? { target, name: title } : undefined;
 }

@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAttached, EVT-FileDetached]
 depends_on: [ST-114, ST-094, ST-120, ST-121]
 labels: [feature:files, ui]
-status: ready
+status: done
 ---
 
 ## Story

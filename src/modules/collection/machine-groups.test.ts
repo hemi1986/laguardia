@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { groupMachines } from "./machine-groups";
+import { groupMachineModels, groupMachines } from "./machine-groups";
 
 describe("grouping machines for a choice (G27)", () => {
-  const m = (museumNumber: string, machineCategory: "pinball" | "arcade" | "other", technology?: "em" | "dmd" | "lcd" | "crt" | "solid-state") => ({
+  const m = (
+    museumNumber: string,
+    machineCategory: "pinball" | "arcade" | "other",
+    technology?: "em" | "dmd" | "lcd" | "crt" | "solid-state",
+  ) => ({
     museumNumber,
     machineCategory,
     technology,
@@ -40,5 +44,32 @@ describe("grouping machines for a choice (G27)", () => {
   it("shows no group without a machine", () => {
     expect(groupMachines([m("LG-005", "pinball", "em")])).toHaveLength(1);
     expect(groupMachines([])).toEqual([]);
+  });
+});
+
+describe("grouping machine models for a choice (ST-115)", () => {
+  const model = (title: string, machineCategory: "pinball" | "arcade" | "other", technology?: "em" | "crt") => ({
+    title,
+    machineCategory,
+    technology,
+  });
+
+  it("orders the groups as CONTEXT.md does and the models of a group by title", () => {
+    const groups = groupMachineModels([
+      model("Medieval Madness", "pinball", "em"),
+      model("Eight Ball", "pinball", "em"),
+      model("Attack from Mars", "pinball", "em"),
+      model("Pac-Man", "arcade", "crt"),
+    ]);
+
+    expect(groups.map((group) => [group.machineCategory, group.technology])).toEqual([
+      ["pinball", "em"],
+      ["arcade", "crt"],
+    ]);
+    expect(groups[0].machineModels.map((each) => each.title)).toEqual([
+      "Attack from Mars",
+      "Eight Ball",
+      "Medieval Madness",
+    ]);
   });
 });

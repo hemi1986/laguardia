@@ -1,14 +1,20 @@
 /** Public interface of the Collection module (BC-Collection: machines, machine models, files) – ADR 0002. */
 export { addFileCommand } from "./add-file-command";
+export { attachFileCommand } from "./attach-file-command";
+export { detachFileCommand } from "./detach-file-command";
+export { mayDetachFiles } from "./detach-file";
 export { addFileRefusal, attachTargets, fileCategories } from "./add-file";
 export type {
   AddFileError,
   AddFileInput,
   AddFileInputError,
   AttachTarget,
+  AttachedTo,
   FileCategory,
   FileContent,
 } from "./add-file";
+export type { AttachFileError, AttachFileInput } from "./attach-file";
+export type { DetachFileError, DetachFileInput } from "./detach-file";
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
@@ -50,6 +56,12 @@ export { createMachineModelCommand } from "./create-machine-model-command";
 export { machineCategories, technologies, technologiesOf } from "./create-machine-model";
 export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology } from "./create-machine-model";
 export { groupMachines, type MachineGroup } from "./machine-groups";
+export {
+  attachmentChoice,
+  type AttachmentChoice,
+  type AttachmentChoiceMachine,
+  type AttachmentChoiceMachineModel,
+} from "./attachment-choice";
 export {
   machineModelForTeam,
   machineModelsToChooseFrom,
@@ -121,6 +133,8 @@ export {
 export {
   collectionChangesIn,
   fileAddedIn,
+  fileAttachedIn,
+  fileDetachedIn,
   fileRemovedIn,
   machineModelChangeIn,
   machineRegisteredIn,

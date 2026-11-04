@@ -34,13 +34,48 @@ export function originValue(origin: FileOrigin | PlaceOfPage | string | undefine
 export function fileDetailsAddress(
   fileId: string,
   origin?: FileOrigin | PlaceOfPage | string,
-  { retried = false }: { retried?: boolean } = {},
+  {
+    retried = false,
+    attached = false,
+    detached,
+    detachFailed,
+  }: { retried?: boolean; attached?: boolean; detached?: string; detachFailed?: string } = {},
 ): string {
   const search = new URLSearchParams();
   const value = originValue(origin);
   if (value) search.set(ORIGIN_PARAM, value);
   if (retried) search.set("retried", "1");
+  if (attached) search.set("attached", "1");
+  if (detached) search.set("detached", detached);
+  if (detachFailed) search.set("detachFailed", detachFailed);
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
+}
+
+/** Where attaching a file lands (ST-115, G3, G33): its details, which say what it is attached to now. */
+export function attachLanding(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
+  return fileDetailsAddress(fileId, origin, { attached: true });
+}
+
+/** The form „Anhängen“ (ST-115), reached from the file details, with the origin kept (G17). */
+export function attachToFileAddress(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
+  const search = new URLSearchParams();
+  const value = originValue(origin);
+  if (value) search.set(ORIGIN_PARAM, value);
+  return `/team/dateien/${fileId}/details/anhaengen${search.size > 0 ? `?${search}` : ""}`;
+}
+
+/** Where detaching a file lands (ST-115, G3): its details, with the target it was detached from. */
+export function detachLanding(
+  fileId: string,
+  origin: FileOrigin | PlaceOfPage | string | undefined,
+  target: string,
+): string {
+  return fileDetailsAddress(fileId, origin, { detached: target });
+}
+
+/** Where a detach that met a removed file lands (ST-115): the details' removed state, which shows the rejection. */
+export function detachFailureLanding(fileId: string, origin: FileOrigin | PlaceOfPage | string | undefined): string {
+  return fileDetailsAddress(fileId, origin, { detachFailed: "file-removed" });
 }
 
 /** The question before removing a file (ST-121), with the origin kept – „Zurück“ and the removal land there. */

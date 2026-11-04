@@ -188,7 +188,9 @@ async function detailsPage(
 ) {
   const file = await loadFileDetails(db, fileId, { params, viewer: viewerOf(person), ai: ai() });
   if (!file) return "";
-  return renderToStaticMarkup(createElement(FileDetailsView, { file, retry: async () => null }));
+  return renderToStaticMarkup(
+    createElement(FileDetailsView, { file, retry: async () => null, detach: async () => null }),
+  );
 }
 
 /** „Einstellungen“ as Tom opens it. */

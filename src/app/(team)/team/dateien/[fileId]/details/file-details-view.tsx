@@ -7,27 +7,36 @@ import { Section } from "@/components/ui/section";
 import type { RetryFileIndexingState } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
 import { teamMachinePage } from "@/app/museum-number-address";
 import { teamMessages } from "@/platform/messages";
-import { attachedToText } from "./file-attachments";
+import { DetachFileButton } from "./detach-file-button";
+import type { DetachFileState } from "./detach-file-form";
+import { targetValue, attachedToText } from "./file-attachments";
 import type { FileDetailsData } from "./file-details-data";
 import { RetryFileForm } from "./retry-file-form";
 
 const { fileDetails: texts, aiIndex } = teamMessages;
 
 /**
- * The file details (RM-FileDetails, ST-114, G18) in the order of the guideline: the head, „Angehängt an“ and – while AI is
- * on – „KI-Erfassung“, under the file's title as the heading. A view receives everything it shows; the section „KI-Erfassung“ is absent when `ai` is none (G37).
+ * The file details (RM-FileDetails, ST-114, G18) in the order of the guideline: the head, „Angehängt an“ – with
+ * „Anhängen“ at its end and „Lösen“ on each entry for technicians (ST-115) – and, while AI is on, „KI-Erfassung“, under
+ * the file's title as the heading. A view receives everything it shows; the section „KI-Erfassung“ is absent when `ai`
+ * is none (G37).
  */
 export function FileDetailsView({
   file,
   retry,
+  detach,
 }: {
   file: FileDetailsData;
   /** „Erneut versuchen“'s Server Action, the origin already bound. */
   retry: (previous: RetryFileIndexingState, formData: FormData) => Promise<RetryFileIndexingState>;
+  /** „Lösen“'s Server Action, file and origin already bound (ST-115). */
+  detach: (previous: DetachFileState, formData: FormData) => Promise<DetachFileState>;
 }) {
   return (
     <Page title={file.title}>
       {file.retried && <Confirmation>{aiIndex.retrying(file.retried)}</Confirmation>}
+      {file.attachedConfirmation && <Confirmation>{file.attachedConfirmation}</Confirmation>}
+      {file.detachedConfirmation && <Confirmation>{file.detachedConfirmation}</Confirmation>}
       <div className="flex flex-col gap-2">
         <p>{texts.head(file.category, texts.mediaTypes[file.mediaType], file.size)}</p>
         <p className="text-muted-foreground text-sm">{texts.addedBy(file.addedBy, file.addedOn)}</p>
@@ -39,20 +48,29 @@ export function FileDetailsView({
         {file.attachedTo.length === 0 ? (
           <p className="text-sm">{texts.nowhere}</p>
         ) : (
-          <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
-            {file.attachedTo.map((target) =>
-              target.kind === "machine" ? (
-                <li key={target.machineId}>
+          <ul className="flex flex-col gap-2 text-sm [overflow-wrap:anywhere]">
+            {file.attachedTo.map((target) => (
+              <li
+                key={target.kind === "machine" ? target.machineId : target.machineModelId}
+                className="flex flex-wrap items-start justify-between gap-2"
+              >
+                {target.kind === "machine" ? (
                   <Link href={teamMachinePage()(target.museumNumber)} className="underline underline-offset-4">
                     {attachedToText(target)}
                   </Link>
-                </li>
-              ) : (
-                <li key={target.machineModelId}>{attachedToText(target)}</li>
-              ),
-            )}
+                ) : (
+                  <span>{attachedToText(target)}</span>
+                )}
+                {file.detachOffered && <DetachFileButton action={detach} target={targetValue(target)} />}
+              </li>
+            ))}
           </ul>
         )}
+        <div>
+          <Link href={file.attachHref} className={buttonVariants({ variant: "outline" })}>
+            {texts.attach}
+          </Link>
+        </div>
       </Section>
       {file.ai && (
         <Section title={aiIndex.title}>

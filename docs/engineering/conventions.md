@@ -381,6 +381,13 @@ and no other module answers about its commands. The triage outcomes share one mo
 `src/app/(team)/team/triage-confirmation.ts` (triage list and machine record); the machine record asks
 `loadMachineConfirmation` and shows one `confirmation`.
 
+**Attaching and detaching a file** (ST-115, CMD-AttachFile/CMD-DetachFile) are set deltas: a real change journals
+`EVT-FileAttached`/`EVT-FileDetached`, a change already made journals nothing. Their landing is `?attached=1` /
+`?detached=<machine|machineModel>:<id>` and states the resulting state (G33). A detach is confirmed only to a technician
+and only when `fileDetachedIn` of their latest command says so or the target is no longer attached; an attach's counts
+are true whichever command wrote them, so the no-op lands like a change. Both are the exceptions of *A confirmation after
+an action* that G33 needs – a no-op has no journal entry to ask.
+
 **The museum settings** (ST-100, AGG-MuseumSettings in Collection): one singleton in **three parts** – museum details,
 logo, legal texts – each its own record with its own version and its own command, so the existing store and version
 check apply unchanged and a save of one part never rejects another. A part's row is inserted with its defaults by its
