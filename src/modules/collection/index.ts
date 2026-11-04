@@ -25,10 +25,12 @@ export {
 } from "./files";
 export {
   fileDetails,
+  fileForRemoval,
   fileMediaTypeOf,
   fileMediaTypes,
   type FileAttachedTo,
   type FileDetails,
+  type FileForRemoval,
   type FileMediaType,
 } from "./file-details";
 export { removeFileCommand } from "./remove-file-command";

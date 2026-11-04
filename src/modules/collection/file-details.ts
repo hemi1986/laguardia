@@ -46,24 +46,8 @@ export type FileDetails = {
   attachedTo: FileAttachedTo[];
 };
 
-/**
- * One file's page (RM-FileDetails, ST-114) – none for an unknown or removed file. A file attached to nothing has an
- * empty `attachedTo`. Only after the team page's access check (files are team-only).
- */
-export async function fileDetails(db: Database, fileId: string): Promise<FileDetails | undefined> {
-  const [row] = await db
-    .select({
-      id: file.id,
-      title: file.title,
-      fileCategory: file.fileCategory,
-      contentType: file.contentType,
-      size: file.size,
-      addedBy: file.addedBy,
-      addedAt: file.addedAt,
-    })
-    .from(file)
-    .where(and(eq(file.id, fileId), isNull(file.removedAt)));
-  if (!row) return undefined;
+/** What a file is attached to, in the order the attachments were made – machines first, then machine models. */
+async function attachmentsOf(db: Database, fileId: string): Promise<FileAttachedTo[]> {
   const [machines, models] = await Promise.all([
     db
       .select({
@@ -84,6 +68,34 @@ export async function fileDetails(db: Database, fileId: string): Promise<FileDet
       .where(eq(fileAttachment.fileId, fileId))
       .orderBy(asc(fileAttachment.position)),
   ]);
+  return [
+    ...machines.map(({ retiredAt, ...rest }): FileAttachedTo => ({
+      kind: "machine",
+      ...rest,
+      retired: retiredAt !== null,
+    })),
+    ...models.map((model): FileAttachedTo => ({ kind: "machine-model", ...model })),
+  ];
+}
+
+/**
+ * One file's page (RM-FileDetails, ST-114) – none for an unknown or removed file. A file attached to nothing has an
+ * empty `attachedTo`. Only after the team page's access check (files are team-only).
+ */
+export async function fileDetails(db: Database, fileId: string): Promise<FileDetails | undefined> {
+  const [row] = await db
+    .select({
+      id: file.id,
+      title: file.title,
+      fileCategory: file.fileCategory,
+      contentType: file.contentType,
+      size: file.size,
+      addedBy: file.addedBy,
+      addedAt: file.addedAt,
+    })
+    .from(file)
+    .where(and(eq(file.id, fileId), isNull(file.removedAt)));
+  if (!row) return undefined;
   return {
     id: row.id,
     title: row.title,
@@ -92,13 +104,35 @@ export async function fileDetails(db: Database, fileId: string): Promise<FileDet
     size: row.size,
     addedBy: row.addedBy,
     addedAt: row.addedAt,
-    attachedTo: [
-      ...machines.map(({ retiredAt, ...rest }): FileAttachedTo => ({
-        kind: "machine",
-        ...rest,
-        retired: retiredAt !== null,
-      })),
-      ...models.map((model): FileAttachedTo => ({ kind: "machine-model", ...model })),
-    ],
+    attachedTo: await attachmentsOf(db, fileId),
+  };
+}
+
+/** A file as the question before its removal shows it (ST-121): the kept record, removed or not. */
+export type FileForRemoval = {
+  id: string;
+  title: string;
+  version: number;
+  removed: boolean;
+  attachedTo: FileAttachedTo[];
+};
+
+/**
+ * The file the question before removing it shows (CMD-RemoveFile, ST-121): what it is attached to and the version it
+ * posts – **removed or not**, so the question can answer after a removal made meanwhile. None only for an unknown file.
+ * Only after the team page's access check (removal is technician-only; the command checks again).
+ */
+export async function fileForRemoval(db: Database, fileId: string): Promise<FileForRemoval | undefined> {
+  const [row] = await db
+    .select({ id: file.id, title: file.title, version: file.version, removedAt: file.removedAt })
+    .from(file)
+    .where(eq(file.id, fileId));
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    title: row.title,
+    version: row.version,
+    removed: row.removedAt !== null,
+    attachedTo: await attachmentsOf(db, fileId),
   };
 }

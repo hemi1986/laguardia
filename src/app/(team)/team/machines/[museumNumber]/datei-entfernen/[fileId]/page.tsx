@@ -34,7 +34,7 @@ export default async function RemoveFilePage({
   const back = teamMachinePage()(museumNumber);
 
   return (
-    <Page title={texts.title(museumNumber)}>
+    <Page title={texts.title(file?.title ?? museumNumber)}>
       {!machine ? (
         <p>{machineRecord.unknown(museumNumber)}</p>
       ) : !file ? (
@@ -42,7 +42,7 @@ export default async function RemoveFilePage({
       ) : (
         // Rendered for a removed file too: an action re-renders this page, and a rejection must stay and say so.
         <>
-          <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title, file.machineModel)}</p>
+          <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title)}</p>
           <RemoveFileButton
             action={removeFileAction.bind(null, machine.museumNumber, file.id)}
             version={file.version}
