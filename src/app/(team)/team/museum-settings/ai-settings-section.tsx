@@ -72,7 +72,7 @@ export function AiSettingsSection({
   confirmed,
   overview,
   retried,
-  removedFile,
+  removedFileTitle,
   replacingKey,
   chosen,
 }: AiSettingsData) {
@@ -82,7 +82,7 @@ export function AiSettingsSection({
     : `${texts.off} ${texts.missing} ${form.missing.map((part) => texts.missingParts[part]).join(", ")}.`;
   return (
     <Section title={texts.title} id="ki" contentClassName="flex flex-col gap-4">
-      {removedFile && <Confirmation>{teamMessages.removeFile.removed(removedFile)}</Confirmation>}
+      {removedFileTitle && <Confirmation>{teamMessages.removeFile.removed(removedFileTitle)}</Confirmation>}
       {confirmed === "saved" && <Confirmation>{form.aiOn ? `${texts.saved} ${texts.on}` : texts.saved}</Confirmation>}
       {confirmed === "key-removed" && <Confirmation>{texts.keyRemoved}</Confirmation>}
       {confirmed === "key-replaced" && <Confirmation>{texts.keyReplaced}</Confirmation>}

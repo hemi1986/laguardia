@@ -61,7 +61,8 @@ export function removalLanding(origin: FileOrigin, fileId: string): string {
     case "machine":
       return `${teamMachinePage()(origin.museumNumber)}?${query}`;
     case "settings":
-      return `/team/museum-settings?${query}`;
+      // The confirmation sits in the section „KI“, the page's last section – the anchor makes it visible (G3).
+      return `/team/museum-settings?${query}#ki`;
     case "none":
       return `/team/machines?${query}`;
   }

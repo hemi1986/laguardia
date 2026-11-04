@@ -18,6 +18,7 @@ import { formRunner } from "@/app/_actions/form-runner";
 import { executeCommand, journalOf, type Actor } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { post } from "@/test-support/forms";
+import { hrefOf, queryOf } from "@/test-support/html";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { loadAiSettings } from "../../../museum-settings/ai-settings-data";
@@ -111,9 +112,6 @@ async function details(
   return { file, html };
 }
 
-/** The query of an address a page offered – what the person's next request carries. */
-const queryOf = (href: string) => Object.fromEntries(new URL(href, "http://museum.test").searchParams);
-
 /** The machine record as a team member opens it. */
 async function machineRecord(museumNumber: string, person: Viewer = ben) {
   const record = await loadMachineRecord(db, museumNumber, { clock, viewer: viewerOf(person), ai: ai() });
@@ -124,14 +122,6 @@ async function machineRecord(museumNumber: string, person: Viewer = ben) {
 async function settingsPage() {
   const data = await loadAiSettings(db, {}, { dependencies: ai(), viewer: tom.teamMemberId });
   return renderToStaticMarkup(createElement(AiSettingsSection, data));
-}
-
-/** The address of the link with this accessible name or text in the markup. */
-function hrefOf(html: string, linkText: string): string {
-  const at = html.indexOf(`>${linkText}</a>`);
-  if (at < 0) throw new Error(`No link „${linkText}“`);
-  const start = html.lastIndexOf("<a ", at);
-  return /href="([^"]+)"/.exec(html.slice(start, at))![1].replaceAll("&amp;", "&");
 }
 
 const hrefs = (html: string) => [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);

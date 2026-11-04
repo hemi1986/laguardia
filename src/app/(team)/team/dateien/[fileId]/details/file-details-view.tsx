@@ -7,6 +7,7 @@ import { Section } from "@/components/ui/section";
 import type { RetryFileIndexingState } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
 import { teamMachinePage } from "@/app/museum-number-address";
 import { teamMessages } from "@/platform/messages";
+import { attachedToText } from "./file-attachments";
 import type { FileDetailsData } from "./file-details-data";
 import { RetryFileForm } from "./retry-file-form";
 
@@ -43,13 +44,11 @@ export function FileDetailsView({
               target.kind === "machine" ? (
                 <li key={target.machineId}>
                   <Link href={teamMachinePage()(target.museumNumber)} className="underline underline-offset-4">
-                    {target.retired
-                      ? texts.retiredMachine(target.museumNumber)
-                      : texts.machine(target.museumNumber, target.machineModelTitle)}
+                    {attachedToText(target)}
                   </Link>
                 </li>
               ) : (
-                <li key={target.machineModelId}>{texts.machineModel(target.title)}</li>
+                <li key={target.machineModelId}>{attachedToText(target)}</li>
               ),
             )}
           </ul>

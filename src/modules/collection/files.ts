@@ -130,51 +130,32 @@ export async function fileToOpen(
   return row && { content: row.content, download: !opensInBrowser(row.contentType) };
 }
 
-/** A file of one machine's page (ST-038): what the question before removing it shows and posts, removed or not. */
+/** A file of one machine's page (ST-038, ST-121): what the removal confirmation names. */
 export type MachineFile = {
   id: string;
   title: string;
-  version: number;
-  removed: boolean;
-  /** The machine model's title, for a file attached to the machine model – it disappears from every machine of that model. */
-  machineModel?: string;
 };
 
 /**
- * A file of a machine or of its machine model, removed or not – none for any other file (ST-038): the question before
- * removing it, and the confirmation afterwards, which names the file the machine record no longer lists.
+ * A file of a machine or of its machine model, removed or not – none for any other file (ST-038, ST-121): the
+ * confirmation after a removal, which names the file the machine record no longer lists.
  */
 export async function machineFile(
   db: Database,
   { fileId, machineId }: { fileId: string; machineId: string },
 ): Promise<MachineFile | undefined> {
   const [owner] = await db
-    .select({ machineModelId: machine.machineModelId, machineModelTitle: machineModel.title })
+    .select({ machineModelId: machine.machineModelId })
     .from(machine)
-    .innerJoin(machineModel, eq(machineModel.id, machine.machineModelId))
     .where(eq(machine.id, machineId));
   if (!owner) return undefined;
   const [row] = await db
-    .select({
-      id: file.id,
-      title: file.title,
-      version: file.version,
-      removedAt: file.removedAt,
-      ofMachineModel: sql<boolean>`bool_or(${fileAttachment.machineModelId} is not null)`,
-    })
+    .select({ id: file.id, title: file.title })
     .from(file)
     .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
     .where(and(eq(file.id, fileId), ofMachineOrModel({ machineId, machineModelId: owner.machineModelId })))
     .groupBy(file.id);
-  return (
-    row && {
-      id: row.id,
-      title: row.title,
-      version: row.version,
-      removed: row.removedAt !== null,
-      ...(row.ofMachineModel && { machineModel: owner.machineModelTitle }),
-    }
-  );
+  return row && { id: row.id, title: row.title };
 }
 
 /**

@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
+import { isId } from "@/platform/command";
 import { requireTeamMember } from "../../../../../../team-session";
 
 /**
@@ -14,6 +15,7 @@ export default async function FormerRemoveFilePage({
 }: PageProps<"/team/machines/[museumNumber]/datei-entfernen/[fileId]">) {
   await requireTeamMember();
   const { fileId } = await params;
+  if (!isId(fileId)) notFound();
   const museumNumber = await museumNumberOfPage({ params, searchParams }, teamMachinePage(`datei-entfernen/${fileId}`));
   redirect(fileDetailsAddress(fileId, { machine: museumNumber }));
 }

@@ -35,7 +35,7 @@ export type AiSettingsData = {
   /** The file the technician just tried again (G3) – its title. */
   retried: string | undefined;
   /** The file the technician just removed on its details (G3) – its title, from the journal. */
-  removedFile: string | undefined;
+  removedFileTitle: string | undefined;
   /** „Ersetzen“ was tapped: the form offers the field „Neuer API-Schlüssel“ (ST-110). */
   replacingKey: boolean;
   /** The models chosen before the warning, when the technician came back from it (G10b, ST-110). */
@@ -73,7 +73,7 @@ export async function loadAiSettings(
     confirmed,
     overview,
     retried: retried?.title,
-    removedFile: removed?.title,
+    removedFileTitle: removed?.title,
     replacingKey: params.replace === "key" && !!form.keyLastFour,
     chosen: { chatModel: chosen("chatModel"), embeddingModel: chosen("embeddingModel") },
   };

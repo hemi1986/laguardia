@@ -20,6 +20,7 @@ import { formRunner } from "@/app/_actions/form-runner";
 import { executeCommand, journalOf } from "@/platform/command";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";
+import { hrefOf, listTexts, queryOf } from "@/test-support/html";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
 import { anExistingTeamMember } from "@/test-support/team-members";
@@ -175,7 +176,7 @@ async function overviewPage({ fileRemoved }: { fileRemoved?: string } = {}) {
       retiredCount,
       query: {},
       canRegister: true,
-      removedFile: removed?.title,
+      removedFileTitle: removed?.title,
     }),
   );
 }
@@ -196,19 +197,12 @@ async function settingsPage(params: Record<string, string> = {}) {
   return renderToStaticMarkup(createElement(AiSettingsSection, data));
 }
 
-/** The query of an address a page offered – what the person's next request carries. */
-const queryOf = (href: string) => Object.fromEntries(new URL(href, "http://museum.test").searchParams);
-
-/** The address of the link with this text in the markup. */
-function hrefOf(html: string, linkText: string): string {
-  const at = html.indexOf(`>${linkText}</a>`);
-  if (at < 0) throw new Error(`No link „${linkText}“`);
-  const start = html.lastIndexOf("<a ", at);
-  return /href="([^"]+)"/.exec(html.slice(start, at))![1].replaceAll("&amp;", "&");
+/** The class of the link or button with exactly that text – which component drew it. */
+function classOf(html: string, text: string): string {
+  const match = new RegExp(`<(?:a|button) [^>]*class="([^"]*)"[^>]*>${text}</(?:a|button)>`).exec(html);
+  if (!match) throw new Error(`no link or button „${text}“`);
+  return match[1];
 }
-
-const lines = (html: string) =>
-  [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((match) => match[1].replace(/<[^>]+>/g, ""));
 
 describe("the question before removing a file (ST-121)", () => {
   it("ST-121: The question names everything the file disappears from", async () => {
@@ -220,9 +214,22 @@ describe("the question before removing a file (ST-121)", () => {
     expect(html).toContain("Datei entfernen · MM Operations Manual</h1>");
     expect(html).toContain("„MM Operations Manual“ entfernen? Die Datei wird endgültig gelöscht.");
     expect(html).toContain("Sie verschwindet bei:");
-    expect(lines(html)).toEqual(["LG-042 · Medieval Madness", "Alle Geräte des Modells Medieval Madness"]);
+    expect(listTexts(html)).toEqual(["LG-042 · Medieval Madness", "Alle Geräte des Modells Medieval Madness"]);
     expect(hrefOf(html, "Zurück")).toBe(`/team/dateien/${manual}/details?from=machine%3ALG-042`);
-    expect(await fileDetails(db, manual)).toBeDefined();
+    expect((await fileDetails(db, manual))!.attachedTo).toEqual([
+      {
+        kind: "machine",
+        machineId,
+        museumNumber: "LG-042",
+        machineModelTitle: "Medieval Madness",
+        retired: false,
+      },
+      { kind: "machine-model", machineModelId: medievalMadness, title: "Medieval Madness" },
+    ]);
+    // Red is only the verb of the question page (G30); the way to it is an ordinary secondary button.
+    const details = await detailsPage(manual, { params: { from: "machine:LG-042" } });
+    expect(classOf(details, "Datei entfernen")).not.toContain("bg-destructive");
+    expect(classOf(html, "Endgültig entfernen")).toContain("bg-destructive");
   });
 
   it("ST-121: The question for a file attached to nothing names no list", async () => {
@@ -232,7 +239,7 @@ describe("the question before removing a file (ST-121)", () => {
 
     expect(html).toContain("„Wiring notes“ entfernen? Die Datei wird endgültig gelöscht.");
     expect(html).not.toContain("Sie verschwindet bei:");
-    expect(lines(html)).toEqual([]);
+    expect(listTexts(html)).toEqual([]);
   });
 
   it("ST-121: A technician removes a file on its details page", async () => {
@@ -292,7 +299,7 @@ describe("the question before removing a file (ST-121)", () => {
         origin: { kind: "settings" },
         place: () => settingsPage(),
         link: "Attract mode (Einstellungen).mp4",
-        landing: (fileId) => `/team/museum-settings?fileRemoved=${fileId}`,
+        landing: (fileId) => `/team/museum-settings?fileRemoved=${fileId}#ki`,
       },
     ];
 
@@ -397,6 +404,9 @@ describe("the question before removing a file (ST-121)", () => {
     expect(after.file?.removed).toBe(true);
     expect(after.html).toContain("Diese Datei wurde schon entfernt.");
     expect(after.html).not.toContain("Endgültig entfernen");
+    // A removed file's attachments no longer count: the question and its list are gone.
+    expect(after.html).not.toContain("Sie verschwindet bei:");
+    expect(after.html).not.toContain("„Old manual“ entfernen?");
   });
 });
 

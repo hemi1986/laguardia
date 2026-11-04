@@ -1,10 +1,11 @@
 import { Page } from "@/components/page";
 import { teamMessages } from "@/platform/messages";
+import { attachedToText } from "../file-attachments";
 import { RemoveFileButton } from "./remove-file-button";
 import type { RemoveFileData } from "./remove-file-data";
 import type { RemoveFileState } from "./remove-file-form";
 
-const { removeFile: texts, fileDetails } = teamMessages;
+const { removeFile: texts } = teamMessages;
 
 /**
  * The question before removing a file (CMD-RemoveFile, ST-121, G10b): the file by its title, that it is deleted for good,
@@ -24,18 +25,15 @@ export function RemoveFileView({
 }) {
   return (
     <Page title={texts.title(file.title)}>
-      <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title)}</p>
-      {file.attachedTo.length > 0 && (
+      {/* A removed file's attachments no longer count (AGG-File): the page says only that it is gone. */}
+      {!file.removed && <p className="font-medium [overflow-wrap:anywhere]">{texts.question(file.title)}</p>}
+      {!file.removed && file.attachedTo.length > 0 && (
         <div className="flex flex-col gap-1">
           <p>{texts.disappearsFrom}</p>
           <ul className="flex flex-col gap-1 text-sm [overflow-wrap:anywhere]">
             {file.attachedTo.map((target) => (
               <li key={target.kind === "machine" ? target.machineId : target.machineModelId}>
-                {target.kind === "machine"
-                  ? target.retired
-                    ? fileDetails.retiredMachine(target.museumNumber)
-                    : fileDetails.machine(target.museumNumber, target.machineModelTitle)
-                  : fileDetails.machineModel(target.title)}
+                {attachedToText(target)}
               </li>
             ))}
           </ul>

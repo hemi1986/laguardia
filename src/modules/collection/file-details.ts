@@ -47,7 +47,7 @@ export type FileDetails = {
 };
 
 /** What a file is attached to, in the order the attachments were made – machines first, then machine models. */
-async function attachmentsOf(db: Database, fileId: string): Promise<FileAttachedTo[]> {
+async function attachedToOf(db: Database, fileId: string): Promise<FileAttachedTo[]> {
   const [machines, models] = await Promise.all([
     db
       .select({
@@ -104,7 +104,7 @@ export async function fileDetails(db: Database, fileId: string): Promise<FileDet
     size: row.size,
     addedBy: row.addedBy,
     addedAt: row.addedAt,
-    attachedTo: await attachmentsOf(db, fileId),
+    attachedTo: await attachedToOf(db, fileId),
   };
 }
 
@@ -133,6 +133,6 @@ export async function fileForRemoval(db: Database, fileId: string): Promise<File
     title: row.title,
     version: row.version,
     removed: row.removedAt !== null,
-    attachedTo: await attachmentsOf(db, fileId),
+    attachedTo: await attachedToOf(db, fileId),
   };
 }

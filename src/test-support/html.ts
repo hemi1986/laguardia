@@ -27,3 +27,19 @@ export const labelOf = (html: string, id: string): string | undefined =>
 
 /** The visible text – tags replaced by spaces, whitespace collapsed. */
 export const textOf = (html: string): string => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+/** The href of the link with exactly this text. */
+export function hrefOf(html: string, linkText: string): string {
+  const at = html.indexOf(`>${linkText}</a>`);
+  if (at < 0) throw new Error(`No link „${linkText}“`);
+  const start = html.lastIndexOf("<a ", at);
+  return /href="([^"]+)"/.exec(html.slice(start, at))![1].replaceAll("&amp;", "&");
+}
+
+/** The query of an address a page offered – what the person's next request carries. */
+export const queryOf = (href: string): Record<string, string> =>
+  Object.fromEntries(new URL(href, "http://museum.test").searchParams);
+
+/** The text of every `<li>` in the markup, tags removed. */
+export const listTexts = (html: string): string[] =>
+  [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((match) => match[1].replace(/<[^>]+>/g, ""));

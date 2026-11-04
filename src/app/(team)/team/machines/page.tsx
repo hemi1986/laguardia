@@ -40,7 +40,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
         query={query}
         canRegister={member.role === "technician"}
         registered={registered ? machines.find((machine) => machine.id === registered) : undefined}
-        removedFile={removed?.title}
+        removedFileTitle={removed?.title}
       />
     </Page>
   );
