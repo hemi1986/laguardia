@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Page } from "@/components/page";
 import { BackLink } from "@/components/ui/back-link";
+import { buttonVariants } from "@/components/ui/button";
 import { Confirmation } from "@/components/ui/message";
 import { Section } from "@/components/ui/section";
 import type { RetryFileIndexingState } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
 import { teamMachinePage } from "@/app/museum-number-address";
 import { teamMessages } from "@/platform/messages";
+import { attachedToText } from "./file-attachments";
 import type { FileDetailsData } from "./file-details-data";
 import { RetryFileForm } from "./retry-file-form";
 
@@ -42,13 +44,11 @@ export function FileDetailsView({
               target.kind === "machine" ? (
                 <li key={target.machineId}>
                   <Link href={teamMachinePage()(target.museumNumber)} className="underline underline-offset-4">
-                    {target.retired
-                      ? texts.retiredMachine(target.museumNumber)
-                      : texts.machine(target.museumNumber, target.machineModelTitle)}
+                    {attachedToText(target)}
                   </Link>
                 </li>
               ) : (
-                <li key={target.machineModelId}>{texts.machineModel(target.title)}</li>
+                <li key={target.machineModelId}>{attachedToText(target)}</li>
               ),
             )}
           </ul>
@@ -65,6 +65,14 @@ export function FileDetailsView({
             <RetryFileForm action={retry} fileId={file.id} version={file.ai.version} />
           )}
         </Section>
+      )}
+      {file.removalHref && (
+        // At the end of the page, technicians only (G18, G11) – an ordinary secondary button, not red (G30).
+        <div>
+          <Link href={file.removalHref} className={buttonVariants({ variant: "outline" })}>
+            {teamMessages.removeFile.button}
+          </Link>
+        </div>
       )}
       <BackLink href={file.back.href}>
         {file.back.kind === "machine"

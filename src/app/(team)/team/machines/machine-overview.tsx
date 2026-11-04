@@ -36,6 +36,7 @@ export function MachineOverview({
   query,
   canRegister,
   registered,
+  removedFileTitle,
 }: {
   machines: MachineOverviewItem[];
   /** Over all active machines – independent of the search and the filter (ST-008). */
@@ -46,6 +47,8 @@ export function MachineOverview({
   canRegister: boolean;
   /** The machine just registered – named in the confirmation (G3). */
   registered?: MachineOverviewItem;
+  /** The title of the file just removed without a known origin – named in the confirmation (G3, ST-121). */
+  removedFileTitle?: string;
 }) {
   const total = machineStatuses.reduce((sum, status) => sum + counts[status], 0);
   const search = query.search?.trim();
@@ -54,6 +57,7 @@ export function MachineOverview({
   return (
     <>
       {/* The confirmation is the first thing under the heading (G3, ST-092). */}
+      {removedFileTitle && <Confirmation>{teamMessages.removeFile.removed(removedFileTitle)}</Confirmation>}
       {registered && (
         <Confirmation>{texts.registered(registered.museumNumber, registered.machineModelTitle)}</Confirmation>
       )}

@@ -43,6 +43,31 @@ export function fileDetailsAddress(
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
 }
 
+/** The question before removing a file (ST-121), with the origin kept – „Zurück“ and the removal land there. */
+export function removeFileAddress(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
+  const search = new URLSearchParams();
+  const value = originValue(origin);
+  if (value) search.set(ORIGIN_PARAM, value);
+  return `/team/dateien/${fileId}/details/entfernen${search.size > 0 ? `?${search}` : ""}`;
+}
+
+/**
+ * Where the removal lands (G3, ST-121): the place the file details' way back leads to, with the confirmation that names
+ * the file. Without a known origin the machine overview – until ST-117 makes that „Dateien“.
+ */
+export function removalLanding(origin: FileOrigin, fileId: string): string {
+  const query = new URLSearchParams({ fileRemoved: fileId });
+  switch (origin.kind) {
+    case "machine":
+      return `${teamMachinePage()(origin.museumNumber)}?${query}`;
+    case "settings":
+      // The confirmation sits in the section „KI“, the page's last section – the anchor makes it visible (G3).
+      return `/team/museum-settings?${query}#ki`;
+    case "none":
+      return `/team/machines?${query}`;
+  }
+}
+
 /** Where the way back leads, from the checked origin – an address of this site built here, never taken from the request. */
 export function wayBack(origin: FileOrigin): { href: string; kind: FileOrigin["kind"] } {
   switch (origin.kind) {

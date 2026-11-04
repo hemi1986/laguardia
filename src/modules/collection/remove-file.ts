@@ -35,7 +35,7 @@ export function removeFileRefusal(
   return file.removed ? "file-removed" : undefined;
 }
 
-/** Whether the team member may remove files at all – what the machine record asks before it offers „Entfernen“ (G11). */
+/** Whether the team member may remove files at all – what the file details ask before they offer „Datei entfernen“ (G11). */
 export function mayRemoveFiles(teamMember: { role: Role }): boolean {
   return removingActors.some((actor) => actor === teamMember.role);
 }
@@ -63,5 +63,7 @@ export function removeFile(
 }
 
 function withoutId(attachment: Attachment): { machineId: string } | { machineModelId: string } {
-  return "machineId" in attachment ? { machineId: attachment.machineId } : { machineModelId: attachment.machineModelId };
+  return "machineId" in attachment
+    ? { machineId: attachment.machineId }
+    : { machineModelId: attachment.machineModelId };
 }

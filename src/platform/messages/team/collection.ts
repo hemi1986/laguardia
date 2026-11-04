@@ -137,13 +137,9 @@ export const collectionTexts = {
     /** Next to a file of the machine model – every machine of that model shows it. */
     ofMachineModel: "Modell",
     fileAttached: (title: string) => `„${title}“ angehängt.`,
-    /** Next to each file, technicians only (ST-038) – leads to the question before removing it (G10b). */
-    removeFile: "Entfernen",
-    removeFileLabel: (title: string) => `„${title}“ entfernen`,
     /** Next to each file, the whole team (ST-114, G18) – leads to the file details. */
     fileDetails: "Details",
     fileDetailsLabel: (title: string) => `Details zu „${title}“`,
-    fileRemoved: (title: string) => `„${title}“ entfernt.`,
   },
   /** The file details (RM-FileDetails, ST-114, G18): one file's page – what it is, what it is attached to, how far the AI index got. */
   fileDetails: {
@@ -220,16 +216,18 @@ export const collectionTexts = {
       photoRequired: "Bitte ein Foto aufnehmen oder auswählen.",
     },
   },
-  /** Removing a file (ST-038): the question once, on a page of its own (G10, G10b). */
+  /** Removing a file (ST-121): the question once, on a page of its own (G10, G10b), from the file details. */
   removeFile: {
-    title: (museumNumber: string) => `Datei entfernen · ${museumNumber}`,
-    /** A file of the machine model also says where else it disappears (user, 2026-10-25, acceptance of ST-038). */
-    question: (title: string, machineModel?: string) =>
-      `„${title}“ entfernen? Die Datei wird endgültig gelöscht.` +
-      (machineModel ? ` Sie verschwindet bei allen Geräten von ${machineModel}.` : ""),
+    title: (fileTitle: string) => `Datei entfernen · ${fileTitle}`,
+    question: (title: string) => `„${title}“ entfernen? Die Datei wird endgültig gelöscht.`,
+    /** The list of machines and machine models follows, in the wording of „Angehängt an“ (G10b, ST-121). */
+    disappearsFrom: "Sie verschwindet bei:",
+    /** The button on the file details that leads to the question – an ordinary secondary button (G18, G30). */
+    button: "Datei entfernen",
+    /** The confirmation after the removal, wherever the person came from (G3). */
+    removed: (title: string) => `„${title}“ entfernt.`,
     confirm: "Endgültig entfernen",
     back: "Zurück",
-    unknown: (museumNumber: string) => `Diese Datei gehört nicht zu ${museumNumber}.`,
   },
   machineStatusChange: {
     title: (museumNumber: string) => `Status ändern · ${museumNumber}`,

@@ -6,15 +6,15 @@ import { VersionField } from "@/app/_actions/form-parts";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Rejection } from "@/components/ui/message";
 import { commandErrorText, teamMessages } from "@/platform/messages";
-import type { RemoveFileState } from "./actions";
+import type { RemoveFileState } from "./remove-file-form";
 
 const { removeFile: texts } = teamMessages;
 
 /**
  * The two buttons under the question (G10b): „Endgültig entfernen“ posts the version of the file the page showed and
- * carries the removal out; „Zurück“ is a link back to the machine record and changes nothing. Works without
- * JavaScript. A refusal – the file was removed meanwhile – takes the place of „Endgültig entfernen“ (G11); after a
- * conflict the button stays, and the re-rendered page posts the version stored now.
+ * carries the removal out; „Zurück“ is a link back to the file details and changes nothing. Works without JavaScript. A
+ * refusal – the file was removed meanwhile – takes the place of „Endgültig entfernen“ (G11); after a conflict the button
+ * stays, and the re-rendered page posts the version stored now.
  */
 export function RemoveFileButton({
   action: run,

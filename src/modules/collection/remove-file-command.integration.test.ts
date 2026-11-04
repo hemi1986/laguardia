@@ -5,19 +5,12 @@ import { aFileAdded } from "@/test-support/files";
 import { executeCommand } from "@/platform/command";
 import { testDatabase } from "@/test-support/database";
 import { anExistingTeamMember } from "@/test-support/team-members";
-import {
-  createMachineModelCommand,
-  fileToOpen,
-  machineFile,
-  machineRecord,
-  registerMachineCommand,
-  removeFileCommand,
-} from ".";
+import { createMachineModelCommand, fileToOpen, machineRecord, registerMachineCommand, removeFileCommand } from ".";
 
 /**
  * CMD-RemoveFile (ST-038) through the command layer, observed through the machine record (RM-MachineRecord) and what
  * opening a file finds. Deleting the content from the storage is the form's step after the commit – tested at the
- * Server Action runner (`datei-entfernen/[fileId]/remove-file.integration.test.ts`).
+ * Server Action runner (`dateien/[fileId]/details/entfernen/remove-file.integration.test.ts`, ST-121).
  */
 const db = testDatabase();
 const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
@@ -98,19 +91,5 @@ describe("CMD-RemoveFile", () => {
     const { fileId } = await aMachineWithFile("MM Flyer");
 
     expect(await remove(fileId, tom, 3)).toEqual({ ok: false, error: "version-conflict" });
-  });
-});
-
-describe("a file of a machine's page", () => {
-  it("names the machine model a file of the model belongs to – the question says where else it disappears", async () => {
-    const ofModel = await aMachineWithFile("MM Operations Manual (model)", "machine-model");
-    const ofMachine = await aMachineWithFile("LG wiring notes");
-
-    expect(await machineFile(db, ofModel)).toMatchObject({
-      title: "MM Operations Manual (model)",
-      machineModel: "Medieval Madness MM Operations Manual (model)",
-    });
-    expect(await machineFile(db, ofMachine)).not.toHaveProperty("machineModel");
-    expect(await machineFile(db, { fileId: ofModel.fileId, machineId: ofMachine.machineId })).toBeUndefined();
   });
 });

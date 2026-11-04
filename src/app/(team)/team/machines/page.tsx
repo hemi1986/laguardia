@@ -1,5 +1,5 @@
 import { Page } from "@/components/page";
-import { machineRegisteredIn, machineStatuses, type MachineStatus } from "@/modules/collection";
+import { fileRemovedBy, machineRegisteredIn, machineStatuses, type MachineStatus } from "@/modules/collection";
 import { systemClock } from "@/platform/clock";
 import { lastCommandBy } from "@/platform/command";
 import { database } from "@/platform/database";
@@ -27,6 +27,9 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
   const registeredId = single(params.registered);
   const registering = registeredId && (await lastCommandBy(database(), { aggregateId: registeredId }, member.id));
   const registered = registering && machineRegisteredIn(registering, registeredId) ? registeredId : undefined;
+  // A file removed without a known origin lands here (ST-121), confirmed from the journal like any other action.
+  const removedId = single(params.fileRemoved);
+  const removed = removedId ? await fileRemovedBy(database(), removedId, member.id) : undefined;
 
   return (
     <Page title={teamMessages.machines.title}>
@@ -37,6 +40,7 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
         query={query}
         canRegister={member.role === "technician"}
         registered={registered ? machines.find((machine) => machine.id === registered) : undefined}
+        removedFileTitle={removed?.title}
       />
     </Page>
   );

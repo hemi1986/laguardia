@@ -67,13 +67,22 @@ export function aiSettingsFormProps(
  * „Entfernen“ (G36), the saved models, the form, and the reminders – a spending limit and the privacy settings for free models at
  * OpenRouter, the privacy notice.
  */
-export function AiSettingsSection({ form, confirmed, overview, retried, replacingKey, chosen }: AiSettingsData) {
+export function AiSettingsSection({
+  form,
+  confirmed,
+  overview,
+  retried,
+  removedFileTitle,
+  replacingKey,
+  chosen,
+}: AiSettingsData) {
   const props = aiSettingsFormProps(form, { replacingKey, chosen });
   const state = form.aiOn
     ? texts.on
     : `${texts.off} ${texts.missing} ${form.missing.map((part) => texts.missingParts[part]).join(", ")}.`;
   return (
     <Section title={texts.title} id="ki" contentClassName="flex flex-col gap-4">
+      {removedFileTitle && <Confirmation>{teamMessages.removeFile.removed(removedFileTitle)}</Confirmation>}
       {confirmed === "saved" && <Confirmation>{form.aiOn ? `${texts.saved} ${texts.on}` : texts.saved}</Confirmation>}
       {confirmed === "key-removed" && <Confirmation>{texts.keyRemoved}</Confirmation>}
       {confirmed === "key-replaced" && <Confirmation>{texts.keyReplaced}</Confirmation>}

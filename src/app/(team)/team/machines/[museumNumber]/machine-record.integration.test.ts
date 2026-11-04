@@ -494,18 +494,21 @@ describe("the machine record", () => {
       expect(files).not.toContain("Noch keine Dateien");
     });
 
-    it("offers removing each file to technicians only (ST-038, G11)", async () => {
+    it("offers details for each file and no removal – that lives on the file details (ST-114, ST-121)", async () => {
       const machineId = await registered("LG-043", "2026-10-01T09:00:00Z");
       const manual = await attached(machineId, "machine-model", "MM Manual (wrong edition)", "manual");
 
       const files = section(await page("LG-043"), "Dateien");
 
       expect(files).toMatch(
-        new RegExp(`<a [^>]*href="/team/machines/LG-043/datei-entfernen/${manual}"[^>]*>Entfernen</a>`),
+        new RegExp(`<a [^>]*href="/team/dateien/${manual}/details\\?from=machine%3ALG-043"[^>]*>Details</a>`),
       );
-      expect(files).toContain('aria-label="„MM Manual (wrong edition)“ entfernen"');
-      expect(section(await page("LG-043", { id: randomUUID(), role: "helper" }), "Dateien")).not.toContain(
-        "datei-entfernen",
+      expect(files).toContain('aria-label="Details zu „MM Manual (wrong edition)“"');
+      expect(files).not.toContain("datei-entfernen");
+      expect(files).not.toContain(">Entfernen<");
+      // Details are for the whole team (G18, ST-114).
+      expect(section(await page("LG-043", { id: randomUUID(), role: "helper" }), "Dateien")).toContain(
+        `href="/team/dateien/${manual}/details?from=machine%3ALG-043"`,
       );
     });
   });
@@ -518,11 +521,7 @@ async function attached(
   title: string,
   fileCategory: FileCategory,
 ) {
-  return aFileAdded(
-    db,
-    { actor: eva, clock: fixedClock(NOW) },
-    { machineId, to: attachTo, title, fileCategory },
-  );
+  return aFileAdded(db, { actor: eva, clock: fixedClock(NOW) }, { machineId, to: attachTo, title, fileCategory });
 }
 
 /** The class of the link or button with exactly that text – which component drew it. */
@@ -541,7 +540,6 @@ describe("red only for what cannot be undone (ST-092, G30)", () => {
 
     const secondaryButton = classOf(html, "Status ändern");
     expect(classOf(html, "Gerät ausmustern")).toBe(secondaryButton);
-    expect(classOf(html, "Entfernen")).toBe(secondaryButton);
     // Red is the destructive button's own colour – every button names `destructive` for a field marked invalid.
     expect(html).not.toContain("bg-destructive");
 

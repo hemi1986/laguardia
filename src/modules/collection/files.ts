@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
-import { aggregateStore, isId, replaces, type Database } from "@/platform/command";
+import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { aggregateStore, isId, lastCommandBy, replaces, type Database } from "@/platform/command";
 import {
   fileCategories,
   type AddFileInput,
@@ -9,6 +9,7 @@ import {
   type FileState,
 } from "./add-file";
 import { fileRemovalLock } from "./file-removal-lock";
+import { fileRemovedIn } from "./in-command";
 import { opensInBrowser } from "./open-file";
 import { file, fileAttachment, machine, machineModel } from "./schema";
 
@@ -68,7 +69,9 @@ export async function addingFacts(tx: Database, input: AddFileInput): Promise<Ad
       ? tx.select({ id: machineModel.id }).from(machineModel).where(inArray(machineModel.id, machineModelIds))
       : [],
   ]);
-  return { everythingExists: foundMachines.length === machineIds.length && foundModels.length === machineModelIds.length };
+  return {
+    everythingExists: foundMachines.length === machineIds.length && foundModels.length === machineModelIds.length,
+  };
 }
 
 /** A file as the machine record lists it (RM-MachineRecord, ST-037). */
@@ -103,7 +106,12 @@ export async function filesOfMachine(
     .orderBy(asc(file.title), asc(file.addedAt));
   // A file attached to both shows once, with the mark of its machine model: every machine of the model shows it.
   return rows
-    .map((row) => ({ id: row.id, title: row.title, fileCategory: row.fileCategory, ofMachineModel: row.ofMachineModel }))
+    .map((row) => ({
+      id: row.id,
+      title: row.title,
+      fileCategory: row.fileCategory,
+      ofMachineModel: row.ofMachineModel,
+    }))
     .sort((a, b) => fileCategories.indexOf(a.fileCategory) - fileCategories.indexOf(b.fileCategory));
 }
 
@@ -122,51 +130,51 @@ export async function fileToOpen(
   return row && { content: row.content, download: !opensInBrowser(row.contentType) };
 }
 
-/** A file of one machine's page (ST-038): what the question before removing it shows and posts, removed or not. */
+/** A file of one machine's page (ST-038, ST-121): what the removal confirmation names. */
 export type MachineFile = {
   id: string;
   title: string;
-  version: number;
-  removed: boolean;
-  /** The machine model's title, for a file attached to the machine model – it disappears from every machine of that model. */
-  machineModel?: string;
 };
 
 /**
- * A file of a machine or of its machine model, removed or not – none for any other file (ST-038): the question before
- * removing it, and the confirmation afterwards, which names the file the machine record no longer lists.
+ * A file of a machine or of its machine model, removed or not – none for any other file (ST-038, ST-121): the
+ * confirmation after a removal, which names the file the machine record no longer lists.
  */
 export async function machineFile(
   db: Database,
   { fileId, machineId }: { fileId: string; machineId: string },
 ): Promise<MachineFile | undefined> {
   const [owner] = await db
-    .select({ machineModelId: machine.machineModelId, machineModelTitle: machineModel.title })
+    .select({ machineModelId: machine.machineModelId })
     .from(machine)
-    .innerJoin(machineModel, eq(machineModel.id, machine.machineModelId))
     .where(eq(machine.id, machineId));
   if (!owner) return undefined;
   const [row] = await db
-    .select({
-      id: file.id,
-      title: file.title,
-      version: file.version,
-      removedAt: file.removedAt,
-      ofMachineModel: sql<boolean>`bool_or(${fileAttachment.machineModelId} is not null)`,
-    })
+    .select({ id: file.id, title: file.title })
     .from(file)
     .innerJoin(fileAttachment, eq(fileAttachment.fileId, file.id))
     .where(and(eq(file.id, fileId), ofMachineOrModel({ machineId, machineModelId: owner.machineModelId })))
     .groupBy(file.id);
-  return (
-    row && {
-      id: row.id,
-      title: row.title,
-      version: row.version,
-      removed: row.removedAt !== null,
-      ...(row.ofMachineModel && { machineModel: owner.machineModelTitle }),
-    }
-  );
+  return row && { id: row.id, title: row.title };
+}
+
+/**
+ * The file a technician just removed (ST-121, G3): its title, only when the latest step on the file was their own
+ * CMD-RemoveFile and the file is really removed – never from the address alone.
+ */
+export async function fileRemovedBy(
+  db: Database,
+  fileId: string,
+  teamMemberId: string,
+): Promise<{ title: string } | undefined> {
+  if (!isId(fileId)) return undefined;
+  const command = await lastCommandBy(db, { aggregateId: fileId }, teamMemberId);
+  if (!command || !fileRemovedIn(command, fileId)) return undefined;
+  const [row] = await db
+    .select({ title: file.title })
+    .from(file)
+    .where(and(eq(file.id, fileId), isNotNull(file.removedAt)));
+  return row && { title: row.title };
 }
 
 /** The attachments to a machine or to its machine model – what makes a file show on the machine's record. */
