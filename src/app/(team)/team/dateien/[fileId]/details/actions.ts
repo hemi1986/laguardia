@@ -9,9 +9,9 @@ import {
   retryFileIndexingForm,
   type RetryFileIndexingState,
 } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
-import { attachmentTargetValue } from "./file-attachments";
+import { targetValue } from "./file-attachments";
 import { detachFileForm, type DetachFileState } from "./detach-file-form";
-import { detachLanding, fileDetailsAddress } from "./file-origin";
+import { detachFailureLanding, detachLanding, fileDetailsAddress } from "./file-origin";
 
 /**
  * „Erneut versuchen“ on the file details (ST-114): the same CMD-IndexFileForAi by hand as on the form „KI“, through the
@@ -40,9 +40,7 @@ export async function retryFileFromDetailsAction(
 const detach = (fileId: string, origin: string | undefined) =>
   formAction(
     detachFileCommand,
-    detachFileForm(fileId, async ({ target }) =>
-      redirect(detachLanding(fileId, origin, attachmentTargetValue(target))),
-    ),
+    detachFileForm(fileId, async ({ target }) => redirect(detachLanding(fileId, origin, targetValue(target)))),
   );
 
 export async function detachFileFromDetailsAction(
@@ -52,5 +50,10 @@ export async function detachFileFromDetailsAction(
   formData: FormData,
 ): Promise<DetachFileState> {
   await requireTeamMember(); // the page's access check; who may detach is decided by the command
-  return detach(fileId, origin)(previous, formData);
+  const state = await detach(fileId, origin)(previous, formData);
+  // A removed file has no details page to re-render – its rejection is shown by the page's removed state (ST-115).
+  if (state?.error === "file-removed") {
+    redirect(detachFailureLanding(fileId, origin));
+  }
+  return state;
 }

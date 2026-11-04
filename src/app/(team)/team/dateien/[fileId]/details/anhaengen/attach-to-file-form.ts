@@ -1,6 +1,7 @@
 import type { ManyFormDefinition, ManyFormState } from "@/app/_actions/form-action";
-import type { AttachFileInput, attachFileCommand } from "@/modules/collection";
+import type { AttachFileInput, AttachedTo, attachFileCommand } from "@/modules/collection";
 import type { CommandError } from "@/platform/command";
+import { targetOf } from "../file-attachments";
 
 /** The one field the choice posts: every ticked entry as `machine:<id>` or `machineModel:<id>` (ST-115). */
 export const attachToFileFields = ["targets"] as const;
@@ -21,13 +22,19 @@ export function attachToFileForm(
   return {
     fields: attachToFileFields,
     many: { field: "targets" },
-    input: (_fields, chosen) => ({
-      fileId,
-      machineIds: chosen.filter((value) => value.startsWith("machine:")).map((value) => value.slice("machine:".length)),
-      machineModelIds: chosen
-        .filter((value) => value.startsWith("machineModel:"))
-        .map((value) => value.slice("machineModel:".length)),
-    }),
+    input: (_fields, chosen) => {
+      const targets = chosen.flatMap((value) => {
+        const target = targetOf(value);
+        return target ? [target] : [];
+      });
+      return {
+        fileId,
+        machineIds: targets.flatMap((target: AttachedTo) => ("machineId" in target ? [target.machineId] : [])),
+        machineModelIds: targets.flatMap((target: AttachedTo) =>
+          "machineModelId" in target ? [target.machineModelId] : [],
+        ),
+      };
+    },
     onSuccess,
   };
 }

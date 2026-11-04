@@ -63,26 +63,31 @@ async function targetsExist(
   tx: Database,
   machineIds: readonly string[],
   machineModelIds: readonly string[],
-): Promise<boolean> {
+): Promise<{ machinesExist: boolean; machineModelsExist: boolean }> {
   const machines = [...new Set(machineIds)];
   const models = [...new Set(machineModelIds)];
   // An ID that is no ID names nothing – a forged form field, not a database error.
-  if (![...machines, ...models].every(isId)) return false;
+  if (![...machines, ...models].every(isId)) return { machinesExist: false, machineModelsExist: false };
   const [foundMachines, foundModels] = await Promise.all([
     machines.length ? tx.select({ id: machine.id }).from(machine).where(inArray(machine.id, machines)) : [],
     models.length ? tx.select({ id: machineModel.id }).from(machineModel).where(inArray(machineModel.id, models)) : [],
   ]);
-  return foundMachines.length === machines.length && foundModels.length === models.length;
+  return {
+    machinesExist: foundMachines.length === machines.length,
+    machineModelsExist: foundModels.length === models.length,
+  };
 }
 
 /** CMD-AddFile's facts: whether every machine and machine model the input names exists. */
 export async function addingFacts(tx: Database, input: AddFileInput): Promise<AddingFacts> {
-  return { everythingExists: await targetsExist(tx, input.machineIds, input.machineModelIds) };
+  const { machinesExist, machineModelsExist } = await targetsExist(tx, input.machineIds, input.machineModelIds);
+  return { everythingExists: machinesExist && machineModelsExist };
 }
 
-/** CMD-AttachFile's facts (ST-115): whether every machine and machine model it names exists – retired machines included. */
+/** CMD-AttachFile's facts (ST-115): which of the named machines and machine models does not exist – retired machines included. */
 export async function attachingFacts(tx: Database, input: AttachFileInput): Promise<AttachingFacts> {
-  return { everythingExists: await targetsExist(tx, input.machineIds, input.machineModelIds) };
+  const { machinesExist, machineModelsExist } = await targetsExist(tx, input.machineIds, input.machineModelIds);
+  return { missingMachines: !machinesExist, missingMachineModels: !machineModelsExist };
 }
 
 /** A file as the machine record lists it (RM-MachineRecord, ST-037). */

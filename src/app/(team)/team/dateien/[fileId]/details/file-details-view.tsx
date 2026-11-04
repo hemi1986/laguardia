@@ -9,7 +9,7 @@ import { teamMachinePage } from "@/app/museum-number-address";
 import { teamMessages } from "@/platform/messages";
 import { DetachFileButton } from "./detach-file-button";
 import type { DetachFileState } from "./detach-file-form";
-import { attachmentTargetValue, attachedToText } from "./file-attachments";
+import { targetValue, attachedToText } from "./file-attachments";
 import type { FileDetailsData } from "./file-details-data";
 import { RetryFileForm } from "./retry-file-form";
 
@@ -29,8 +29,8 @@ export function FileDetailsView({
   file: FileDetailsData;
   /** „Erneut versuchen“'s Server Action, the origin already bound. */
   retry: (previous: RetryFileIndexingState, formData: FormData) => Promise<RetryFileIndexingState>;
-  /** „Lösen“'s Server Action, file and origin already bound (ST-115) – required when `detachOffered`. */
-  detach?: (previous: DetachFileState, formData: FormData) => Promise<DetachFileState>;
+  /** „Lösen“'s Server Action, file and origin already bound (ST-115). */
+  detach: (previous: DetachFileState, formData: FormData) => Promise<DetachFileState>;
 }) {
   return (
     <Page title={file.title}>
@@ -61,9 +61,7 @@ export function FileDetailsView({
                 ) : (
                   <span>{attachedToText(target)}</span>
                 )}
-                {file.detachOffered && detach && (
-                  <DetachFileButton action={detach} target={attachmentTargetValue(target)} />
-                )}
+                {file.detachOffered && <DetachFileButton action={detach} target={targetValue(target)} />}
               </li>
             ))}
           </ul>

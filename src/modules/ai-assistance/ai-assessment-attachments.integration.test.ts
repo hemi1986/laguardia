@@ -156,8 +156,12 @@ describe("attach and detach and the AI (ST-115)", () => {
     await scenario.run({ kinds: [aiAssessmentWork], with: ai() });
 
     // A new AI assessment of the LG-042 defect does not find it, and one of the LG-050 defect does.
-    expect((await aiAssessmentById(db, onFlipper))!.filesSearched ?? []).not.toContain(wiring);
-    expect((await aiAssessmentById(db, onDisplay))!.filesSearched ?? []).toContain(wiring);
+    const writtenOnFlipper = (await aiAssessmentById(db, onFlipper))!;
+    const writtenOnDisplay = (await aiAssessmentById(db, onDisplay))!;
+    expect(writtenOnFlipper.state).toBe("written");
+    expect(writtenOnDisplay.state).toBe("written");
+    expect(writtenOnFlipper.filesSearched ?? []).not.toContain(wiring);
+    expect(writtenOnDisplay.filesSearched ?? []).toContain(wiring);
 
     // The earlier AI assessment still shows its reference, and the file still opens.
     const shown = await defectAiAssessments(db, {

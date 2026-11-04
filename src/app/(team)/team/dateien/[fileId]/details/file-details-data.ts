@@ -7,19 +7,21 @@ import {
 } from "@/modules/ai-assistance";
 import {
   fileDetails,
+  fileDetachedIn,
   machineLabels,
   machineModelTitles,
   mayDetachFiles,
   mayRemoveFiles,
+  type AttachedTo,
   type FileAttachedTo,
   type FileMediaType,
 } from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
-import type { Database } from "@/platform/command";
-import { isId } from "@/platform/command";
+import { isId, lastCommandBy, type Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { calendarDate, formatCalendarDate } from "@/platform/time";
 import { fileSizeText } from "./file-size";
+import { targetOf, targetValue } from "./file-attachments";
 import { attachToFileAddress, originOf, removeFileAddress, wayBack, type FileOrigin } from "./file-origin";
 
 /** Section „KI-Erfassung“ (RM-FileDetails, G37): none while AI is off. */
@@ -76,15 +78,20 @@ export async function loadFileDetails(
   if (!isId(fileId)) return undefined;
   const details = await fileDetails(db, fileId);
   if (!details) return undefined;
-  const [names, aiState, origin, retried, detachedName] = await Promise.all([
+  const wantsConfirmation = params.attached === "1" || typeof params.detached === "string";
+  const [names, aiState, origin, retried, detached, lastCommand] = await Promise.all([
     teamMemberNames(db, [details.addedBy]),
     aiIndexStateOfFile(db, ai, fileId),
     originOf(db, params.from, viewer),
     params.retried === "1" ? fileIndexingRetriedBy(db, fileId, viewer.id) : undefined,
-    detachedNameOf(db, params.detached),
+    detachedTargetOf(db, params.detached),
+    wantsConfirmation ? lastCommandBy(db, { aggregateId: fileId }, viewer.id) : undefined,
   ]);
   const machineCount = details.attachedTo.filter((target) => target.kind === "machine").length;
   const machineModelCount = details.attachedTo.filter((target) => target.kind === "machine-model").length;
+  const stillAttached =
+    detached !== undefined && details.attachedTo.some((target) => targetValue(target) === targetValue(detached.target));
+  const detachedByViewer = lastCommand !== undefined && fileDetachedIn(lastCommand, fileId);
   return {
     id: details.id,
     title: details.title,
@@ -98,11 +105,17 @@ export async function loadFileDetails(
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",
     attachHref: attachToFileAddress(details.id, origin),
     detachOffered: mayDetachFiles(viewer),
+    // A resulting-state confirmation (G3, G33): the counts are true whichever command wrote them.
     attachedConfirmation:
       params.attached === "1"
         ? teamMessages.fileDetails.attachedNow(details.title, machineCount, machineModelCount)
         : undefined,
-    detachedConfirmation: detachedName ? teamMessages.fileDetails.detachedFrom(details.title, detachedName) : undefined,
+    // Only a technician, and only when the target is no longer attached – or their latest command was this detach. So the
+    // sentence never claims a state that is not there, and a helper sees no control and no confirmation (G11, G3).
+    detachedConfirmation:
+      detached !== undefined && mayDetachFiles(viewer) && (detachedByViewer || !stillAttached)
+        ? teamMessages.fileDetails.detachedFrom(details.title, detached.name)
+        : undefined,
     removalHref: mayRemoveFiles(viewer) ? removeFileAddress(details.id, origin) : undefined,
     retried: retried?.title,
     origin,
@@ -110,15 +123,21 @@ export async function loadFileDetails(
   };
 }
 
-/** The name of what a detach named in the address – a machine by museum number, a machine model by title (ST-115). */
-async function detachedNameOf(db: Database, value: string | string[] | undefined): Promise<string | undefined> {
+/**
+ * What a detach named in the address, with the name the confirmation shows (ST-115): a machine by museum number, a
+ * machine model by title. None for a malformed value or an ID that is no ID – an address is untrusted input.
+ */
+async function detachedTargetOf(
+  db: Database,
+  value: string | string[] | undefined,
+): Promise<{ target: AttachedTo; name: string } | undefined> {
   if (typeof value !== "string") return undefined;
-  const separator = value.indexOf(":");
-  if (separator < 0) return undefined;
-  const kind = value.slice(0, separator);
-  const id = value.slice(separator + 1);
-  if (!id) return undefined;
-  if (kind === "machine") return (await machineLabels(db, [id])).get(id)?.museumNumber;
-  if (kind === "machineModel") return (await machineModelTitles(db, [id])).get(id);
-  return undefined;
+  const target = targetOf(value);
+  if (!target) return undefined;
+  if ("machineId" in target) {
+    const label = (await machineLabels(db, [target.machineId])).get(target.machineId);
+    return label && { target, name: label.museumNumber };
+  }
+  const title = (await machineModelTitles(db, [target.machineModelId])).get(target.machineModelId);
+  return title ? { target, name: title } : undefined;
 }

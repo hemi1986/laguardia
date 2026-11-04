@@ -40,6 +40,20 @@ export function fileAddedIn(command: readonly JournalEntry[], fileId: string): b
   );
 }
 
+/** Whether the command attached this file to anything (ST-115). */
+export function fileAttachedIn(command: readonly JournalEntry[], fileId: string): boolean {
+  return entriesOf(collectionEvents, command).some(
+    (entry) => entry.type === "EVT-FileAttached" && entry.aggregate.id === fileId,
+  );
+}
+
+/** Whether the command detached this file from anything (ST-115). */
+export function fileDetachedIn(command: readonly JournalEntry[], fileId: string): boolean {
+  return entriesOf(collectionEvents, command).some(
+    (entry) => entry.type === "EVT-FileDetached" && entry.aggregate.id === fileId,
+  );
+}
+
 /** Whether the command removed this file (ST-038). */
 export function fileRemovedIn(command: readonly JournalEntry[], fileId: string): boolean {
   return entriesOf(collectionEvents, command).some(

@@ -1,6 +1,6 @@
 import type { ActorOf, Decision, DecisionContext, Role } from "@/platform/command";
 import type { AttachedTo, FileState } from "./add-file";
-import { attachmentKey } from "./attach-file";
+import { targetKey } from "./attach-file";
 
 /**
  * CMD-DetachFile (AGG-File, ST-115): a technician detaches a file from one machine or machine model in one tap – no
@@ -21,7 +21,7 @@ export type DetachFileInput = { fileId: string; target: AttachedTo | undefined }
 
 export type FileDetached = { type: "EVT-FileDetached"; fileId: string; detachedBy: string } & AttachedTo;
 
-export type DetachFileError = "file-removed" | "unknown-machine" | "unknown-machine-model";
+export type DetachFileError = "file-removed" | "target-required";
 
 /**
  * Removes the attachment to the target, if it is there. Nothing attached is nothing to do: the loaded state comes back
@@ -34,13 +34,13 @@ export function detachFile(
   { actor }: DecisionContext<ActorOf<(typeof detachingActors)[number]>>,
 ): Decision<FileState, FileDetached, DetachFileError> {
   if (file.removed) return { ok: false, error: "file-removed" };
-  if (!input.target) return { ok: false, error: "unknown-machine" };
-  const key = attachmentKey(input.target);
-  const attachments = file.attachments.filter((attachment) => attachmentKey(attachment) !== key);
-  if (attachments.length === file.attachments.length) return { ok: true, state: file, events: [] };
+  if (!input.target) return { ok: false, error: "target-required" };
+  const key = targetKey(input.target);
+  const remaining = file.attachments.filter((attachment) => targetKey(attachment) !== key);
+  if (remaining.length === file.attachments.length) return { ok: true, state: file, events: [] };
   return {
     ok: true,
-    state: { ...file, attachments },
+    state: { ...file, attachments: remaining },
     events: [
       {
         type: "EVT-FileDetached",

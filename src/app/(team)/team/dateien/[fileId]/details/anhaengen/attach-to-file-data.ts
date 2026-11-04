@@ -7,6 +7,7 @@ import {
 } from "@/app/(team)/team/category-and-technology";
 import { isId, type Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { targetValue } from "../file-attachments";
 import { fileDetailsAddress, originOf, type FileOrigin } from "../file-origin";
 
 /** The form „Anhängen“ (ST-115) as the page shows it: the file, the two parts of the choice and the way back. */
@@ -51,7 +52,7 @@ export async function loadAttachToFile(
     title: choice.title,
     removed: choice.removed,
     machineGroups: machineChoiceGroups(choice.machineGroups, (machine) => ({
-      value: `machine:${machine.id}`,
+      value: targetValue({ machineId: machine.id }),
       label: machine.retired
         ? teamMessages.fileDetails.retiredMachine(machine.museumNumber)
         : machineEntryLabel(machine),
@@ -60,7 +61,7 @@ export async function loadAttachToFile(
       key: `machineModel:${group.machineCategory}/${group.technology ?? ""}`,
       label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
       entries: group.machineModels.map((model) => ({
-        value: `machineModel:${model.id}`,
+        value: targetValue({ machineModelId: model.id }),
         label: model.title,
       })),
     })),

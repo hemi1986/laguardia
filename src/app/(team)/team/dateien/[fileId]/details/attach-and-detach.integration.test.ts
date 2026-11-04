@@ -31,10 +31,19 @@ import { loadAttachToFile } from "./anhaengen/attach-to-file-data";
 import { attachToFileForm } from "./anhaengen/attach-to-file-form";
 import { AttachToFileForm } from "./anhaengen/attach-to-file-form-view";
 import { detachFileForm } from "./detach-file-form";
-import { attachmentTargetValue } from "./file-attachments";
+import { targetValue } from "./file-attachments";
 import { loadFileDetails } from "./file-details-data";
 import { FileDetailsView } from "./file-details-view";
-import { attachLanding, attachToFileAddress, detachLanding, type FileOrigin } from "./file-origin";
+import {
+  attachLanding,
+  attachToFileAddress,
+  detachFailureLanding,
+  detachLanding,
+  fileDetailsAddress,
+  wayBack,
+  type FileOrigin,
+} from "./file-origin";
+import { FileRemovedView } from "./file-removed-view";
 import { loadRemoveFile } from "./entfernen/remove-file-data";
 import { removeFileForm } from "./entfernen/remove-file-form";
 import { RemoveFileView } from "./entfernen/remove-file-view";
@@ -224,7 +233,7 @@ function detachOnDetails(fileId: string, origin?: FileOrigin, person: Viewer = t
   })(
     detachFileCommand,
     detachFileForm(fileId, async ({ target }) => {
-      result.landed = detachLanding(fileId, origin, attachmentTargetValue(target));
+      result.landed = detachLanding(fileId, origin, targetValue(target));
     }),
   );
   return { result, send: (target: string) => action(null, post({ target })) };
@@ -239,8 +248,6 @@ async function removeOnQuestion(fileId: string, version: number) {
   return action(null, post({ version: String(version) }));
 }
 
-const filesOf = (html: string) => html;
-
 describe("attaching a file on its details page (ST-115)", () => {
   it("ST-115: A helper attaches a file to several machines and machine models", async () => {
     const manual = await aFileAttachedTo({ models: [medievalMadness] }, "MM Operations Manual");
@@ -253,7 +260,7 @@ describe("attaching a file on its details page (ST-115)", () => {
     // Attaching starts no indexing and costs nothing (ADR 0018): the runner's after-commit starts no AI work.
     expect(attach.result.starts).toBe(0);
     for (const museumNumber of ["LG-050", "LG-041", "LG-042", "LG-043"]) {
-      expect(filesOf(await machineRecordPage(museumNumber))).toContain("MM Operations Manual");
+      expect(await machineRecordPage(museumNumber)).toContain("MM Operations Manual");
     }
     const details = (await fileDetails(db, manual))!;
     expect(details.attachedTo).toHaveLength(4);
@@ -277,8 +284,8 @@ describe("attaching a file on its details page (ST-115)", () => {
     expect(page.html).toContain("Geräte");
     expect(page.html).toContain("Modelle");
     // The groups are closed when the page opens, and nothing is ticked (G27).
-    expect(page.html).not.toContain("<details open");
-    expect(page.html).not.toContain("checked");
+    expect(page.html).not.toMatch(/<details[^>]*\sopen/);
+    expect(page.html).not.toMatch(/<input[^>]*checked/);
     // LG-042 is not offered; the active LG-050 comes before the retired LG-041, although its museum number is lower.
     expect(page.html).not.toContain("LG-042 · Medieval Madness");
     expect(page.html.indexOf("LG-050 · Eight Ball")).toBeLessThan(page.html.indexOf("LG-041 · Ausgemustert"));
@@ -294,8 +301,9 @@ describe("attaching a file on its details page (ST-115)", () => {
 
     expect(page.file?.machineGroups).toEqual([]);
     expect(page.file?.machineModelGroups).toEqual([]);
+    expect(page.file?.back).toBe(fileDetailsAddress(manual, { kind: "none" }));
     expect(page.html).toContain("Es gibt nichts mehr, woran sich diese Datei anhängen lässt.");
-    expect(page.html).not.toContain("<button");
+    expect(page.html).not.toMatch(/<button[^>]*>Anhängen<\/button>/);
   });
 
   it("ST-115: A rejected attach attaches nothing and keeps the choice", async () => {
@@ -417,6 +425,25 @@ describe("detaching a file on its details page (ST-115)", () => {
     const page = await attachPage(fileId);
     expect(page.file?.removed).toBe(true);
     expect(page.html).toContain("Diese Datei wurde schon entfernt.");
+    // A detach that met the removal lands on the details address with the rejection; a removed file's normal address
+    // stays not found (ST-114), so the rejection has a page of its own (ST-115).
+    expect(detachFailureLanding(fileId, undefined)).toContain("detachFailed=file-removed");
+    const removedView = renderToStaticMarkup(
+      createElement(FileRemovedView, { back: wayBack({ kind: "machine", museumNumber: "LG-042" }) }),
+    );
+    expect(removedView).toContain("Diese Datei wurde schon entfernt.");
+    expect(removedView).toContain("Zurück zum Gerät");
+  });
+
+  it("a malformed detached address and a forged detach target are refused without a confirmation", async () => {
+    const fileId = await aFileAttachedTo({ machines: [lg042] }, "MM Operations Manual");
+
+    const page = await detailsPage(fileId, { params: { detached: "machine:abc" } });
+    expect(page.html).not.toContain("gelöst.");
+
+    const detach = detachOnDetails(fileId);
+    expect(await detach.send("machine:abc")).toMatchObject({ error: "target-required" });
+    expect(detach.result.landed).toBeUndefined();
   });
 
   it("ST-115: A removal asked before a change asks again with the current list", async () => {

@@ -1,7 +1,7 @@
 import type { FormDefinition, FormState } from "@/app/_actions/form-action";
 import type { AttachedTo, DetachFileInput, detachFileCommand } from "@/modules/collection";
 import type { CommandError } from "@/platform/command";
-import { attachmentTargetOf } from "./file-attachments";
+import { targetOf } from "./file-attachments";
 
 /** The only field „Lösen“ posts: the target, `machine:<id>` or `machineModel:<id>` (ST-115). */
 export const detachFileFields = ["target"] as const;
@@ -23,7 +23,7 @@ export function detachFileForm(
 ): FormDefinition<DetachFileInput, DetachFileResult, DetachFileField> {
   return {
     fields: detachFileFields,
-    input: (fields) => ({ fileId, target: attachmentTargetOf(fields.target) }),
+    input: (fields) => ({ fileId, target: targetOf(fields.target) }),
     onSuccess,
   };
 }

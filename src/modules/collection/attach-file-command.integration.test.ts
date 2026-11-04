@@ -177,4 +177,29 @@ describe("attaching a file (ST-115)", () => {
       (await journalOf(db, { aggregateId: fileId })).filter((step) => step.type === "EVT-FileAttached"),
     ).toHaveLength(2);
   });
+
+  it("two attaches to the same machine at the same moment both stand, with one event", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const fileId = await aFile({});
+
+    const { first, second } = await whileHoldingRow(
+      db,
+      sql`SELECT id FROM file WHERE id = ${fileId} FOR UPDATE`,
+      async (untilWaiting) => {
+        const first = attach(fileId, { machineIds: [lg042.machineId] });
+        await untilWaiting(1);
+        const second = attach(fileId, { machineIds: [lg042.machineId] });
+        await untilWaiting(2);
+        return { first, second };
+      },
+    );
+
+    expect(await first).toMatchObject({ ok: true });
+    expect(await second).toMatchObject({ ok: true });
+    expect((await fileDetails(db, fileId))!.attachedTo).toHaveLength(1);
+    expect(
+      (await journalOf(db, { aggregateId: fileId })).filter((step) => step.type === "EVT-FileAttached"),
+    ).toHaveLength(1);
+  });
 });

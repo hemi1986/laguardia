@@ -181,6 +181,8 @@ export const collectionTexts = {
     detachedFrom: (title: string, name: string) => `„${title}“ von ${name} gelöst.`,
     /** The way back from the attach form (ST-115, G17). */
     backToFile: "Zurück zur Datei",
+    /** A removed file's details address after a detach attempt (ST-115): the rejection, not the details. */
+    removedTitle: "Datei entfernt",
     /** The way back, by where the person came from (G17, closed set of origins). */
     backToMachine: "Zurück zum Gerät",
     backToSettings: "Zurück zu den Einstellungen",
@@ -391,6 +393,8 @@ export const collectionErrors = {
   "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
   /** Attaching an existing file to further things (ST-115): nothing ticked. */
   "no-attachment-chosen": "Bitte mindestens ein Gerät oder Modell wählen.",
+  /** Detaching a file (ST-115): a forged form without a target. */
+  "target-required": "Bitte ein Gerät oder Modell wählen.",
   /** Removing a file (ST-038): another technician was quicker. */
   "file-removed": "Diese Datei wurde schon entfernt.",
 } as const;

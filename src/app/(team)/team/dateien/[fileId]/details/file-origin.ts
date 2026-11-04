@@ -34,7 +34,12 @@ export function originValue(origin: FileOrigin | PlaceOfPage | string | undefine
 export function fileDetailsAddress(
   fileId: string,
   origin?: FileOrigin | PlaceOfPage | string,
-  { retried = false, attached = false, detached }: { retried?: boolean; attached?: boolean; detached?: string } = {},
+  {
+    retried = false,
+    attached = false,
+    detached,
+    detachFailed,
+  }: { retried?: boolean; attached?: boolean; detached?: string; detachFailed?: string } = {},
 ): string {
   const search = new URLSearchParams();
   const value = originValue(origin);
@@ -42,6 +47,7 @@ export function fileDetailsAddress(
   if (retried) search.set("retried", "1");
   if (attached) search.set("attached", "1");
   if (detached) search.set("detached", detached);
+  if (detachFailed) search.set("detachFailed", detachFailed);
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
 }
 
@@ -65,6 +71,11 @@ export function detachLanding(
   target: string,
 ): string {
   return fileDetailsAddress(fileId, origin, { detached: target });
+}
+
+/** Where a detach that met a removed file lands (ST-115): the details' removed state, which shows the rejection. */
+export function detachFailureLanding(fileId: string, origin: FileOrigin | PlaceOfPage | string | undefined): string {
+  return fileDetailsAddress(fileId, origin, { detachFailed: "file-removed" });
 }
 
 /** The question before removing a file (ST-121), with the origin kept – „Zurück“ and the removal land there. */

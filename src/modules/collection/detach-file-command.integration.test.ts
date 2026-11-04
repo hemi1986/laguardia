@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { executeCommand, journalOf } from "@/platform/command";
+import { whileHoldingRow } from "@/test-support/held-row";
 import { machinesOfOneModel, retireMachine } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { testDatabase } from "@/test-support/database";
@@ -97,6 +99,56 @@ describe("detaching a file (ST-115)", () => {
       result: { fileId, target: { machineId: lg042.machineId } },
     });
     expect(await versionOf(fileId)).toBe(before);
+    expect(
+      (await journalOf(db, { aggregateId: fileId })).filter((step) => step.type === "EVT-FileDetached"),
+    ).toHaveLength(1);
+  });
+
+  it("detaching what was never attached changes nothing", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const [lg042, lg050] = await machinesOfOneModel(db, 2);
+    const fileId = await aFile({ machines: [lg042.machineId] });
+    const before = await versionOf(fileId);
+
+    expect(await detach(fileId, { machineId: lg050.machineId })).toEqual({
+      ok: true,
+      result: { fileId, target: { machineId: lg050.machineId } },
+    });
+    expect(await versionOf(fileId)).toBe(before);
+    expect((await fileDetails(db, fileId))!.attachedTo).toHaveLength(1);
+  });
+
+  it("a forged detach without a target is refused", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const fileId = await aFile({ machines: [lg042.machineId] });
+
+    expect(await executeCommand(detachFileCommand, { fileId, target: undefined }, { actor: tom, ...at() })).toEqual({
+      ok: false,
+      error: "target-required",
+    });
+  });
+
+  it("two detaches at the same moment both stand, with one event", async () => {
+    await anExistingTeamMember(db, tom, "Tom");
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const fileId = await aFile({ machines: [lg042.machineId] });
+
+    const { first, second } = await whileHoldingRow(
+      db,
+      sql`SELECT id FROM file WHERE id = ${fileId} FOR UPDATE`,
+      async (untilWaiting) => {
+        const first = detach(fileId, { machineId: lg042.machineId });
+        await untilWaiting(1);
+        const second = detach(fileId, { machineId: lg042.machineId });
+        await untilWaiting(2);
+        return { first, second };
+      },
+    );
+
+    expect(await first).toMatchObject({ ok: true });
+    expect(await second).toMatchObject({ ok: true });
+    expect((await fileDetails(db, fileId))!.attachedTo).toEqual([]);
     expect(
       (await journalOf(db, { aggregateId: fileId })).filter((step) => step.type === "EVT-FileDetached"),
     ).toHaveLength(1);

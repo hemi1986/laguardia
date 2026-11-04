@@ -17,8 +17,8 @@ export type AttachFileInput = {
   machineModelIds: readonly string[];
 };
 
-/** What the decision must know: whether every machine and machine model the input names exists. Retired machines are allowed. */
-export type AttachingFacts = { everythingExists: boolean };
+/** What the decision must know: which of the named machines and machine models do not exist. Retired machines are allowed. */
+export type AttachingFacts = { missingMachines: boolean; missingMachineModels: boolean };
 
 export type AttachFileError = "file-removed" | "no-attachment-chosen" | "unknown-machine" | "unknown-machine-model";
 
@@ -26,7 +26,7 @@ export type AttachFileError = "file-removed" | "no-attachment-chosen" | "unknown
  * The one place that says what a target is called in a set of attachments – the command's decision and the read model
  * compare machines and machine models without mixing them up.
  */
-export function attachmentKey(target: AttachedTo): string {
+export function targetKey(target: AttachedTo): string {
   return "machineId" in target ? `machine:${target.machineId}` : `machineModel:${target.machineModelId}`;
 }
 
@@ -45,9 +45,9 @@ export function attachFile(
   const machineIds = [...new Set(input.machineIds)];
   const machineModelIds = [...new Set(input.machineModelIds)];
   if (machineIds.length === 0 && machineModelIds.length === 0) return { ok: false, error: "no-attachment-chosen" };
-  if (!facts.everythingExists)
-    return { ok: false, error: machineIds.length > 0 ? "unknown-machine" : "unknown-machine-model" };
-  const attached = new Set(file.attachments.map(attachmentKey));
+  if (facts.missingMachines) return { ok: false, error: "unknown-machine" };
+  if (facts.missingMachineModels) return { ok: false, error: "unknown-machine-model" };
+  const attached = new Set(file.attachments.map(targetKey));
   const targets: AttachedTo[] = [
     ...machineIds.filter((machineId) => !attached.has(`machine:${machineId}`)).map((machineId) => ({ machineId })),
     ...machineModelIds

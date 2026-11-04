@@ -6,6 +6,7 @@ import {
   attachmentChoice,
   createMachineModelCommand,
   registerMachineCommand,
+  removeFileCommand,
 } from "@/modules/collection";
 import { retireMachineCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
@@ -128,11 +129,7 @@ describe("the machines and machine models a file can be attached to (ST-115)", (
   it("offers nothing for a removed file", async () => {
     const lg042 = await aMachine(medievalMadness, "LG-042");
     const manual = await aFile({ machineIds: [lg042] }, "Old manual");
-    const removed = await executeCommand(
-      (await import("./remove-file-command")).removeFileCommand,
-      { fileId: manual, version: 0 },
-      at(),
-    );
+    const removed = await executeCommand(removeFileCommand, { fileId: manual, version: 0 }, at());
     if (!removed.ok) throw new Error(removed.error);
 
     expect(await attachmentChoice(db, manual)).toEqual({

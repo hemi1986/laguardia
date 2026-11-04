@@ -108,7 +108,9 @@ async function details(
 ) {
   const file = await loadFileDetails(db, fileId, { params, viewer: viewerOf(person), ai: dependencies });
   if (!file) return { file, html: "" };
-  const html = renderToStaticMarkup(createElement(FileDetailsView, { file, retry: async () => null }));
+  const html = renderToStaticMarkup(
+    createElement(FileDetailsView, { file, retry: async () => null, detach: async () => null }),
+  );
   return { file, html };
 }
 
@@ -213,7 +215,9 @@ describe("the file details (ST-114)", () => {
 
     const { html } = await details(manual);
 
-    const lines = [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((match) => match[1].replace(/<[^>]+>/g, ""));
+    const lines = [...html.matchAll(/<li[^>]*>(.*?)<\/li>/g)].map((match) =>
+      match[1].replace(/<form[\s\S]*?<\/form>/g, "").replace(/<[^>]+>/g, ""),
+    );
     expect(lines).toEqual([
       "LG-042 · Medieval Madness",
       "LG-041 · Ausgemustert",
