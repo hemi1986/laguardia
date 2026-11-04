@@ -114,4 +114,14 @@ describe("the question before removing a file (ST-121)", () => {
     expect(hrefOf(html, "Zurück")).toBe(`/team/dateien/${manual}/details?from=machine%3ALG-042`);
     expect(await fileDetails(db, manual)).toBeDefined();
   });
+
+  it("ST-121: The question for a file attached to nothing names no list", async () => {
+    const notes = await aFileAttachedTo({}, "Wiring notes");
+
+    const { html } = await question(notes);
+
+    expect(html).toContain("„Wiring notes“ entfernen? Die Datei wird endgültig gelöscht.");
+    expect(html).not.toContain("Sie verschwindet bei:");
+    expect(lines(html)).toEqual([]);
+  });
 });
