@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { FileAdded, FileAttached } from "./add-file";
+import type { FileDetached } from "./detach-file";
 import type { FileRemoved } from "./remove-file";
 import type { MachineStatusChanged } from "./change-machine-status";
 import type { MachineDetailsCorrected } from "./correct-machine-details";
@@ -96,13 +97,24 @@ export const collectionEvents = eventCatalogue({
       data: { machineModelId: event.machineModelId ?? null },
     }),
   },
+  "EVT-FileDetached": {
+    aggregate: "AGG-File",
+    // The file no longer shows there (ST-115); a machine model belongs to no one machine. Who detached it is the
+    // journal's actor.
+    project: (event: FileDetached) => ({
+      aggregateId: event.fileId,
+      machineId: "machineId" in event ? event.machineId : null,
+      data: { machineModelId: "machineModelId" in event ? event.machineModelId : null },
+    }),
+  },
   "EVT-FileRemoved": {
     aggregate: "AGG-File",
-    // Which file and who removed it (the journal's actor); its title stays in the kept record (ST-038).
+    // Which file and who removed it (the journal's actor); its title stays in the kept record (ST-038). Since ST-115 a
+    // file may be attached to several things, so the removal names no machine (events.yaml: File, Removed by).
     project: (event: FileRemoved) => ({
       aggregateId: event.fileId,
-      machineId: event.machineId ?? null,
-      data: { machineModelId: event.machineModelId ?? null },
+      machineId: null,
+      data: {},
     }),
   },
   "EVT-MuseumDetailsChanged": {

@@ -56,7 +56,10 @@ describe("CMD-AddFile", () => {
   it("ST-037: Helper attaches a manual to a machine model", async () => {
     const [lg042, lg043] = await machinesOfOneModel(2);
 
-    const added = await add(lg042.machineId, "machine-model", { title: "MM Operations Manual", fileCategory: "manual" });
+    const added = await add(lg042.machineId, "machine-model", {
+      title: "MM Operations Manual",
+      fileCategory: "manual",
+    });
 
     expect(added.ok).toBe(true);
     expect(await filesOf(lg042.museumNumber)).toEqual([{ title: "MM Operations Manual", fileCategory: "manual" }]);
@@ -150,9 +153,9 @@ describe("CMD-AddFile", () => {
       },
     ]);
     // One command wrote both: the latest command on the file holds the two events.
-    expect((await lastCommandBy(db, { aggregateId: added.result.fileId }, anna.teamMemberId))?.map((e) => e.type)).toEqual(
-      ["EVT-FileAdded", "EVT-FileAttached"],
-    );
+    expect(
+      (await lastCommandBy(db, { aggregateId: added.result.fileId }, anna.teamMemberId))?.map((e) => e.type),
+    ).toEqual(["EVT-FileAdded", "EVT-FileAttached"]);
     expect(JSON.stringify(entries)).not.toMatch(/Secret-ish|secret-ish/);
   });
 

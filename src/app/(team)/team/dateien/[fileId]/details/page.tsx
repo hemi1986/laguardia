@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "@/app/team-session";
-import { retryFileFromDetailsAction } from "./actions";
+import { detachFileFromDetailsAction, retryFileFromDetailsAction } from "./actions";
 import { loadFileDetails } from "./file-details-data";
 import { FileDetailsView } from "./file-details-view";
 import { originValue } from "./file-origin";
@@ -17,5 +17,11 @@ export default async function FileDetailsPage({ params, searchParams }: PageProp
   const { fileId } = await params;
   const file = await loadFileDetails(database(), fileId, { params: await searchParams, viewer });
   if (!file) notFound();
-  return <FileDetailsView file={file} retry={retryFileFromDetailsAction.bind(null, originValue(file.origin))} />;
+  return (
+    <FileDetailsView
+      file={file}
+      retry={retryFileFromDetailsAction.bind(null, originValue(file.origin))}
+      detach={detachFileFromDetailsAction.bind(null, file.id, originValue(file.origin))}
+    />
+  );
 }

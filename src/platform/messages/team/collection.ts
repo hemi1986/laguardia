@@ -164,10 +164,36 @@ export const collectionTexts = {
     machineModel: (title: string) => `Alle Geräte des Modells ${title}`,
     /** A file attached to nothing – the data model allows it; ST-115 is where it first occurs. */
     nowhere: "Nirgends angehängt",
+    /** At the end of „Angehängt an“ (ST-115, G18): the way to the form that attaches this file to further things. */
+    attach: "Anhängen",
+    /** On each entry of „Angehängt an“, technicians only (ST-115, G10a): one tap, no question. */
+    detach: "Lösen",
+    /** The confirmation after attaching (ST-115, G3, G33): the resulting state, only the parts there are. */
+    attachedNow: (title: string, machines: number, models: number) => {
+      const parts = [
+        machines === 0 ? "" : machines === 1 ? "1 Gerät" : `${machines} Geräten`,
+        models === 0 ? "" : models === 1 ? "1 Modell" : `${models} Modellen`,
+      ].filter(Boolean);
+      if (parts.length === 0) return `„${title}“ hängt jetzt nirgends.`;
+      return `„${title}“ hängt jetzt an ${parts.join(" und ")}.`;
+    },
+    /** The confirmation after detaching one thing (ST-115, G3) – the file stays a file. */
+    detachedFrom: (title: string, name: string) => `„${title}“ von ${name} gelöst.`,
+    /** The way back from the attach form (ST-115, G17). */
+    backToFile: "Zurück zur Datei",
     /** The way back, by where the person came from (G17, closed set of origins). */
     backToMachine: "Zurück zum Gerät",
     backToSettings: "Zurück zu den Einstellungen",
     backToMachines: "Zurück zu den Geräten",
+  },
+  /** Attaching an existing file to further machines and machine models (ST-115, RM-AttachmentChoice, G27). */
+  attachToFile: {
+    title: (fileTitle: string) => `Anhängen · ${fileTitle}`,
+    machines: "Geräte",
+    machineModels: "Modelle",
+    /** Nothing left to offer (G7): the page says so and has no submit. */
+    nothingLeft: "Es gibt nichts mehr, woran sich diese Datei anhängen lässt.",
+    submit: "Anhängen",
   },
   /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
   fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },
@@ -363,6 +389,8 @@ export const collectionErrors = {
   /** Attaching a file (ST-037). */
   "file-category-required": "Bitte eine Dateikategorie wählen.",
   "attach-to-required": "Bitte wählen, ob die Datei nur zu diesem Gerät oder zu allen Geräten des Modells gehört.",
+  /** Attaching an existing file to further things (ST-115): nothing ticked. */
+  "no-attachment-chosen": "Bitte mindestens ein Gerät oder Modell wählen.",
   /** Removing a file (ST-038): another technician was quicker. */
   "file-removed": "Diese Datei wurde schon entfernt.",
 } as const;

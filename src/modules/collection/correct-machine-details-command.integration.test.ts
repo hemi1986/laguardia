@@ -128,12 +128,20 @@ describe("CMD-CorrectMachineDetails", () => {
   it("ST-035: Correction and registration race for the same number", async () => {
     await aMachine("LG-420");
 
-    const [correction, registration] = await Promise.all([correct("LG-420", { museumNumber: "LG-060" }), register("LG-060")]);
+    const [correction, registration] = await Promise.all([
+      correct("LG-420", { museumNumber: "LG-060" }),
+      register("LG-060"),
+    ]);
 
     expect([correction.ok, registration.ok].sort()).toEqual([false, true]);
-    expect([correction, registration].find((outcome) => !outcome.ok)).toEqual({ ok: false, error: "museum-number-taken" });
+    expect([correction, registration].find((outcome) => !outcome.ok)).toEqual({
+      ok: false,
+      error: "museum-number-taken",
+    });
     const owner = await machineForTeamForm(db, "LG-060");
-    expect(owner?.id).toBe(correction.ok ? correction.result.machineId : registration.ok && registration.result.machineId);
+    expect(owner?.id).toBe(
+      correction.ok ? correction.result.machineId : registration.ok && registration.result.machineId,
+    );
   });
 
   it("ST-035: Reserved number cannot be taken by a correction", async () => {
