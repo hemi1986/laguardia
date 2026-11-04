@@ -87,7 +87,10 @@ const kinds = {
 function attach(
   machineId: string,
   title: string,
-  { kind = "text", to = "machine" }: { kind?: keyof typeof kinds; to?: "machine" | "machine-model" } = {},
+  {
+    kind = "text",
+    to = "machine",
+  }: { kind?: keyof typeof kinds; to?: "machine" | "machine-model" | "nothing" } = {},
 ): Promise<string> {
   const { contentType, bytes } = kinds[kind];
   return scenario.attachFile(machineId, { title, bytes: bytes(), contentType, to, fileCategory: "other" });
@@ -316,6 +319,19 @@ describe("the form „KI“ once a file has no one owner (ST-120)", () => {
     expect(visibleText(html)).toContain("Attract mode.mp4 – Dateiformat wird nicht erfasst");
     expect(visibleText(html)).not.toContain("LG-042");
     expect(html.match(/Erneut versuchen/g)).toHaveLength(1);
+  });
+});
+
+describe("a file attached to nothing (RM-AiSettings, ADR 0018)", () => {
+  it("is indexed by the background work and counted in the overview", async () => {
+    await turnAiOn();
+    const loose = await attach(await aMachine("LG-042"), "Loose notes", { to: "nothing" });
+    await run();
+
+    const { data } = await settingsPage();
+
+    expect(data.overview).toMatchObject({ indexed: 1, waiting: 0, failed: [] });
+    expect((await journalOfFile(loose)).map((entry) => entry.type)).toContain("EVT-FileIndexedForAi");
   });
 });
 

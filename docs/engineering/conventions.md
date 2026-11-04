@@ -848,7 +848,7 @@ request. Everything else stays synchronous (ADR 0002). There is **no scheduled j
   asks the AI assessments still *requested*; `work` reads what is known about the defect through Repair's
   `defectForAiAssessment` and Collection's `machineModelOfMachineForAi` and `filesOfMachineAndModelForAi` – the files
   attached to the machine or its machine model, read **once, when the writing begins** (ST-120, ADR 0018): that list
-  limits the search, is what the chat model is told, and passes through CMD-WriteAiAssessment's input (`files`) as what
+  limits the search, is what the chat model is told, and passes through CMD-WriteAiAssessment's input (`filesAttached`) as what
   references are checked against, so an attach or detach during the writing changes nothing. The AI index entry names
   no machine; the search (`ai-index-search.ts`) looks only among those file IDs, only the current embedding model; one
   text search for the defect title, the problem report descriptions and the note, one image search per photo of the

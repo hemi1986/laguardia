@@ -98,7 +98,7 @@ export const aiAssessmentWork: AiWorkKind = {
           whatToCheckFirst: outcome.whatToCheckFirst,
           // The command owns the invariant: references to files outside the list read when the writing began are dropped.
           references: outcome.references,
-          files: fileIds,
+          filesAttached: fileIds,
           filesSearched,
           embeddingModel: searches.embeddingModel,
           cost: piece.openRouter.spent(),

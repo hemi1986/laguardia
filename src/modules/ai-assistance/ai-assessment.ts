@@ -161,7 +161,7 @@ export type WriteAiAssessmentInput = {
    * references are checked against. Only the system runs the command, so the list passes through its input instead of
    * being read again when the result is stored.
    */
-  files: readonly string[];
+  filesAttached: readonly string[];
   filesSearched: string[];
   embeddingModel: string;
   cost: number;
@@ -192,7 +192,7 @@ export function writeAiAssessment(
   { clock }: DecisionContext,
 ): Decision<AiAssessmentState, AiAssessmentWritten, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
-  const allowed = new Set(input.files);
+  const allowed = new Set(input.filesAttached);
   const references = input.references
     .filter((reference) => allowed.has(reference.fileId))
     .filter(

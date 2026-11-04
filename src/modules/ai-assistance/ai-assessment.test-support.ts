@@ -44,7 +44,7 @@ export async function writeAiAssessmentForTest(
       probableCauses,
       whatToCheckFirst,
       references,
-      files: await filesOfTheDefect(db, aiAssessmentId),
+      filesAttached: await filesOfTheDefect(db, aiAssessmentId),
       filesSearched,
       embeddingModel,
       cost,
