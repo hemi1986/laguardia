@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -13,11 +15,15 @@ import { journalOf, lastCommandBy, type CommittedEvent } from "@/platform/comman
 import { memoryStorage } from "@/platform/storage";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { post } from "@/test-support/forms";
+import { textOf } from "@/test-support/html";
 import { machinesOfOneModel } from "@/test-support/machines";
 import { anExistingTeamMember } from "@/test-support/team-members";
 import { grantUploadAddress } from "@/upload";
 import { attachFileForm } from "./datei-anhaengen/attach-file-form";
 import { attachPhotoForm } from "./foto-anhaengen/attach-photo-form";
+import { loadFileDetails } from "../../dateien/[fileId]/details/file-details-data";
+import { FileDetailsView } from "../../dateien/[fileId]/details/file-details-view";
+import { loadFileOverview } from "../../dateien/file-overview-data";
 import { loadMachineConfirmation } from "./machine-confirmation";
 
 /**
@@ -54,7 +60,11 @@ async function aPhonePhoto(name: string): Promise<File> {
 const forms = [
   {
     form: "„Datei anhängen“",
-    send: async (machine: { machineId: string; machineModelId: string }, name: string, committed: CommittedEvent[][]) => {
+    send: async (
+      machine: { machineId: string; machineModelId: string },
+      name: string,
+      committed: CommittedEvent[][],
+    ) => {
       const issued = await grantUploadAddress(
         { db, storage, clock: fixedClock(at), newId: randomUUID },
         { issuedTo: anna.teamMemberId, size: 16, contentType: "text/plain" },
@@ -89,7 +99,11 @@ const forms = [
   },
   {
     form: "„Foto aufnehmen“",
-    send: async (machine: { machineId: string; machineModelId: string }, name: string, committed: CommittedEvent[][]) => {
+    send: async (
+      machine: { machineId: string; machineModelId: string },
+      name: string,
+      committed: CommittedEvent[][],
+    ) => {
       const fileIds: string[] = [];
       const action = formRunner({
         currentPerson: async () => anna,
@@ -127,15 +141,16 @@ describe("adding a file on the machine record", () => {
       const record = (await machineRecord(db, lg042.museumNumber))!;
       expect(record.files).toMatchObject([{ id: fileId, title: "MM Operations Manual", ofMachineModel: false }]);
       expect((await machineRecord(db, lg043.museumNumber))!.files).toEqual([]);
-      expect(await loadMachineConfirmation(db, fixedClock(at), anna.teamMemberId, record, { attached: fileId })).toEqual({
+      expect(
+        await loadMachineConfirmation(db, fixedClock(at), anna.teamMemberId, record, { attached: fileId }),
+      ).toEqual({
         kind: "file-attached",
         title: "MM Operations Manual",
       });
       // The journal records the file added and attached to LG-042 in one step.
-      expect((await lastCommandBy(db, { aggregateId: fileId }, anna.teamMemberId))?.map((entry) => entry.type)).toEqual([
-        "EVT-FileAdded",
-        "EVT-FileAttached",
-      ]);
+      expect((await lastCommandBy(db, { aggregateId: fileId }, anna.teamMemberId))?.map((entry) => entry.type)).toEqual(
+        ["EVT-FileAdded", "EVT-FileAttached"],
+      );
       expect(await journalOf(db, { aggregateId: fileId })).toMatchObject([
         { type: "EVT-FileAdded", machineId: null },
         { type: "EVT-FileAttached", machineId: lg042.machineId },
@@ -152,5 +167,45 @@ describe("adding a file on the machine record", () => {
       await scenario.run({ kinds: [fileIndexingWork] });
       expect(await aiIndexOverview(db, scenario.ai())).toMatchObject({ indexed: index + 1, waiting: 0, failed: [] });
     }
+  });
+
+  it("ST-119: The machine record keeps adding through the same command", async () => {
+    const [lg042] = await machinesOfOneModel(db, 1);
+    const machineModelId = (await machineModelOfMachineForAi(db, lg042.machineId))!.id;
+    const committed: CommittedEvent[][] = [];
+
+    // When a team member adds "wiring.pdf" under „Datei anhängen“ on the machine record of "LG-042" …
+    const { state, fileIds } = await forms[0].send(
+      { machineId: lg042.machineId, machineModelId },
+      "wiring.pdf",
+      committed,
+    );
+
+    // … the team member is back on the machine record with its confirmation,
+    expect(state).toBeNull();
+    const [fileId] = fileIds;
+    const record = (await machineRecord(db, lg042.museumNumber))!;
+    expect(await loadMachineConfirmation(db, fixedClock(at), anna.teamMemberId, record, { attached: fileId })).toEqual({
+      kind: "file-attached",
+      title: "MM Operations Manual",
+    });
+    // „Details“ leads to its file details, which show the original file name and what it is attached to,
+    const listed = record.files.find((file) => file.id === fileId)!;
+    expect(listed.title).toBe("MM Operations Manual");
+    const file = await loadFileDetails(db, fileId, {
+      params: { from: `machine:${lg042.museumNumber}` },
+      viewer: { id: anna.teamMemberId, role: anna.role },
+      ai: scenario.ai(),
+    });
+    const opened = textOf(
+      renderToStaticMarkup(
+        createElement(FileDetailsView, { file: file!, retry: async () => null, detach: async () => null }),
+      ),
+    );
+    expect(opened).toContain("Ursprünglicher Dateiname: wiring.pdf");
+    expect(opened).toContain(`${lg042.museumNumber} · ${record.machineModel.title}`);
+    // and „Dateien“ lists it.
+    const overview = await loadFileOverview(db, { params: {}, viewer: { id: anna.teamMemberId }, ai: scenario.ai() });
+    expect(overview.entries.map((entry) => entry.id)).toContain(fileId);
   });
 });

@@ -12,7 +12,8 @@ import { Rejection } from "@/components/ui/message";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { FileCategory } from "@/modules/collection";
 import type { AddFileState } from "./actions";
-import { ADD_FILE_TARGETS, type AddFileField } from "./add-file-form";
+import type { AddFileField } from "./add-file-form";
+import { ADD_FILE_TARGETS } from "./add-file-targets";
 import { titleFromFileName } from "./title-from-file-name";
 
 type Texts = ChosenFileTexts & {

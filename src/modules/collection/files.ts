@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, lastCommandBy, replaces, type Database } from "@/platform/command";
-import { safeFileName } from "@/platform/storage";
+import { safeFileName } from "@/platform/storage/content-disposition";
 import {
   fileCategories,
   type AddFileInput,

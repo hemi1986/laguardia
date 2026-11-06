@@ -7,6 +7,7 @@ import {
   type FileContent,
 } from "@/modules/collection";
 import { targetOf } from "../[fileId]/details/file-attachments";
+import { ADD_FILE_TARGETS } from "./add-file-targets";
 
 /**
  * The fields of the form „Datei hinzufügen“ in the file overview (ST-119). `content` is the name of the content the
@@ -17,8 +18,6 @@ import { targetOf } from "../[fileId]/details/file-attachments";
 export const addFileFields = ["title", "fileCategory", "content", "fileName"] as const;
 export type AddFileField = (typeof addFileFields)[number];
 
-/** The field the choice posts. */
-export const ADD_FILE_TARGETS = "targets";
 
 /** The rules that need only the fields, in the order the form asks them: title, then file category. */
 export function addFileFormRefusal(fields: { title?: string; fileCategory?: string }): AddFileInputError | undefined {

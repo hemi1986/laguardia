@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Database } from "@/platform/command";
-import { safeFileName } from "@/platform/storage";
+import { safeFileName } from "@/platform/storage/content-disposition";
 import type { FileCategory } from "./add-file";
 import { file, fileAttachment, machine, machineModel } from "./schema";
 
