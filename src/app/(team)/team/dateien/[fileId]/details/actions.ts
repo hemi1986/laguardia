@@ -11,7 +11,7 @@ import {
 } from "@/app/(team)/team/museum-settings/retry-file-indexing-definition";
 import { targetValue } from "./file-attachments";
 import { detachFileForm, type DetachFileState } from "./detach-file-form";
-import { detachFailureLanding, detachLanding, fileDetailsAddress } from "./file-origin";
+import { detachFailureLanding, detachLanding, fileDetailsAddress } from "../../file-navigation";
 
 /**
  * „Erneut versuchen“ on the file details (ST-114): the same CMD-IndexFileForAi by hand as on the form „KI“, through the

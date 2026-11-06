@@ -4,7 +4,7 @@ import { Page } from "@/components/page";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTeamMember } from "@/app/team-session";
-import { originValue } from "../file-origin";
+import { originValue } from "../../../file-navigation";
 import { attachToFileAction } from "./actions";
 import { loadAttachToFile } from "./attach-to-file-data";
 import { AttachToFileForm } from "./attach-to-file-form-view";

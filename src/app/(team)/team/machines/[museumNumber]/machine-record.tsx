@@ -5,7 +5,7 @@ import { Section } from "@/components/ui/section";
 import { Confirmation } from "@/components/ui/message";
 import { teamMessages } from "@/platform/messages";
 import { formatDateTime } from "@/platform/time";
-import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/file-navigation";
 import { fileCategories } from "@/modules/collection";
 import { OpenDefectEntry } from "../../defects/open-defect-entry";
 import type { MachineRecordData, ShownEndedRepairHistoryEntry } from "./machine-record-data";

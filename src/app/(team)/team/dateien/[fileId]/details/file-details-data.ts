@@ -30,7 +30,7 @@ import {
   removeFileAddress,
   wayBack,
   type FileOrigin,
-} from "./file-origin";
+} from "../../file-navigation";
 
 /** Section „KI-Erfassung“ (RM-FileDetails, G37): none while AI is off. */
 export type FileAiState =

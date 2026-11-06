@@ -1,6 +1,6 @@
 import { fileForChange, type FileCategory } from "@/modules/collection";
 import { isId, type Database } from "@/platform/command";
-import { fileDetailsAddress, originOf, type FileOrigin } from "../file-origin";
+import { originAndBack, type FileOrigin } from "../../../file-navigation";
 
 /** The form „Datei bearbeiten“ (ST-116) as the page shows it: the file's current details, the version and the way back. */
 export type ChangeFileDetailsData = {
@@ -36,6 +36,5 @@ export async function loadChangeFileDetails(
   if (!isId(fileId)) return undefined;
   const file = await fileForChange(db, fileId);
   if (!file) return undefined;
-  const origin = await originOf(db, params.from, viewer);
-  return { ...file, origin, back: fileDetailsAddress(file.id, origin) };
+  return { ...file, ...(await originAndBack(db, file.id, params.from, viewer)) };
 }

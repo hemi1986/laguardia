@@ -2,7 +2,7 @@ import { Page } from "@/components/page";
 import { BackLink } from "@/components/ui/back-link";
 import { Rejection } from "@/components/ui/message";
 import { commandErrorText, teamMessages } from "@/platform/messages";
-import type { wayBack } from "./file-origin";
+import type { wayBack } from "../../file-navigation";
 
 const { fileDetails: texts } = teamMessages;
 

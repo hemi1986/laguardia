@@ -14,7 +14,7 @@ import {
 } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
-import { fileDetailsAddress } from "./[fileId]/details/file-origin";
+import { fileDetailsAddress } from "./file-navigation";
 import { fileSizeText } from "./[fileId]/details/file-size";
 import { targetOf, targetValue } from "./[fileId]/details/file-attachments";
 import {

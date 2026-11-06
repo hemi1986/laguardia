@@ -19,7 +19,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { grantUploadAddress } from "@/upload";
 import { loadFileDetails } from "../[fileId]/details/file-details-data";
 import { FileDetailsView } from "../[fileId]/details/file-details-view";
-import { fileDetailsAddress } from "../[fileId]/details/file-origin";
+import { fileDetailsAddress } from "../file-navigation";
 import { FileOverviewView } from "../file-overview";
 import { loadFileOverview } from "../file-overview-data";
 import { addFileForm } from "./add-file-form";

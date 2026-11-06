@@ -1,6 +1,6 @@
 import { fileForRemoval, type FileAttachedTo } from "@/modules/collection";
 import { isId, type Database } from "@/platform/command";
-import { fileDetailsAddress, originOf, type FileOrigin } from "../file-origin";
+import { originAndBack, type FileOrigin } from "../../../file-navigation";
 
 /** The question before removing a file (ST-121), as the page shows it: the kept record, where the person came from and the way back. */
 export type RemoveFileData = {
@@ -34,6 +34,5 @@ export async function loadRemoveFile(
   if (!isId(fileId)) return undefined;
   const file = await fileForRemoval(db, fileId);
   if (!file) return undefined;
-  const origin = await originOf(db, params.from, viewer);
-  return { ...file, origin, back: fileDetailsAddress(file.id, origin) };
+  return { ...file, ...(await originAndBack(db, file.id, params.from, viewer)) };
 }

@@ -7,7 +7,7 @@ import { detachFileFromDetailsAction, retryFileFromDetailsAction } from "./actio
 import { loadFileDetails } from "./file-details-data";
 import { FileDetailsView } from "./file-details-view";
 import { FileRemovedView } from "./file-removed-view";
-import { originOf, originValue, wayBack } from "./file-origin";
+import { originOf, originValue, wayBack } from "../../file-navigation";
 
 /**
  * One file's details (ST-114, G18): what it is, what it is attached to and how far the AI index got – for the whole team.

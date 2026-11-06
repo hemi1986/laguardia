@@ -42,7 +42,7 @@ import {
   fileDetailsAddress,
   wayBack,
   type FileOrigin,
-} from "./file-origin";
+} from "../../file-navigation";
 import { FileRemovedView } from "./file-removed-view";
 import { loadRemoveFile } from "./entfernen/remove-file-data";
 import { removeFileForm } from "./entfernen/remove-file-form";

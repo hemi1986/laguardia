@@ -33,7 +33,7 @@ import { loadAiSettings } from "../../../../museum-settings/ai-settings-data";
 import { AiSettingsSection } from "../../../../museum-settings/ai-settings-section";
 import { loadFileDetails } from "../file-details-data";
 import { FileDetailsView } from "../file-details-view";
-import { removalLanding, removeFileAddress, type FileOrigin } from "../file-origin";
+import { removalLanding, removeFileAddress, type FileOrigin } from "../../../file-navigation";
 import { loadRemoveFile } from "./remove-file-data";
 import { removeFileForm } from "./remove-file-form";
 import { RemoveFileView } from "./remove-file-view";

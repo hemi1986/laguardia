@@ -28,7 +28,7 @@ import { loadMachineRecord } from "../../../machines/[museumNumber]/machine-reco
 import { MachineRecordView } from "../../../machines/[museumNumber]/machine-record";
 import { loadFileDetails } from "./file-details-data";
 import { FileDetailsView } from "./file-details-view";
-import { fileDetailsAddress } from "./file-origin";
+import { fileDetailsAddress } from "../../file-navigation";
 
 /**
  * ST-114: the file details page – Collection's file, AI assistance's state and Team's name composed by the page data

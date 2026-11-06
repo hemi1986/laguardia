@@ -3,7 +3,7 @@ import { removeFileRefusal } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { commandErrorText, teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../../team-session";
-import { originValue } from "../file-origin";
+import { originValue } from "../../../file-navigation";
 import { removeFileAction } from "./actions";
 import { loadRemoveFile } from "./remove-file-data";
 import { RemoveFileView } from "./remove-file-view";

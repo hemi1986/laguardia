@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/file-navigation";
 import { museumNumberOfPage, teamMachinePage } from "@/app/museum-number-address";
 import { isId } from "@/platform/command";
 import { requireTeamMember } from "../../../../../../team-session";

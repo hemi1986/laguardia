@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { addFileCommand } from "@/modules/collection";
 import { formAction } from "@/app/_actions/form-action";
 import { requireTeamMember } from "@/app/team-session";
-import { fileDetailsAddress } from "../[fileId]/details/file-origin";
+import { fileDetailsAddress } from "../file-navigation";
 import { addFileForm } from "./add-file-form";
 
 /**

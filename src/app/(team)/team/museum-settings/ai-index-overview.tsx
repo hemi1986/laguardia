@@ -1,5 +1,5 @@
 import { Confirmation } from "@/components/ui/message";
-import { fileDetailsAddress } from "@/app/(team)/team/dateien/[fileId]/details/file-origin";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/file-navigation";
 import { teamMessages } from "@/platform/messages";
 import type { AiIndexOverview } from "@/modules/ai-assistance";
 import type { FailedFileRow } from "./retry-file-indexing-form";
