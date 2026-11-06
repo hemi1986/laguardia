@@ -39,7 +39,8 @@ export function fileDetailsAddress(
     attached = false,
     detached,
     detachFailed,
-  }: { retried?: boolean; attached?: boolean; detached?: string; detachFailed?: string } = {},
+    saved = false,
+  }: { retried?: boolean; attached?: boolean; detached?: string; detachFailed?: string; saved?: boolean } = {},
 ): string {
   const search = new URLSearchParams();
   const value = originValue(origin);
@@ -48,12 +49,26 @@ export function fileDetailsAddress(
   if (attached) search.set("attached", "1");
   if (detached) search.set("detached", detached);
   if (detachFailed) search.set("detachFailed", detachFailed);
+  if (saved) search.set("saved", "1");
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
 }
 
 /** Where attaching a file lands (ST-115, G3, G33): its details, which say what it is attached to now. */
 export function attachLanding(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
   return fileDetailsAddress(fileId, origin, { attached: true });
+}
+
+/** Where correcting a file lands (ST-116, G3, G33): its details, which confirm the save – also when nothing changed. */
+export function changeLanding(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
+  return fileDetailsAddress(fileId, origin, { saved: true });
+}
+
+/** The form „Datei bearbeiten“ (ST-116), reached from the head of the file details, with the origin kept (G17). */
+export function changeFileDetailsAddress(fileId: string, origin?: FileOrigin | PlaceOfPage | string): string {
+  const search = new URLSearchParams();
+  const value = originValue(origin);
+  if (value) search.set(ORIGIN_PARAM, value);
+  return `/team/dateien/${fileId}/details/bearbeiten${search.size > 0 ? `?${search}` : ""}`;
 }
 
 /** The form „Anhängen“ (ST-115), reached from the file details, with the origin kept (G17). */

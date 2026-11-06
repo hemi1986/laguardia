@@ -22,7 +22,14 @@ import { teamMessages } from "@/platform/messages";
 import { calendarDate, formatCalendarDate } from "@/platform/time";
 import { fileSizeText } from "./file-size";
 import { targetOf, targetValue } from "./file-attachments";
-import { attachToFileAddress, originOf, removeFileAddress, wayBack, type FileOrigin } from "./file-origin";
+import {
+  attachToFileAddress,
+  changeFileDetailsAddress,
+  originOf,
+  removeFileAddress,
+  wayBack,
+  type FileOrigin,
+} from "./file-origin";
 
 /** Section „KI-Erfassung“ (RM-FileDetails, G37): none while AI is off. */
 export type FileAiState =
@@ -42,6 +49,10 @@ export type FileDetailsData = {
   retryOffered: boolean;
   /** „Anhängen“ at the end of „Angehängt an“ (ST-115) – every team member. */
   attachHref: string;
+  /** „Datei bearbeiten“ in the head (ST-116) – every team member, with the origin kept (G17). */
+  editHref: string;
+  /** The confirmation after a correction (ST-116, G3, G33): the file's current title, also when nothing changed. */
+  savedConfirmation: string | undefined;
   /** „Lösen“ on each entry (ST-115) – technicians only (G11). */
   detachOffered: boolean;
   /** The confirmation after attaching (ST-115, G3, G33): the resulting state, never from the journal alone. */
@@ -104,6 +115,8 @@ export async function loadFileDetails(
     ai: aiState,
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",
     attachHref: attachToFileAddress(details.id, origin),
+    editHref: changeFileDetailsAddress(details.id, origin),
+    savedConfirmation: params.saved === "1" ? teamMessages.fileDetails.saved(details.title) : undefined,
     detachOffered: mayDetachFiles(viewer),
     // A resulting-state confirmation (G3, G33): the counts are true whichever command wrote them.
     attachedConfirmation:

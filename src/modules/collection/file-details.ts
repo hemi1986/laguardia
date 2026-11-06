@@ -136,3 +136,39 @@ export async function fileForRemoval(db: Database, fileId: string): Promise<File
     attachedTo: await attachedToOf(db, fileId),
   };
 }
+
+/** A file as the form „Datei bearbeiten“ shows it (ST-116): its current details and the version the form posts. */
+export type FileForChange = {
+  id: string;
+  title: string;
+  fileCategory: FileCategory;
+  version: number;
+  removed: boolean;
+};
+
+/**
+ * The file the form „Datei bearbeiten“ shows (CMD-ChangeFileDetails, ST-116): **removed or not**, so the form can answer
+ * a removal made meanwhile – the action re-renders this page and its rejection must stay. None only for an unknown file.
+ * Only after the team page's access check (every team member may correct a file).
+ */
+export async function fileForChange(db: Database, fileId: string): Promise<FileForChange | undefined> {
+  const [row] = await db
+    .select({
+      id: file.id,
+      title: file.title,
+      fileCategory: file.fileCategory,
+      version: file.version,
+      removedAt: file.removedAt,
+    })
+    .from(file)
+    .where(eq(file.id, fileId));
+  return (
+    row && {
+      id: row.id,
+      title: row.title,
+      fileCategory: row.fileCategory,
+      version: row.version,
+      removed: row.removedAt !== null,
+    }
+  );
+}

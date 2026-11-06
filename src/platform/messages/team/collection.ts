@@ -179,6 +179,10 @@ export const collectionTexts = {
     },
     /** The confirmation after detaching one thing (ST-115, G3) – the file stays a file. */
     detachedFrom: (title: string, name: string) => `„${title}“ von ${name} gelöst.`,
+    /** In the head of the page (ST-116, G18): the way to the form that corrects the title and the file category. */
+    edit: "Datei bearbeiten",
+    /** The confirmation after a correction (ST-116, G3, G33) – also when nothing changed. */
+    saved: (title: string) => `„${title}“ gespeichert.`,
     /** The way back from the attach form (ST-115, G17). */
     backToFile: "Zurück zur Datei",
     /** A removed file's details address after a detach attempt (ST-115): the rejection, not the details. */
@@ -187,6 +191,15 @@ export const collectionTexts = {
     backToMachine: "Zurück zum Gerät",
     backToSettings: "Zurück zu den Einstellungen",
     backToMachines: "Zurück zu den Geräten",
+  },
+  /** Correcting a file's title and file category (ST-116, G34): the form behind „Datei bearbeiten“. */
+  changeFileDetails: {
+    pageTitle: (fileTitle: string) => `Datei bearbeiten · ${fileTitle}`,
+    title: "Titel",
+    fileCategory: "Dateikategorie",
+    /** Only after a form was sent without a file category – the choice has no empty entry otherwise (G20). */
+    choose: "Bitte wählen",
+    submit: "Datei speichern",
   },
   /** Attaching an existing file to further machines and machine models (ST-115, RM-AttachmentChoice, G27). */
   attachToFile: {

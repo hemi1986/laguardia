@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { FileAdded, FileAttached } from "./add-file";
+import type { FileDetailsChanged } from "./change-file-details";
 import type { FileDetached } from "./detach-file";
 import type { FileRemoved } from "./remove-file";
 import type { MachineStatusChanged } from "./change-machine-status";
@@ -105,6 +106,16 @@ export const collectionEvents = eventCatalogue({
       aggregateId: event.fileId,
       machineId: "machineId" in event ? event.machineId : null,
       data: { machineModelId: "machineModelId" in event ? event.machineModelId : null },
+    }),
+  },
+  "EVT-FileDetailsChanged": {
+    aggregate: "AGG-File",
+    // Which details changed and the file category, a fact from a fixed list; the typed title stays in the aggregate, like
+    // the museum name (ST-116, events.yaml). Who changed it is the journal's actor.
+    project: (event: FileDetailsChanged) => ({
+      aggregateId: event.fileId,
+      machineId: null,
+      data: { changedDetails: event.changedDetails, fileCategory: event.fileCategory },
     }),
   },
   "EVT-FileRemoved": {

@@ -37,12 +37,18 @@ export function FileDetailsView({
       {file.retried && <Confirmation>{aiIndex.retrying(file.retried)}</Confirmation>}
       {file.attachedConfirmation && <Confirmation>{file.attachedConfirmation}</Confirmation>}
       {file.detachedConfirmation && <Confirmation>{file.detachedConfirmation}</Confirmation>}
+      {file.savedConfirmation && <Confirmation>{file.savedConfirmation}</Confirmation>}
       <div className="flex flex-col gap-2">
         <p>{texts.head(file.category, texts.mediaTypes[file.mediaType], file.size)}</p>
         <p className="text-muted-foreground text-sm">{texts.addedBy(file.addedBy, file.addedOn)}</p>
         <a href={`/team/dateien/${file.id}`} className="self-start underline underline-offset-4">
           {texts.open}
         </a>
+        <div>
+          <Link href={file.editHref} className={buttonVariants({ variant: "outline" })}>
+            {texts.edit}
+          </Link>
+        </div>
       </div>
       <Section title={texts.attachedTo}>
         {file.attachedTo.length === 0 ? (

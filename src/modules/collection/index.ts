@@ -1,6 +1,8 @@
 /** Public interface of the Collection module (BC-Collection: machines, machine models, files) – ADR 0002. */
 export { addFileCommand } from "./add-file-command";
 export { attachFileCommand } from "./attach-file-command";
+export { changeFileDetailsCommand } from "./change-file-details-command";
+export type { ChangeFileDetailsError, ChangeFileDetailsInput } from "./change-file-details";
 export { detachFileCommand } from "./detach-file-command";
 export { mayDetachFiles } from "./detach-file";
 export { addFileRefusal, attachTargets, fileCategories } from "./add-file";
@@ -32,11 +34,13 @@ export {
 } from "./files";
 export {
   fileDetails,
+  fileForChange,
   fileForRemoval,
   fileMediaTypeOf,
   fileMediaTypes,
   type FileAttachedTo,
   type FileDetails,
+  type FileForChange,
   type FileForRemoval,
   type FileMediaType,
 } from "./file-details";
