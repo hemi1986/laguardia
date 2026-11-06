@@ -44,6 +44,13 @@ export {
   type FileForRemoval,
   type FileMediaType,
 } from "./file-details";
+export {
+  fileOverview,
+  fileOverviewChoices,
+  type FileOverviewChoices,
+  type FileOverviewEntry,
+  type FileOverviewFilter,
+} from "./file-overview";
 export { removeFileCommand } from "./remove-file-command";
 export { mayRemoveFiles, removeFileRefusal } from "./remove-file";
 export type { RemoveFileError, RemoveFileInput } from "./remove-file";
