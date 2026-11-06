@@ -4,15 +4,20 @@
 
 **Progress: 84 of 87 domain stories done** · scenarios 784 of 813
 
-**118 stories** · In Progress: 0 · Ready: 3 · In Review: 0 · Draft: 0 · Done: 104 · Superseded: 11
+**118 stories** · In Progress: 1 · Ready: 2 · In Review: 0 · Draft: 0 · Done: 104 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
 | [ST-119](ST-119-add-a-file-from-the-file-overview.md) | Add a file from the file overview, attached to something or to nothing yet | story | Collection | should | L | medium | ST-115, ST-116, ST-117 |
 | [ST-118](ST-118-full-text-search-in-the-file-overview.md) | Search the file overview by title, names and content | story | Collection | should | L | medium | ST-117, ST-119, ST-106 |
 
