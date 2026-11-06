@@ -3,8 +3,10 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   attachFileCommand,
+  changeFileDetailsCommand,
   createMachineModelCommand,
   detachFileCommand,
+  fileForChange,
   fileToOpen,
   registerMachineCommand,
 } from "@/modules/collection";
@@ -174,5 +176,64 @@ describe("attach and detach and the AI (ST-115)", () => {
       expect.objectContaining({ fileId: wiring, title: "Wiring notes", removed: false }),
     ]);
     expect(await fileToOpen(db, wiring)).toBeDefined();
+  });
+
+  it("ST-116: A corrected title shows in earlier references and costs nothing", async () => {
+    const lg042 = await aMachine(medievalMadness, "LG-042");
+    const manual = await scenario.attachFile(lg042, {
+      title: "MM Manul",
+      bytes: new TextEncoder().encode("The flipper coil of LG-042."),
+      contentType: "text/plain",
+      to: "machine",
+    });
+    await scenario.run({ kinds: [fileIndexingWork], with: ai() });
+    expect(await aiIndexEntryOf(db, manual)).toMatchObject({ state: "indexed" });
+    const flipper = await anOpenDefect(lg042, "Left flipper weak");
+    const earlier = await scenario.requestAiAssessment(flipper);
+    await writeAiAssessmentForTest(db, earlier, {
+      summary: "Die Spule prüfen.",
+      references: [{ fileId: manual, page: 1 }],
+      embeddingModel: geminiEmbedding.id,
+      at: clock,
+    });
+    const indexedBefore = await aiIndexEntryOf(db, manual);
+    const requestsBefore = seam.requests.length;
+    const steps = { starts: 0 };
+
+    const changed = await executeCommand(
+      changeFileDetailsCommand,
+      {
+        fileId: manual,
+        title: "MM Manual",
+        fileCategory: "manual",
+        version: (await fileForChange(db, manual))!.version,
+      },
+      {
+        actor: tom,
+        db,
+        clock,
+        newId: randomUUID,
+        afterCommit: (events: readonly CommittedEvent[]) => {
+          if (makesAiWork(events)) steps.starts += 1;
+        },
+      },
+    );
+    if (!changed.ok) throw new Error(changed.error);
+
+    // The correction indexes nothing again: no run, no request to OpenRouter, the index entry and its cost as they were.
+    expect(steps.starts).toBe(0);
+    expect(seam.requests.length).toBe(requestsBefore);
+    expect(await aiIndexEntryOf(db, manual)).toEqual(indexedBefore);
+
+    // The reference shows the file's current title.
+    const shown = await defectAiAssessments(db, {
+      defectId: flipper,
+      viewer: { teamMemberId: tom.teamMemberId, role: "technician" },
+      dependencies: ai(),
+    });
+    const written = [shown.current, ...shown.earlier].find((assessment) => assessment?.id === earlier);
+    expect(written?.references).toEqual([
+      expect.objectContaining({ fileId: manual, title: "MM Manual", removed: false }),
+    ]);
   });
 });

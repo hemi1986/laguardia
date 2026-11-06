@@ -9,7 +9,7 @@ risk: low
 events: [EVT-FileDetailsChanged]
 depends_on: [ST-114]
 labels: [feature:files, ui]
-status: ready
+status: done
 ---
 
 ## Story
@@ -111,3 +111,4 @@ Scenario: Someone not logged in cannot correct a file
 
 ## Notes
 - Independent of ST-115: it needs only the page of ST-114. No helper rejection: every team member may do this.
+- The version-conflict rejection on this form is the form-runner text of every team form that keeps its input: „Jemand hat das inzwischen geändert. Deine Eingabe ist noch da – bitte noch einmal senden.“ (ST-100, ST-103, ST-104, `conventions.md`); the scenario's "neu laden" wording contradicts "everything typed stays" (code review ST-116 #2).
