@@ -7,7 +7,15 @@ import type { Entities } from "./entities";
 import type { History } from "./history";
 import type { Replaces } from "./replaces";
 import type { StoredList } from "./stored-list";
-import type { Actor, ActorOf, AllowedActor, Command, CommandContext, JournalEvent } from "./index";
+import {
+  isId,
+  type Actor,
+  type ActorOf,
+  type AllowedActor,
+  type Command,
+  type CommandContext,
+  type JournalEvent,
+} from "./index";
 
 /**
  * The one shape of a command (ST-071, architecture review 2026-09-27, Q2/Q11/Q12/Q14):
@@ -77,6 +85,8 @@ export function aggregateStore<
   return {
     type,
     async load(tx, id, options) {
+      // An address that is no ID names no aggregate – not a database error (a forged form field is a 404, not a 500).
+      if (!isId(id)) return undefined;
       const query = tx
         .select()
         .from(table as PgTable)
