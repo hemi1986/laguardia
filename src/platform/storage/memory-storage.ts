@@ -1,3 +1,4 @@
+import { contentDisposition } from "./content-disposition";
 import type { ContentStorage, DeclaredUpload, UploadAddress } from ".";
 
 export type MemoryStorage = ContentStorage & {
@@ -27,8 +28,9 @@ export function memoryStorage(): MemoryStorage {
     async delete(name) {
       stored.delete(name);
     },
-    async viewAddresses(names, validUntil, { download = false } = {}) {
-      const suffix = download ? "&download=1" : "";
+    async viewAddresses(names, validUntil, { download = false, fileName } = {}) {
+      const disposition = fileName && contentDisposition(download ? "attachment" : "inline", fileName);
+      const suffix = (download ? "&download=1" : "") + (disposition ? `&content-disposition=${encodeURIComponent(disposition)}` : "");
       return new Map(names.map((name) => [name, `memory://${name}?valid-until=${validUntil.toISOString()}${suffix}`]));
     },
     async uploadAddress(name, declared) {

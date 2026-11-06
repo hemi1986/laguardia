@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, lastCommandBy, replaces, type Database } from "@/platform/command";
+import { safeFileName } from "@/platform/storage";
 import {
   fileCategories,
   type AddFileInput,
@@ -133,17 +134,20 @@ export async function filesOfMachine(
 
 /**
  * What opening a file needs (ST-037): its content's name in the storage seam, and whether the browser saves it instead
- * of opening it – none for an unknown or removed file (ST-038). Only after the team page's access check (files are team-only).
+ * of opening it, and the name it is saved or opened under (ST-119) – none for an unknown or removed file (ST-038). Only after the team page's access check (files are team-only).
  */
 export async function fileToOpen(
   db: Database,
   fileId: string,
-): Promise<{ content: string; download: boolean } | undefined> {
+): Promise<{ content: string; download: boolean; fileName?: string } | undefined> {
   const [row] = await db
-    .select({ content: file.content, contentType: file.contentType })
+    .select({ content: file.content, contentType: file.contentType, originalFileName: file.originalFileName })
     .from(file)
     .where(and(eq(file.id, fileId), isNull(file.removedAt)));
-  return row && { content: row.content, download: !opensInBrowser(row.contentType) };
+  if (!row) return undefined;
+  // The name the file had on the device it came from (ST-119), made safe – none for a file from before the feature.
+  const fileName = row.originalFileName ? safeFileName(row.originalFileName) : undefined;
+  return { content: row.content, download: !opensInBrowser(row.contentType), ...(fileName && { fileName }) };
 }
 
 /** A file of one machine's page (ST-038, ST-121): what the removal confirmation names. */

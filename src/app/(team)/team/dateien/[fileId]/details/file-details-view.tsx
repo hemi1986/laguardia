@@ -41,6 +41,7 @@ export function FileDetailsView({
       <div className="flex flex-col gap-2">
         <p>{texts.head(file.category, texts.mediaTypes[file.mediaType], file.size)}</p>
         <p className="text-muted-foreground text-sm">{texts.addedBy(file.addedBy, file.addedOn)}</p>
+        {file.originalFileName && <p className="text-sm break-all">{texts.originalFileName(file.originalFileName)}</p>}
         <a href={`/team/dateien/${file.id}`} className="self-start underline underline-offset-4">
           {texts.open}
         </a>

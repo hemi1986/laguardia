@@ -43,6 +43,8 @@ export type FileDetailsData = {
   size: string;
   addedBy: string;
   addedOn: string;
+  /** „Ursprünglicher Dateiname“ (ST-119) – none for a file from before the feature. */
+  originalFileName: string | undefined;
   attachedTo: FileAttachedTo[];
   ai: FileAiState | undefined;
   /** „Erneut versuchen“ is offered – only a technician, only on a failed file (AI is on then). */
@@ -111,6 +113,7 @@ export async function loadFileDetails(
     size: fileSizeText(details.size),
     addedBy: names.get(details.addedBy) ?? teamMessages.names.unknownTeamMember,
     addedOn: formatCalendarDate(calendarDate(details.addedAt)),
+    originalFileName: details.originalFileName,
     attachedTo: details.attachedTo,
     ai: aiState,
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",

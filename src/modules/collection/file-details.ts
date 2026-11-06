@@ -1,5 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Database } from "@/platform/command";
+import { safeFileName } from "@/platform/storage";
 import type { FileCategory } from "./add-file";
 import { file, fileAttachment, machine, machineModel } from "./schema";
 
@@ -42,6 +43,8 @@ export type FileDetails = {
   size: number;
   addedBy: string;
   addedAt: Date;
+  /** The name the file had on the device it came from (ST-119), made safe – none for a file from before the feature. */
+  originalFileName?: string;
   /** Machines first, then machine models, each in the order they were attached. */
   attachedTo: FileAttachedTo[];
 };
@@ -92,10 +95,12 @@ export async function fileDetails(db: Database, fileId: string): Promise<FileDet
       size: file.size,
       addedBy: file.addedBy,
       addedAt: file.addedAt,
+      originalFileName: file.originalFileName,
     })
     .from(file)
     .where(and(eq(file.id, fileId), isNull(file.removedAt)));
   if (!row) return undefined;
+  const originalFileName = row.originalFileName ? safeFileName(row.originalFileName) : undefined;
   return {
     id: row.id,
     title: row.title,
@@ -104,6 +109,7 @@ export async function fileDetails(db: Database, fileId: string): Promise<FileDet
     size: row.size,
     addedBy: row.addedBy,
     addedAt: row.addedAt,
+    ...(originalFileName && { originalFileName }),
     attachedTo: await attachedToOf(db, fileId),
   };
 }

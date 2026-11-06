@@ -157,6 +157,8 @@ export const collectionTexts = {
       other: "Anderes Format",
     },
     addedBy: (name: string, date: string) => `Hinzugefügt von ${name} am ${date}`,
+    /** The name the file had on the team member's device (ST-119, CONTEXT.md: Original file name). */
+    originalFileName: (name: string) => `Ursprünglicher Dateiname: ${name}`,
     open: "Datei öffnen",
     attachedTo: "Angehängt an",
     machine: (museumNumber: string, machineModelTitle: string) => `${museumNumber} · ${machineModelTitle}`,

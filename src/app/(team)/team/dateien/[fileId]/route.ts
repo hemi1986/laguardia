@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/team/dat
   const { fileId } = await params;
   const found = isId(fileId) ? await fileToOpen(database(), fileId) : undefined;
   if (!found) notFound();
-  const address = await viewAddressOf(s3Storage(), systemClock, found.content, { download: found.download });
+  const address = await viewAddressOf(s3Storage(), systemClock, found.content, { download: found.download, fileName: found.fileName });
   if (!address) notFound();
   return new Response(null, { status: 303, headers: { Location: address, "Cache-Control": "private, no-store" } });
 }

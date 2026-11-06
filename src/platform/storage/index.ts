@@ -11,12 +11,13 @@ export type ContentStorage = {
   delete(name: string): Promise<void>;
   /**
    * Addresses to show content, valid until the given time – one call per page, however many it shows. Only issued
-   * after the page's access check. With `download`, the browser saves the content instead of opening it (ST-037).
+   * after the page's access check. With `download`, the browser saves the content instead of opening it (ST-037); with
+   * `fileName`, whatever the browser does with it, it uses that name (ST-119) – the name is made safe here.
    */
   viewAddresses(
     names: readonly string[],
     validUntil: Date,
-    options?: { download?: boolean },
+    options?: { download?: boolean; fileName?: string },
   ): Promise<Map<string, string>>;
   /**
    * A permission for the browser to upload content of exactly the declared size and media type under exactly this
@@ -49,6 +50,7 @@ export type DeclaredUpload = { size: number; contentType: string; validUntil: Da
  */
 export type UploadAddress = { url: string; headers: Record<string, string> };
 
+export { contentDisposition, safeFileName } from "./content-disposition";
 export { memoryStorage, type MemoryStorage } from "./memory-storage";
 export { s3Storage } from "./s3-storage";
 export { s3Settings, storeOrigin, type S3Settings } from "./s3-settings";

@@ -10,6 +10,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { awsCredentialsProvider } from "@vercel/functions/oidc";
 import { systemClock, type Clock } from "@/platform/clock";
+import { contentDisposition } from "./content-disposition";
 import type { ContentStorage } from ".";
 import { s3Settings, type S3Settings } from "./s3-settings";
 
@@ -42,7 +43,8 @@ export function s3Storage({
       const { client, bucket } = store();
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: name }));
     },
-    async viewAddresses(names, validUntil, { download = false } = {}) {
+    async viewAddresses(names, validUntil, { download = false, fileName } = {}) {
+      const disposition = (fileName && contentDisposition(download ? "attachment" : "inline", fileName)) || (download ? "attachment" : undefined);
       const { client, bucket } = store();
       const signed = await Promise.all(
         names.map(async (name) => {
@@ -50,7 +52,7 @@ export function s3Storage({
           const command = new GetObjectCommand({
             Bucket: bucket,
             Key: name,
-            ResponseContentDisposition: download ? "attachment" : undefined,
+            ResponseContentDisposition: disposition,
           });
           const address = await getSignedUrl(client, command, {
             expiresIn: secondsUntil(validUntil),
