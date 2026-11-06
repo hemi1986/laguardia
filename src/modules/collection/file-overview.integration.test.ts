@@ -92,7 +92,7 @@ async function aMachine(museumNumber: string, machineModelId: string): Promise<s
 const titles = async (filter: FileOverviewFilter = {}) => (await fileOverview(db, filter)).map((entry) => entry.title);
 
 describe("RM-FileOverview (ST-117)", () => {
-  it("ST-117: Filtering by file category", async () => {
+  it("narrows by file category", async () => {
     await aFile("MM Operations Manual", { fileCategory: "manual" });
     await aFile("MM Wiring", { fileCategory: "schematic" });
     await aFile("MM Backglass", { fileCategory: "photo" });

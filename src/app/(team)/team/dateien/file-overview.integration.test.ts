@@ -231,6 +231,8 @@ describe("the file overview (ST-117)", () => {
       { from: "files:fileCategory=manual&page=2&next=https%3A%2F%2Fevil.example" },
       { from: "files:attachedTo=machine:https://evil.example" },
       { from: "files:fileCategory=manual&fileCategory=photo" },
+      { from: "machine:XX-999" },
+      { from: "machine:https://evil.example" },
     ];
     for (const query of foreign) {
       const file = (await loadFileDetails(db, other, { params: query, viewer: viewerOf(tom), ai: ai() }))!;
@@ -239,9 +241,22 @@ describe("the file overview (ST-117)", () => {
       );
       expect(hrefOf(html, "Zurück zu den Dateien")).toBe("/team/dateien");
       expect(html).not.toContain("evil.example");
+      expect(html).not.toContain("XX-999");
       const asked = (await loadRemoveFile(db, other, { params: query, viewer: viewerOf(tom) }))!;
       expect(removalLanding(asked.origin, other)).toBe(`/team/dateien?fileRemoved=${other}`);
     }
+  });
+
+  it("ST-117: Filtering by file category", async () => {
+    await aFile("MM Operations Manual", { fileCategory: "manual" });
+    await aFile("MM Wiring", { fileCategory: "schematic" });
+    await aFile("MM Backglass", { fileCategory: "photo" });
+
+    const schematic = await overview({ fileCategory: "schematic" });
+
+    expect(listed(schematic.html)).toEqual(["MM Wiring"]);
+    expect(schematic.text).toContain("1 Datei");
+    expect(selectedOf(schematic.html, "fileCategory")).toBe("schematic");
   });
 
   it("ST-117: Filtering by how far the AI index got", async () => {
@@ -350,6 +365,8 @@ describe("the file overview (ST-117)", () => {
     const page = await overview({ attachedTo: `machine:${machineId}` });
 
     expect(page.html).toContain("LG-042 · Medieval Madness");
+    expect(page.html).toContain('<optgroup label="Geräte">');
+    expect(page.html).toContain('<optgroup label="Modelle">');
     expect(page.html).toContain("Nirgends angehängt");
     expect(page.html).toContain("Alle Dateikategorien");
     expect(selectedOf(page.html, "attachedTo")).toBe(`machine:${machineId}`);

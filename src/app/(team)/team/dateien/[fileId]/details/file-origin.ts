@@ -153,7 +153,7 @@ export function wayBack(origin: FileOrigin): { href: string; kind: FileOrigin["k
 /**
  * The origin the address names, checked: a machine only when its museum number is one of a registered machine (a
  * reserved one counts as its machine's current museum number), the settings only for a technician – a helper does not
- * reach them (G11, G19), „Dateien“ only with parameters of its own and values it knows.
+ * reach them (G11, G19), „Dateien“ only with parameters of its own and values of the form it knows (a machine in `attachedTo` need not exist: the overview ignores one that does not).
  */
 export async function originOf(
   db: Database,
