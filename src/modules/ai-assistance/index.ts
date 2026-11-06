@@ -19,6 +19,7 @@ export { runAiWork } from "./ai-work";
 export {
   aiIndexOverview,
   aiIndexStateOfFile,
+  aiIndexStatesForOverview,
   fileIndexingRetriedBy,
   filesTheAiCannotRead,
   type AiIndexOverview,

@@ -78,7 +78,7 @@ test("removes the file for good from its question, and its former address opens 
   expect((await page.request.get(`/team/dateien/${fileId}`, { maxRedirects: 0 })).status()).toBe(404);
 });
 
-test("a removal without a known origin lands on the machine overview with its confirmation", async ({ page }) => {
+test("a removal without a known origin lands on the first page of „Dateien“ with its confirmation", async ({ page }) => {
   needsTechnician();
   await aMachineWithFile(page, "MM Operations Manual");
   const fileId = fileIdOf(await detailsAddress(page, "MM Operations Manual"));
@@ -88,7 +88,7 @@ test("a removal without a known origin lands on the machine overview with its co
   await page.getByRole("link", { name: "Datei entfernen" }).click();
   await page.getByRole("button", { name: "Endgültig entfernen" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/team/machines\\?fileRemoved=${fileId}$`));
+  await expect(page).toHaveURL(new RegExp(`/team/dateien\\?fileRemoved=${fileId}$`));
   await expect(page.getByRole("main").getByRole("status")).toHaveText("„MM Operations Manual“ entfernt.");
 });
 

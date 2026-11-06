@@ -20,7 +20,7 @@ export function FileRemovedView({ back }: { back: ReturnType<typeof wayBack> }) 
           ? texts.backToMachine
           : back.kind === "settings"
             ? texts.backToSettings
-            : texts.backToMachines}
+            : texts.backToFiles}
       </BackLink>
     </Page>
   );

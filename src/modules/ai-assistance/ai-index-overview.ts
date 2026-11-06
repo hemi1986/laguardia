@@ -118,3 +118,19 @@ export async function aiIndexStateOfFile(
   const stateOf = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, [fileId]);
   return stateOf(fileId);
 }
+
+/**
+ * Where these files stand in the AI index (RM-FileOverview, ST-117), for the current embedding model: `indexed`, `waiting`
+ * (also a file without an entry) or `failed` – to be asked by file; none while AI is off (G37), which is how the overview
+ * knows to show neither the state nor its filter. Reading it starts no run.
+ */
+export async function aiIndexStatesForOverview(
+  db: Database,
+  dependencies: Pick<AiDependencies, "encryptionKey">,
+  fileIds: readonly string[],
+): Promise<((fileId: string) => AiIndexStateOfFile["state"]) | undefined> {
+  const aiNow = await aiState(db, dependencies);
+  if (!aiNow.on) return undefined;
+  const stateOf = await aiIndexStatesOfFiles(db, aiNow.embeddingModel, fileIds);
+  return (fileId) => stateOf(fileId).state;
+}

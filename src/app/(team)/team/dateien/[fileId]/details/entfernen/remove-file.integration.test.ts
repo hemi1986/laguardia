@@ -165,22 +165,6 @@ async function machineRecordPage(museumNumber: string, { fileRemoved }: { fileRe
   };
 }
 
-/** The machine overview as a team member opens it, with the confirmation the address asks for. */
-async function overviewPage({ fileRemoved }: { fileRemoved?: string } = {}) {
-  const { machines, counts, retiredCount } = await loadMachineOverview(db, clock, {});
-  const removed = fileRemoved ? await fileRemovedBy(db, fileRemoved, tom.teamMemberId) : undefined;
-  return renderToStaticMarkup(
-    createElement(MachineOverview, {
-      machines,
-      counts,
-      retiredCount,
-      query: {},
-      canRegister: true,
-      removedFileTitle: removed?.title,
-    }),
-  );
-}
-
 /** The file details as a team member opens them – params are the address's query. */
 async function detailsPage(
   fileId: string,
@@ -339,26 +323,6 @@ describe("the question before removing a file (ST-121)", () => {
           : (await machineRecordPage("LG-042", { fileRemoved: fileId })).html;
       expect(landing).toContain(`„${example.title}“ entfernt.`);
     }
-  });
-
-  it("ST-121: A removal without a known origin lands on the machine overview", async () => {
-    const manual = await aFileAttachedTo({}, "MM Operations Manual");
-    const question = (await loadRemoveFile(db, manual, {
-      params: { from: "https://evil.example/phish" },
-      viewer: viewerOf(tom),
-    }))!;
-    expect(question.origin).toEqual({ kind: "none" });
-
-    let landed: string | undefined;
-    const action = formRunner({ currentPerson: async () => tom, db, clock, newId: randomUUID, storage })(
-      removeFileCommandWithAiIndex,
-      removeFileForm(manual, async () => {
-        landed = removalLanding(question.origin, manual);
-      }),
-    );
-    expect(await action(null, post({ version: String(question.version) }))).toBeNull();
-    expect(landed).toBe(`/team/machines?fileRemoved=${manual}`);
-    expect(await overviewPage({ fileRemoved: manual })).toContain("„MM Operations Manual“ entfernt.");
   });
 
   it("ST-121: A helper cannot remove a file", async () => {

@@ -388,6 +388,19 @@ and only when `fileDetachedIn` of their latest command says so or the target is 
 are true whichever command wrote them, so the no-op lands like a change. Both are the exceptions of *A confirmation after
 an action* that G33 needs – a no-op has no journal entry to ask.
 
+**The file overview „Dateien“ and the first paged list** (ST-117, G40, G19 row 8a): Collection publishes `fileOverview(db, filter)` –
+every file that is not removed, newest first, narrowed by file category and by what it is attached to (HS-36; `"nowhere"`
+for none) – and `fileOverviewChoices` for the filter „Angehängt an“. The page composes (`dateien/file-overview-data.ts`): it
+adds AI assistance's `aiIndexStatesForOverview` (none while AI is off – then neither the state nor the filter exists, and a
+state in the address is ignored) for the 25 shown, or for all that remain when the state filter is set, and cuts the list
+into pages (`FILES_PER_PAGE`; a page past the end shows the last, one that is no number the first). **The address of the page is
+one module**, `dateien/file-overview-query.ts`: `fileOverviewQueryOf` reads it leniently (a value that is not ours is left out),
+`strictFileOverviewQueryOf` strictly, `fileOverviewAddress` builds it – no other code spells these parameters. The filters are
+one GET form (`FilterForm`, native selects) and carry no page, so sending them starts at page 1. **The file details' origin
+„Dateien“** is `files:<the overview's own parameters>`: anything else in it (another parameter, a foreign value, a parameter
+twice) is no known origin. No origin leads to „Dateien“ too – its first page, also for a removal (`removalLanding`). The
+„Weiter“ of the pager is the one exception to the ban on vague button texts of ST-091 (`messages.test.ts`).
+
 **The museum settings** (ST-100, AGG-MuseumSettings in Collection): one singleton in **three parts** – museum details,
 logo, legal texts – each its own record with its own version and its own command, so the existing store and version
 check apply unchanged and a save of one part never rejects another. A part's row is inserted with its defaults by its

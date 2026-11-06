@@ -190,7 +190,7 @@ export const collectionTexts = {
     /** The way back, by where the person came from (G17, closed set of origins). */
     backToMachine: "Zurück zum Gerät",
     backToSettings: "Zurück zu den Einstellungen",
-    backToMachines: "Zurück zu den Geräten",
+    backToFiles: "Zurück zu den Dateien",
   },
   /** Correcting a file's title and file category (ST-116, G34): the form behind „Datei bearbeiten“. */
   changeFileDetails: {
@@ -209,6 +209,37 @@ export const collectionTexts = {
     /** Nothing left to offer (G7): the page says so and has no submit. */
     nothingLeft: "Es gibt nichts mehr, woran sich diese Datei anhängen lässt.",
     submit: "Anhängen",
+  },
+  /**
+   * The file overview (RM-FileOverview, ST-117, G18, G40): finding a file. The AI index states are AI assistance's words
+   * (`aiIndex.fileState`, `aiIndex.unreadable`).
+   */
+  fileOverview: {
+    title: "Dateien",
+    /** „42 Dateien“, and with more than one page „42 Dateien · Seite 2 von 2“ (G4, G40). */
+    count: (files: number, page: number, pages: number) => {
+      const files_ = files === 1 ? "1 Datei" : `${files} Dateien`;
+      return pages > 1 ? `${files_} · Seite ${page} von ${pages}` : files_;
+    },
+    /** The filters (G32): one form, sent with „Filtern“ (`filters.apply`). */
+    filter: "Dateien filtern",
+    fileCategory: "Dateikategorie",
+    allFileCategories: "Alle Dateikategorien",
+    attachedTo: "Angehängt an",
+    all: "Alle",
+    machines: "Geräte",
+    machineModels: "Modelle",
+    aiIndex: "KI-Erfassung",
+    /** No file at all (G7); it points at the one way to add a file until „Datei hinzufügen“ (ST-119). */
+    empty: "Noch keine Dateien. Eine Datei kommt über „Datei anhängen“ auf der Seite eines Geräts dazu.",
+    toMachines: "Geräte",
+    /** Nothing matches (G7): the filters stay as sent. */
+    nothingFound: "Keine Datei passt zu diesen Filtern.",
+    showAll: "Alle Dateien anzeigen",
+    /** Under the entries (G40), each only when there is a page to go to. */
+    previous: "Zurück",
+    next: "Weiter",
+    pages: "Seiten",
   },
   /** The file categories (CONTEXT.md: Dateikategorie) – on the machine record and the form that attaches a file (ST-037). */
   fileCategories: { manual: "Handbuch", schematic: "Schaltplan", photo: "Foto", other: "Sonstiges" },

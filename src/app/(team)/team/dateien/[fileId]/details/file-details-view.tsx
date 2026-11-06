@@ -103,7 +103,7 @@ export function FileDetailsView({
           ? texts.backToMachine
           : file.back.kind === "settings"
             ? texts.backToSettings
-            : texts.backToMachines}
+            : texts.backToFiles}
       </BackLink>
     </Page>
   );
