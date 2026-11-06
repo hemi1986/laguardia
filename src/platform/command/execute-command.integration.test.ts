@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { changeFileDetailsCommand } from "@/modules/collection";
 import { problemReportsOfMachine, reportProblemCommand } from "@/modules/repair";
 import { fixedClock } from "@/platform/clock";
 import { testDatabase } from "@/test-support/database";
@@ -302,3 +303,15 @@ const memoryStore: AggregateStore<{ id: string }> = {
   insert: async () => {},
   update: async () => true,
 };
+
+describe("a command on an aggregate that an address names", () => {
+  it("answers not-found for an address that is no ID, instead of a database error", async () => {
+    const outcome = await executeCommand(
+      changeFileDetailsCommand,
+      { fileId: "../../etc/passwd", title: "x", fileCategory: "manual", version: 0 },
+      deps(technician),
+    );
+
+    expect(outcome).toEqual({ ok: false, error: "not-found" });
+  });
+});
