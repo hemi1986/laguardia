@@ -33,7 +33,7 @@ test.describe("with a team account", () => {
     await page.getByLabel("Dateikategorie").selectOption("photo");
     await page.getByRole("button", { name: "Filtern" }).click();
 
-    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=photo$/);
+    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=photo(&attachedTo=)?$/);
     await expect(page.getByLabel("Dateikategorie")).toHaveValue("photo");
   });
 });
@@ -55,6 +55,6 @@ test.describe("without JavaScript", () => {
     await page.getByRole("button", { name: "Filtern" }).click();
 
     // Sending the filters starts at page 1: the page is not carried along.
-    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=manual$/);
+    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=manual(&attachedTo=)?$/);
   });
 });

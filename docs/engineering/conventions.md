@@ -388,6 +388,19 @@ and only when `fileDetachedIn` of their latest command says so or the target is 
 are true whichever command wrote them, so the no-op lands like a change. Both are the exceptions of *A confirmation after
 an action* that G33 needs – a no-op has no journal entry to ask.
 
+**Adding a file from the file overview and the original file name** (ST-119): „Datei hinzufügen“ (`dateien/hinzufuegen/`) is the
+upload runner with a `choice` – `upload: { field, clearedWith, choice: "targets" }` makes the runner read every ticked
+`machine:<id>` / `machineModel:<id>` as posted, hand them to `input(fields, content, chosen)` and keep them as `state.chosen`
+after a rejection. The choice itself is `attachmentChoiceForNewFile` (RM-AttachmentChoice without a file), mapped to
+`ChoiceGroup`s by `attachmentChoiceGroups`, which „Anhängen“ shares. The field „Datei“ and its rejection wording are
+`ChosenFile` / `rejectionWithChosenFile` (`src/app/(team)/team/chosen-file.tsx`), shared with the machine record's form; only the
+overview's form fills „Titel“ (`titleFromFileName`, never over what was typed). **The original file name** comes from the
+browser: `safeFileName` / `contentDisposition` (`src/platform/storage/content-disposition.ts`) cut it to its last path part, drop
+control and direction characters, shorten it by code points keeping the ending, and the storage seam's `viewAddresses` takes
+`fileName` to sign `Content-Disposition` (RFC 6266, ASCII fallback plus UTF-8). Collection imports that leaf file directly – not
+`@/platform/storage`, whose index pulls the server-only S3 adapter into any client bundle that imports a Collection value.
+The landing is `?added=1` on the file details, confirmed only when the viewer's latest command added that file (`fileAddedIn`).
+
 **The file overview „Dateien“ and the first paged list** (ST-117, G40, G19 row 8a): Collection publishes `fileOverview(db, filter)` –
 every file that is not removed, newest first, narrowed by file category and by what it is attached to (HS-36; `"nowhere"`
 for none) – and `fileOverviewChoices` for the filter „Angehängt an“. The page composes (`dateien/file-overview-data.ts`): it

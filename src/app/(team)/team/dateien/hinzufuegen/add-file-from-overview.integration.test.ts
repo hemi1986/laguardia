@@ -6,12 +6,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { makesAiWork } from "@/modules/ai-assistance/ai-work-events";
 import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
-import {
-  addFileCommand,
-  createMachineModelCommand,
-  machineRecord,
-  registerMachineCommand,
-} from "@/modules/collection";
+import { addFileCommand, createMachineModelCommand, machineRecord, registerMachineCommand } from "@/modules/collection";
 import { retireMachineCommand } from "@/modules/repair";
 import { formRunner } from "@/app/_actions/form-runner";
 import { executeCommand, journalOf, lastCommandBy, type CommittedEvent } from "@/platform/command";
@@ -91,9 +86,11 @@ async function retire(machineId: string) {
 }
 
 /** What the team member's browser did when the file was chosen: uploaded straight to the store, by name. */
-async function aChosenFile(
-  { by = anna as Viewer, contentType = "application/pdf", text = "The flipper coil and its fuse." } = {},
-) {
+async function aChosenFile({
+  by = anna as Viewer,
+  contentType = "application/pdf",
+  text = "The flipper coil and its fuse.",
+} = {}) {
   const bytes = new TextEncoder().encode(text);
   const issued = await grantUploadAddress(
     { db, storage, clock, newId: randomUUID },
@@ -204,8 +201,9 @@ describe("„Datei hinzufügen“ in the file overview", () => {
     const content = await aChosenFile({ by: tom });
     const sent = sendForm({ by: tom });
     const entry = (label: string) =>
-      [...form.machineGroups, ...form.machineModelGroups].flatMap((group) => group.entries).find((e) => e.label === label)!
-        .value;
+      [...form.machineGroups, ...form.machineModelGroups]
+        .flatMap((group) => group.entries)
+        .find((e) => e.label === label)!.value;
     expect(
       await sent.send({ ...complete, title: "Operations", content }, [
         entry("LG-042 · Medieval Madness"),
@@ -227,16 +225,18 @@ describe("„Datei hinzufügen“ in the file overview", () => {
       "EVT-FileAttached",
     ]);
     const attached = (await journalOf(db, { aggregateId: fileId })).filter((e) => e.type === "EVT-FileAttached");
-    expect(attached.map((e) => e.machineId ?? e.data.machineModelId).sort()).toEqual(
-      [lg042, lg041, eightBall].sort(),
-    );
+    expect(attached.map((e) => e.machineId ?? e.data.machineModelId).sort()).toEqual([lg042, lg041, eightBall].sort());
   });
 
   it("ST-119: A rejected form says what happened to the chosen file", async () => {
     const texts = { ...teamMessages.addFileToOverview.form };
     const rows = [
       { filledIn: "no title", fields: { ...complete, title: "  " }, reason: "Bitte einen Titel angeben." },
-      { filledIn: "no file category", fields: { ...complete, fileCategory: "" }, reason: "Bitte eine Dateikategorie wählen." },
+      {
+        filledIn: "no file category",
+        fields: { ...complete, fileCategory: "" },
+        reason: "Bitte eine Dateikategorie wählen.",
+      },
     ];
     for (const { fields, reason } of rows) {
       const content = await aChosenFile();
@@ -245,7 +245,9 @@ describe("„Datei hinzufügen“ in the file overview", () => {
       const state = await sent.send({ ...fields, content }, ["machine:" + randomUUID()]);
 
       // Rejected, no file added; what was filled in is still there, and the file is still attached (not deleted).
-      expect(state).toMatchObject({ values: { title: fields.title, fileCategory: fields.fileCategory, content, fileName: "manual.pdf" } });
+      expect(state).toMatchObject({
+        values: { title: fields.title, fileCategory: fields.fileCategory, content, fileName: "manual.pdf" },
+      });
       expect(state!.chosen).toHaveLength(1);
       expect(addFileRejection(state!, texts)).toBe(`${reason} Die gewählte Datei ist noch angehängt: manual.pdf`);
       expect(sent.landed).toEqual([]);
@@ -260,5 +262,23 @@ describe("„Datei hinzufügen“ in the file overview", () => {
     const gone = await sendForm().send({ ...complete, content: `files/${randomUUID()}` });
     expect(gone).toMatchObject({ error: "content-gone", values: { content: "", fileName: "" } });
     expect(addFileRejection(gone!, texts)).toMatch(/Die Datei muss erneut ausgewählt werden\.$/);
+  });
+
+  it("refuses someone not logged in at the form's runner, and adds nothing", async () => {
+    const content = await aChosenFile();
+    const landed: string[] = [];
+    const run = formRunner({ currentPerson: async () => ({ kind: "visitor" }), db, clock, newId: randomUUID, storage })(
+      addFileCommand,
+      addFileForm(async ({ fileId }) => void landed.push(fileId)),
+    );
+
+    const answer = await run(null, post({ ...complete, content, fileName: "x.pdf" }));
+
+    // A pending upload is issued to a team member: nothing of a visitor's matches it, so the upload step stops first
+    // (CMD-AddFile itself refuses a visitor too – `add-file-command.integration.test.ts`).
+    expect(answer).toMatchObject({ error: "content-gone" });
+    expect(storage.read(content)).toBeDefined();
+    expect(landed).toEqual([]);
+    expect((await overview()).text).toContain("Noch keine Dateien.");
   });
 });

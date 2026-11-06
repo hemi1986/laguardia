@@ -18,9 +18,10 @@ test("ST-100: Technicians reach the museum settings under „Mehr“", async ({ 
 
   await openMore(page);
   const more = page.getByRole("navigation").getByRole("listitem");
-  await expect(more.nth(3)).toHaveText("Teammitglieder");
-  await expect(more.nth(4)).toHaveText("Einstellungen");
-  await expect(more.nth(5)).toHaveText("Passwort ändern");
+  await expect(more.nth(3)).toHaveText("Dateien");
+  await expect(more.nth(4)).toHaveText("Teammitglieder");
+  await expect(more.nth(5)).toHaveText("Einstellungen");
+  await expect(more.nth(6)).toHaveText("Passwort ändern");
   await page.getByRole("navigation").getByRole("link", { name: "Einstellungen" }).click();
 
   await expect(page).toHaveURL(/\/team\/museum-settings$/);

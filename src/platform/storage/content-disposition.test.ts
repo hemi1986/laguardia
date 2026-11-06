@@ -6,7 +6,9 @@ describe("the file name of a download (ST-119)", () => {
     expect(contentDisposition("attachment", "medieval_manual-v2.pdf")).toBe(
       `attachment; filename="medieval_manual-v2.pdf"; filename*=UTF-8''medieval_manual-v2.pdf`,
     );
-    expect(contentDisposition("inline", "wiring.pdf")).toBe(`inline; filename="wiring.pdf"; filename*=UTF-8''wiring.pdf`);
+    expect(contentDisposition("inline", "wiring.pdf")).toBe(
+      `inline; filename="wiring.pdf"; filename*=UTF-8''wiring.pdf`,
+    );
   });
 
   it("carries a name with umlauts as UTF-8 and an ASCII fallback", () => {
@@ -36,7 +38,21 @@ describe("the file name of a download (ST-119)", () => {
     expect(contentDisposition("attachment", name)).toBeUndefined();
   });
 
-  it("shortens a very long name", () => {
-    expect(safeFileName("x".repeat(500) + ".pdf")!.length).toBeLessThanOrEqual(200);
+  it("shortens a very long name and keeps its ending", () => {
+    const name = safeFileName("x".repeat(500) + ".pdf")!;
+    expect(name.length).toBeLessThanOrEqual(200);
+    expect(name.endsWith(".pdf")).toBe(true);
+  });
+
+  it("never cuts a character in half", () => {
+    const header = contentDisposition("inline", "x".repeat(199) + "😀😀.pdf");
+    expect(header).toBeDefined();
+    expect(() => decodeURIComponent(header!.split("UTF-8''")[1])).not.toThrow();
+    expect(contentDisposition("inline", "x".repeat(199) + "😀" + "y".repeat(300))).toBeDefined();
+  });
+
+  it("removes invisible direction marks that disguise an ending", () => {
+    expect(safeFileName("manual\u202Efdp.exe")).toBe("manualfdp.exe");
+    expect(safeFileName("a\u200Bb.pdf")).toBe("ab.pdf");
   });
 });

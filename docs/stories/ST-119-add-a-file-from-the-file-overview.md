@@ -9,7 +9,7 @@ risk: medium
 events: [EVT-FileAdded, EVT-FileAttached, EVT-FileIndexedForAi]
 depends_on: [ST-115, ST-116, ST-117]
 labels: [feature:files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story

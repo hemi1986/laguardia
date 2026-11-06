@@ -12,9 +12,21 @@ const MAX_LENGTH = 200;
  */
 export function safeFileName(name: string): string | undefined {
   const last = name.split(/[\\/]/).at(-1) ?? "";
-  // eslint-disable-next-line no-control-regex -- control characters are exactly what is removed
-  const cleaned = last.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, MAX_LENGTH).trim();
-  return /^\.*$/.test(cleaned) ? undefined : cleaned;
+  // Control characters (a line break would split the header) and invisible direction marks (they make "fdp.exe" read as
+  // ".pdf") are removed.
+  const cleaned = last.replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, "").trim();
+  const shortened = shorten(cleaned).trim();
+  return /^\.*$/.test(shortened) ? undefined : shortened;
+}
+
+/** At most 200 characters, counted by code points (never a half character), keeping a short ending such as ".pdf". */
+function shorten(name: string): string {
+  const characters = [...name];
+  if (characters.length <= MAX_LENGTH) return name;
+  const dot = name.lastIndexOf(".");
+  const ending = dot > 0 ? [...name.slice(dot)] : [];
+  const kept = ending.length > 0 && ending.length <= 16 ? ending : [];
+  return characters.slice(0, MAX_LENGTH - kept.length).join("") + kept.join("");
 }
 
 /** RFC 5987 encoding of the extended parameter: everything but the unreserved characters is percent-encoded. */
