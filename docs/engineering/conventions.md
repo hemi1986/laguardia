@@ -411,7 +411,11 @@ one module**, `dateien/file-overview-query.ts`: `fileOverviewQueryOf` reads it l
 `strictFileOverviewQueryOf` strictly, `fileOverviewAddress` builds it – no other code spells these parameters. The filters are
 one GET form (`FilterForm`, native selects) and carry no page, so sending them starts at page 1. **The file details' origin
 „Dateien“** is `files:<the overview's own parameters>`: anything else in it (another parameter, a foreign value, a parameter
-twice) is no known origin. No origin leads to „Dateien“ too – its first page, also for a removal (`removalLanding`). The
+twice) is no known origin. No origin leads to „Dateien“ too – its first page, also for a removal (`removalLanding`).
+**Where a file's page was reached from and where each outcome lands is one module**, `dateien/file-navigation.ts`: `originOf` checks the address's value against the closed set
+(the pages and Server Actions call it, the question pages through `originAndBack`), the address builders and landings keep
+the origin (`?from=`) and spell the confirmation parameters, and `wayBack` and `removalLanding` read one switch over the
+origins (`placeOf`) – no other code writes `from=`. The
 „Weiter“ of the pager is the one exception to the ban on vague button texts of ST-091 (`messages.test.ts`).
 
 **Searching the file overview** (ST-118, context map *The file overview: searching*): the page composes two answers by file ID

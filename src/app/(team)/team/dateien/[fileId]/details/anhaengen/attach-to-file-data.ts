@@ -2,7 +2,7 @@ import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import { attachmentChoice } from "@/modules/collection";
 import { isId, type Database } from "@/platform/command";
 import { attachmentChoiceGroups } from "../attachment-choice-groups";
-import { fileDetailsAddress, originOf, type FileOrigin } from "../file-origin";
+import { originAndBack, type FileOrigin } from "../../../file-navigation";
 
 /** The form „Anhängen“ (ST-115) as the page shows it: the file, the two parts of the choice and the way back. */
 export type AttachToFileData = {
@@ -40,13 +40,11 @@ export async function loadAttachToFile(
   if (!isId(fileId)) return undefined;
   const choice = await attachmentChoice(db, fileId);
   if (!choice) return undefined;
-  const origin = await originOf(db, params.from, viewer);
   return {
     id: fileId,
     title: choice.title,
     removed: choice.removed,
     ...attachmentChoiceGroups(choice),
-    origin,
-    back: fileDetailsAddress(fileId, origin),
+    ...(await originAndBack(db, fileId, params.from, viewer)),
   };
 }

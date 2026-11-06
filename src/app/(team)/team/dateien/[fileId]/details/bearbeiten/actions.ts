@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { changeFileDetailsCommand } from "@/modules/collection";
 import { formAction } from "@/app/_actions/form-action";
 import { requireTeamMember } from "@/app/team-session";
-import { changeLanding } from "../file-origin";
+import { changeLanding } from "../../../file-navigation";
 import { changeFileDetailsForm, type ChangeFileDetailsState } from "./change-file-details-form";
 
 /**

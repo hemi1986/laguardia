@@ -6,7 +6,7 @@ import { removeFileCommandWithAiIndex } from "@/modules/ai-assistance";
 import { formAction } from "@/app/_actions/form-action";
 import { database } from "@/platform/database";
 import { requireTechnician } from "../../../../../../team-session";
-import { originOf, removalLanding } from "../file-origin";
+import { originOf, removalLanding } from "../../../file-navigation";
 import { removeFileForm, type RemoveFileState } from "./remove-file-form";
 
 /**

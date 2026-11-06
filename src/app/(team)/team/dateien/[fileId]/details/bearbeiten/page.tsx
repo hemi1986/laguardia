@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { database } from "@/platform/database";
 import { requireTeamMember } from "@/app/team-session";
-import { originValue } from "../file-origin";
+import { originValue } from "../../../file-navigation";
 import { changeFileDetailsAction } from "./actions";
 import { loadChangeFileDetails } from "./change-file-details-data";
 import { ChangeFileDetailsView } from "./change-file-details-view";

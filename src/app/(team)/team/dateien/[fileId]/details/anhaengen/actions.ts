@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { attachFileCommand } from "@/modules/collection";
 import { formAction } from "@/app/_actions/form-action";
 import { requireTeamMember } from "@/app/team-session";
-import { attachLanding } from "../file-origin";
+import { attachLanding } from "../../../file-navigation";
 import { attachToFileForm, type AttachToFileState } from "./attach-to-file-form";
 
 /**

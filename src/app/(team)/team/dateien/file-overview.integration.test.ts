@@ -24,7 +24,7 @@ import { anExistingTeamMember } from "@/test-support/team-members";
 import { teamMessages } from "@/platform/messages";
 import { loadFileDetails } from "./[fileId]/details/file-details-data";
 import { FileDetailsView } from "./[fileId]/details/file-details-view";
-import { removalLanding } from "./[fileId]/details/file-origin";
+import { removalLanding } from "./file-navigation";
 import { loadRemoveFile } from "./[fileId]/details/entfernen/remove-file-data";
 import { FileOverviewView } from "./file-overview";
 import { loadFileOverview } from "./file-overview-data";
