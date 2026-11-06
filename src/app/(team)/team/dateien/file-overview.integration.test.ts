@@ -16,10 +16,12 @@ import { aiIndexOf, anIndexedFile } from "@/modules/ai-assistance/ai-index.test-
 import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { geminiEmbedding } from "@/modules/ai-assistance/ai-seam.test-support";
 import { steppingClock } from "@/modules/ai-assistance/ai-work-stand-in.test-support";
+import { retireMachineCommand } from "@/modules/repair";
 import { executeCommand } from "@/platform/command";
 import { hrefOf, queryOf, selectedOf, textOf } from "@/test-support/html";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { anExistingTeamMember } from "@/test-support/team-members";
+import { teamMessages } from "@/platform/messages";
 import { loadFileDetails } from "./[fileId]/details/file-details-data";
 import { FileDetailsView } from "./[fileId]/details/file-details-view";
 import { removalLanding } from "./[fileId]/details/file-origin";
@@ -46,8 +48,6 @@ afterAll(() => isolated.close());
 
 const scenario = aiScenario({ db: () => db, clock, technician: tom });
 const { ai, turnAiOn, removeTheKey } = scenario;
-/** AI dependencies whose OpenRouter records its requests. */
-const scenarioAi = () => ai();
 const run = (dependencies: AiDependencies = ai()) => scenario.run({ kinds: [fileIndexingWork], with: dependencies });
 
 beforeEach(async () => {
@@ -140,6 +140,8 @@ const listed = (html: string) =>
   [...html.matchAll(/<li[^>]*><a [^>]*href="\/team\/dateien\/[^"]+\/details[^"]*"[^>]*>([^<]*)<\/a>/g)].map(
     (match) => match[1],
   );
+
+const texts = teamMessages.fileOverview;
 
 describe("the file overview (ST-117)", () => {
   it("ST-117: A helper finds every file in the overview", async () => {
@@ -324,7 +326,7 @@ describe("the file overview (ST-117)", () => {
     const off = await overview({ aiIndex: "failed" });
 
     expect(listed(off.html).sort()).toEqual(["A", "C"]);
-    expect(entriesText(off.text)).not.toContain("KI");
+    expect(off.text.replace(texts.searchHint, "")).not.toContain("KI");
     expect(off.html).not.toContain('name="aiIndex"');
     expect(off.data.query.aiIndex).toBeUndefined();
 
@@ -414,17 +416,17 @@ describe("searching the file overview (ST-118)", () => {
   });
 
   it("ST-118: A file is found by the content of its indexed passages", async () => {
-    const ai = scenarioAi();
+    const openRouter = ai();
     const backbox = await aFile("Backbox schematic", { fileCategory: "schematic" });
     await aFile("Unrelated notes");
     await indexed(backbox, "Auf Seite 12 sitzen die Spulen der Flipper.");
     const before = await aiIndexOf(db, [backbox]);
 
-    const found = await overview({ search: "Spule" }, { dependencies: ai });
+    const found = await overview({ search: "Spule" }, { dependencies: openRouter });
 
     expect(listed(found.html)).toEqual(["Backbox schematic"]);
     expect(await aiIndexOf(db, [backbox])).toEqual(before);
-    expect(ai.ai.requests).toEqual([]);
+    expect(openRouter.ai.requests).toEqual([]);
   });
 
   it("ST-118: Every word must be found, not all in the same place", async () => {
@@ -440,7 +442,7 @@ describe("searching the file overview (ST-118)", () => {
 
   it("ST-118: A word in a file's own data comes before the same word in the content only", async () => {
     clock.set("2026-10-01T10:00:00Z");
-    const chart = await aFile("Coil chart");
+    await aFile("Coil chart");
     clock.set("2026-11-01T10:00:00Z");
     const guide = await aFile("Service guide");
     await indexed(guide, "The coils are on page 340.");
@@ -448,7 +450,6 @@ describe("searching the file overview (ST-118)", () => {
     const found = await overview({ search: "coil" });
 
     expect(listed(found.html)).toEqual(["Coil chart", "Service guide"]);
-    expect(chart).not.toBe(guide);
   });
 
   it("ST-118: The page says that only the content of indexed files is searched", async () => {
@@ -491,7 +492,7 @@ describe("searching the file overview (ST-118)", () => {
     const backbox = await aFile("Backbox schematic");
     await indexed(backbox, "Die Spulen im Backbox.");
     await removeTheKey();
-    const off = scenarioAi();
+    const off = ai();
 
     const found = await overview({ search: "Spule" }, { dependencies: off });
 
@@ -499,15 +500,11 @@ describe("searching the file overview (ST-118)", () => {
     expect(found.text).not.toContain("Für die KI erfasst");
     expect(off.ai.requests).toEqual([]);
 
-    // AI on, the file indexed again with another embedding model: its passages are still the ones searched.
+    // AI on, and the same file indexed again with another embedding model: its passages are still the ones searched.
     await turnAiOn();
-    const again = await aFile("Rulesheet");
-    await indexed(again, "Die Spulen im Regelwerk.", "another/embedding-model");
-    const on = scenarioAi();
-    expect(listed((await overview({ search: "Spule" }, { dependencies: on })).html).sort()).toEqual([
-      "Backbox schematic",
-      "Rulesheet",
-    ]);
+    await indexed(backbox, "Die Spulen im Backbox.", "another/embedding-model");
+    const on = ai();
+    expect(listed((await overview({ search: "Spule" }, { dependencies: on })).html)).toEqual(["Backbox schematic"]);
     expect(on.ai.requests).toEqual([]);
   });
 
@@ -585,6 +582,32 @@ describe("searching the file overview (ST-118)", () => {
     expect(hrefOf(none.html, "Alle Dateien anzeigen")).toBe("/team/dateien");
     expect(none.html).toMatch(/<input[^>]*name="search"[^>]*value="Zylinderkopf"/);
     expect(none.text).not.toContain("Noch keine Dateien");
+  });
+
+  it("a word that is a stop word in both languages is no word", async () => {
+    await aFile("Relais in der Backbox");
+    await aFile("Relais Katalog");
+
+    expect(listed((await overview({ search: "Relais in Backbox" })).html)).toEqual(["Relais in der Backbox"]);
+    expect(listed((await overview({ search: "in" })).html)).toHaveLength(2);
+  });
+
+  it("finds a file by the machine of a retired machine and combines with the AI state", async () => {
+    await turnAiOn();
+    const notes = await aFile("Own notes", { machines: [eightBallMachineId] });
+    await aFile("Other notes", { machines: [eightBallMachineId] });
+    await indexed(notes, "Das Relais.");
+    const retired = await executeCommand(
+      retireMachineCommand,
+      { machineId: eightBallMachineId, version: 0, reason: "Sold to a collector" },
+      { actor: tom, db, clock, newId: randomUUID },
+    );
+    if (!retired.ok) throw new Error(retired.error);
+
+    expect(listed((await overview({ search: "LG-050" })).html).sort()).toEqual(["Other notes", "Own notes"]);
+    const combined = await overview({ search: "LG-050", aiIndex: "indexed" });
+    expect(listed(combined.html)).toEqual(["Own notes"]);
+    expect(combined.text).toContain("1 Datei");
   });
 
   it("an empty search, or one of punctuation only, is no search", async () => {

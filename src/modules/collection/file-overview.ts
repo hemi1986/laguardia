@@ -66,10 +66,23 @@ const ownText = sql`(
 const normalized = sql`regexp_replace(${ownText}, '[[:punct:][:space:]]+', ' ', 'g')`;
 const ownWords = sql`(to_tsvector('german'::regconfig, ${normalized}) || to_tsvector('english'::regconfig, ${normalized}))`;
 
-/** Whether and how well the file's own text matches a word: a rank, or null. */
+/**
+ * Whether and how well the file's own text (`d`, its words) matches a word: a rank, or null. A word that is a stop word in
+ * both German and English (`in`, `am`) has an empty query, which matches nothing; it is no word, so every file passes it
+ * with rank 0 – "Relais in Backbox" searches for „Relais“ and „Backbox“.
+ */
 function ownRankOf(word: string): SQL<number | null> {
   const query = sql`(plainto_tsquery('german'::regconfig, ${word}) || plainto_tsquery('english'::regconfig, ${word}))`;
-  return sql<number | null>`case when ${ownWords} @@ ${query} then ts_rank(${ownWords}, ${query}) end`;
+  return sql<
+    number | null
+  >`case when numnode(${query}) = 0 then 0 when own.d @@ ${query} then ts_rank(own.d, ${query}) end`;
+}
+
+/** The per-word ranks of a file, its own words computed once per file (`offset 0` keeps the planner from inlining them). */
+function ownRanksOf(words: readonly string[]): SQL<(number | null)[]> {
+  return sql<
+    (number | null)[]
+  >`(select array[${sql.join(words.map(ownRankOf), sql`, `)}] from (select ${ownWords} as d offset 0) own)`;
 }
 
 /**
@@ -91,10 +104,7 @@ export async function fileOverview(
       contentType: file.contentType,
       size: file.size,
       addedAt: file.addedAt,
-      ownRanks:
-        words.length > 0
-          ? sql<(number | null)[]>`array[${sql.join(words.map(ownRankOf), sql`, `)}]`
-          : sql<number[]>`'{}'::float8[]`,
+      ownRanks: words.length > 0 ? ownRanksOf(words) : sql<number[]>`'{}'::float8[]`,
     })
     .from(file)
     .where(
