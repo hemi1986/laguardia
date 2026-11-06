@@ -380,31 +380,9 @@ describe("the file details (ST-114)", () => {
 
       expect(hrefOf(page.html, wayBack)).toBe(leadsTo);
     }
-    // A helper does not reach „Einstellungen“: their way back from an address naming it is the default (G11).
+    // A helper does not reach „Einstellungen“: their way back from an address naming it is the default – „Dateien“ since
+    // ST-117 (G11).
     const helper = await details(attract, { params: { from: "settings" }, person: ben });
-    expect(hrefOf(helper.html, "Zurück zu den Geräten")).toBe("/team/machines");
-  });
-
-  it("ST-114: Without a known origin the way back leads to the machines", async () => {
-    await aMachine("LG-042");
-    const manual = await attach(await aMachine("LG-043"), "MM Operations Manual");
-    const origins: Record<string, string>[] = [
-      {},
-      { from: "https://evil.example/phish" },
-      { from: "//evil.example" },
-      { from: "machine:XX-999" },
-      { from: "machine:https://evil.example" },
-    ];
-
-    for (const params of origins) {
-      const { html } = await details(manual, { params });
-
-      expect(hrefOf(html, "Zurück zu den Geräten")).toBe("/team/machines");
-      // No link leads anywhere the address named.
-      const named = Object.values(params).join(" ");
-      expect(hrefs(html).filter((href) => named.includes(href) && href !== "/team/machines")).toEqual([]);
-      expect(html).not.toContain("evil.example");
-      expect(html).not.toContain("XX-999");
-    }
+    expect(hrefOf(helper.html, "Zurück zu den Dateien")).toBe("/team/dateien");
   });
 });

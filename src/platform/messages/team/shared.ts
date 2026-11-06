@@ -49,6 +49,7 @@ export const sharedTexts = {
     maintenancePlan: "Wartungsplan",
     repairTimes: "Reparaturzeiten",
     machineModels: "Modelle",
+    files: "Dateien",
     machines: "Geräte",
     triage: "Sichtung",
     defects: "Defekte",

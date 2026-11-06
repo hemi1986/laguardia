@@ -36,5 +36,11 @@
   },
   "ST-091": {
     "The question before removing a file names the machine in its heading": "ST-121"
+  },
+  "ST-114": {
+    "Without a known origin the way back leads to the machines": "ST-117"
+  },
+  "ST-121": {
+    "A removal without a known origin lands on the machine overview": "ST-117"
   }
 }

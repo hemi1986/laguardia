@@ -72,7 +72,12 @@ describe("message catalogs", () => {
     const scanned = texts(teamMessages);
     expect(scanned.map(([key]) => key)).toContain("ownPassword.submit");
 
-    const vague = scanned.filter(([, text]) => ["Speichern", "Änderungen speichern", "Weiter"].includes(text));
+    // The one exception: the pager of „Dateien“ (ST-117) – a link to the next page, not a button that continues to
+    // something else. G40 (user, 2026-11-02) names „Zurück“ and „Weiter“ for every paged list.
+    const pager = ["fileOverview.next"];
+    const vague = scanned.filter(
+      ([key, text]) => ["Speichern", "Änderungen speichern", "Weiter"].includes(text) && !pager.includes(key),
+    );
 
     expect(vague).toEqual([]);
   });
