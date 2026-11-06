@@ -1,5 +1,5 @@
 # Acceptance – ST-116: Correct a file's title and file category
-Date: 2026-11-06 · Tests run: `npm test -- -t "ST-116"` → 7 passed, 1 failed (3 of 3 runs); the AI test file run without `-t` → 2 passed; `npm run typecheck` ok, `npm run lint` 0 errors · Preview: none
+Date: 2026-11-06 (re-check) · Tests run: `npm test -- -t "ST-116"` → 9 passed, 0 failed; per file with `-t "ST-116"`: change-file-details.integration.test.ts 8 passed, ai-assessment-attachments.integration.test.ts 1 passed (the other test there is skipped); scenario trace 9/9 · Preview: none
 
 ## Scenarios
 | Scenario | Test (file) | Given/When/Then really checked? | Result |
@@ -11,8 +11,8 @@ Date: 2026-11-06 · Tests run: `npm test -- -t "ST-116"` → 7 passed, 1 failed 
 | Saving without a change is confirmed and records nothing | same | Yes. Landing and confirmation, no journal entry, version unchanged, and a stale version is not a conflict. | pass |
 | A change made meanwhile rejects the form and keeps what was typed | same | Yes for the behaviour: error, kept values, the other correction is still there. The text differs from the scenario (see decision below). | pass (remark 2) |
 | A removed file cannot be corrected | same | Yes. Rejection text, the file shows nowhere, form without submit, unknown or forged ID gives no file. | pass |
-| A corrected title shows in earlier references and costs nothing | ai-assessment-attachments.integration.test.ts | The Given, When and Then lines are asserted correctly (reference title, no AI-work start, request count, index entry and cost). **But the test fails when run alone** (`expected 8 to be 7` at `seam.requests.length`). It passes only when the whole file runs, so it depends on the state left by the ST-115 test before it. | **FAIL** |
-| Someone not logged in cannot correct a file | e2e/change-file-details.spec.ts | The GET of the form address is redirected to the login and no „Titel“ field shows. "or sends the form" is not tested. Server side, `requireTeamMember()` is called in the action. | pass (remark 3); not run (no e2e environment) |
+| A corrected title shows in earlier references and costs nothing | ai-assessment-attachments.integration.test.ts | Yes. The request count is taken before and asserted directly after the correction, no page read in between. Passes alone (`-t`) and with the file. | pass |
+| Someone not logged in cannot correct a file | change-file-details.integration.test.ts (+ e2e for the GET) | Yes. The form is sent as a visitor through the real form runner: `not-authorized`, no landing, title and file category unchanged, no journal entry. The redirect on opening the address stays in the e2e (skips without a team account). | pass |
 
 ## Definition of done
 | Item | Applies | Evidence | OK? |
@@ -24,7 +24,7 @@ Date: 2026-11-06 · Tests run: `npm test -- -t "ST-116"` → 7 passed, 1 failed 
 | Domain language | yes | „Dateikategorie“, „Datei bearbeiten“, "file category" in code | yes |
 | Phone usability | yes | One field and one select, a single column; an e2e at phone size exists but needs a team account | not run |
 | Performance with realistic data | n/a | One file, one row | n/a |
-| Tests green for the story | yes | One of 9 fails when run with `-t` | **no** |
+| Tests green for the story | yes | 9 of 9 pass with `-t` and per file | yes |
 | Security advisories | n/a | No change to dependencies | n/a |
 
 ## Decision: version-conflict text
@@ -48,5 +48,8 @@ The form-runner convention text („Jemand hat das inzwischen geändert. Deine E
 4. The `fieldOf` map, the `category === ""` logic and the "Bitte wählen" placeholder are in line with G8 and G20. Nothing found against the catalogs.
 5. The e2e test name for the happy path does not start with `ST-116:`. That is allowed, because the scenario is covered by the integration test, but it is inconsistent.
 
-## Verdict: not accepted
-Blocker: `ST-116: A corrected title shows in earlier references and costs nothing` fails reproducibly when run as `npm test -- -t "ST-116"` (also with the file path): `seam.requests.length` is 8, not 7, after the correction. It passes only with the other tests of the file around it. Either one more request really goes to the seam after the title correction (a scenario violation: "no request goes to OpenRouter"), or the test counts a request caused by its own set-up (`requestAiAssessment` / the read with `dependencies: ai()`) and is order-dependent. The implementer must find out which. The rest of the story is sound; with this fixed, the verdict is accepted with remarks.
+## Re-check
+Blocker resolved: the request-count test passes alone. Minor 3 (sending the form as a visitor) is closed by the new test. The story now has a Note about the conflict text, so the conflict decision above stands without a remaining discrepancy. Open minors: 1 (aria-invalid only in e2e), 5 (e2e test name without the prefix). Neither blocks.
+
+## Verdict: accepted with remarks
+Remarks: the "„Titel“ is marked" line is verified only in the e2e, and the phone-size and login-redirect e2e checks did not run here (no team account).

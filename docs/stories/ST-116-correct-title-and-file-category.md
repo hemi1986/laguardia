@@ -9,7 +9,7 @@ risk: low
 events: [EVT-FileDetailsChanged]
 depends_on: [ST-114]
 labels: [feature:files, ui]
-status: in-progress
+status: done
 ---
 
 ## Story
