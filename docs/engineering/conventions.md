@@ -414,6 +414,19 @@ one GET form (`FilterForm`, native selects) and carry no page, so sending them s
 twice) is no known origin. No origin leads to „Dateien“ too – its first page, also for a removal (`removalLanding`). The
 „Weiter“ of the pager is the one exception to the ban on vague button texts of ST-091 (`messages.test.ts`).
 
+**Searching the file overview** (ST-118, context map *The file overview: searching*): the page composes two answers by file ID
+(`dateien/file-overview-data.ts`). The words are the page's (`searchWordsOf`, `search-words.ts`: punctuation separates, lower case,
+at most 8 words). **Collection** – `fileOverview(db, filter, words)` – returns each file with `ownRanks`, per word the rank of its
+own text (title, original file name, museum numbers and machine model titles of what it is attached to, read when asked, so a
+corrected name is found at once) or `null`. **AI assistance** – `filesContainingWords(db, words)` – returns per word the files with a
+passage containing it and the rank of their best passage, from `ai_index_item.words`: a column PostgreSQL generates from the
+passage's text (`wordsOfText` in `schema.ts`, German and English stems together, punctuation turned into spaces first; GIN index),
+so the passages that existed before the migration are searchable at once; it reads *indexed* entries of any embedding model and
+needs no AI settings, so it works while AI is off and makes no request. `searched` (`search-order.ts`) keeps the files whose every
+word is found in either answer and orders them – words in the own text, their rank, the rank of the content, then newest; the ranks
+are never added up. Collection's SQL repeats the same text normalisation as `wordsOfText` – change one, change both. The search is
+its own form beside the filters (G32), each keeping the other's values as hidden fields (`KeptFields`) and neither carrying a page.
+
 **The museum settings** (ST-100, AGG-MuseumSettings in Collection): one singleton in **three parts** – museum details,
 logo, legal texts – each its own record with its own version and its own command, so the existing store and version
 check apply unchanged and a save of one part never rejects another. A part's row is inserted with its defaults by its

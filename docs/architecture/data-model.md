@@ -585,6 +585,7 @@ stateDiagram-v2
 | Index item | Entity | Kind | *passage* \| *page image* \| *image* | yes | EVT-FileIndexedForAi (*Passages*, *Page images and images*) |
 | | | Page | `PageNumber` | for a PDF | EVT-FileIndexedForAi; *References (file, page)* in RM-DefectAiAssessments |
 | | | Text | `Text` | for a passage | EVT-FileIndexedForAi (*Passages*) – what an AI assessment sends of a text hit; its words are what RM-FileOverview searches |
+| | | Words | stemmed words (German and English) | for a passage | computed by the database from *Text* (ST-118) – a generated column with a full-text index, so passages indexed earlier are searchable as soon as the migration has run; never journaled |
 | | | Embedding | `Embedding` | yes | EVT-FileIndexedForAi (never journaled) |
 
 Derived for read models: *Files indexed*, *Files waiting*, *Files failed* (`RM-AiSettings`) and the per-file state on the machine record (`RM-MachineRecord`) – from the entries and Collection's files that are not removed, counting only entries of the current embedding model as indexed. Passages, page images and embeddings stay out of the journal; `EVT-FileIndexedForAi` names the file, the embedding model, the counts and the cost.

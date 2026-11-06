@@ -1,4 +1,9 @@
-import { aiDependencies, aiIndexStatesForOverview, type AiDependencies } from "@/modules/ai-assistance";
+import {
+  aiDependencies,
+  aiIndexStatesForOverview,
+  filesContainingWords,
+  type AiDependencies,
+} from "@/modules/ai-assistance";
 import {
   fileOverview,
   fileOverviewChoices,
@@ -18,6 +23,8 @@ import {
   fileOverviewQueryOf,
   type FileOverviewQuery,
 } from "./file-overview-query";
+import { searched } from "./search-order";
+import { searchWordsOf } from "./search-words";
 
 const { fileOverview: texts, fileDetails, aiIndex } = teamMessages;
 
@@ -85,7 +92,13 @@ export async function loadFileOverview(
     typeof params.fileRemoved === "string" ? fileRemovedBy(db, params.fileRemoved, viewer.id) : undefined,
   ]);
   const filter = filterOf(asked, choices);
-  const found = await fileOverview(db, filter);
+  // The search (ST-118): Collection's files with how well their own text matches each word, AI assistance's files with the
+  // words in a passage; the page merges them by file ID. Without words the list is as it was.
+  const words = asked.search ? searchWordsOf(asked.search) : [];
+  const found =
+    words.length > 0
+      ? searched(await fileOverview(db, filter, words), await filesContainingWords(db, words))
+      : await fileOverview(db, filter);
 
   // The AI index state: for every file that remains when it narrows the list, else for the page's files only.
   const stateOfAll = await aiIndexStatesForOverview(db, ai, asked.aiIndex ? found.map((entry) => entry.id) : []);
@@ -108,6 +121,7 @@ export async function loadFileOverview(
         );
 
   const query: FileOverviewQuery = {
+    ...(asked.search && { search: asked.search }),
     ...(asked.fileCategory && { fileCategory: asked.fileCategory }),
     ...(filter.attachedTo && { attachedTo: asked.attachedTo }),
     ...(aiIndexFilter && { aiIndex: aiIndexFilter }),

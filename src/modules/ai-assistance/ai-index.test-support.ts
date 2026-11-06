@@ -14,7 +14,12 @@ export async function anIndexedFile(
   db: Database,
   clock: Clock,
   fileId: string,
-  { embeddingModel, pages, text = "Eine Textstelle" }: { embeddingModel: string; pages: number; text?: string },
+  {
+    embeddingModel,
+    pages,
+    text = "Eine Textstelle",
+    page = 1,
+  }: { embeddingModel: string; pages: number; text?: string; page?: number },
 ): Promise<void> {
   const indexed = await executeCommand(
     indexFileForAiCommand,
@@ -22,7 +27,7 @@ export async function anIndexedFile(
       fileId,
       embeddingModel,
       result: {
-        items: [{ kind: "passage", page: 1, text, embedding: Array.from({ length: EMBEDDING_SIZE }, () => 0.5) }],
+        items: [{ kind: "passage", page, text, embedding: Array.from({ length: EMBEDDING_SIZE }, () => 0.5) }],
         pagesIndexed: pages,
         imagesIndexed: pages,
         cost: 0.0001,

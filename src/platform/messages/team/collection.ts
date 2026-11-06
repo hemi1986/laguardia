@@ -225,6 +225,15 @@ export const collectionTexts = {
       const files_ = files === 1 ? "1 Datei" : `${files} Dateien`;
       return pages > 1 ? `${files_} · Seite ${page} von ${pages}` : files_;
     },
+    /** The search (ST-118, G32): its own form beside the filters, sent with „Suchen“. */
+    searchForm: "Dateien durchsuchen",
+    search: "Suche",
+    searchSubmit: "Suchen",
+    /** Under the field: what is searched – and that the content of indexed files only is. */
+    searchHint:
+      "Sucht im Titel, im ursprünglichen Dateinamen, in den Namen der Geräte und Modelle und im Inhalt – im Inhalt nur bei Dateien, die für die KI erfasst sind. Gescannte Seiten ohne Text werden dort nicht gefunden.",
+    /** Nothing matches the search (G7): the words and the filters stay as sent. */
+    nothingFoundSearch: "Keine Datei passt zu dieser Suche.",
     /** The filters (G32): one form, sent with „Filtern“ (`filters.apply`). */
     filter: "Dateien filtern",
     fileCategory: "Dateikategorie",

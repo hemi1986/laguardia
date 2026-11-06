@@ -24,6 +24,11 @@ export type FileOverviewEntry = {
   /** Bytes. */
   size: number;
   addedAt: Date;
+  /**
+   * Per word searched for, in their order: how well the file's own text matches it, or `null` when it does not (ST-118).
+   * Empty without words.
+   */
+  ownRanks: (number | null)[];
 };
 
 /** The condition on the attachments, as a subquery on the outer `file` row. */
@@ -46,11 +51,38 @@ function attachedToCondition(attachedTo: NonNullable<FileOverviewFilter["attache
 }
 
 /**
- * RM-FileOverview, Collection's part (ST-117, context map step 1): every file that is not removed – also one attached to
- * nothing – that passes the filters, newest first. The page cuts it into pages and adds the AI index state (the page
+ * A file's own text (ST-118): its title, its original file name and the names of what it is attached to – for a machine
+ * its museum number and its machine model's title, for a machine model its title, always the current values, a retired
+ * machine's too. Punctuation separates words; German and English word forms are kept together.
+ */
+const ownText = sql`(
+  coalesce(${file.title}, '') || ' ' || coalesce(${file.originalFileName}, '') || ' '
+  || coalesce((select string_agg(m.museum_number || ' ' || mm.title, ' ')
+       from file_attachment fa join machine m on m.id = fa.machine_id join machine_model mm on mm.id = m.machine_model_id
+       where fa.file_id = ${file.id}), '') || ' '
+  || coalesce((select string_agg(mm.title, ' ')
+       from file_attachment fa join machine_model mm on mm.id = fa.machine_model_id
+       where fa.file_id = ${file.id}), ''))`;
+const normalized = sql`regexp_replace(${ownText}, '[[:punct:][:space:]]+', ' ', 'g')`;
+const ownWords = sql`(to_tsvector('german'::regconfig, ${normalized}) || to_tsvector('english'::regconfig, ${normalized}))`;
+
+/** Whether and how well the file's own text matches a word: a rank, or null. */
+function ownRankOf(word: string): SQL<number | null> {
+  const query = sql`(plainto_tsquery('german'::regconfig, ${word}) || plainto_tsquery('english'::regconfig, ${word}))`;
+  return sql<number | null>`case when ${ownWords} @@ ${query} then ts_rank(${ownWords}, ${query}) end`;
+}
+
+/**
+ * RM-FileOverview, Collection's part (ST-117, ST-118, context map step 1): every file that is not removed – also one attached to
+ * nothing – that passes the filters, newest first, with – for each of the `words` searched for – how well its own text
+ * matches (the words are the page's: lower-case, without punctuation; it decides which files match). The page cuts it into pages and adds the AI index state (the page
  * composes, ST-009); at a few hundred files these are a few hundred short rows. Only after the team page's access check.
  */
-export async function fileOverview(db: Database, filter: FileOverviewFilter): Promise<FileOverviewEntry[]> {
+export async function fileOverview(
+  db: Database,
+  filter: FileOverviewFilter,
+  words: readonly string[] = [],
+): Promise<FileOverviewEntry[]> {
   const rows = await db
     .select({
       id: file.id,
@@ -59,6 +91,10 @@ export async function fileOverview(db: Database, filter: FileOverviewFilter): Pr
       contentType: file.contentType,
       size: file.size,
       addedAt: file.addedAt,
+      ownRanks:
+        words.length > 0
+          ? sql<(number | null)[]>`array[${sql.join(words.map(ownRankOf), sql`, `)}]`
+          : sql<number[]>`'{}'::float8[]`,
     })
     .from(file)
     .where(
