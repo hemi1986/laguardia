@@ -1,13 +1,7 @@
 import type { ChoiceGroup } from "@/components/ui/grouped-choice";
 import { attachmentChoice } from "@/modules/collection";
-import {
-  categoryAndTechnologyLabel,
-  machineChoiceGroups,
-  machineEntryLabel,
-} from "@/app/(team)/team/category-and-technology";
 import { isId, type Database } from "@/platform/command";
-import { teamMessages } from "@/platform/messages";
-import { targetValue } from "../file-attachments";
+import { attachmentChoiceGroups } from "../attachment-choice-groups";
 import { fileDetailsAddress, originOf, type FileOrigin } from "../file-origin";
 
 /** The form „Anhängen“ (ST-115) as the page shows it: the file, the two parts of the choice and the way back. */
@@ -51,20 +45,7 @@ export async function loadAttachToFile(
     id: fileId,
     title: choice.title,
     removed: choice.removed,
-    machineGroups: machineChoiceGroups(choice.machineGroups, (machine) => ({
-      value: targetValue({ machineId: machine.id }),
-      label: machine.retired
-        ? teamMessages.fileDetails.retiredMachine(machine.museumNumber)
-        : machineEntryLabel(machine),
-    })),
-    machineModelGroups: choice.machineModelGroups.map((group) => ({
-      key: `machineModel:${group.machineCategory}/${group.technology ?? ""}`,
-      label: categoryAndTechnologyLabel(group.machineCategory, group.technology),
-      entries: group.machineModels.map((model) => ({
-        value: targetValue({ machineModelId: model.id }),
-        label: model.title,
-      })),
-    })),
+    ...attachmentChoiceGroups(choice),
     origin,
     back: fileDetailsAddress(fileId, origin),
   };

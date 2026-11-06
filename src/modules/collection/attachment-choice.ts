@@ -22,15 +22,19 @@ export type AttachmentChoiceMachineModel = {
   technology: Technology | undefined;
 };
 
-/** The choice on „Anhängen“ (RM-AttachmentChoice, ST-115): „Geräte“ and „Modelle“, each grouped by machine category and technology. */
-export type AttachmentChoice = {
-  title: string;
-  /** A removed file has nothing to attach – the form still names it and says that it is gone. */
-  removed: boolean;
+/** What the choice offers (RM-AttachmentChoice): „Geräte“ and „Modelle“, each grouped by machine category and technology. */
+export type AttachmentChoiceGroups = {
   /** Only what the file is not attached to yet, in each group the active machines by museum number, then the retired ones. */
   machineGroups: MachineGroup<AttachmentChoiceMachine>[];
   /** Only the machine models the file is not attached to yet, by title. */
   machineModelGroups: MachineModelGroup<AttachmentChoiceMachineModel>[];
+};
+
+/** The choice on „Anhängen“ (RM-AttachmentChoice, ST-115) for one file. */
+export type AttachmentChoice = AttachmentChoiceGroups & {
+  title: string;
+  /** A removed file has nothing to attach – the form still names it and says that it is gone. */
+  removed: boolean;
 };
 
 /**
@@ -50,6 +54,22 @@ export async function attachmentChoice(db: Database, fileId: string): Promise<At
     .where(eq(fileAttachment.fileId, fileId));
   const attachedMachines = new Set(attached.flatMap((entry) => (entry.machineId ? [entry.machineId] : [])));
   const attachedModels = new Set(attached.flatMap((entry) => (entry.machineModelId ? [entry.machineModelId] : [])));
+  return { title: row.title, removed: false, ...(await offered(db, attachedMachines, attachedModels)) };
+}
+
+/**
+ * What a file that is being added can be attached to (RM-AttachmentChoice, ST-119): every registered machine – retired
+ * ones at the end of their group – and every machine model, nothing attached yet. Only after the team page's access check.
+ */
+export async function attachmentChoiceForNewFile(db: Database): Promise<AttachmentChoiceGroups> {
+  return offered(db, new Set(), new Set());
+}
+
+async function offered(
+  db: Database,
+  attachedMachines: ReadonlySet<string>,
+  attachedModels: ReadonlySet<string>,
+): Promise<AttachmentChoiceGroups> {
   const [machines, models] = await Promise.all([
     db
       .select({
@@ -83,8 +103,6 @@ export async function attachmentChoice(db: Database, fileId: string): Promise<At
     machines: [...group.machines.filter((entry) => !entry.retired), ...group.machines.filter((entry) => entry.retired)],
   }));
   return {
-    title: row.title,
-    removed: false,
     machineGroups,
     machineModelGroups: groupMachineModels(
       models

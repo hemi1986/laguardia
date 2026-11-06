@@ -19,9 +19,10 @@ test("ST-104: Technicians reach „Einstellungen“ under „Mehr“", async ({ 
 
   await openMore(page);
   const more = page.getByRole("navigation").getByRole("listitem");
-  await expect(more.nth(3)).toHaveText("Teammitglieder");
-  await expect(more.nth(4)).toHaveText("Einstellungen");
-  await expect(more.nth(5)).toHaveText("Passwort ändern");
+  await expect(more.nth(3)).toHaveText("Dateien");
+  await expect(more.nth(4)).toHaveText("Teammitglieder");
+  await expect(more.nth(5)).toHaveText("Einstellungen");
+  await expect(more.nth(6)).toHaveText("Passwort ändern");
   await expect(page.getByRole("navigation").getByRole("link", { name: "Museumseinstellungen" })).toHaveCount(0);
   await page.getByRole("navigation").getByRole("link", { name: "Einstellungen" }).click();
 

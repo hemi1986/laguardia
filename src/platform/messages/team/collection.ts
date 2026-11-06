@@ -157,6 +157,10 @@ export const collectionTexts = {
       other: "Anderes Format",
     },
     addedBy: (name: string, date: string) => `Hinzugefügt von ${name} am ${date}`,
+    /** The confirmation after „Datei hinzufügen“ (ST-119, G3). */
+    added: (title: string) => `„${title}“ hinzugefügt.`,
+    /** The name the file had on the team member's device (ST-119, CONTEXT.md: Original file name). */
+    originalFileName: (name: string) => `Ursprünglicher Dateiname: ${name}`,
     open: "Datei öffnen",
     attachedTo: "Angehängt an",
     machine: (museumNumber: string, machineModelTitle: string) => `${museumNumber} · ${machineModelTitle}`,
@@ -230,9 +234,10 @@ export const collectionTexts = {
     machines: "Geräte",
     machineModels: "Modelle",
     aiIndex: "KI-Erfassung",
-    /** No file at all (G7); it points at the one way to add a file until „Datei hinzufügen“ (ST-119). */
-    empty: "Noch keine Dateien. Eine Datei kommt über „Datei anhängen“ auf der Seite eines Geräts dazu.",
-    toMachines: "Geräte",
+    /** No file at all (G7); „Datei hinzufügen“ stands below it (ST-119). */
+    empty: "Noch keine Dateien.",
+    /** Directly under the heading (G2, ST-119): leads to the form page. */
+    add: "Datei hinzufügen",
     /** Nothing matches (G7): the filters stay as sent. */
     nothingFound: "Keine Datei passt zu diesen Filtern.",
     showAll: "Alle Dateien anzeigen",
@@ -259,6 +264,31 @@ export const collectionTexts = {
       onlyMachine: "nur {museumNumber}",
       allMachinesOfModel: "alle Geräte des Modells {machineModel}",
       submit: "Datei anhängen",
+      /** After a rejection of the form: whether the chosen file is still attached (G8a, user 2026-10-18). */
+      stillAttached: "Die gewählte Datei ist noch angehängt: {fileName}",
+      chooseAgain: "Die Datei muss erneut ausgewählt werden.",
+      tooLarge: "Dateien dürfen höchstens 100 MB groß sein.",
+      notUploaded: "Die Datei konnte nicht hochgeladen werden. Bitte noch einmal auswählen.",
+    },
+  },
+  /** „Datei hinzufügen“ in the file overview (ST-119, G2a) – its own form page; a file may be attached to nothing yet. */
+  addFileToOverview: {
+    title: "Datei hinzufügen",
+    back: "Zurück zu den Dateien",
+    /** Strings only below – the form is a client component. */
+    form: {
+      file: "Datei",
+      fileHint: "Höchstens 100 MB, jedes Format. PDFs und Bilder lassen sich im Browser öffnen.",
+      uploading: "Wird hochgeladen … {percent} %",
+      uploaded: "Hochgeladen: {fileName}",
+      title: "Titel",
+      fileCategory: "Dateikategorie",
+      choose: "Bitte wählen",
+      attachTo: "Anhängen an",
+      attachToHint: "Freiwillig. Eine Datei darf auch erst einmal nirgends angehängt sein.",
+      machines: "Geräte",
+      machineModels: "Modelle",
+      submit: "Datei hinzufügen",
       /** After a rejection of the form: whether the chosen file is still attached (G8a, user 2026-10-18). */
       stillAttached: "Die gewählte Datei ist noch angehängt: {fileName}",
       chooseAgain: "Die Datei muss erneut ausgewählt werden.",

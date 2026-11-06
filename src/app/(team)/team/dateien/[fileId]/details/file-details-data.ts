@@ -6,6 +6,7 @@ import {
   type IndexingFailureReason,
 } from "@/modules/ai-assistance";
 import {
+  fileAddedIn,
   fileDetails,
   fileDetachedIn,
   machineLabels,
@@ -43,6 +44,8 @@ export type FileDetailsData = {
   size: string;
   addedBy: string;
   addedOn: string;
+  /** „Ursprünglicher Dateiname“ (ST-119) – none for a file from before the feature. */
+  originalFileName: string | undefined;
   attachedTo: FileAttachedTo[];
   ai: FileAiState | undefined;
   /** „Erneut versuchen“ is offered – only a technician, only on a failed file (AI is on then). */
@@ -55,6 +58,8 @@ export type FileDetailsData = {
   savedConfirmation: string | undefined;
   /** „Lösen“ on each entry (ST-115) – technicians only (G11). */
   detachOffered: boolean;
+  /** The confirmation after „Datei hinzufügen“ (ST-119, G3): only to the person who added the file just now. */
+  addedConfirmation: string | undefined;
   /** The confirmation after attaching (ST-115, G3, G33): the resulting state, never from the journal alone. */
   attachedConfirmation: string | undefined;
   /** The confirmation after detaching one thing (ST-115, G3), with the target's name. */
@@ -89,7 +94,7 @@ export async function loadFileDetails(
   if (!isId(fileId)) return undefined;
   const details = await fileDetails(db, fileId);
   if (!details) return undefined;
-  const wantsConfirmation = params.attached === "1" || typeof params.detached === "string";
+  const wantsConfirmation = params.attached === "1" || params.added === "1" || typeof params.detached === "string";
   const [names, aiState, origin, retried, detached, lastCommand] = await Promise.all([
     teamMemberNames(db, [details.addedBy]),
     aiIndexStateOfFile(db, ai, fileId),
@@ -103,6 +108,8 @@ export async function loadFileDetails(
   const stillAttached =
     detached !== undefined && details.attachedTo.some((target) => targetValue(target) === targetValue(detached.target));
   const detachedByViewer = lastCommand !== undefined && fileDetachedIn(lastCommand, fileId);
+  // Never from the address alone: the viewer's own latest command must be this file's adding (G3).
+  const addedByViewer = params.added === "1" && lastCommand !== undefined && fileAddedIn(lastCommand, fileId);
   return {
     id: details.id,
     title: details.title,
@@ -111,11 +118,13 @@ export async function loadFileDetails(
     size: fileSizeText(details.size),
     addedBy: names.get(details.addedBy) ?? teamMessages.names.unknownTeamMember,
     addedOn: formatCalendarDate(calendarDate(details.addedAt)),
+    originalFileName: details.originalFileName,
     attachedTo: details.attachedTo,
     ai: aiState,
     retryOffered: viewer.role === "technician" && aiState?.state === "failed",
     attachHref: attachToFileAddress(details.id, origin),
     editHref: changeFileDetailsAddress(details.id, origin),
+    addedConfirmation: addedByViewer ? teamMessages.fileDetails.added(details.title) : undefined,
     savedConfirmation: params.saved === "1" ? teamMessages.fileDetails.saved(details.title) : undefined,
     detachOffered: mayDetachFiles(viewer),
     // A resulting-state confirmation (G3, G33): the counts are true whichever command wrote them.

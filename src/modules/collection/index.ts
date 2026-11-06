@@ -69,7 +69,9 @@ export type { CreateMachineModelInput, MachineCategory, MachineModel, Technology
 export { groupMachines, type MachineGroup } from "./machine-groups";
 export {
   attachmentChoice,
+  attachmentChoiceForNewFile,
   type AttachmentChoice,
+  type AttachmentChoiceGroups,
   type AttachmentChoiceMachine,
   type AttachmentChoiceMachineModel,
 } from "./attachment-choice";

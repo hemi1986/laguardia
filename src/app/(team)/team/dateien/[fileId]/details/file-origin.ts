@@ -56,7 +56,15 @@ export function fileDetailsAddress(
     detached,
     detachFailed,
     saved = false,
-  }: { retried?: boolean; attached?: boolean; detached?: string; detachFailed?: string; saved?: boolean } = {},
+    added = false,
+  }: {
+    retried?: boolean;
+    attached?: boolean;
+    detached?: string;
+    detachFailed?: string;
+    saved?: boolean;
+    added?: boolean;
+  } = {},
 ): string {
   const search = new URLSearchParams();
   const value = originValue(origin);
@@ -66,6 +74,7 @@ export function fileDetailsAddress(
   if (detached) search.set("detached", detached);
   if (detachFailed) search.set("detachFailed", detachFailed);
   if (saved) search.set("saved", "1");
+  if (added) search.set("added", "1");
   return `/team/dateien/${fileId}/details${search.size > 0 ? `?${search}` : ""}`;
 }
 
