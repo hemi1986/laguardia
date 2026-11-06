@@ -196,7 +196,6 @@ describe("attach and detach and the AI (ST-115)", () => {
       embeddingModel: geminiEmbedding.id,
       at: clock,
     });
-    const costBefore = (await aiIndexEntryOf(db, manual))!.cost;
     const indexedBefore = await aiIndexEntryOf(db, manual);
     const requestsBefore = seam.requests.length;
     const steps = { starts: 0 };
@@ -225,7 +224,6 @@ describe("attach and detach and the AI (ST-115)", () => {
     expect(steps.starts).toBe(0);
     expect(seam.requests.length).toBe(requestsBefore);
     expect(await aiIndexEntryOf(db, manual)).toEqual(indexedBefore);
-    expect((await aiIndexEntryOf(db, manual))!.cost).toBe(costBefore);
 
     // The reference shows the file's current title.
     const shown = await defectAiAssessments(db, {

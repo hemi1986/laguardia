@@ -270,4 +270,24 @@ describe("correcting a file's title and file category (ST-116)", () => {
     expect(await loadChangeFileDetails(db, randomUUID(), { params: {}, viewer: viewerOf(anna) })).toBeUndefined();
     expect(await loadChangeFileDetails(db, "../../etc", { params: {}, viewer: viewerOf(anna) })).toBeUndefined();
   });
+
+  it("ST-116: Someone not logged in cannot correct a file", async () => {
+    const manual = await aFile("MM Operations Manual", "manual");
+    const { file } = await form(manual);
+
+    // The form sent without a team member: the command layer refuses the visitor, and nothing is written.
+    const landed: unknown[] = [];
+    const run = formRunner({ currentPerson: async () => ({ kind: "visitor" }), db, clock, newId: randomUUID })(
+      changeFileDetailsCommand,
+      changeFileDetailsForm(manual, async (result) => void landed.push(result)),
+    );
+    const answer = await run(null, post({ title: "Hacked", fileCategory: "photo", version: String(file.version) }));
+
+    expect(answer).toMatchObject({ error: "not-authorized" });
+    expect(landed).toEqual([]);
+    expect(await fileDetails(db, manual)).toMatchObject({ title: "MM Operations Manual", fileCategory: "manual" });
+    expect(await changesOf(manual)).toEqual([]);
+    // Opening the address sends the person to the login: the page's first step is `requireTeamMember()`, shown with a
+    // real request by `e2e/change-file-details.spec.ts`.
+  });
 });

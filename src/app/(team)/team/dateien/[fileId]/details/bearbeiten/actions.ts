@@ -11,7 +11,7 @@ import { changeFileDetailsForm, type ChangeFileDetailsState } from "./change-fil
 /**
  * „Datei speichern“ on the form „Datei bearbeiten“ (CMD-ChangeFileDetails, ST-116) – through the Server Action runner. The
  * file and its origin are bound by the page. The team member lands on the file details with the confirmation (G3, G33),
- * also when nothing changed; every page showing the file is current. It makes no AI work – the title is not indexed.
+ * also when nothing changed; the machine record and the settings page are revalidated. It makes no AI work – the title is not indexed.
  */
 export async function changeFileDetailsAction(
   fileId: string,
