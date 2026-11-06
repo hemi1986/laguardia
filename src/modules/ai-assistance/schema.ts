@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  customType,
   doublePrecision,
   index,
   integer,
@@ -133,6 +134,17 @@ export const aiAssessment = pgTable(
   ],
 );
 
+/** PostgreSQL's `tsvector`: the stemmed words of a text, searched with `@@` (ST-118). Never read into the application. */
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+/**
+ * The words of a text for the file overview's content search (ST-118, ADR 0018): German and English stems together,
+ * punctuation and spaces separate words (`medieval_manual-v2` is three). The stored words of a passage;
+ * Collection's query makes the words of a file's own text the same way, in SQL of its own (the modules share no code).
+ */
+export const wordsOfText = (text: ReturnType<typeof sql>) =>
+  sql`(to_tsvector('german'::regconfig, regexp_replace(coalesce(${text}, ''), '[[:punct:][:space:]]+', ' ', 'g')) || to_tsvector('english'::regconfig, regexp_replace(coalesce(${text}, ''), '[[:punct:][:space:]]+', ' ', 'g')))`;
+
 /**
  * The index items of an AI index entry (ST-106, data model *Index item*): passages, PDF page images and images, each
  * with where it came from (file, page) and its embedding. They are never journaled and replaced as a whole with the
@@ -153,7 +165,14 @@ export const aiIndexItem = pgTable(
     page: integer("page"),
     /** The passage's text – what an AI assessment sends of a text hit; none for an image. */
     text: text("text"),
+    /** The passage's words (ST-118) – computed by the database from `text`, so the passages that existed before are searchable at once. */
+    words: tsvector("words")
+      .generatedAlwaysAs(wordsOfText(sql`"text"`))
+      .notNull(),
     embedding: vector("embedding", { dimensions: EMBEDDING_SIZE }).notNull(),
   },
-  (table) => [index("ai_index_item_file_idx").on(table.fileId)],
+  (table) => [
+    index("ai_index_item_file_idx").on(table.fileId),
+    index("ai_index_item_words_idx").using("gin", table.words),
+  ],
 );

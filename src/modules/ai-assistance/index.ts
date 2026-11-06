@@ -36,6 +36,7 @@ export { aiWorkDependencies } from "./ai-work-dependencies";
 export { aiAssessmentLeftUnfinished, aiAssessmentWork } from "./ai-assessment-work";
 export { fileIndexingLeftUnfinished, fileIndexingWork } from "./file-indexing-work";
 export { aiAssessmentsOfDefect } from "./ai-assessments";
+export { filesContainingWords, type FilesContainingWords } from "./files-containing-words";
 export { MAX_AI_ASSESSMENT_PHOTOS } from "./ai-assessment";
 export type {
   AiAssessmentReference,

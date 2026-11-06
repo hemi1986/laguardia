@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, describe, expect, it } from "vitest";
-import { aiAssessmentWork, aiIndexOverview } from "@/modules/ai-assistance";
+import { aiAssessmentWork, aiIndexOverview, filesContainingWords } from "@/modules/ai-assistance";
 import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { geminiEmbedding } from "@/modules/ai-assistance/ai-seam.test-support";
 import { machineRecord } from "@/modules/collection";
@@ -67,9 +67,7 @@ describe("migration 0023_machine_model_category_history", () => {
     const { rows } = await db.execute(sql`
       SELECT machine_category, technology, holds_from = '2026-02-01T10:00:00Z' AS from_creation FROM machine_model_category_change
       WHERE machine_model_id = ${fireball}`);
-    expect(rows).toEqual([
-      { machine_category: "pinball", technology: "solid-state", from_creation: true },
-    ]);
+    expect(rows).toEqual([{ machine_category: "pinball", technology: "solid-state", from_creation: true }]);
   });
 
   it("a machine model the journal knows no creation of still gets its first entry (ST-036 code review)", async () => {
@@ -296,7 +294,10 @@ describe("migrations 0043_file_attachments and 0044_file_owner_dropped", () => {
           sql`SELECT id, state, embedding_model, changed_at, failure_reason, pages_indexed, images_indexed, cost, version FROM ai_index_entry ORDER BY id`,
         )
       ).rows;
-    const items = async () => (await db.execute(sql`SELECT * FROM ai_index_item ORDER BY id`)).rows;
+    // Every column the items had then – the words of ST-118 (migration 0046) are new and do not change an item.
+    const items = async () =>
+      (await db.execute(sql`SELECT id, position, file_id, kind, page, text, embedding FROM ai_index_item ORDER BY id`))
+        .rows;
     const journal = async () => (await db.execute(sql`SELECT count(*)::int AS count FROM event_journal`)).rows;
     const [indexBefore, itemsBefore, journalBefore] = [await index(), await items(), await journal()];
 
@@ -309,15 +310,17 @@ describe("migrations 0043_file_attachments and 0044_file_owner_dropped", () => {
       ["MM Operations Manual", "Not indexed yet", "Unreadable scan", "Wiring notes"].sort(),
     );
     expect(await titles("LG-043")).toEqual(["MM Operations Manual", "Unreadable scan"]);
-    expect((await machineRecord(db, "LG-042"))!.files.find((file) => file.title === "MM Operations Manual")).toMatchObject(
-      { ofMachineModel: true },
-    );
+    expect(
+      (await machineRecord(db, "LG-042"))!.files.find((file) => file.title === "MM Operations Manual"),
+    ).toMatchObject({ ofMachineModel: true });
     // A retired machine keeps its file's attachment, a removed file keeps its attachment too (it counts for nothing).
     const attachments = await db.execute<{ title: string; machine_id: string | null; machine_model_id: string | null }>(
       sql`SELECT f.title, a.machine_id, a.machine_model_id FROM file_attachment a JOIN file f ON f.id = a.file_id ORDER BY a.position`,
     );
     expect(attachments.rows).toHaveLength(6);
-    expect(attachments.rows.find((row) => row.title === "Notes of a retired machine")).toMatchObject({ machine_id: lg007 });
+    expect(attachments.rows.find((row) => row.title === "Notes of a retired machine")).toMatchObject({
+      machine_id: lg007,
+    });
     expect(attachments.rows.find((row) => row.title === "Old manual")).toMatchObject({ machine_id: lg042 });
     expect(attachments.rows.find((row) => row.title === "MM Operations Manual")).toMatchObject({
       machine_id: null,
@@ -437,5 +440,38 @@ describe("migration 0045_ai_index_entry_owner_dropped", () => {
     await scenario.run({ kinds: [aiAssessmentWork] });
     const written = (await journalOf(db, { aggregateId: id })).find((each) => each.type === "EVT-AiAssessmentWritten");
     expect(written?.data.filesSearched).toEqual([manual]);
+  });
+});
+
+describe("migration 0046_file_content_words", () => {
+  const tom = { kind: "team-member", teamMemberId: randomUUID(), role: "technician" } as const;
+  const clock = fixedClock("2026-11-06T10:00:00Z");
+
+  it("a passage indexed before the search was built is searchable by its words as soon as the migration has run (ST-118)", async () => {
+    const db = await isolated.reset("0045_ai_index_entry_owner_dropped");
+    await db.execute(sql`
+      INSERT INTO team_member (id, name, email, username, role)
+      VALUES (${tom.teamMemberId}, 'Tom', 'tom@example.org', 'tom', 'technician')`);
+    const fileId = randomUUID();
+    await db.execute(sql`
+      INSERT INTO file (id, title, file_category, content, size, content_type, added_by, added_at, version)
+      VALUES (${fileId}, 'Backbox schematic', 'schematic', ${`files/${fileId}`}, 1000, 'application/pdf', ${tom.teamMemberId}, '2026-02-01T10:00:00Z', 0)`);
+    await db.execute(sql`
+      INSERT INTO ai_index_entry (id, state, embedding_model, changed_at, pages_indexed, images_indexed, cost, version)
+      VALUES (${fileId}, 'indexed', 'openai/text-embedding-3-small', '2026-02-02T10:00:00Z', 12, 12, 0.01, 0)`);
+    await db.execute(sql`
+      INSERT INTO ai_index_item (id, file_id, kind, page, text, embedding)
+      VALUES (${randomUUID()}, ${fileId}, 'passage', 12, 'Auf Seite 12 sitzen die Spulen.', array_fill(0.1, ARRAY[1536])::vector(1536))`);
+    const scenario = aiScenario({ db: () => db, clock, technician: tom });
+    const openRouter = scenario.openRouter();
+    const before = await aiIndexOverview(db, scenario.ai(openRouter));
+
+    await isolated.migrate();
+
+    // The words are there as soon as the migration has run: German and English forms, any embedding model, AI off.
+    expect((await filesContainingWords(db, ["spule"]))[0]?.has(fileId)).toBe(true);
+    expect((await filesContainingWords(db, ["seite", "zylinderkopf"]))[1]?.has(fileId)).toBe(false);
+    expect(await aiIndexOverview(db, scenario.ai(openRouter))).toEqual(before);
+    expect(openRouter.requests).toEqual([]);
   });
 });

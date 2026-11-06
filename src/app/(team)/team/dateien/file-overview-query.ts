@@ -1,5 +1,6 @@
 import { fileCategories, type FileCategory } from "@/modules/collection";
 import { targetOf } from "./[fileId]/details/file-attachments";
+import { MAX_SEARCH_LENGTH, searchWordsOf } from "./search-words";
 
 /** Where the file overview shows 25 files at a time (G40). */
 export const FILES_PER_PAGE = 25;
@@ -13,6 +14,8 @@ export type AiIndexFilter = (typeof aiIndexFilters)[number];
  * `machine:<id>` or `machineModel:<id>`, the one wording of an attachment target in an address (`targetValue`).
  */
 export type FileOverviewQuery = {
+  /** What was typed into „Suche“ (ST-118) – only a search that has words; one of punctuation only is no search. */
+  search?: string;
   fileCategory?: FileCategory;
   attachedTo?: string;
   aiIndex?: AiIndexFilter;
@@ -21,12 +24,17 @@ export type FileOverviewQuery = {
 };
 
 /** The parameters the overview's address knows – the closed list the file details' origin is checked against (G17). */
-const KNOWN = ["fileCategory", "attachedTo", "aiIndex", "page"] as const;
+const KNOWN = ["search", "fileCategory", "attachedTo", "aiIndex", "page"] as const;
 
 type Params = Record<string, string | string[] | undefined>;
 
 function single(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function searchOf(value: string | undefined): string | undefined {
+  const search = value?.trim().slice(0, MAX_SEARCH_LENGTH).trim();
+  return search && searchWordsOf(search).length > 0 ? search : undefined;
 }
 
 function fileCategoryOf(value: string | undefined): FileCategory | undefined {
@@ -54,6 +62,7 @@ function pageOf(value: string | undefined): number | undefined {
  */
 export function fileOverviewQueryOf(params: Params): FileOverviewQuery {
   return compact({
+    search: searchOf(single(params.search)),
     fileCategory: fileCategoryOf(single(params.fileCategory)),
     attachedTo: attachedToOf(single(params.attachedTo)),
     aiIndex: aiIndexOf(single(params.aiIndex)),
@@ -82,6 +91,7 @@ function compact(query: FileOverviewQuery): FileOverviewQuery {
 /** The query as an address holds it – always the same order, so the same query is the same string. */
 export function queryString(query: FileOverviewQuery): string {
   const search = new URLSearchParams();
+  if (query.search) search.set("search", query.search);
   if (query.fileCategory) search.set("fileCategory", query.fileCategory);
   if (query.attachedTo) search.set("attachedTo", query.attachedTo);
   if (query.aiIndex) search.set("aiIndex", query.aiIndex);

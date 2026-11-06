@@ -3,6 +3,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { FilterForm } from "@/components/ui/filter-form";
 import { Confirmation } from "@/components/ui/message";
+import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { teamMessages } from "@/platform/messages";
 import { fileOverviewAddress } from "./file-overview-query";
@@ -28,10 +29,11 @@ export function FileOverviewView({ overview }: { overview: FileOverviewData }) {
         <>
           <AddFileButton />
           {!overview.nothingFound && <p>{overview.count}</p>}
+          <FileSearch overview={overview} />
           <Filters overview={overview} />
           {overview.nothingFound ? (
             <>
-              <p>{texts.nothingFound}</p>
+              <p>{overview.query.search ? texts.nothingFoundSearch : texts.nothingFound}</p>
               <BackLink href={fileOverviewAddress()}>{texts.showAll}</BackLink>
             </>
           ) : (
@@ -75,11 +77,54 @@ function AddFileButton() {
   );
 }
 
+/**
+ * The search (ST-118, G4, G32): the field „Suche“ with „Suchen“ beside it and what is searched below it, as everywhere a
+ * list is searched. It keeps the filters in hidden fields and carries no page – a new search starts at page 1.
+ */
+function FileSearch({ overview }: { overview: FileOverviewData }) {
+  const { query } = overview;
+  return (
+    <form
+      action="/team/dateien"
+      method="get"
+      role="search"
+      aria-label={texts.searchForm}
+      className="flex flex-col gap-2"
+    >
+      <label htmlFor="search" className="text-sm font-medium">
+        {texts.search}
+      </label>
+      <div className="flex gap-2">
+        <Input id="search" name="search" type="search" defaultValue={query.search} aria-describedby="search-hint" />
+        <KeptFields query={query} only={["fileCategory", "attachedTo", "aiIndex"]} />
+        <button type="submit" className={buttonVariants({ variant: "outline" })}>
+          {texts.searchSubmit}
+        </button>
+      </div>
+      <p id="search-hint" className="text-muted-foreground text-sm">
+        {texts.searchHint}
+      </p>
+    </form>
+  );
+}
+
+/** What one form keeps of the other (G32): the values the address holds, as hidden fields – none for what is not set. */
+function KeptFields({
+  query,
+  only,
+}: {
+  query: FileOverviewData["query"];
+  only: ("search" | "fileCategory" | "attachedTo" | "aiIndex")[];
+}) {
+  return only.map((name) => query[name] && <input key={name} type="hidden" name={name} value={query[name]} />);
+}
+
 /** The filters (G32, G20) – one form sent with „Filtern“; sending it starts at page 1, so it carries no page. */
 function Filters({ overview }: { overview: FileOverviewData }) {
   const { query } = overview;
   return (
     <FilterForm action="/team/dateien" label={texts.filter} apply={teamMessages.filters.apply}>
+      <KeptFields query={query} only={["search"]} />
       <Choice name="fileCategory" label={texts.fileCategory} value={query.fileCategory} all={texts.allFileCategories}>
         <Options options={overview.fileCategories} />
       </Choice>

@@ -1,0 +1,2 @@
+ALTER TABLE "ai_index_item" ADD COLUMN "words" "tsvector" GENERATED ALWAYS AS ((to_tsvector('german'::regconfig, regexp_replace(coalesce("text", ''), '[[:punct:][:space:]]+', ' ', 'g')) || to_tsvector('english'::regconfig, regexp_replace(coalesce("text", ''), '[[:punct:][:space:]]+', ' ', 'g')))) STORED NOT NULL;--> statement-breakpoint
+CREATE INDEX "ai_index_item_words_idx" ON "ai_index_item" USING gin ("words");
