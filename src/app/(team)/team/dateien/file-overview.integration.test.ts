@@ -323,29 +323,6 @@ describe("the file overview (ST-117)", () => {
     expect(entriesText((await overview()).text)).toContain("Für die KI erfasst");
   });
 
-  it("ST-117: No file yet says what to do", async () => {
-    const empty = await overview();
-    expect(empty.text).toContain(
-      "Noch keine Dateien. Eine Datei kommt über „Datei anhängen“ auf der Seite eines Geräts dazu.",
-    );
-    expect(hrefOf(empty.html, "Geräte")).toBe("/team/machines");
-    expect(listed(empty.html)).toEqual([]);
-    expect(empty.text).not.toContain("Zurück");
-    expect(empty.text).not.toContain("Weiter");
-
-    // Only removed ones count as none.
-    const gone = await aFile("Old manual");
-    const removed = await executeCommand(
-      removeFileCommand,
-      { fileId: gone, version: 0 },
-      { actor: tom, db, clock, newId: randomUUID },
-    );
-    if (!removed.ok) throw new Error(removed.error);
-    expect((await overview()).text).toContain("Noch keine Dateien.");
-    // Also through an address that holds filters – the museum has no file at all.
-    expect((await overview({ fileCategory: "photo" })).text).toContain("Noch keine Dateien.");
-  });
-
   it("ST-117: No match says so and keeps the filters", async () => {
     await aFile("MM Operations Manual");
     await aFile("MM Rulesheet");

@@ -22,12 +22,11 @@ export function FileOverviewView({ overview }: { overview: FileOverviewData }) {
       {overview.empty ? (
         <>
           <p>{texts.empty}</p>
-          <Link href="/team/machines" className={buttonVariants({ className: "self-start" })}>
-            {texts.toMachines}
-          </Link>
+          <AddFileButton />
         </>
       ) : (
         <>
+          <AddFileButton />
           {!overview.nothingFound && <p>{overview.count}</p>}
           <Filters overview={overview} />
           {overview.nothingFound ? (
@@ -64,6 +63,15 @@ export function FileOverviewView({ overview }: { overview: FileOverviewData }) {
         </>
       )}
     </>
+  );
+}
+
+/** „Datei hinzufügen“ (ST-119, G2): directly under the heading, and in the empty overview below its sentence (G7). */
+function AddFileButton() {
+  return (
+    <Link href="/team/dateien/hinzufuegen" className={buttonVariants({ className: "self-start" })}>
+      {texts.add}
+    </Link>
   );
 }
 

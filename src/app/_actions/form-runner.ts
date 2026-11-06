@@ -120,10 +120,15 @@ export type UploadFormDefinition<Input, Result, Field extends string, Refusal ex
     field: Field;
     /** Fields emptied together with it when the content is gone – those that only describe the chosen file. */
     clearedWith?: readonly Field[];
+    /**
+     * A field the browser posts once per ticked checkbox (ST-119: the machines and machine models a file is attached
+     * to): the input gets them as posted, and a rejection keeps them as `chosen`.
+     */
+    choice?: string;
   };
   /** The command's rejections that need nothing but the fields – asked before the content is handed over. */
   refusal: (fields: FormFields<Field>) => Refusal | undefined;
-  input: (fields: FormFields<Field>, content: UploadedContent) => Input;
+  input: (fields: FormFields<Field>, content: UploadedContent, chosen: readonly string[]) => Input;
 };
 
 /**
@@ -285,10 +290,12 @@ export function formRunner(dependencies: RunnerDependencies) {
 }
 
 /** The state of a form with uploaded content: also its own rejections, a missing file, and content that is gone. */
-type UploadFormState<Error extends string, Field extends string> = FormState<
-  Error | UploadedContentError | "file-required",
-  Field
->;
+type UploadFormState<Error extends string, Field extends string> =
+  | (NonNullable<FormState<Error | UploadedContentError | "file-required", Field>> & {
+      /** What was ticked, when the form has a `choice` (ST-119) – a ticked checkbox is no field the state can echo. */
+      chosen?: readonly string[];
+    })
+  | null;
 
 function withoutContent<Input, Result, Error extends string, Field extends string>(
   { currentPerson, storage, ...dependencies }: RunnerDependencies,
@@ -385,9 +392,15 @@ function uploadStep<Input, Result, Error extends string, Refusal extends string,
   return async (_previous, formData) => {
     const fields = fieldsOf(formData, definition.fields);
     const name = fields[definition.upload.field];
+    const { choice } = definition.upload;
+    // As posted, in the order of the form: a forged post may name one twice, which the command's rules answer.
+    const chosen = choice
+      ? formData.getAll(choice).filter((item): item is string => typeof item === "string")
+      : undefined;
+    const kept = chosen && { chosen };
     const refusal = definition.refusal(fields);
-    if (refusal) return { error: refusal, values: valuesOf(fields, definition.secret) };
-    if (!name) return { error: "file-required", values: valuesOf(fields, definition.secret) };
+    if (refusal) return { error: refusal, values: valuesOf(fields, definition.secret), ...kept };
+    if (!name) return { error: "file-required", values: valuesOf(fields, definition.secret), ...kept };
     const actor = await currentPerson();
     const outcome = await withUploadedContent(
       {
@@ -397,14 +410,14 @@ function uploadStep<Input, Result, Error extends string, Refusal extends string,
         newId: dependencies.newId ?? randomUUID,
       },
       { name, issuedTo: "teamMemberId" in actor ? actor.teamMemberId : "" },
-      (content) => executeCommand(command, definition.input(fields, content), { ...dependencies, actor }),
+      (content) => executeCommand(command, definition.input(fields, content, chosen ?? []), { ...dependencies, actor }),
     );
     if (!outcome.ok) {
       const gone: readonly string[] = [definition.upload.field, ...(definition.upload.clearedWith ?? [])];
       const values = Object.fromEntries(
         Object.entries(valuesOf(fields, definition.secret)).map(([field, value]) => [field, gone.includes(field) ? "" : value]),
       ) as { readonly [F in Field]: string };
-      return { error: outcome.error, values };
+      return { error: outcome.error, values, ...kept };
     }
     await deleteWhatItRemoved(storage, command, outcome.result);
     await definition.onSuccess(outcome.result);

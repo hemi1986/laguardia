@@ -35,6 +35,7 @@ export function FileDetailsView({
   return (
     <Page title={file.title}>
       {file.retried && <Confirmation>{aiIndex.retrying(file.retried)}</Confirmation>}
+      {file.addedConfirmation && <Confirmation>{file.addedConfirmation}</Confirmation>}
       {file.attachedConfirmation && <Confirmation>{file.attachedConfirmation}</Confirmation>}
       {file.detachedConfirmation && <Confirmation>{file.detachedConfirmation}</Confirmation>}
       {file.savedConfirmation && <Confirmation>{file.savedConfirmation}</Confirmation>}
