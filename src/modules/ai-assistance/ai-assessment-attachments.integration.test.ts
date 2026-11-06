@@ -221,6 +221,12 @@ describe("attach and detach and the AI (ST-115)", () => {
     );
     if (!changed.ok) throw new Error(changed.error);
 
+    // The correction indexes nothing again: no run, no request to OpenRouter, the index entry and its cost as they were.
+    expect(steps.starts).toBe(0);
+    expect(seam.requests.length).toBe(requestsBefore);
+    expect(await aiIndexEntryOf(db, manual)).toEqual(indexedBefore);
+    expect((await aiIndexEntryOf(db, manual))!.cost).toBe(costBefore);
+
     // The reference shows the file's current title.
     const shown = await defectAiAssessments(db, {
       defectId: flipper,
@@ -231,10 +237,5 @@ describe("attach and detach and the AI (ST-115)", () => {
     expect(written?.references).toEqual([
       expect.objectContaining({ fileId: manual, title: "MM Manual", removed: false }),
     ]);
-    // The file is not indexed again: no run, no request to OpenRouter, the index entry and its cost as they were.
-    expect(steps.starts).toBe(0);
-    expect(seam.requests.length).toBe(requestsBefore);
-    expect(await aiIndexEntryOf(db, manual)).toEqual(indexedBefore);
-    expect((await aiIndexEntryOf(db, manual))!.cost).toBe(costBefore);
   });
 });
