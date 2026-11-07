@@ -69,7 +69,7 @@ export {
   type OpenAiModelProposals,
 } from "./open-ai-model-proposals";
 export { aiModelProposalDiscardedIn, discardAiModelProposalCommand } from "./discard-ai-model-proposal-command";
-export type { DiscardAiModelProposalError, DiscardAiModelProposalInput } from "./discard-ai-model-proposal";
+export type { DiscardAiModelProposalInput } from "./discard-ai-model-proposal";
 export { acceptAiModelProposalCommand } from "./accept-ai-model-proposal-command";
 export type {
   AcceptAiModelProposalError,

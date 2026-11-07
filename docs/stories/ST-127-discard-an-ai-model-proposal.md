@@ -12,7 +12,7 @@ risk: low
 events: [EVT-AiModelProposalDiscarded]
 depends_on: [ST-124]
 labels: [feature:ai-model-proposal]
-status: in-progress
+status: done
 ---
 
 ## Story

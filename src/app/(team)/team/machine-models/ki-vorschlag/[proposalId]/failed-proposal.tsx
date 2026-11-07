@@ -22,7 +22,7 @@ export function FailedAiModelProposal({ proposal }: { proposal: AiModelProposalP
       <Link href={tryAgainAddress(proposal.id)} className={buttonVariants({ className: "self-start" })}>
         {texts.tryAgain}
       </Link>
-      {proposal.state === "failed" && <DiscardAiModelProposalForm proposal={proposal} />}
+      <DiscardAiModelProposalForm proposal={proposal} />
     </>
   );
 }

@@ -126,10 +126,16 @@ describe("discarding an AI model proposal (ST-127)", () => {
     expect(aiModelProposalDiscardedIn((await lastCommandBy(db, { aggregateId: id }, tom.teamMemberId))!, id)).toBe(
       true,
     );
-    // A discarded proposal offers nothing to discard any more (G11).
-    const html = renderToStaticMarkup(createElement(FailedAiModelProposal, { proposal: await pageOf(id) }));
-    expect(html).not.toContain(texts.discard);
-    expect(texts.discarded).toBe("KI-Vorschlag verworfen.");
+  });
+
+  it("ST-127: A proposal still being written is not discarded", async () => {
+    const id = await scenario.requestAiModelProposal("Flipper High Speed Williams");
+    const form = new FormData();
+    form.append("aiModelProposalId", id);
+    form.append("version", "0");
+
+    expect((await discarding()(null, form))?.error).toBe("ai-model-proposal-not-discardable");
+    expect((await pageOf(id)).state).toBe("requested");
   });
 
   it("ST-127: A failed AI model proposal is discarded", async () => {

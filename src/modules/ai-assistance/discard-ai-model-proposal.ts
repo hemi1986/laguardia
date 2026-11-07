@@ -26,8 +26,8 @@ export type AiModelProposalDiscarded = {
 
 export type DiscardAiModelProposalError = "ai-model-proposal-already-accepted" | "ai-model-proposal-not-discardable";
 
-/** Whether a proposal in this state can be discarded – the page offers „Verwerfen“ by the same rule (G11). */
-export function discardable(state: AiModelProposalState["state"]): boolean {
+/** Whether a proposal in this state can be discarded – only a written or failed one (rule). */
+function discardable(state: AiModelProposalState["state"]): boolean {
   return state === "written" || state === "failed";
 }
 
