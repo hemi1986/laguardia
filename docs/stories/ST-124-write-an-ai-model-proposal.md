@@ -12,7 +12,7 @@ risk: high
 events: [EVT-AiModelProposalWritten, EVT-AiModelProposalFailed]
 depends_on: [ST-123, ST-122]
 labels: [feature:ai-model-proposal]
-status: ready-for-human-review
+status: ready
 ---
 
 ## Story

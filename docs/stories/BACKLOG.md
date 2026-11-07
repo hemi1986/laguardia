@@ -4,7 +4,7 @@
 
 **Progress: 87 of 95 domain stories done** · scenarios 813 of 841
 
-**127 stories** · In Progress: 0 · Ready: 7 · Ready for Human Review: 1 · In Review: 0 · Draft: 0 · Done: 108 · Superseded: 11
+**127 stories** · In Progress: 0 · Ready: 8 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 108 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -13,18 +13,13 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
 | [ST-123](ST-123-request-an-ai-model-proposal.md) | Request an AI model proposal from a description | domain | AI assistance | must | M | medium | ST-122, ST-006, ST-104 |
+| [ST-124](ST-124-write-an-ai-model-proposal.md) | The AI completes the machine model and finds documents on the web | domain | AI assistance | must | L | high | ST-123, ST-122 |
 | [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 | [ST-126](ST-126-a-failed-ai-model-proposal-says-why.md) | An AI model proposal that fails or breaks off says why | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-127](ST-127-discard-an-ai-model-proposal.md) | Discard an AI model proposal | domain | AI assistance | should | S | low | ST-124 |
 | [ST-130](ST-130-retry-a-proposed-document.md) | Retry a proposed document that failed to load | domain | AI assistance | should | S | low | ST-129 |
-
-## Ready for Human Review
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-124](ST-124-write-an-ai-model-proposal.md) | The AI completes the machine model and finds documents on the web | domain | AI assistance | must | L | high | ST-123, ST-122 |
 
 ## Done
 
