@@ -12,7 +12,7 @@ risk: high
 events: [EVT-ProposedDocumentLoaded, EVT-ProposedDocumentFailed]
 depends_on: [ST-128]
 labels: [feature:ai-model-proposal]
-status: ready
+status: in-progress
 ---
 
 ## Story
