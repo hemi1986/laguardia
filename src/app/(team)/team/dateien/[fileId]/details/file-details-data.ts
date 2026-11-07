@@ -18,7 +18,8 @@ import {
   type FileMediaType,
 } from "@/modules/collection";
 import { teamMemberNames } from "@/modules/team";
-import { isId, lastCommandBy, type Database } from "@/platform/command";
+import { isId, type Database } from "@/platform/command";
+import { viewersCommandOn } from "../../../confirmation";
 import { teamMessages } from "@/platform/messages";
 import { calendarDate, formatCalendarDate } from "@/platform/time";
 import { fileSizeText } from "./file-size";
@@ -101,7 +102,7 @@ export async function loadFileDetails(
     originOf(db, params.from, viewer),
     params.retried === "1" ? fileIndexingRetriedBy(db, fileId, viewer.id) : undefined,
     detachedTargetOf(db, params.detached),
-    wantsConfirmation ? lastCommandBy(db, { aggregateId: fileId }, viewer.id) : undefined,
+    wantsConfirmation ? viewersCommandOn(db, viewer.id, fileId) : undefined,
   ]);
   const machineCount = details.attachedTo.filter((target) => target.kind === "machine").length;
   const machineModelCount = details.attachedTo.filter((target) => target.kind === "machine-model").length;
