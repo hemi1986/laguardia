@@ -4,15 +4,20 @@
 
 **Progress: 90 of 95 domain stories done** · scenarios 824 of 841
 
-**127 stories** · In Progress: 0 · Ready: 5 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 111 · Superseded: 11
+**127 stories** · In Progress: 1 · Ready: 4 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 111 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 | [ST-126](ST-126-a-failed-ai-model-proposal-says-why.md) | An AI model proposal that fails or breaks off says why | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-127](ST-127-discard-an-ai-model-proposal.md) | Discard an AI model proposal | domain | AI assistance | should | S | low | ST-124 |
