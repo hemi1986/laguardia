@@ -161,6 +161,8 @@ export const aiAssistanceTexts = {
     documentsToLoad: "Aus dem Netz",
     loading: "Wird geladen …",
     loaded: "Geladen",
+    /** Trying a failed link again (ST-130). */
+    retry: "Nochmal versuchen",
     /** Why a chosen link could not be loaded (ST-129) – one word for each reason of `DocumentFailureReason`. */
     documentFailures: {
       "not-reachable": "nicht erreichbar",
@@ -245,6 +247,7 @@ export const aiAssistanceErrors = {
   "ai-model-proposal-not-discardable": "Dieser KI-Vorschlag lässt sich nicht verwerfen.",
   "ai-model-proposal-already-accepted": "Dieser KI-Vorschlag wurde schon gespeichert.",
   "ai-model-proposal-document-unknown": "Dieses Dokument gehört nicht zum KI-Vorschlag.",
+  "ai-model-proposal-document-not-failed": "Dieses Dokument ist nicht fehlgeschlagen – es wird nicht erneut geladen.",
   "ai-model-proposal-document-removed": "Eine Datei wurde inzwischen entfernt. Es wurde nichts gespeichert.",
   "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
   "file-indexing-not-failed":

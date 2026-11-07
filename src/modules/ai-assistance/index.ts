@@ -70,6 +70,8 @@ export {
 } from "./open-ai-model-proposals";
 export { aiModelProposalDiscardedIn, discardAiModelProposalCommand } from "./discard-ai-model-proposal-command";
 export type { DiscardAiModelProposalInput } from "./discard-ai-model-proposal";
+export { retryProposedDocumentCommand } from "./retry-proposed-document-command";
+export type { RetryProposedDocumentInput } from "./retry-proposed-document";
 export { acceptAiModelProposalCommand } from "./accept-ai-model-proposal-command";
 export type {
   AcceptAiModelProposalError,

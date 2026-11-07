@@ -11,6 +11,7 @@ describe("which committed events leave AI work to do", () => {
     ["an AI model proposal requested (ST-124)", { type: "EVT-AiModelProposalRequested", data: {} }, true],
     ["an AI model proposal written", { type: "EVT-AiModelProposalWritten", data: {} }, false],
     ["a file tried again", { type: "EVT-FileIndexingRetried", data: {} }, true],
+    ["a failed link tried again (ST-130)", { type: "EVT-ProposedDocumentLoadingRetried", data: {} }, true],
     ["a key saved", settingsChanged("key-saved"), true],
     ["a chat model changed", settingsChanged("chat-model"), true],
     ["an embedding model changed", settingsChanged("embedding-model"), true],

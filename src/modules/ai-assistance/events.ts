@@ -4,6 +4,7 @@ import type { AiModelProposalFailed, AiModelProposalRequested, AiModelProposalWr
 import type { AiModelProposalAccepted } from "./accept-ai-model-proposal";
 import type { AiModelProposalDiscarded } from "./discard-ai-model-proposal";
 import type { ProposedDocumentFailed, ProposedDocumentLoaded } from "./load-proposed-document";
+import type { ProposedDocumentLoadingRetried } from "./retry-proposed-document";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
@@ -160,6 +161,15 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { documentIndex: event.documentIndex, reason: event.reason },
+    }),
+  },
+  // A failed link tried again (ST-130): its place among the documents – no title, no link.
+  "EVT-ProposedDocumentLoadingRetried": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: ProposedDocumentLoadingRetried) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { documentIndex: event.documentIndex },
     }),
   },
 });

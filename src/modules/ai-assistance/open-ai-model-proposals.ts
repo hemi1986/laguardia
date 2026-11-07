@@ -60,7 +60,7 @@ export type AiModelProposalPage = {
   id: string;
   description: string;
   state: AiModelProposalStateName;
-  /** Written or failed – the version „Speichern“ and „Verwerfen“ post. */
+  /** Written, failed or accepted – the version „Speichern“, „Verwerfen“ and „Nochmal versuchen“ (ST-130) post. */
   version?: number;
   /** Written only, with the sources and documents – a field the AI could not fill (or filled with something not valid) is absent. */
   fields?: {
@@ -94,6 +94,7 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
       : undefined;
     return {
       ...base,
+      version,
       documents: chosenDocuments(proposal),
       ...(machineModelId &&
         machineModelTitle !== undefined && { machineModel: { id: machineModelId, title: machineModelTitle } }),
