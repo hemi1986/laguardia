@@ -418,6 +418,15 @@ the origin (`?from=`) and spell the confirmation parameters, and `wayBack` and `
 origins (`placeOf`) – no other code writes `from=`. The
 „Weiter“ of the pager is the one exception to the ban on vague button texts of ST-091 (`messages.test.ts`).
 
+**What a file is attached to is one module**, `src/modules/collection/attached-to.ts` (architecture review 2026-11-06): one SQL
+condition on the outer `file` row for each question – attached to a machine or its machine model (the machine record, the
+overview filter, the files an AI assessment is told), attached to a machine model's own or any of its machines' (retired
+ones included), attached to nothing – plus the part of the machine's files every machine of the model shows. The machine's model
+is read from the machine in the condition, so no reader passes a model along; a reader adds the condition to its own `where` and
+leaves removed files out itself. No reader spells these rules again (naming what a file is attached to – the details, the choice, the overview's own text – still reads `file_attachment` itself). The file store and the reads are
+split by consumer: `files.ts` (store and the commands' facts), `files-of-machine.ts` (machine record, file links, removal
+confirmation), `files-for-ai.ts` (indexing and AI references); `index.ts` stays the interface.
+
 **Searching the file overview** (ST-118, context map *The file overview: searching*): the page composes two answers by file ID
 (`dateien/file-overview-data.ts`). The words are the page's (`searchWordsOf`, `search-words.ts`: punctuation separates, lower case,
 at most 8 words). **Collection** – `fileOverview(db, filter, words)` – returns each file with `ownRanks`, per word the rank of its

@@ -362,7 +362,7 @@ describe("what an AI assessment does", () => {
     const model = await machineModelOfMachineForAi(db, machineId);
     if (!model) throw new Error("no machine model");
     const query = Array.from({ length: geminiEmbedding.embeddingSize ?? 1536 }, () => 0.1);
-    const files = await filesOfMachineAndModelForAi(db, { machineId, machineModelId: model.id });
+    const files = await filesOfMachineAndModelForAi(db, machineId);
     const scope = { fileIds: files.map((file) => file.id), embeddingModel: EMBEDDING };
     expect(await searchAiIndex(db, scope, query, "text")).toHaveLength(SEARCH_TEXT_HITS);
     expect(await searchAiIndex(db, scope, query, "image")).toHaveLength(SEARCH_IMAGE_HITS);

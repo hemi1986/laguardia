@@ -17,21 +17,17 @@ export type {
 } from "./add-file";
 export type { AttachFileError, AttachFileInput } from "./attach-file";
 export type { DetachFileError, DetachFileInput } from "./detach-file";
+export { machineFile, fileRemovedBy, fileToOpen, type FileOfMachine, type MachineFile } from "./files-of-machine";
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
-  fileRemovedBy,
   filesForAiReferences,
   filesForIndexing,
   filesOfMachineAndModelForAi,
-  fileToOpen,
-  machineFile,
   type FileForAiReference,
   type FileForIndexing,
   type FileOfAiAssessmentMachine,
-  type FileOfMachine,
-  type MachineFile,
-} from "./files";
+} from "./files-for-ai";
 export {
   fileDetails,
   fileForChange,

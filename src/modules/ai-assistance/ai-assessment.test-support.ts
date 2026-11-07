@@ -60,7 +60,7 @@ async function filesOfTheDefect(db: Database, aiAssessmentId: string): Promise<s
   const defect = assessment && (await defectMachineForAiAssessment(db, assessment.defectId));
   const model = defect && (await machineModelOfMachineForAi(db, defect.machineId));
   if (!defect || !model) return [];
-  const files = await filesOfMachineAndModelForAi(db, { machineId: defect.machineId, machineModelId: model.id });
+  const files = await filesOfMachineAndModelForAi(db, defect.machineId);
   return files.map((file) => file.id);
 }
 
