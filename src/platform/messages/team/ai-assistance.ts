@@ -105,8 +105,21 @@ export const aiAssistanceTexts = {
     unknown: "Diesen KI-Vorschlag gibt es nicht.",
     backToModels: "Zurück zu den Modellen",
     running: "KI arbeitet …",
-    runningHint: "Die Seite aktualisiert sich selbst. Du kannst sie verlassen – den Vorschlag findest du unter „KI-Vorschläge“.",
+    runningHint:
+      "Die Seite aktualisiert sich selbst. Du kannst sie verlassen – den Vorschlag findest du unter „KI-Vorschläge“.",
     states: { requested: "KI arbeitet …", written: "Fertig", failed: "Fehlgeschlagen" },
+    /** The written proposal's page (ST-124, RM-AiModelProposal): a field the AI could not fill says so beside it. */
+    notFound: "Nicht gefunden",
+    sources: "Quellen",
+    noSources: "Keine Quellen genannt.",
+    loadFromTheWeb: "Aus dem Netz laden",
+    noDocuments: "Keine Dokumente gefunden.",
+    documentTitle: "Titel des Dokuments",
+    fileCategory: "Dateikategorie",
+    documentLink: "Quelle",
+    documentTick: (title: string) => `„${title}“ laden`,
+    documentFileCategory: (title: string) => `Dateikategorie von „${title}“`,
+    fileCategories: { manual: "Handbuch", schematic: "Schaltplan", other: "Sonstiges" },
   },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
@@ -178,8 +191,7 @@ export const aiAssistanceErrors = {
   "ai-assessment-too-many-photos": "Bitte höchstens 5 Fotos mitschicken.",
   "ai-model-proposal-ai-off": "Die KI ist ausgeschaltet.",
   "ai-model-proposal-description-required": "Bitte beschreibe das Gerät.",
-  "ai-model-proposal-being-written":
-    "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
+  "ai-model-proposal-being-written": "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
   "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
   "file-indexing-not-failed":
     "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",

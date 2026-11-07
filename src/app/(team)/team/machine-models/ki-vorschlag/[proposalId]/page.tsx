@@ -4,13 +4,13 @@ import { aiModelProposalPage } from "@/modules/ai-assistance";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../team-session";
+import { WrittenAiModelProposal } from "./written-proposal";
 
 const { aiModelProposals: texts } = teamMessages;
 
 /**
- * An AI model proposal's own page (ST-123: while it is being written, G35; ST-124 and ST-126 add the written and the
- * failed one). The technician lands here at once after sending; the page refreshes itself – a meta refresh needs no
- * JavaScript – and can be left, the proposal is found again under „KI-Vorschläge“.
+ * An AI model proposal's own page (ST-123: while it is being written, G35; ST-124 adds the written one, ST-126 the failed one).
+ * The technician lands here at once after sending; the page refreshes itself – a meta refresh needs no JavaScript – and can be left, the proposal is found again under „KI-Vorschläge“.
  */
 export default async function AiModelProposalPage({
   params,
@@ -27,6 +27,7 @@ export default async function AiModelProposalPage({
         <div className="flex flex-col gap-3 [overflow-wrap:anywhere]">
           {proposal.state === "requested" && <meta httpEquiv="refresh" content="5" />}
           <p>{proposal.description}</p>
+          {proposal.state === "written" && <WrittenAiModelProposal proposal={proposal} />}
           {proposal.state === "requested" && (
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{texts.running}</p>

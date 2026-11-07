@@ -1,5 +1,11 @@
 import type { Database } from "@/platform/command";
-import { requestRefusal, type RequestAiModelProposalError } from "./ai-model-proposal";
+import type { MachineCategory, Technology } from "@/modules/collection";
+import {
+  requestRefusal,
+  type AiModelProposalStateName,
+  type ProposedDocument,
+  type RequestAiModelProposalError,
+} from "./ai-model-proposal";
 import { aiModelProposalById, openAiModelProposalStates } from "./ai-model-proposals";
 import type { AiDependencies } from "./ai-settings";
 import { requestAiModelProposalFacts } from "./request-ai-model-proposal-command";
@@ -35,8 +41,42 @@ export async function aiModelProposalRefusal(
   return requestRefusal(await requestAiModelProposalFacts(db, dependencies), undefined);
 }
 
-/** The AI model proposal's page (ST-123: while it is being written; ST-124, ST-126: written and failed). */
-export async function aiModelProposalPage(db: Database, id: string) {
+/** The AI model proposal's page: what is known of it now. The fields, sources and documents only of a written one. */
+export type AiModelProposalPage = {
+  id: string;
+  description: string;
+  state: AiModelProposalStateName;
+  /** Written only, with the sources and documents – a field the AI could not fill (or filled with something not valid) is absent. */
+  fields?: {
+    title?: string;
+    manufacturer?: string;
+    year?: number;
+    machineCategory?: MachineCategory;
+    technology?: Technology;
+  };
+  sources?: string[];
+  documents?: ProposedDocument[];
+};
+
+/** The AI model proposal's page (ST-123: while it is being written; ST-124: written; ST-126: failed). */
+export async function aiModelProposalPage(db: Database, id: string): Promise<AiModelProposalPage | undefined> {
   const proposal = await aiModelProposalById(db, id);
-  return proposal && { id: proposal.id, description: proposal.description, state: proposal.state };
+  if (!proposal) return undefined;
+  const { title, manufacturer, year, machineCategory, technology } = proposal;
+  return {
+    id: proposal.id,
+    description: proposal.description,
+    state: proposal.state,
+    ...(proposal.state === "written" && {
+      fields: {
+        ...(title !== undefined && { title }),
+        ...(manufacturer !== undefined && { manufacturer }),
+        ...(year !== undefined && { year }),
+        ...(machineCategory !== undefined && { machineCategory }),
+        ...(technology !== undefined && { technology }),
+      },
+      sources: proposal.sources ?? [],
+      documents: proposal.documents ?? [],
+    }),
+  };
 }

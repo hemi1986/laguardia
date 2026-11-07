@@ -1,6 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
-import type { AiModelProposalRequested } from "./ai-model-proposal";
+import type { AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
@@ -103,6 +103,16 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { requestedBy: event.requestedBy, chatModel: event.chatModel },
+    }),
+  },
+  // Written (ST-124): the text of the fields, the sources and the documents stay out – that it was written, the models
+  // and the cost.
+  "EVT-AiModelProposalWritten": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: AiModelProposalWritten) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { chatModel: event.chatModel, embeddingModel: event.embeddingModel ?? null, cost: event.cost },
     }),
   },
 });

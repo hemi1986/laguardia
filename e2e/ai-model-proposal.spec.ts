@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { turnAiOff, turnAiOn, withDatabase } from "./ai-seed";
-import { logIn } from "./fixtures";
+import { logIn, pageWidth } from "./fixtures";
 
 /**
  * ST-123 in a browser, without JavaScript: „Mit KI erstellen“ is absent while AI is off, the page of the same name sends
@@ -62,5 +63,56 @@ test.describe("AI model proposals on the machine models page without JavaScript"
     // One is being written: another request is rejected and the typed description stays.
     await page.goto("/team/machine-models/mit-ki-erstellen");
     await expect(page.getByText("Es wird gerade schon ein KI-Vorschlag erstellt.")).toBeVisible();
+  });
+
+  /**
+   * ST-124: the page of a written proposal. The browser tests never reach OpenRouter, so a written proposal is seeded as
+   * the background work would have stored it (the work itself is tested at the run seam).
+   */
+  test("shows a written proposal: fields, what was not found, sources and documents", async ({ page }) => {
+    await restore();
+    await turnAiOn();
+    const id = randomUUID();
+    await withDatabase(async (client) => {
+      const member = await client.query("SELECT id FROM team_member LIMIT 1");
+      await client.query(
+        `INSERT INTO ai_model_proposal
+           (id, description, requested_by, requested_at, chat_model, state, title, manufacturer, machine_category,
+            sources, documents, cost, changed_at)
+         VALUES ($1, 'Flipper High Speed Williams', $2, now(), 'google/gemini-2.5-flash', 'written', 'High Speed',
+                 'Williams', 'pinball', $3, $4, 0.04, now())`,
+        [
+          id,
+          member.rows[0].id,
+          ["https://www.ipdb.org/machine.cgi?id=1203"],
+          JSON.stringify([
+            {
+              kind: "link",
+              title: "High Speed – Manual",
+              fileCategory: "manual",
+              link: "https://www.ipdb.org/manual.pdf",
+            },
+          ]),
+        ],
+      );
+    });
+    await logIn(page);
+
+    await page.goto(`/team/machine-models/ki-vorschlag/${id}`);
+
+    await expect(page.getByLabel("Titel", { exact: true })).toHaveValue("High Speed");
+    await expect(page.getByLabel("Hersteller")).toHaveValue("Williams");
+    await expect(page.getByLabel("Kategorie", { exact: true })).toHaveValue("pinball");
+    // The year and the technology were not found: empty, and the page says so beside them.
+    await expect(page.getByLabel("Baujahr")).toHaveValue("");
+    await expect(page.getByText("Nicht gefunden")).toHaveCount(2);
+    await expect(page.getByRole("heading", { name: "Quellen" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "https://www.ipdb.org/machine.cgi?id=1203" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Aus dem Netz laden" })).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "„High Speed – Manual“ laden" })).toBeChecked();
+    await expect(page.getByLabel("Dateikategorie von „High Speed – Manual“")).toHaveValue("manual");
+    await expect(page.locator('meta[http-equiv="refresh"]')).toHaveCount(0);
+    // Usable at 360 px: nothing pushes the page wider than the screen.
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
   });
 });

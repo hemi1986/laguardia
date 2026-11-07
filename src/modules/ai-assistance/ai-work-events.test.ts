@@ -8,6 +8,8 @@ describe("which committed events leave AI work to do", () => {
     ["a file added", { type: "EVT-FileAdded", data: {} }, true],
     ["a file attached (ADR 0018: attaching causes no indexing)", { type: "EVT-FileAttached", data: {} }, false],
     ["an AI assessment requested", { type: "EVT-AiAssessmentRequested", data: {} }, true],
+    ["an AI model proposal requested (ST-124)", { type: "EVT-AiModelProposalRequested", data: {} }, true],
+    ["an AI model proposal written", { type: "EVT-AiModelProposalWritten", data: {} }, false],
     ["a file tried again", { type: "EVT-FileIndexingRetried", data: {} }, true],
     ["a key saved", settingsChanged("key-saved"), true],
     ["a chat model changed", settingsChanged("chat-model"), true],

@@ -31,6 +31,13 @@ const EMBED_TIMEOUT_MS = 60_000;
 /** Writing an AI assessment sends photos and page images and takes minutes – it must end within a run's budget (ST-107). */
 const CHAT_TIMEOUT_MS = 120_000;
 
+/** OpenRouter's server tools of one AI model proposal run and their limits (ADR 0020: 8 results, 6 fetches, 15 calls). */
+const WEB_TOOLS = [
+  { type: "openrouter:web_search", parameters: { max_results: 8 } },
+  { type: "openrouter:web_fetch", parameters: { max_uses: 6 } },
+];
+const WEB_TOOLS_MAX_CALLS = 15;
+
 /** What OpenRouter's lists name the output of each kind. */
 const outputOf: Record<ModelKind, string> = { chat: "text", embedding: "embeddings" };
 
@@ -236,6 +243,8 @@ export function openRouter({ baseUrl = configuredBaseUrl() }: { baseUrl?: string
             ],
             // The answer is read as an AI assessment, not as prose (ST-107: the structured-answer parser).
             response_format: { type: "json_object" },
+            // The AI model proposal's writing searches the web and reads pages; its budget is ADR 0020's (ST-124).
+            ...(input.webTools && { tools: WEB_TOOLS, max_tool_calls: WEB_TOOLS_MAX_CALLS }),
             // Any provider OpenRouter routes to – free models and providers that keep or train on the data included
             // (user, 2026-11-01, ADR 0016). Only the account's own privacy settings at OpenRouter still narrow it.
           }),

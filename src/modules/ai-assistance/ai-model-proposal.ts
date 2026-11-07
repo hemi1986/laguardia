@@ -1,9 +1,10 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
+import { machineCategories, technologiesOf, type MachineCategory, type Technology } from "@/modules/collection";
 
 /**
  * AGG-AiModelProposal (ST-123, docs/architecture/data-model.md, data model *AI model proposal*): what an AI makes of
- * the description of a device a technician typed. This story holds the request; the fields, sources and documents
- * of a written one come with the writing (ST-124), the failure with ST-126. It never changes a machine model by itself
+ * the description of a device a technician typed. ST-123 holds the request, ST-124 the writing (fields, sources and
+ * links of a written one; existing files join with ST-125), the failure with ST-126. It never changes a machine model by itself
  * (ADR 0019) and at most one is being written at a time (HS-37).
  */
 
@@ -13,6 +14,17 @@ type RequestingPerson = ActorOf<"technician">;
 /** The five states of the lifecycle (data model *AI model proposal*). */
 export const aiModelProposalStates = ["requested", "written", "failed", "accepted", "discarded"] as const;
 export type AiModelProposalStateName = (typeof aiModelProposalStates)[number];
+
+/** The file categories a proposed document may have – a photo is no document of a proposal (no images, ST-124). */
+export const proposedFileCategories = ["manual", "schematic", "other"] as const;
+export type ProposedFileCategory = (typeof proposedFileCategories)[number];
+
+/** At most this many documents in a written AI model proposal (invariant). */
+export const MAX_PROPOSED_DOCUMENTS = 10;
+
+/** A document the AI found on the web: a link (https) with a title and one file category. Existing files: ST-125. */
+export type ProposedLink = { kind: "link"; link: string; title: string; fileCategory: ProposedFileCategory };
+export type ProposedDocument = ProposedLink;
 
 /** AGG-AiModelProposal – current state. */
 export type AiModelProposalState = {
@@ -24,6 +36,19 @@ export type AiModelProposalState = {
   /** The chat model it was requested with – never changes. */
   chatModel: string;
   state: AiModelProposalStateName;
+  /** Written only – each field empty (absent) or valid (invariant). */
+  title?: string;
+  manufacturer?: string;
+  year?: number;
+  machineCategory?: MachineCategory;
+  technology?: Technology;
+  /** Written only – the links the fields rest on (https). */
+  sources?: string[];
+  /** Written only – at most {@link MAX_PROPOSED_DOCUMENTS}. */
+  documents?: ProposedDocument[];
+  embeddingModel?: string;
+  cost?: number;
+  changedAt?: Date;
 };
 
 /** What CMD-RequestAiModelProposal reads from the outside before it decides. */
@@ -95,4 +120,122 @@ export function requestAiModelProposal(
       },
     ],
   };
+}
+
+/**
+ * What the chat model named, as the answer's parser read it – untrusted, nothing of it checked yet. CMD-WriteAiModelProposal
+ * owns the invariants: what is not valid is left empty, not repaired (rule).
+ */
+export type AiModelProposalAnswer = {
+  title?: string;
+  manufacturer?: string;
+  /** As named – "1986", "ca. 1986" – only a plain four-digit number is a year. */
+  year?: string;
+  machineCategory?: string;
+  technology?: string;
+  sources: string[];
+  documents: { link: string; title: string; fileCategory: string }[];
+};
+
+export type WriteAiModelProposalInput = {
+  answer: AiModelProposalAnswer;
+  /** The embedding model the AI index was searched with (ST-125) – none while no search was made. */
+  embeddingModel?: string;
+  /** What OpenRouter charged for the whole writing, in US dollars. */
+  cost: number;
+};
+
+export type AiModelProposalWritten = {
+  type: "EVT-AiModelProposalWritten";
+  aiModelProposalId: string;
+  chatModel: string;
+  embeddingModel?: string;
+  cost: number;
+};
+
+/** A link the proposal may keep: an `https` address and nothing else (rule, ADR 0019 decision 3). */
+export function httpsLink(value: string): string | undefined {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" && url.hostname ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Addresses that end in an image or video file – a proposal holds text documents only. */
+const PICTURE_OR_FILM = /\.(jpe?g|png|gif|webp|avif|bmp|tiff?|svg|heic|mp4|m4v|mov|avi|mkv|webm|mpe?g|wmv|flv)$/i;
+const isPictureOrFilm = (address: string) => PICTURE_OR_FILM.test(new URL(address).pathname);
+
+/** A year is exactly four digits (as on a machine model). */
+function validYear(value: string | undefined): number | undefined {
+  return value !== undefined && /^\d{4}$/.test(value.trim()) ? Number(value.trim()) : undefined;
+}
+
+/**
+ * CMD-WriteAiModelProposal (AGG-AiModelProposal, ST-124): run by POL-RequestedAiModelProposalIsWritten as the system.
+ * Only a proposal still requested is written – a late result after it was failed as broken off records nothing
+ * (version check, rule). Every field is empty or valid: a machine category of none of the three, a technology that
+ * does not fit it and a year that is not four digits are left empty, not repaired; at most 10 documents, only https
+ * links, no duplicates. The text of the fields stays out of the journal; it says that it was written and what it cost.
+ */
+export function writeAiModelProposal(
+  state: AiModelProposalState,
+  { answer, embeddingModel, cost }: WriteAiModelProposalInput,
+  { clock }: DecisionContext,
+): Decision<AiModelProposalState, AiModelProposalWritten, "not-requested"> {
+  if (state.state !== "requested") return { ok: false, error: "not-requested" };
+  const machineCategory = machineCategories.find((category) => category === answer.machineCategory);
+  const technology = machineCategory
+    ? technologiesOf(machineCategory).find((candidate) => candidate === answer.technology)
+    : undefined;
+  const year = validYear(answer.year);
+  const title = answer.title?.trim();
+  const manufacturer = answer.manufacturer?.trim();
+  const sources = unique(answer.sources.flatMap((source) => httpsLink(source) ?? []));
+  const documents = uniqueBy(
+    answer.documents.flatMap(({ link, title: documentTitle, fileCategory }): ProposedLink[] => {
+      const address = httpsLink(link);
+      const named = documentTitle.trim();
+      // No images, no video (rule): a document the AI calls a photo, or whose address is a picture or a film, is left out.
+      if (!address || !named || fileCategory === "photo" || isPictureOrFilm(address)) return [];
+      const category = proposedFileCategories.find((candidate) => candidate === fileCategory);
+      return [{ kind: "link", link: address, title: named, fileCategory: category ?? "other" }];
+    }),
+    (document) => document.link,
+  ).slice(0, MAX_PROPOSED_DOCUMENTS);
+  const written: AiModelProposalState = {
+    ...state,
+    state: "written",
+    ...(title && { title }),
+    ...(manufacturer && { manufacturer }),
+    ...(year !== undefined && { year }),
+    ...(machineCategory && { machineCategory }),
+    ...(technology && { technology }),
+    sources,
+    documents,
+    ...(embeddingModel !== undefined && { embeddingModel }),
+    cost,
+    changedAt: clock.now(),
+  };
+  return {
+    ok: true,
+    state: written,
+    events: [
+      {
+        type: "EVT-AiModelProposalWritten",
+        aiModelProposalId: state.id,
+        chatModel: state.chatModel,
+        ...(embeddingModel !== undefined && { embeddingModel }),
+        cost,
+      },
+    ],
+  };
+}
+
+const unique = <T>(values: T[]): T[] => [...new Set(values)];
+
+function uniqueBy<T>(values: T[], key: (value: T) => string): T[] {
+  const seen = new Set<string>();
+  return values.filter((value) => !seen.has(key(value)) && !!seen.add(key(value)));
 }

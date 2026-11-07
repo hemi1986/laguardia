@@ -10,11 +10,7 @@ export {
   type MissingPart,
 } from "./ai-settings";
 export type { AiSeam, ModelKind, OfferedModel } from "./ai-seam";
-export {
-  embeddingModelChange,
-  type EmbeddingModelChange,
-  type NoEmbeddingModelChange,
-} from "./embedding-model-change";
+export { embeddingModelChange, type EmbeddingModelChange, type NoEmbeddingModelChange } from "./embedding-model-change";
 export { runAiWork } from "./ai-work";
 export {
   aiIndexOverview,
@@ -26,11 +22,7 @@ export {
   type FailedFile,
 } from "./ai-index-overview";
 export type { AiIndexStateOfFile } from "./ai-index-entries";
-export type {
-  IndexingFailureReason,
-  RetryFileIndexingError,
-  RetryFileIndexingInput,
-} from "./ai-index-entry";
+export type { IndexingFailureReason, RetryFileIndexingError, RetryFileIndexingInput } from "./ai-index-entry";
 export { retryFileIndexingCommand } from "./index-file-for-ai-command";
 export { aiWorkDependencies } from "./ai-work-dependencies";
 export { aiAssessmentLeftUnfinished, aiAssessmentWork } from "./ai-assessment-work";
@@ -61,10 +53,17 @@ export {
  */
 export { removeFileCommandWithAiIndex } from "./removal-policy";
 export { requestAiModelProposalCommand } from "./request-ai-model-proposal-command";
-export type { RequestAiModelProposalError, RequestAiModelProposalInput } from "./ai-model-proposal";
+export type {
+  ProposedDocument,
+  ProposedFileCategory,
+  RequestAiModelProposalError,
+  RequestAiModelProposalInput,
+} from "./ai-model-proposal";
 export {
   aiModelProposalPage,
   aiModelProposalRefusal,
   openAiModelProposals,
+  type AiModelProposalPage,
   type OpenAiModelProposals,
 } from "./open-ai-model-proposals";
+export { aiModelProposalWork } from "./ai-model-proposal-work";

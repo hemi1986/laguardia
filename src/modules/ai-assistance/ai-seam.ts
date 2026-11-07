@@ -36,7 +36,16 @@ export type EmbedResult = Embedding | "refused" | "unreachable";
 export type ChatImage = { bytes: Uint8Array; contentType: string };
 
 /** What CMD-WriteAiAssessment sends the chat model – the system prompt and the request in words and images. */
-export type ChatInput = { system: string; text: string; images: ChatImage[] };
+export type ChatInput = {
+  system: string;
+  text: string;
+  images: ChatImage[];
+  /**
+   * OpenRouter's server tools for web search and fetching a page (ST-124, ADR 0020) – the AI model proposal's writing
+   * only. They are the budget of one run: the adapter limits the searches, the fetches and the calls.
+   */
+  webTools?: boolean;
+};
 
 /** Why a chat request ended without an answer – the anti-corruption layer's words, never OpenRouter's (ST-107). */
 export type ChatFailure =
