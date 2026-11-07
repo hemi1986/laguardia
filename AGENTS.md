@@ -26,9 +26,16 @@ This repository runs the Kataster workflow. Discovery lives in `.claude/skills/`
 - **Project checks:** `docs/engineering/checks.yaml` – what runs at edit time and Stop/CI; architecture boundaries
   in `docs/architecture/boundaries.yaml` with existing debt in the baseline (only new violations fail).
 - **Language:** domain terms exactly as in `CONTEXT.md`; UI words from its `_UI (<lang>)_` lines.
-- **Traceability:** every scenario has a test titled `ST-NNN: <scenario title>`; domain IDs come from
+- **1-command rule:** one story = one command + its events on one aggregate, at most 4 Gherkin scenarios. Full
+  domain stories are `type: domain`; UI tweaks, refactors, dependencies and setup use the fast lane
+  (`type: chore` or `type: task`).
+- **Spec gate:** `node .claude/skills/user-stories/scripts/lint-story.ts <file>` must be green. A story the linter
+  accepts becomes `ready-for-human-review`; only the user approves `ready`.
+- **Traceability:** every domain scenario has a test titled `ST-NNN: <scenario title>`; domain IDs come from
   `docs/domain/events.yaml`.
 - **ADRs:** new ones are `proposed`; only the user sets `accepted`. A `done` story is never reopened.
+- **Reviews:** `/implement` scales review to the diff. `code-reviewer` and `acceptance-tester` report findings and
+  never create stories; fast-lane stories skip the formal review pass.
 - **Gate:** `node .claude/skills/implement/scripts/verify.ts`.
 
 Keep this block short: it is loaded into every session. Put rules into the skill that owns them, not here.

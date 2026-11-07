@@ -13,7 +13,8 @@
       "Bash(node .claude/skills/adopt/scripts/*)",
       "Bash(node .claude/skills/backlog/scripts/*)",
       "Bash(gh issue *)",
-      "Bash(gh label *)"
+      "Bash(gh label *)",
+      "Bash(node .claude/skills/user-stories/scripts/*)"
     ],
     "deny": [],
     "ask": []
