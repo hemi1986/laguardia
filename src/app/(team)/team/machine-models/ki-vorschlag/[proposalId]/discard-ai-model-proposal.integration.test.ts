@@ -128,7 +128,7 @@ describe("discarding an AI model proposal (ST-127)", () => {
     );
   });
 
-  it("ST-127: A proposal still being written is not discarded", async () => {
+  it("a proposal still being written is not discarded", async () => {
     const id = await scenario.requestAiModelProposal("Flipper High Speed Williams");
     const form = new FormData();
     form.append("aiModelProposalId", id);
