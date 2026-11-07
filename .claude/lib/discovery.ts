@@ -544,7 +544,11 @@ function checkBody(r: Report, where: string, meta: Obj, body: string): void {
   if (isDomain(meta)) {
     if (scenarios.length < 2) r.error(where, "at least 2 Gherkin scenarios required (happy path + error/edge case)");
     scenarios.forEach((sc, n) => {
-      const missing = ["Given", "When", "Then"].filter((step) => !new RegExp(`^\\s*${step}\\b`, "m").test(sc));
+      // Stories closed before Kataster v0.4.0 (done/superseded) were written under the old rule: only When and Then
+      // were required. A done story is never reopened, so Given is enforced for all other stories only.
+      const legacy = meta.status === "done" || meta.status === "superseded";
+      const required = legacy ? ["When", "Then"] : ["Given", "When", "Then"];
+      const missing = required.filter((step) => !new RegExp(`^\\s*${step}\\b`, "m").test(sc));
       if (missing.length) r.error(where, `scenario ${n + 1}: ${missing.join(", ")} required (Gherkin Given/When/Then)`);
     });
   } else if (!scenarios.length && !/^\s*[-*]\s*\[[ xX]\]/m.test(ac)) {
