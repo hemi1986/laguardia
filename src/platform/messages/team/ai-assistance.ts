@@ -97,6 +97,7 @@ export const aiAssistanceTexts = {
     createTitle: "Mit KI erstellen",
     proposal: "KI-Vorschlag",
     description: "Welches Gerät?",
+    placeholder: "Flipper High Speed Williams",
     example: "Zum Beispiel: Flipper High Speed Williams",
     send: "Vorschlag erstellen",
     cancel: "Abbrechen",

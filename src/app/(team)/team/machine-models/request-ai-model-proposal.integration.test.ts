@@ -112,6 +112,9 @@ describe("asking for an AI model proposal", () => {
     const state = await theForm()(null, await posted("Flipper High Speed Williams"));
 
     expect(state?.error).toBe("ai-model-proposal-being-written");
+    expect(teamMessages.commandErrors["ai-model-proposal-being-written"]).toBe(
+      "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
+    );
     expect(state?.values.description).toBe("Flipper High Speed Williams");
     // Still only the first one.
     expect((await openAiModelProposals(db, ai())).proposals.map(({ id }) => id)).toEqual([first]);

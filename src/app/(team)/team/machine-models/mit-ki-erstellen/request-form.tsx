@@ -35,7 +35,7 @@ export function RequestAiModelProposalForm({
         <Input
           id="description"
           name="description"
-          placeholder="Flipper High Speed Williams"
+          placeholder={texts.placeholder}
           defaultValue={state?.values.description}
           key={`description-${keptKey(state)}`}
           aria-invalid={state ? true : undefined}
