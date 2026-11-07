@@ -1,0 +1,1 @@
+ALTER TABLE "ai_model_proposal" ADD COLUMN "machine_model_id" uuid;

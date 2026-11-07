@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 90 of 95 domain stories done** · scenarios 824 of 841
+**Progress: 91 of 95 domain stories done** · scenarios 828 of 841
 
-**127 stories** · In Progress: 0 · Ready: 5 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 111 · Superseded: 11
+**127 stories** · In Progress: 0 · Ready: 4 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 112 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 | [ST-126](ST-126-a-failed-ai-model-proposal-says-why.md) | An AI model proposal that fails or breaks off says why | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-127](ST-127-discard-an-ai-model-proposal.md) | Discard an AI model proposal | domain | AI assistance | should | S | low | ST-124 |
@@ -78,12 +77,19 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-104](ST-104-ai-settings-key-and-models.md) | AI settings – the OpenRouter key and the two models on „Einstellungen“ | story | AI assistance | should | L | medium | – |
 | [ST-123](ST-123-request-an-ai-model-proposal.md) | Request an AI model proposal from a description | domain | AI assistance | must | M | medium | ST-122, ST-006, ST-104 |
 | [ST-124](ST-124-write-an-ai-model-proposal.md) | The AI completes the machine model and finds documents on the web | domain | AI assistance | must | L | high | ST-123, ST-122 |
+| [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
+| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
+| [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
+| [ST-105](ST-105-spike-indexing-the-largest-manual.md) | Indexing the largest manual for AI within one run | spike | AI assistance | should | M | high | – |
+| [ST-112](ST-112-background-work-for-ai.md) | Background work for AI – worker route, holds, run budget and continuation | tech-task | AI assistance | should | M | medium | ST-104, ST-105 |
+| [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |
+| [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
+| [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
 | [ST-034](ST-034-move-machine.md) | Move a machine to a new location | story | Collection | should | XS | low | ST-009 |
 | [ST-036](ST-036-correct-machine-model.md) | Correct a machine model | story | Collection | should | M | medium | ST-009, ST-010, ST-043, ST-044 |
-| [ST-037](ST-037-attach-file.md) | Attach files to a machine or machine model and find them by file category | story | Collection | should | L | high | ST-001, ST-009, ST-016, ST-085 |
 | [ST-039](ST-039-retire-machine.md) | Retire a machine, closing its open defects and problem reports | story | Collection | should | M | high | ST-012, ST-020, ST-024, ST-027, ST-029, ST-030, ST-033 |
 | [ST-041](ST-041-maintenance-plan-change-remove-task.md) | Maintenance plan – change or remove a maintenance task | story | Maintenance | should | S | low | ST-043 |
 | [ST-045](ST-045-record-maintenance-several-machines.md) | Record a maintenance task for several machines at once | story | Maintenance | should | M | medium | ST-044 |
@@ -107,16 +113,11 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-101](ST-101-welcome-page-with-the-machines-on-display.md) | Welcome page with the machines on display to report a problem | story | Collection | should | M | low | ST-100 |
 | [ST-102](ST-102-logo-on-the-welcome-page.md) | Replace or remove the museum's logo on the welcome page | story | Collection | should | L | medium | ST-100 |
 | [ST-103](ST-103-legal-texts-in-the-museum-settings.md) | Privacy notice and imprint written in the museum settings | story | Collection | should | M | medium | ST-100 |
-| [ST-105](ST-105-spike-indexing-the-largest-manual.md) | Indexing the largest manual for AI within one run | spike | AI assistance | should | M | high | – |
-| [ST-112](ST-112-background-work-for-ai.md) | Background work for AI – worker route, holds, run budget and continuation | tech-task | AI assistance | should | M | medium | ST-104, ST-105 |
-| [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |
 | [ST-107](ST-107-request-an-ai-assessment.md) | Request an AI assessment of an open defect | story | AI assistance | should | L | high | ST-106 |
 | [ST-108](ST-108-failed-and-broken-off-ai-assessments.md) | An AI assessment that fails or breaks off says why and can be tried again | story | AI assistance | should | M | medium | ST-107 |
 | [ST-109](ST-109-ai-index-overview-and-failed-files.md) | See how far the AI index got and try failed files again | story | AI assistance | should | M | medium | ST-106 |
 | [ST-110](ST-110-replace-the-ai-key-and-change-the-models.md) | Replace the AI key and change the models, with a cost warning for the embedding model | story | AI assistance | should | M | medium | ST-104, ST-106 |
 | [ST-111](ST-111-earlier-ai-assessments.md) | Earlier AI assessments on the defect page and in the repair history | story | AI assistance | should | S | low | ST-107, ST-108 |
-| [ST-054](ST-054-camera-photo-as-file.md) | Attach a camera photo as a file of a machine | story | Collection | could | S | low | ST-002, ST-037, ST-016 |
-| [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
 | [ST-038](ST-038-remove-file.md) | Remove a file | story | Collection | could | S | low | ST-037 |
 | [ST-114](ST-114-file-details-page.md) | See a file's details | story | Collection | should | L | medium | ST-113, ST-038, ST-109 |
 | [ST-120](ST-120-an-ai-assessment-follows-what-a-file-is-attached-to.md) | An AI assessment follows what a file is attached to | story | AI assistance | should | M | medium | ST-113, ST-107, ST-109 |
@@ -126,7 +127,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
 | [ST-119](ST-119-add-a-file-from-the-file-overview.md) | Add a file from the file overview, attached to something or to nothing yet | story | Collection | should | L | medium | ST-115, ST-116, ST-117 |
 | [ST-118](ST-118-full-text-search-in-the-file-overview.md) | Search the file overview by title, names and content | story | Collection | should | L | medium | ST-117, ST-119, ST-106 |
-| [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |

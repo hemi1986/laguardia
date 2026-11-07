@@ -75,6 +75,7 @@ export {
   type AttachmentChoiceMachineModel,
 } from "./attachment-choice";
 export {
+  machineModelCalled,
   machineModelForTeam,
   machineModelsToChooseFrom,
   machineModelOfMachineForAi,

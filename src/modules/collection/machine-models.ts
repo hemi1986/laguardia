@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { aggregateStore, history, isId, type Database } from "@/platform/command";
 import type { CategoryChange, MachineModel, MachineModelState } from "./create-machine-model";
 import { machine, machineModel, machineModelCategoryChange } from "./schema";
@@ -144,4 +144,30 @@ export async function machineModelTitles(db: Database, machineModelIds: readonly
     .from(machineModel)
     .where(inArray(machineModel.id, unique));
   return new Map(rows.map(({ id, title }) => [id, title]));
+}
+
+/**
+ * A machine model with this title and manufacturer – the one a hint points to when an AI model proposal is for a device
+ * the museum has (ST-128, HS-39). Compared without regard to case and surrounding spaces; the first by ID if there are
+ * several. Undefined when there is none or either is blank.
+ */
+export async function machineModelCalled(
+  db: Database,
+  title: string,
+  manufacturer: string,
+): Promise<{ id: string; title: string } | undefined> {
+  const [wantedTitle, wantedManufacturer] = [title.trim().toLowerCase(), manufacturer.trim().toLowerCase()];
+  if (!wantedTitle || !wantedManufacturer) return undefined;
+  const [row] = await db
+    .select({ id: machineModel.id, title: machineModel.title })
+    .from(machineModel)
+    .where(
+      and(
+        sql`lower(btrim(${machineModel.title})) = ${wantedTitle}`,
+        sql`lower(btrim(${machineModel.manufacturer})) = ${wantedManufacturer}`,
+      ),
+    )
+    .orderBy(asc(machineModel.id))
+    .limit(1);
+  return row;
 }
