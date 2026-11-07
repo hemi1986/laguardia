@@ -33,7 +33,7 @@ test.describe("with a team account", () => {
     await page.getByLabel("Dateikategorie").selectOption("photo");
     await page.getByRole("button", { name: "Filtern" }).click();
 
-    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=photo(&attachedTo=)?$/);
+    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=photo(&attachedTo=)?(&aiIndex=)?$/);
     await expect(page.getByLabel("Dateikategorie")).toHaveValue("photo");
   });
 });
@@ -110,7 +110,7 @@ test.describe("without JavaScript", () => {
     await page.getByRole("button", { name: "Filtern" }).click();
 
     // Sending the filters starts at page 1: the page is not carried along.
-    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=manual(&attachedTo=)?$/);
+    await expect(page).toHaveURL(/\/team\/dateien\?fileCategory=manual(&attachedTo=)?(&aiIndex=)?$/);
   });
 
   test("the search is a plain form that keeps the filter", async ({ page }) => {
@@ -128,7 +128,7 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(/\/team\/dateien\?search=Spule&fileCategory=manual$/);
     await page.getByLabel("Dateikategorie").selectOption("schematic");
     await page.getByRole("button", { name: "Filtern" }).click();
-    await expect(page).toHaveURL(/\/team\/dateien\?search=Spule&fileCategory=schematic(&attachedTo=)?$/);
+    await expect(page).toHaveURL(/\/team\/dateien\?search=Spule&fileCategory=schematic(&attachedTo=)?(&aiIndex=)?$/);
     await expect(page.getByLabel("Suche", { exact: true })).toHaveValue("Spule");
   });
 });

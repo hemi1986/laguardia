@@ -1,5 +1,5 @@
 import { aiDependencies, type AiDependencies } from "@/modules/ai-assistance";
-import { fileOverview, fileOverviewChoices, fileRemovedBy, type FileOverviewEntry } from "@/modules/collection";
+import { anyFileExists, fileOverviewChoices, fileRemovedBy, type FileOverviewEntry } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { fileDetailsAddress } from "./file-navigation";
@@ -74,7 +74,7 @@ export async function loadFileOverview(
   };
   const filtered = Object.keys(query).some((key) => key !== "page");
   // Files exist, or not at all: the answer to an address with filters needs the files without them.
-  const empty = remaining.length === 0 && (!filtered || (await fileOverview(db, {})).length === 0);
+  const empty = remaining.length === 0 && (!filtered || !(await anyFileExists(db)));
 
   return {
     query,
