@@ -1,6 +1,7 @@
 import { accountsTexts } from "./accounts";
 import { aiAssistanceErrors, aiAssistanceTexts } from "./ai-assistance";
 import { collectionErrors, collectionTexts } from "./collection";
+import { collectionFilesTexts } from "./collection-files";
 import { dashboardTexts } from "./dashboard";
 import { maintenanceErrors, maintenanceTexts } from "./maintenance";
 import { repairErrors, repairTexts } from "./repair";
@@ -17,6 +18,7 @@ export const teamMessages = {
   ...accountsTexts,
   ...aiAssistanceTexts,
   ...collectionTexts,
+  ...collectionFilesTexts,
   ...dashboardTexts,
   ...maintenanceTexts,
   ...repairTexts,
@@ -25,6 +27,15 @@ export const teamMessages = {
 
 /** The areas, for the test that a text key or an error code lives in one file only. */
 export const teamAreas = {
-  texts: { sharedTexts, accountsTexts, aiAssistanceTexts, collectionTexts, dashboardTexts, maintenanceTexts, repairTexts },
+  texts: {
+    sharedTexts,
+    accountsTexts,
+    aiAssistanceTexts,
+    collectionTexts,
+    collectionFilesTexts,
+    dashboardTexts,
+    maintenanceTexts,
+    repairTexts,
+  },
   errors: { sharedErrors, aiAssistanceErrors, collectionErrors, maintenanceErrors, repairErrors },
 };
