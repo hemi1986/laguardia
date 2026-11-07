@@ -1,4 +1,9 @@
-import { aiIndexStatesForOverview, filesContainingWords, type AiDependencies } from "@/modules/ai-assistance";
+import {
+  aiIndexStatesForOverview,
+  filesContainingWords,
+  type AiDependencies,
+  type AiIndexStateOfFile,
+} from "@/modules/ai-assistance";
 import {
   fileOverview,
   type FileOverviewChoices,
@@ -12,7 +17,7 @@ import { searched } from "./search-order";
 import { searchWordsOf } from "./search-words";
 
 /** What AI assistance says of a file's index (RM-FileOverview, G37). */
-export type AiIndexState = "indexed" | "waiting" | "failed";
+export type AiIndexState = AiIndexStateOfFile["state"];
 
 /** What the pipeline made of the address: the files that remain, the page of them and what was in effect. */
 export type FileOverviewPage = {

@@ -56,8 +56,8 @@ describe("the order of a search (ST-118)", () => {
     ).toEqual(["b", "a"]);
   });
 
-  it("never adds the two ranks up: a word in the own text beats a high content rank", () => {
-    const files = [entry("content", [null]), entry("own", [0.01])];
+  it("never adds the two ranks up: with as many own words, the own rank decides whatever the content holds", () => {
+    const files = [entry("content", [0.1]), entry("own", [0.4])];
     expect(ids(searched(files, content([["content", 99]])))).toEqual(["own", "content"]);
   });
 
