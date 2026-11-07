@@ -8,7 +8,7 @@ import { teamMessages } from "@/platform/messages";
 import { machineModelChoices } from "../../choices";
 import { MachineModelFields } from "../../machine-model-fields";
 import { machineModelFields } from "../../machine-model-input";
-import { fileDetailsAddress } from "../../../dateien/file-navigation";
+import { fileDetailsAddress } from "@/app/(team)/team/dateien/file-navigation";
 
 const { aiModelProposals: texts } = teamMessages;
 

@@ -78,10 +78,7 @@ function aiStateOf(state: AiSettingsState, encryptionKey: Buffer | undefined): A
  * Is AI on now? Read before every request, so turning AI off, a rotated key or a changed model takes effect at once.
  * Not the same as `aiOn` of CMD-ChangeAiSettings, which says what was saved and cannot know whether the key is readable.
  */
-export async function aiState(
-  db: Database,
-  { encryptionKey }: Pick<AiDependencies, "encryptionKey">,
-): Promise<AiState> {
+export async function aiState(db: Database, { encryptionKey }: Pick<AiDependencies, "encryptionKey">): Promise<AiState> {
   const { state } = await storedAiSettings(db);
   return aiStateOf(state, encryptionKey());
 }

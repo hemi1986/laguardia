@@ -70,8 +70,8 @@ export const aiModelProposalWork: AiWorkKind = {
 
 /**
  * The files the AI index finds for the completed fields (ST-125): the best passages and the best pages or images of the
- * current embedding model among every file that is not removed, also one attached to nothing – a file counts once, the
- * best hit first. A photo is no document of a proposal. Nothing named, nothing searched and nothing paid; the number of
+ * current embedding model among every file that is not removed, also one attached to nothing – a file counts once, passages
+ * first, then pages or images (the item limits of `searchAiIndex` apply, not a limit of files). A photo is no document of a proposal. Nothing named, nothing searched and nothing paid; the number of
  * hits is fixed (`searchAiIndex`), not a setting.
  */
 async function findExistingFiles(
@@ -83,6 +83,7 @@ async function findExistingFiles(
   if (!text) return { files: [] };
   const embedded = await openRouter.embed({ kind: "text", text });
   if (typeof embedded === "string") return "gave-up";
+  // Photos are left out of the scope already, so they take none of the fixed hits; the decision keeps the invariant too.
   const candidates = (await filesForAiModelProposal(db)).filter((file) =>
     proposedFileCategories.some((category) => category === file.fileCategory),
   );

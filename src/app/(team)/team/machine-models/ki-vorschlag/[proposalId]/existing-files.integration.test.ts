@@ -3,11 +3,12 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { aiModelProposalPage, aiModelProposalWork } from "@/modules/ai-assistance";
+import { aiModelProposalPage, aiModelProposalWork, removeFileCommandWithAiIndex } from "@/modules/ai-assistance";
 import { anIndexedFile } from "@/modules/ai-assistance/ai-index.test-support";
 import { aiScenario } from "@/modules/ai-assistance/ai-scenario.test-support";
 import { geminiEmbedding } from "@/modules/ai-assistance/ai-seam.test-support";
 import { fixedClock } from "@/platform/clock";
+import { executeCommand, journalOf } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { isolatedTestDatabase } from "@/test-support/isolated-database";
 import { aRegisteredMachine } from "@/test-support/machines";
@@ -80,15 +81,24 @@ async function theWrittenProposal(answer: unknown) {
   await scenario.run({ kinds: [aiModelProposalWork], with: openRouter });
   const proposal = await aiModelProposalPage(db, id);
   if (!proposal) throw new Error("no page");
-  return { proposal, html: renderToStaticMarkup(createElement(WrittenAiModelProposal, { proposal })), openRouter };
+  return {
+    id,
+    proposal,
+    html: renderToStaticMarkup(createElement(WrittenAiModelProposal, { proposal })),
+    openRouter,
+  };
 }
 
 describe("existing files in an AI model proposal", () => {
   it("ST-125: A file the museum already has is offered", async () => {
     const wiki = await anIndexedFileOfTheMuseum("Pinball wiki – System 11", "machine-model", "other");
 
-    const { html, openRouter } = await theWrittenProposal(highSpeed);
+    const { id, html, openRouter } = await theWrittenProposal(highSpeed);
 
+    // The journal says which embedding model searched and that the embedding was paid with the chat model's answer.
+    const written = (await journalOf(db, { aggregateId: id })).find((e) => e.type === "EVT-AiModelProposalWritten");
+    expect(written?.data).toMatchObject({ embeddingModel: geminiEmbedding.id });
+    expect(written?.data.cost).toBeCloseTo(0.04 + 0.0001, 6);
     // The index was searched with the completed fields.
     expect(openRouter.embedInputs[0]).toMatchObject({ kind: "text" });
     expect(openRouter.embedInputs[0]).toHaveProperty("text", expect.stringContaining("High Speed"));
@@ -116,7 +126,7 @@ describe("existing files in an AI model proposal", () => {
   });
 
   it("ST-125: Nothing found in the museum", async () => {
-    // A file without an AI index entry is not found, nor is the museum's index asked for nothing.
+    // A file without an AI index entry cannot be found.
     const machineId = await aRegisteredMachine(db);
     await scenario.attachFile(machineId, {
       title: "Not indexed",
@@ -129,5 +139,26 @@ describe("existing files in an AI model proposal", () => {
     expect(proposal.documents?.map((document) => document.kind)).toEqual(["link"]);
     expect(html).not.toContain(texts.alreadyInTheMuseum);
     expect(html).toContain(texts.loadFromTheWeb);
+  });
+
+  it("offers only files that are not removed and indexed with the current embedding model are found", async () => {
+    const removed = await anIndexedFileOfTheMuseum("Removed manual", "nothing");
+    const removing = await executeCommand(
+      removeFileCommandWithAiIndex,
+      { fileId: removed, version: 0 },
+      { actor: tom, db, clock },
+    );
+    if (!removing.ok) throw new Error(removing.error);
+    const machineId = await aRegisteredMachine(db);
+    const older = await scenario.attachFile(machineId, {
+      title: "Indexed with an older model",
+      bytes: new Uint8Array([1]),
+      contentType: "application/pdf",
+    });
+    await anIndexedFile(db, clock, older, { embeddingModel: "some/older-embedding-model", pages: 1 });
+
+    const { proposal } = await theWrittenProposal(highSpeed);
+
+    expect(proposal.documents?.map((document) => document.kind)).toEqual(["link"]);
   });
 });

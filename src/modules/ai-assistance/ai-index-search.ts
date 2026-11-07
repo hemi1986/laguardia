@@ -4,9 +4,10 @@ import type { IndexItemKind } from "./ai-index-entry";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
- * Searching the AI index for an AI assessment (ST-107, ADR 0014): only the entries of the files attached to the defect's
+ * Searching the AI index (ST-107, ADR 0014; ST-125): for an AI assessment only the entries of the files attached to the defect's
  * machine or its machine model – the list Collection gave when the writing began (ST-120, ADR 0018) – and only those
- * made with the current embedding model. A search is exact – the index of one machine and its model is small enough –
+ * made with the current embedding model; for an AI model proposal every file that is not removed (ST-125, ADR 0018).
+ * A search is exact – the index of one machine and its model, or of a few hundred files, is small enough –
  * ordered by cosine distance, and takes a fixed number of the best text passages and the best pages or images (not a
  * setting).
  */
