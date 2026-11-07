@@ -31,7 +31,7 @@ export function AcceptAiModelProposalForm({
   const rejectionId = useId();
   const removed = (state?.subjects ?? []).flatMap((fileId) =>
     (proposal.documents ?? []).flatMap((document) =>
-      document.kind === "file" && document.fileId === fileId ? [`„${document.title}“`] : [],
+      document.kind === "file" && document.fileId === fileId ? [document.title] : [],
     ),
   );
 
@@ -51,7 +51,7 @@ export function AcceptAiModelProposalForm({
         <div id={rejectionId}>
           <Rejection>
             {rejectionText(state.error, {
-              "ai-model-proposal-document-removed": `${removed.join(", ")} ${removed.length > 1 ? "wurden" : "wurde"} inzwischen entfernt. Es wurde nichts gespeichert.`,
+              "ai-model-proposal-document-removed": texts.documentsRemoved(removed),
             })}
           </Rejection>
         </div>

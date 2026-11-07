@@ -176,6 +176,13 @@ describe("saving an AI model proposal", () => {
     // The journal: the proposal accepted, the machine model created and the file attached – by the technician, in one step.
     const types = (await journalOf(db, { aggregateId: id })).map((entry) => entry.type);
     expect(types).toContain("EVT-AiModelProposalAccepted");
+    const accepted = (await journalOf(db, { aggregateId: id })).find(
+      (entry) => entry.type === "EVT-AiModelProposalAccepted",
+    );
+    // References only – no title, no link – and by the technician.
+    expect(accepted?.data).toEqual({ machineModelId: model.id, fileIds: [wiki], linkCount: 0 });
+    expect(accepted?.actor).toEqual(tom);
+    expect((await journalOf(db, { aggregateId: wiki })).map((entry) => entry.type)).toContain("EVT-FileAttached");
     const created = (await journalOf(db, { aggregateId: model.id })).map((entry) => entry.type);
     expect(created).toEqual(["EVT-MachineModelCreated"]);
   });
@@ -287,4 +294,3 @@ describe("saving an AI model proposal", () => {
     expect(await modelsCalled("High Speed")).toHaveLength(1);
   });
 });
-

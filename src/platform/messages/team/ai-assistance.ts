@@ -125,12 +125,15 @@ export const aiAssistanceTexts = {
     documentTick: (title: string) => `„${title}“ laden`,
     documentFileCategory: (title: string) => `Dateikategorie von „${title}“`,
     fileCategories: { manual: "Handbuch", schematic: "Schaltplan", other: "Sonstiges" },
-    /** Saving (ST-128): the button, the hint for a machine model that exists, and the page of a saved proposal (G3). */
-    /** G14: the button says what is saved – a bare „Speichern“ is on ST-091's list of vague texts (the story's wording). */
+    /** Saving (ST-128): the button, the hint for a machine model that exists, and the page of a saved proposal (G3).
+     *  G14: the button says what is saved – a bare „Speichern“ is on ST-091's list of vague texts (the story's wording). */
     save: "Modell speichern",
     sameModel: "Ein Modell mit diesem Titel und Hersteller gibt es schon.",
     toTheModel: "Zum Modell",
     removedFile: "Wurde inzwischen entfernt",
+    /** The rejection naming the chosen files that were removed meanwhile (HS-38): their titles in quotes. */
+    documentsRemoved: (titles: readonly string[]) =>
+      `${titles.map((title) => `„${title}“`).join(", ")} ${titles.length > 1 ? "wurden" : "wurde"} inzwischen entfernt. Es wurde nichts gespeichert.`,
     saved: "Gespeichert",
     savedModel: "Modell",
     attachedFiles: "Angehängte Dateien",

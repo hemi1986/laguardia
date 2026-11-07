@@ -4,6 +4,9 @@ import { aiModelProposalPage, type AiModelProposalPage } from "@/modules/ai-assi
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../../team-session";
+import { Rejection } from "@/components/ui/message";
+import { commandErrorText } from "@/platform/messages";
+import { ALREADY_SAVED } from "./document-fields";
 import { SavedAiModelProposal } from "./saved-proposal";
 import { WrittenAiModelProposal } from "./written-proposal";
 
@@ -20,9 +23,11 @@ const waitsForLinks = (proposal: AiModelProposalPage) =>
  */
 export default async function AiModelProposalPage({
   params,
+  searchParams,
 }: PageProps<"/team/machine-models/ki-vorschlag/[proposalId]">) {
   await requireTechnician();
   const { proposalId } = await params;
+  const alreadySaved = (await searchParams)[ALREADY_SAVED] === "1";
   const proposal = await aiModelProposalPage(database(), proposalId);
 
   return (
@@ -34,7 +39,14 @@ export default async function AiModelProposalPage({
           {(proposal.state === "requested" || waitsForLinks(proposal)) && <meta httpEquiv="refresh" content="5" />}
           <p>{proposal.description}</p>
           {proposal.state === "written" && <WrittenAiModelProposal proposal={proposal} />}
-          {proposal.state === "accepted" && <SavedAiModelProposal proposal={proposal} />}
+          {proposal.state === "accepted" && (
+            <>
+              {alreadySaved && (
+                <Rejection>{commandErrorText(teamMessages, "ai-model-proposal-already-accepted")}</Rejection>
+              )}
+              <SavedAiModelProposal proposal={proposal} />
+            </>
+          )}
           {proposal.state === "requested" && (
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{texts.running}</p>

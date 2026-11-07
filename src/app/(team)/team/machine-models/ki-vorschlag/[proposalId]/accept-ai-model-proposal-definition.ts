@@ -32,7 +32,11 @@ export function acceptAiModelProposalInput(
     machineModel: machineModelInput(fields),
     chosen: chosen.map((tick) => {
       const index = wholeNumber(tick) ?? -1;
-      return { index, title: fields[documentTitleField(index)], fileCategory: fields[documentFileCategoryField(index)] };
+      return {
+        index,
+        title: fields[documentTitleField(index)],
+        fileCategory: fields[documentFileCategoryField(index)],
+      };
     }),
   };
 }

@@ -8,6 +8,8 @@ import { requireTechnician } from "../../../../../team-session";
 import { aiModelProposalAddress } from "../../mit-ki-erstellen/request-ai-model-proposal-definition";
 import { acceptAiModelProposalForm } from "./accept-ai-model-proposal-definition";
 
+import { ALREADY_SAVED } from "./document-fields";
+
 const acceptAiModelProposal = formAction(
   acceptAiModelProposalCommand,
   acceptAiModelProposalForm({
@@ -31,5 +33,11 @@ export async function acceptAiModelProposalAction(
   formData: FormData,
 ): Promise<AcceptAiModelProposalState> {
   await requireTechnician(); // the page's access check; who may accept is decided by the command
-  return acceptAiModelProposal(previous, formData);
+  const state = await acceptAiModelProposal(previous, formData);
+  // Saved a moment ago by someone else: the page now shows the saved proposal and no form, which would take the
+  // rejection with it – so it is said on that page (G8a; the form has nothing left to keep).
+  if (state?.error === "ai-model-proposal-already-accepted") {
+    redirect(`${aiModelProposalAddress(String(formData.get("aiModelProposalId") ?? ""))}?${ALREADY_SAVED}=1`);
+  }
+  return state;
 }
