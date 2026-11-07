@@ -139,6 +139,15 @@ export const aiAssistanceTexts = {
     attachedFiles: "Angehängte Dateien",
     documentsToLoad: "Aus dem Netz",
     loading: "Wird geladen …",
+    loaded: "Geladen",
+    /** Why a chosen link could not be loaded (ST-129) – one word for each reason of `DocumentFailureReason`. */
+    documentFailures: {
+      "not-reachable": "nicht erreichbar",
+      "too-large": "zu groß",
+      "not-pdf-or-text": "kein PDF oder Text",
+      "address-not-allowed": "Adresse nicht erlaubt",
+      "broken-off": "abgebrochen",
+    },
   },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {

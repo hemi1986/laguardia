@@ -163,13 +163,25 @@ export function trigger<Input, Result, Error extends string>(
  * Another command this one runs after saving – also another module's –, in the same transaction, as the same acting
  * person and with that command's own authorization check (`context.run`, architecture review Q6, ST-018).
  */
-export type RunCall<Error extends string = string> = { command: Command<unknown, unknown, Error>; input: unknown };
+export type RunCall<Error extends string = string> = {
+  command: Command<unknown, unknown, Error>;
+  input: unknown;
+  /** The team member the inner command runs for – only a command run by the system may name one (see `run`). */
+  as?: Extract<Actor, { kind: "team-member" }>;
+};
 
+/**
+ * `as` (ST-129): a command the system runs in the background may run another command *on behalf of* a team member –
+ * the loading of a proposed document adds the file as the technician who asked for the proposal (a file has an
+ * „added by“). The inner command's own authorization check applies to that team member. Any other acting person that
+ * names `as` is a bug and throws: a person can never run a command as somebody else.
+ */
 export function run<Input, Result, Error extends string>(
   command: Command<Input, Result, Error>,
   input: Input,
+  options?: { as?: Extract<Actor, { kind: "team-member" }> },
 ): RunCall<Error> {
-  return { command: command as unknown as Command<unknown, unknown, Error>, input };
+  return { command: command as unknown as Command<unknown, unknown, Error>, input, ...(options?.as && { as: options.as }) };
 }
 
 /**
@@ -398,7 +410,7 @@ export function aggregateCommand<
       }
 
       for (const call of definition.runs?.(decision.state, decision.events, input) ?? []) {
-        await context.run(call.command, call.input);
+        await context.run(call.command, call.input, call.as && { as: call.as });
       }
       for (const call of definition.policies?.(decision.state, decision.events) ?? []) {
         await context.runAsSystem(call.policy, call.input);
