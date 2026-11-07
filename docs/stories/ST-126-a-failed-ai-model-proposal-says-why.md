@@ -12,7 +12,7 @@ risk: medium
 events: [EVT-AiModelProposalWritten, EVT-AiModelProposalFailed]
 depends_on: [ST-124]
 labels: [feature:ai-model-proposal]
-status: ready
+status: in-progress
 ---
 
 ## Story
