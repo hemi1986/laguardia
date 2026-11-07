@@ -3,13 +3,14 @@ import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
-import { aiDependencies, openAiModelProposals } from "@/modules/ai-assistance";
+import { aiDependencies, aiModelProposalDiscardedIn, openAiModelProposals } from "@/modules/ai-assistance";
 import { machineModelChangeIn, machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
 import { oneOf, viewersCommandOn } from "../confirmation";
 import { AiModelProposalsSection } from "./ai-model-proposals-section";
+import { DISCARDED_PARAMETER } from "./ki-vorschlag/[proposalId]/discard-ai-model-proposal-definition";
 
 const { machineModels: texts } = teamMessages;
 
@@ -20,7 +21,7 @@ const { machineModels: texts } = teamMessages;
  */
 export default async function MachineModelsPage({ searchParams }: PageProps<"/team/machine-models">) {
   const member = await requireTechnician();
-  const [models, { created }, aiProposals] = await Promise.all([
+  const [models, { created, [DISCARDED_PARAMETER]: discarded }, aiProposals] = await Promise.all([
     machineModelsToChooseFrom(database()),
     searchParams,
     openAiModelProposals(database(), aiDependencies()),
@@ -33,12 +34,18 @@ export default async function MachineModelsPage({ searchParams }: PageProps<"/te
       ? models.find((model) => model.id === createdId)
       : undefined;
 
+  // „KI-Vorschlag verworfen.“ only when discarding was the latest command on that proposal and this technician ran it (G3).
+  const discardedId = oneOf(discarded);
+  const discarding = discardedId ? await viewersCommandOn(database(), member.id, discardedId) : undefined;
+  const proposalDiscarded = !!discardedId && !!discarding && aiModelProposalDiscardedIn(discarding, discardedId);
+
   return (
     <Page title={texts.title}>
       <Link href="/team/machine-models/new" className={buttonVariants({ className: "self-start" })}>
         {texts.newMachineModel}
       </Link>
       <AiModelProposalsSection data={aiProposals} />
+      {proposalDiscarded && <Confirmation>{teamMessages.aiModelProposals.discarded}</Confirmation>}
       {createdModel && <Confirmation>{texts.created(createdModel.title)}</Confirmation>}
       {models.length === 0 ? (
         <p>{texts.empty}</p>

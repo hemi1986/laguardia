@@ -60,7 +60,7 @@ export type AiModelProposalPage = {
   id: string;
   description: string;
   state: AiModelProposalStateName;
-  /** Written only – the version „Speichern“ posts. */
+  /** Written or failed – the version „Speichern“ and „Verwerfen“ post. */
   version?: number;
   /** Written only, with the sources and documents – a field the AI could not fill (or filled with something not valid) is absent. */
   fields?: {
@@ -100,7 +100,7 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
     };
   }
   if (proposal.state === "failed") {
-    return { ...base, ...(proposal.failureReason && { failureReason: proposal.failureReason }) };
+    return { ...base, version, ...(proposal.failureReason && { failureReason: proposal.failureReason }) };
   }
   if (proposal.state !== "written") return base;
   const { title, manufacturer, year, machineCategory, technology } = proposal;

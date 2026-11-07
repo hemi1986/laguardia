@@ -56,6 +56,7 @@ export default async function AiModelProposalPage({
               <SavedAiModelProposal proposal={proposal} />
             </>
           )}
+          {proposal.state === "discarded" && <p className="text-sm font-medium">{texts.discardedState}</p>}
           {proposal.state === "requested" && (
             <div className="flex flex-col gap-1">
               <p className="text-sm font-medium">{texts.running}</p>

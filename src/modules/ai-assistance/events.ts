@@ -2,6 +2,7 @@ import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
 import type { AiModelProposalFailed, AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
 import type { AiModelProposalAccepted } from "./accept-ai-model-proposal";
+import type { AiModelProposalDiscarded } from "./discard-ai-model-proposal";
 import type { ProposedDocumentFailed, ProposedDocumentLoaded } from "./load-proposed-document";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
@@ -133,6 +134,15 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { machineModelId: event.machineModelId, fileIds: event.fileIds, linkCount: event.linkCount },
+    }),
+  },
+  // Discarded (ST-127): the fact only – the typed description stays out.
+  "EVT-AiModelProposalDiscarded": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: AiModelProposalDiscarded) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: {},
     }),
   },
   // A chosen link loaded or failed (ST-129): its place among the documents and the file or the reason – no title, no link.

@@ -168,4 +168,32 @@ test.describe("AI model proposals on the machine models page without JavaScript"
     await page.goto("/team/machine-models");
     await expect(page.getByRole("heading", { name: "KI-Vorschläge" })).toBeVisible();
   });
+
+  /** ST-127: „Verwerfen“ on a failed proposal – without JavaScript, the confirmation on the machine models page (G3). */
+  test("discards a failed proposal and confirms it on the machine models page", async ({ page }) => {
+    await restore();
+    await turnAiOn();
+    const id = randomUUID();
+    await withDatabase(async (client) => {
+      const member = await client.query("SELECT id FROM team_member LIMIT 1");
+      await client.query(
+        `INSERT INTO ai_model_proposal
+           (id, description, requested_by, requested_at, chat_model, state, failure_reason, changed_at)
+         VALUES ($1, 'asdf', $2, now(), 'google/gemini-2.5-flash', 'failed', 'device-not-recognised', now())`,
+        [id, member.rows[0].id],
+      );
+    });
+    await logIn(page);
+    await page.goto(`/team/machine-models/ki-vorschlag/${id}`);
+    await expect(page.getByText("Das Gerät wurde nicht erkannt.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Verwerfen" }).click();
+
+    await expect(page).toHaveURL(/\/team\/machine-models\?discarded=/);
+    await expect(page.getByText("KI-Vorschlag verworfen.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "KI-Vorschläge" })).toHaveCount(0);
+    // The address alone confirms nothing: a reload of another proposal's ID shows no confirmation.
+    await page.goto(`/team/machine-models?discarded=${randomUUID()}`);
+    await expect(page.getByText("KI-Vorschlag verworfen.")).toHaveCount(0);
+  });
 });

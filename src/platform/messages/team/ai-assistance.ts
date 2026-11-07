@@ -111,6 +111,10 @@ export const aiAssistanceTexts = {
     /** The failed proposal's page (ST-126, G7): why it failed, and „Nochmal versuchen“ – the form „Mit KI erstellen“
      *  with the description typed in. The reasons of an AI assessment have the texts of ST-108. */
     failed: "Fehlgeschlagen",
+    /** Discarding (ST-127): the button, the confirmation on the machine models page (G3) and the page of a discarded one. */
+    discard: "Verwerfen",
+    discarded: "KI-Vorschlag verworfen.",
+    discardedState: "Verworfen",
     tryAgain: "Nochmal versuchen",
     failureReasons: {
       "key-invalid":
@@ -238,6 +242,7 @@ export const aiAssistanceErrors = {
   "ai-model-proposal-description-required": "Bitte beschreibe das Gerät.",
   "ai-model-proposal-being-written": "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
   "ai-model-proposal-not-written": "Dieser KI-Vorschlag lässt sich nicht speichern.",
+  "ai-model-proposal-not-discardable": "Dieser KI-Vorschlag lässt sich nicht verwerfen.",
   "ai-model-proposal-already-accepted": "Dieser KI-Vorschlag wurde schon gespeichert.",
   "ai-model-proposal-document-unknown": "Dieses Dokument gehört nicht zum KI-Vorschlag.",
   "ai-model-proposal-document-removed": "Eine Datei wurde inzwischen entfernt. Es wurde nichts gespeichert.",
