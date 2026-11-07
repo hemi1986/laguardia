@@ -16,7 +16,8 @@ import {
   type Priority,
 } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database } from "@/platform/command";
+import type { Database } from "@/platform/command";
+import { viewersCommandOn } from "../../confirmation";
 import { calendarDate, daysBetween, today } from "@/platform/time";
 import { photoViewAddresses } from "@/photo";
 import { s3Storage } from "@/platform/storage";
@@ -139,7 +140,7 @@ export async function loadDefectDetails(
   });
   // Read only for the confirmation – once: someone just back from an action (G3). Repair says which action the command
   // did, Collection whether it changed the machine status in the same step (reopening, ST-030).
-  const command = done && viewer ? await lastCommandBy(db, { aggregateId: defect.id }, viewer.id) : undefined;
+  const command = done && viewer ? await viewersCommandOn(db, viewer.id, defect.id) : undefined;
   const last = command && defectActionIn(command, defect.id);
   const confirmed = last?.action === done ? last : undefined;
   const previousClaimant = confirmed?.takenOverFrom;

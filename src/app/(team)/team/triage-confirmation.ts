@@ -1,8 +1,9 @@
 import { collectionChangesIn, type MachineStatus } from "@/modules/collection";
 import { defectTitle, problemReportForTriage, triageOutcomeIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
-import { lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
+import type { Database, TeamMemberId } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
+import { oneOf, viewersCommandOn, type AddressQuery } from "./confirmation";
 import { named } from "./named";
 
 /**
@@ -17,12 +18,6 @@ export type TriageConfirmation =
   | { outcome: "linked"; museumNumber: string; title: string; reopened: boolean }
   | { outcome: "resolved-on-the-spot"; museumNumber: string }
   | { outcome: "dismissed"; museumNumber: string };
-
-/** A page's query as Next.js hands it over – what the address asks a page to confirm. */
-export type AddressQuery = { [name: string]: string | string[] | undefined };
-
-/** One value of the query – none when the address gives it twice. */
-export const oneOf = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
 
 /** Which outcome each address parameter asks for; each names the problem report. */
 const asked = [
@@ -48,7 +43,7 @@ export async function loadTriageConfirmation(
   const [parameter, outcome] = asked.find(([name]) => oneOf(query[name])) ?? [];
   const problemReportId = parameter && oneOf(query[parameter]);
   if (!outcome || !problemReportId) return undefined;
-  const command = await lastCommandBy(db, { aggregateId: problemReportId }, viewer);
+  const command = await viewersCommandOn(db, viewer, problemReportId);
   const triaged = command && triageOutcomeIn(command, problemReportId);
   if (triaged?.outcome !== outcome) return undefined;
   const report = await problemReportForTriage(db, clock, problemReportId);

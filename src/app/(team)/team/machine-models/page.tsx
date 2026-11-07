@@ -4,10 +4,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
 import { machineModelChangeIn, machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
-import { lastCommandBy } from "@/platform/command";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
+import { oneOf, viewersCommandOn } from "../confirmation";
 
 const { machineModels: texts } = teamMessages;
 
@@ -19,11 +19,11 @@ export default async function MachineModelsPage({ searchParams }: PageProps<"/te
   const member = await requireTechnician();
   const [models, { created }] = await Promise.all([machineModelsToChooseFrom(database()), searchParams]);
   // Confirmed only when creating it was the latest command on it and this technician ran it (G3).
-  const creating =
-    typeof created === "string" ? await lastCommandBy(database(), { aggregateId: created }, member.id) : undefined;
+  const createdId = oneOf(created);
+  const creating = await viewersCommandOn(database(), member.id, createdId);
   const createdModel =
-    creating && machineModelChangeIn(creating, created as string).created
-      ? models.find((model) => model.id === created)
+    creating && machineModelChangeIn(creating, createdId!).created
+      ? models.find((model) => model.id === createdId)
       : undefined;
 
   return (

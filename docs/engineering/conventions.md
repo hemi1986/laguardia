@@ -364,7 +364,7 @@ from the address, and the page checks it where it reads it.
 the view takes a `can…` prop. An offer another module decides per item (ST-047's „Wartung erfassen“ per due task) comes
 with that section's data from that module.
 
-**A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18): the address
+**A confirmation after an action (G3)** – one rule on every team page (architecture review 2026-10-18; its reading of the address is one module since 2026-11-06, `src/app/(team)/team/confirmation.ts`: `oneOf` – a parameter given twice is none –, `AddressQuery`, and `viewersCommandOn`, the journal rule's first half for an ID the address names; every parameter follows one of two kinds – **journal**, the rule below, or **state**, the exceptions named below, which state what is true now and claim nothing about who did it): the address
 only says *what* to look for (`?statusChanged`, `?done=claim`, `?defectRecorded=<problem report>`, `?recorded=<id>`,
 `?registered=`, `?created=`, `?corrected`, `?added=`, `?changed=`, `?removed=`; `?machinesChanged=` and `?tasksChanged=` are the exceptions named under *Changing the machines of a task* and *Changing the tasks of one machine*, `?saved=museum` and `?saved=legal-texts` the ones under *The museum settings*); the page confirms it only when `lastCommandBy(db, { machineId } |
 { aggregateId }, viewer)` (command layer) says the latest command on that target was that action **and** the team

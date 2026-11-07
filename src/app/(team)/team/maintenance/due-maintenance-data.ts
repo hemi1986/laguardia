@@ -8,7 +8,8 @@ import {
   type DueMaintenanceTask,
 } from "@/modules/maintenance";
 import type { Clock } from "@/platform/clock";
-import { isId, lastCommandBy, type Database } from "@/platform/command";
+import { isId, type Database } from "@/platform/command";
+import { viewersCommandOn } from "../confirmation";
 import type { TeamCommandErrorCode } from "@/platform/messages";
 import type { Viewer } from "../claimant";
 
@@ -119,7 +120,7 @@ async function confirmedRecords(
   const records = (
     await Promise.all(
       recorded.filter(isId).map(async (recordId) => {
-        const command = await lastCommandBy(db, { aggregateId: recordId }, viewer.id);
+        const command = await viewersCommandOn(db, viewer.id, recordId);
         return command && maintenanceRecordedIn(command, recordId) ? maintenanceRecordById(db, recordId) : undefined;
       }),
     )

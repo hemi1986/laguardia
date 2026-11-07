@@ -3,7 +3,8 @@ import { maintenanceRecordById, maintenanceRecordedIn } from "@/modules/maintena
 import { problemReportedIn } from "@/modules/repair";
 import type { Clock } from "@/platform/clock";
 import { isId, lastCommandBy, type Database, type TeamMemberId } from "@/platform/command";
-import { loadTriageConfirmation, oneOf, type AddressQuery, type TriageConfirmation } from "../../triage-confirmation";
+import { oneOf, viewersCommandOn, type AddressQuery } from "../../confirmation";
+import { loadTriageConfirmation, type TriageConfirmation } from "../../triage-confirmation";
 import type { MachineRecordData } from "./machine-record-data";
 
 /**
@@ -42,25 +43,23 @@ export async function loadMachineConfirmation(
   const fileId = oneOf(query.attached);
   if (fileId) {
     const file = record.files.find((shown) => shown.id === fileId);
-    const command = file && (await lastCommandBy(db, { aggregateId: fileId }, viewer));
-    return file && command && fileAddedIn(command, fileId)
-      ? { kind: "file-attached", title: file.title }
-      : undefined;
+    const command = file && (await viewersCommandOn(db, viewer, fileId));
+    return file && command && fileAddedIn(command, fileId) ? { kind: "file-attached", title: file.title } : undefined;
   }
   const removedFileId = oneOf(query.fileRemoved);
   if (removedFileId !== undefined) {
+    // machineFile reads the file by this ID: only an ID can name one.
     if (!isId(removedFileId)) return undefined;
     // The machine record lists the file no more – its title comes from the kept record, only for a file of this page.
     const file = await machineFile(db, { fileId: removedFileId, machineId: record.id });
-    const command = file && (await lastCommandBy(db, { aggregateId: removedFileId }, viewer));
+    const command = file && (await viewersCommandOn(db, viewer, removedFileId));
     return file && command && fileRemovedIn(command, removedFileId)
       ? { kind: "file-removed", title: file.title }
       : undefined;
   }
   const maintenanceRecordId = oneOf(query.maintenanceRecorded);
   if (maintenanceRecordId !== undefined) {
-    if (!isId(maintenanceRecordId)) return undefined;
-    const command = await lastCommandBy(db, { aggregateId: maintenanceRecordId }, viewer);
+    const command = await viewersCommandOn(db, viewer, maintenanceRecordId);
     if (!command || !maintenanceRecordedIn(command, maintenanceRecordId)) return undefined;
     const recorded = await maintenanceRecordById(db, maintenanceRecordId);
     return recorded?.machineId === record.id ? { kind: "maintenance-recorded" } : undefined;
