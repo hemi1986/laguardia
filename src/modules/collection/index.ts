@@ -21,9 +21,11 @@ export { machineFile, fileRemovedBy, fileToOpen, type FileOfMachine, type Machin
 export {
   fileForIndexing,
   fileForIndexingWhileStoring,
+  filesForAiModelProposal,
   filesForAiReferences,
   filesForIndexing,
   filesOfMachineAndModelForAi,
+  type FileForAiModelProposal,
   type FileForAiReference,
   type FileForIndexing,
   type FileOfAiAssessmentMachine,

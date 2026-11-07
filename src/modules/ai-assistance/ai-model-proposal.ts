@@ -3,8 +3,8 @@ import { machineCategories, technologiesOf, type MachineCategory, type Technolog
 
 /**
  * AGG-AiModelProposal (ST-123, docs/architecture/data-model.md, data model *AI model proposal*): what an AI makes of
- * the description of a device a technician typed. ST-123 holds the request, ST-124 the writing (fields, sources and
- * links of a written one; existing files join with ST-125), the failure with ST-126. It never changes a machine model by itself
+ * the description of a device a technician typed. ST-123 holds the request, ST-124 the writing (fields, sources, existing
+ * files ST-125 and links of a written one), the failure with ST-126. It never changes a machine model by itself
  * (ADR 0019) and at most one is being written at a time (HS-37).
  */
 
@@ -22,9 +22,11 @@ export type ProposedFileCategory = (typeof proposedFileCategories)[number];
 /** At most this many documents in a written AI model proposal (invariant). */
 export const MAX_PROPOSED_DOCUMENTS = 10;
 
-/** A document the AI found on the web: a link (https) with a title and one file category. Existing files: ST-125. */
+/** A document the AI found on the web: a link (https) with a title and one file category. */
 export type ProposedLink = { kind: "link"; link: string; title: string; fileCategory: ProposedFileCategory };
-export type ProposedDocument = ProposedLink;
+/** A file the museum already has, found in the AI index (ST-125): by ID, with the title and file category it had then. */
+export type ProposedFile = { kind: "file"; fileId: string; title: string; fileCategory: ProposedFileCategory };
+export type ProposedDocument = ProposedFile | ProposedLink;
 
 /** AGG-AiModelProposal – current state. */
 export type AiModelProposalState = {
@@ -137,8 +139,13 @@ export type AiModelProposalAnswer = {
   documents: { link: string; title: string; fileCategory: string }[];
 };
 
+/** A file the AI index found for the completed fields (ST-125) – read from Collection, so its title and category are trusted. */
+export type FoundFile = { fileId: string; title: string; fileCategory: string };
+
 export type WriteAiModelProposalInput = {
   answer: AiModelProposalAnswer;
+  /** The files the AI index found, best first (ST-125) – offered before the links. */
+  existingFiles?: FoundFile[];
   /** The embedding model the AI index was searched with (ST-125) – none while no search was made. */
   embeddingModel?: string;
   /** What OpenRouter charged for the whole writing, in US dollars. */
@@ -181,7 +188,7 @@ function validYear(value: string | undefined): number | undefined {
  */
 export function writeAiModelProposal(
   state: AiModelProposalState,
-  { answer, embeddingModel, cost }: WriteAiModelProposalInput,
+  { answer, existingFiles = [], embeddingModel, cost }: WriteAiModelProposalInput,
   { clock }: DecisionContext,
 ): Decision<AiModelProposalState, AiModelProposalWritten, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
@@ -193,7 +200,15 @@ export function writeAiModelProposal(
   const title = answer.title?.trim();
   const manufacturer = answer.manufacturer?.trim();
   const sources = unique(answer.sources.flatMap((source) => httpsLink(source) ?? []));
-  const documents = uniqueBy(
+  // Existing files come first and count within the 10 (rule); a photo is no document of a proposal.
+  const files = uniqueBy(
+    existingFiles.flatMap(({ fileId, title: fileTitle, fileCategory }): ProposedFile[] => {
+      const category = proposedFileCategories.find((candidate) => candidate === fileCategory);
+      return category ? [{ kind: "file", fileId, title: fileTitle, fileCategory: category }] : [];
+    }),
+    (document) => document.fileId,
+  );
+  const links = uniqueBy(
     answer.documents.flatMap(({ link, title: documentTitle, fileCategory }): ProposedLink[] => {
       const address = httpsLink(link);
       const named = documentTitle.trim();
@@ -203,7 +218,8 @@ export function writeAiModelProposal(
       return [{ kind: "link", link: address, title: named, fileCategory: category ?? "other" }];
     }),
     (document) => document.link,
-  ).slice(0, MAX_PROPOSED_DOCUMENTS);
+  );
+  const documents: ProposedDocument[] = [...files, ...links].slice(0, MAX_PROPOSED_DOCUMENTS);
   const written: AiModelProposalState = {
     ...state,
     state: "written",

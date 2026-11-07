@@ -51,7 +51,7 @@ const highSpeed = {
 
 /** The chat model's answer, as a JSON object like the spike's runs; `cost` is what OpenRouter reports. */
 const answering = (answer: unknown, cost = 0.0412) =>
-  scenario.openRouter({ chatAnswer: { content: JSON.stringify(answer), cost } });
+  scenario.openRouter({ chatAnswer: { content: JSON.stringify(answer), cost }, embeddingCost: 0 });
 
 /** Requests a proposal and runs the background work once – returns the proposal's page, rendered. */
 async function theWrittenProposal(description: string, openRouter: ReturnType<typeof answering>) {

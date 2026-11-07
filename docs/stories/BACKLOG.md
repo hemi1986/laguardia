@@ -2,9 +2,9 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 89 of 95 domain stories done** · scenarios 821 of 841
+**Progress: 90 of 95 domain stories done** · scenarios 824 of 841
 
-**127 stories** · In Progress: 0 · Ready: 6 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 110 · Superseded: 11
+**127 stories** · In Progress: 0 · Ready: 5 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 111 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 | [ST-126](ST-126-a-failed-ai-model-proposal-says-why.md) | An AI model proposal that fails or breaks off says why | domain | AI assistance | should | M | medium | ST-124 |
@@ -127,6 +126,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-117](ST-117-file-overview-with-filters-and-pages.md) | Find a file in the file overview with filters and pages | story | Collection | should | L | medium | ST-114, ST-121 |
 | [ST-119](ST-119-add-a-file-from-the-file-overview.md) | Add a file from the file overview, attached to something or to nothing yet | story | Collection | should | L | medium | ST-115, ST-116, ST-117 |
 | [ST-118](ST-118-full-text-search-in-the-file-overview.md) | Search the file overview by title, names and content | story | Collection | should | L | medium | ST-117, ST-119, ST-106 |
+| [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-032](ST-032-photos-on-work-log-entry.md) | Add photos to a work log entry | story | Repair | could | S | low | ST-002, ST-024, ST-016 |
 | [ST-035](ST-035-correct-machine-details.md) | Correct a machine's museum number or serial number | story | Collection | could | L | medium | ST-011 |
 | [ST-055](ST-055-retired-machines-in-views.md) | Retired machines in the overview, search and visitor page | story | Collection | could | S | low | ST-039 |
