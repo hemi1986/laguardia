@@ -9,6 +9,7 @@ import {
 import { chosenDocuments } from "./accept-ai-model-proposal";
 import {
   requestRefusal,
+  type AiModelProposalFailureReason,
   type AiModelProposalStateName,
   type ProposedDocument,
   type RequestAiModelProposalError,
@@ -76,6 +77,8 @@ export type AiModelProposalPage = {
   sameModel?: { id: string; title: string };
   /** Accepted only – the machine model this proposal created. */
   machineModel?: { id: string; title: string };
+  /** Failed only (ST-126) – why. */
+  failureReason?: AiModelProposalFailureReason;
 };
 
 /** The AI model proposal's page (ST-123: while it is being written; ST-124: written; ST-128: accepted; ST-126: failed). */
@@ -86,13 +89,18 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
   const base = { id: proposal.id, description: proposal.description, state: proposal.state };
   if (proposal.state === "accepted") {
     const { machineModelId } = proposal;
-    const machineModelTitle = machineModelId ? (await machineModelTitles(db, [machineModelId])).get(machineModelId) : undefined;
+    const machineModelTitle = machineModelId
+      ? (await machineModelTitles(db, [machineModelId])).get(machineModelId)
+      : undefined;
     return {
       ...base,
       documents: chosenDocuments(proposal),
       ...(machineModelId &&
         machineModelTitle !== undefined && { machineModel: { id: machineModelId, title: machineModelTitle } }),
     };
+  }
+  if (proposal.state === "failed") {
+    return { ...base, ...(proposal.failureReason && { failureReason: proposal.failureReason }) };
   }
   if (proposal.state !== "written") return base;
   const { title, manufacturer, year, machineCategory, technology } = proposal;
@@ -113,9 +121,8 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
       ...(technology !== undefined && { technology }),
     },
     sources: proposal.sources ?? [],
-    documents: documents.map(
-      (document): PageDocument =>
-        document.kind === "file" && files.get(document.fileId)?.removed ? { ...document, removed: true } : document,
+    documents: documents.map((document): PageDocument =>
+      document.kind === "file" && files.get(document.fileId)?.removed ? { ...document, removed: true } : document,
     ),
     ...(sameModel && { sameModel }),
   };

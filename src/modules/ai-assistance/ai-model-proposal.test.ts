@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
-import { writeAiModelProposal, type AiModelProposalAnswer, type AiModelProposalState } from "./ai-model-proposal";
+import {
+  failAiModelProposal,
+  writeAiModelProposal,
+  type AiModelProposalAnswer,
+  type AiModelProposalState,
+} from "./ai-model-proposal";
 import { answerOfChat, existingFilesSearchText, parseAiModelProposalAnswer } from "./ai-model-proposal-writing";
 
 /** The rules of CMD-WriteAiModelProposal over many cases (ST-124) – the scenarios themselves run at the run seam. */
@@ -207,5 +212,33 @@ describe("the chat model's answer", () => {
   it("is told apart from a stop and a failure", () => {
     expect(answerOfChat("stopped")).toBe("stopped");
     expect(answerOfChat({ failure: "timed-out" })).toEqual({ failure: "timed-out" });
+  });
+});
+
+describe("an AI model proposal that fails (ST-126)", () => {
+  it.each([
+    ["no title and no manufacturer", { title: undefined, manufacturer: undefined }],
+    ["only a category, a technology and a year", { title: " ", manufacturer: " ", machineCategory: "pinball" }],
+  ])("fails as device not recognised when the answer names %s", (_, given) => {
+    const decision = writeAiModelProposal(requested, { answer: answer(given), cost: 0.05 }, context);
+
+    expect(decision).toMatchObject({
+      ok: true,
+      state: { state: "failed", failureReason: "device-not-recognised" },
+      events: [{ type: "EVT-AiModelProposalFailed", aiModelProposalId: "proposal-1", reason: "device-not-recognised" }],
+    });
+    if (decision.ok) expect(decision.state).not.toHaveProperty("cost");
+  });
+
+  it("fails a requested proposal once; a written or failed one records nothing", () => {
+    const failed = failAiModelProposal(requested, "broken-off", context);
+    if (!failed.ok) throw new Error(failed.error);
+
+    expect(failed.state).toMatchObject({ state: "failed", failureReason: "broken-off" });
+    expect(failAiModelProposal(failed.state, "ai-off", context)).toEqual({ ok: false, error: "not-requested" });
+    expect(writeAiModelProposal(failed.state, { answer: answer(), cost: 0.05 }, context)).toEqual({
+      ok: false,
+      error: "not-requested",
+    });
   });
 });

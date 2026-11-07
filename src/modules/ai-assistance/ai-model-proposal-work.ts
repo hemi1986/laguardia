@@ -1,17 +1,22 @@
+import type { Clock } from "@/platform/clock";
 import { executeCommand, type Database } from "@/platform/command";
 import { filesForAiModelProposal } from "@/modules/collection";
 import { aiModelProposalById, requestedAiModelProposalIds } from "./ai-model-proposals";
 import {
   MAX_PROPOSED_DOCUMENTS,
+  deviceRecognised,
   proposedFileCategories,
   type AiModelProposalAnswer,
+  type AiModelProposalFailureReason,
   type FoundFile,
 } from "./ai-model-proposal";
 import { aiModelProposalChatRequest, answerOfChat, existingFilesSearchText } from "./ai-model-proposal-writing";
+import { failureOfEmbedding } from "./ai-assessment-writing";
 import { searchAiIndex } from "./ai-index-search";
-import type { AiWorkKind } from "./ai-work";
+import { aiState } from "./ai-settings";
+import { aiWorkLeftUnfinished, type AiWorkContext, type AiWorkKind, type HeldPiece } from "./ai-work";
 import type { OpenRouterSession } from "./open-router-session";
-import { writeAiModelProposalCommand } from "./write-ai-model-proposal-command";
+import { failAiModelProposalCommand, writeAiModelProposalCommand } from "./write-ai-model-proposal-command";
 
 /**
  * Writing an AI model proposal as a kind of the background work (ST-124, ADR 0015, ADR 0020,
@@ -19,11 +24,16 @@ import { writeAiModelProposalCommand } from "./write-ai-model-proposal-command";
  * any transaction, and only the storage of the answer is one short transaction that ends the hold. The chat model is the
  * one the proposal was requested with, never the one saved since.
  *
- * Only the happy path is built here: an answer that cannot be stored (OpenRouter's failures, an answer that is not the
- * agreed form, AI turned off, a break-off) gives the piece up and records nothing. Failing it with a reason comes with
- * ST-126.
+ * What cannot be written fails the proposal with its reason (ST-126): OpenRouter's failures, an answer that is not the
+ * agreed form, an answer without a machine, AI turned off – nothing is sent then – and a break-off, recorded by the next
+ * run (POL-UnfinishedAiWorkFails). A failed proposal is never written again automatically.
  */
 const AI_MODEL_PROPOSAL_KIND = "ai-model-proposal";
+
+/** Whether this AI model proposal was left unfinished: its hold ran out without a result (HS-33). */
+export function aiModelProposalLeftUnfinished(db: Database, clock: Clock, aiModelProposalId: string): Promise<boolean> {
+  return aiWorkLeftUnfinished(db, clock, AI_MODEL_PROPOSAL_KIND, [aiModelProposalId]);
+}
 
 export const aiModelProposalWork: AiWorkKind = {
   kind: AI_MODEL_PROPOSAL_KIND,
@@ -39,16 +49,21 @@ export const aiModelProposalWork: AiWorkKind = {
 
   async work(id, piece, context) {
     const proposal = await aiModelProposalById(context.db, id);
+    // Already written or failed meanwhile – a stale hold does nothing.
     if (!proposal || proposal.state !== "requested") return piece.giveUp();
+    // AI turned off before it started: nothing is sent, and the proposal is failed as *AI off* (rule).
+    if (!(await aiState(context.db, context.ai)).on) return fail(id, "ai-off", piece, context);
     const answer = answerOfChat(
       await piece.openRouter.chat(proposal.chatModel, aiModelProposalChatRequest(proposal.description)),
     );
-    // ST-126: stopped, a failure of OpenRouter and an unusable answer fail the proposal with their reason.
-    if (answer === "stopped" || answer === "unusable" || "failure" in answer) return piece.giveUp();
+    if (answer === "stopped") return fail(id, "ai-off", piece, context);
+    if (answer === "unusable") return fail(id, "answer-unusable", piece, context);
+    if ("failure" in answer) return fail(id, answer.failure, piece, context);
+    // No machine in the answer: nothing is searched for and nothing more is paid.
+    if (!deviceRecognised(answer)) return fail(id, "device-not-recognised", piece, context);
     // The AI index is searched with the completed fields among all files (ST-125, ADR 0018).
     const found = await findExistingFiles(context.db, piece.openRouter, answer);
-    // ST-126: a failed embedding fails the proposal with its reason.
-    if (found === "gave-up") return piece.giveUp();
+    if ("failure" in found) return fail(id, found.failure, piece, context);
     await piece.storeResult((tx) =>
       executeCommand(
         writeAiModelProposalCommand,
@@ -64,9 +79,32 @@ export const aiModelProposalWork: AiWorkKind = {
     );
   },
 
-  /** ST-126 records the proposal failed as *broken off*; until then a break-off leaves it as it is. */
-  async recordBrokenOff() {},
+  /**
+   * POL-UnfinishedAiWorkFails: a proposal whose hold ran out without a result is recorded failed as *broken off* and
+   * never written again automatically (HS-33, D3). Nothing is read and nothing is sent.
+   */
+  async recordBrokenOff(tx, id, context) {
+    await failIn(tx, id, "broken-off", context);
+  },
 };
+
+/** Records a failure through the aggregate's own command – only while the proposal is still requested. */
+async function fail(
+  id: string,
+  reason: AiModelProposalFailureReason,
+  piece: HeldPiece,
+  context: AiWorkContext,
+): Promise<void> {
+  await piece.storeResult((tx) => failIn(tx, id, reason, context));
+}
+
+function failIn(tx: Database, id: string, reason: AiModelProposalFailureReason, context: AiWorkContext) {
+  return executeCommand(
+    failAiModelProposalCommand,
+    { aiModelProposalId: id, reason },
+    { actor: { kind: "system" }, db: tx, clock: context.clock },
+  );
+}
 
 /**
  * The files the AI index finds for the completed fields (ST-125): the best passages and the best pages or images of the
@@ -78,11 +116,11 @@ async function findExistingFiles(
   db: Database,
   openRouter: OpenRouterSession,
   answer: AiModelProposalAnswer,
-): Promise<{ files: FoundFile[]; embeddingModel?: string } | "gave-up"> {
+): Promise<{ files: FoundFile[]; embeddingModel?: string } | { failure: AiModelProposalFailureReason }> {
   const text = existingFilesSearchText(answer);
   if (!text) return { files: [] };
   const embedded = await openRouter.embed({ kind: "text", text });
-  if (typeof embedded === "string") return "gave-up";
+  if (typeof embedded === "string") return { failure: failureOfEmbedding(embedded) };
   // Photos are left out of the scope already, so they take none of the fixed hits; the decision keeps the invariant too.
   const candidates = (await filesForAiModelProposal(db)).filter((file) =>
     proposedFileCategories.some((category) => category === file.fileCategory),

@@ -17,7 +17,9 @@ export function aiModelProposalAddress(aiModelProposalId: string): string {
 }
 
 /** The typed description as it came – the decision trims it and says when it is blank. */
-export function requestAiModelProposalInput(fields: FormFields<RequestAiModelProposalField>): RequestAiModelProposalInput {
+export function requestAiModelProposalInput(
+  fields: FormFields<RequestAiModelProposalField>,
+): RequestAiModelProposalInput {
   return { description: fields.description ?? "" };
 }
 
@@ -31,4 +33,12 @@ export function requestAiModelProposalForm({
   onSuccess: (result: { aiModelProposalId: string }) => Promise<void>;
 }): FormDefinition<RequestAiModelProposalInput, { aiModelProposalId: string }, RequestAiModelProposalField> {
   return { fields: requestAiModelProposalFields, input: requestAiModelProposalInput, onSuccess };
+}
+
+/** The query parameter of „Nochmal versuchen“: the failed proposal whose description the form starts with (ST-126, HS-42). */
+export const TRY_AGAIN_PARAMETER = "retry";
+
+/** „Nochmal versuchen“ on a failed proposal: the page „Mit KI erstellen“, which reads the description on the server. */
+export function tryAgainAddress(aiModelProposalId: string): string {
+  return `/team/machine-models/mit-ki-erstellen?${TRY_AGAIN_PARAMETER}=${encodeURIComponent(aiModelProposalId)}`;
 }

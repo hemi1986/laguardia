@@ -1,0 +1,1 @@
+ALTER TABLE "ai_model_proposal" ADD COLUMN "failure_reason" text;

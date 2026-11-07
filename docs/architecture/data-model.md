@@ -42,6 +42,7 @@
 | `Cost` | What OpenRouter charged for a request, in OpenRouter's credits (US dollars) as OpenRouter reports it |
 | `IndexingFailureReason` | *not readable* \| *format not indexed* \| *OpenRouter refused* \| *OpenRouter not reachable* \| *broken off* (the indexing ended without a result – D3) |
 | `AssessmentFailureReason` | *key invalid* \| *credit used up* \| *model not available* \| *timed out* (OpenRouter did not answer in time) \| *OpenRouter not reachable* \| *AI off* \| *answer unusable* \| *broken off* (the writing ended without a result – HS-33, D3) |
+| `ProposalFailureReason` | the reasons of `AssessmentFailureReason` and *device not recognised* (the AI found no machine for the description – ST-126) |
 | `PageNumber` | A page of a PDF, counted from 1 as the PDF shows it |
 | `Text` / `Title` | Free text; `Title` is short and, for defects, understandable for visitors |
 | `Timestamp` / `Date` | Point in time / calendar date |

@@ -1,5 +1,5 @@
 import { machineCategories, technologies } from "@/modules/collection";
-import type { ChatAnswer, ChatInput } from "./ai-seam";
+import type { ChatAnswer, ChatFailure, ChatInput } from "./ai-seam";
 import type { SessionStopped } from "./open-router-session";
 import type { AiModelProposalAnswer } from "./ai-model-proposal";
 import { proposedFileCategories } from "./ai-model-proposal";
@@ -38,11 +38,11 @@ const MAX_NAMED_DOCUMENTS = 40;
 
 /**
  * What the chat model's request came to: the answer's plain values, or `"unusable"` – an answer that is not the agreed
- * form. A stopped session (AI turned off meanwhile) and OpenRouter's failures are the caller's to tell (ST-126).
+ * form. A stopped session (AI turned off meanwhile) and OpenRouter's failures are told apart for the caller (ST-126).
  */
 export function answerOfChat(
   answer: ChatAnswer | SessionStopped,
-): AiModelProposalAnswer | "stopped" | "unusable" | { failure: string } {
+): AiModelProposalAnswer | "stopped" | "unusable" | { failure: ChatFailure } {
   if (answer === "stopped") return "stopped";
   if ("failure" in answer) return answer;
   return parseAiModelProposalAnswer(answer.content) ?? "unusable";

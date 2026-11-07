@@ -16,7 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { wordsOfText } from "@/platform/word-search";
 import { EMBEDDING_SIZE } from "./ai-seam";
-import { aiModelProposalStates, type ProposedDocument } from "./ai-model-proposal";
+import { aiModelProposalFailureReasons, aiModelProposalStates, type ProposedDocument } from "./ai-model-proposal";
 import { assessmentFailureReasons, type AiAssessmentReference } from "./ai-assessment";
 import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
 
@@ -167,6 +167,8 @@ export const aiModelProposal = pgTable(
     machineModelId: uuid("machine_model_id"),
     /** Written or failed at. */
     changedAt: timestamp("changed_at", { withTimezone: true }),
+    /** Failed only (ST-126). */
+    failureReason: text("failure_reason", { enum: aiModelProposalFailureReasons }),
     /** Optimistic version check (HS-16): a late result after the proposal failed records nothing. */
     version: integer("version").notNull().default(0),
   },

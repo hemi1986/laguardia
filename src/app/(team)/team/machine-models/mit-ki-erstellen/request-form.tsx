@@ -19,10 +19,13 @@ const { aiModelProposals: texts } = teamMessages;
 export function RequestAiModelProposalForm({
   action,
   whyNot,
+  initialDescription,
 }: {
   action: (previous: RequestAiModelProposalState, formData: FormData) => Promise<RequestAiModelProposalState>;
   /** Why CMD-RequestAiModelProposal would refuse any description now – none when it would not (G11). */
   whyNot: TeamCommandErrorCode | undefined;
+  /** „Nochmal versuchen“ (ST-126): the description of the failed proposal, typed in when the page opens. */
+  initialDescription?: string | undefined;
 }) {
   const [state, submit, pending] = useActionState(action, null);
   const rejectionId = useId();
@@ -36,7 +39,7 @@ export function RequestAiModelProposalForm({
           id="description"
           name="description"
           placeholder={texts.placeholder}
-          defaultValue={state?.values.description}
+          defaultValue={state ? state.values.description : initialDescription}
           key={`description-${keptKey(state)}`}
           aria-invalid={state ? true : undefined}
           aria-describedby={state ? rejectionId : undefined}
