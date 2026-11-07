@@ -32,7 +32,7 @@
       },
       "entryPoints": [],
       "internalDeps": [],
-      "externalDeps": 40,
+      "externalDeps": 43,
       "consumers": [],
       "hasTests": true,
       "adopted": true,
@@ -44,7 +44,7 @@
       "path": ".",
       "score": 0.7,
       "reasons": [
-        "2839 changed files in recent history",
+        "3037 changed files in recent history",
         "app"
       ]
     }
