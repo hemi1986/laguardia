@@ -302,4 +302,36 @@ describe("loading the chosen links of a saved proposal", () => {
       reason: "broken-off",
     });
   });
+
+  it("a result that comes after the hold ran out records nothing and leaves no content behind", async () => {
+    const { id } = await aSavedProposal([link("https://example.org/a.pdf", "A manual")]);
+    const inner = memoryWeb({ "https://example.org/a.pdf": { contentType: "application/pdf", bytes: pdf(100) } });
+    // While the fetch is running, the next run fails the link as broken off and ends the hold.
+    const slow = {
+      async fetch(address: string, options: { maxBytes: number }) {
+        const kind = proposedDocumentWork(inner);
+        await db.transaction(async (tx) => {
+          await kind.recordBrokenOff(
+            tx,
+            proposedDocumentPieceId(id, 0),
+            { db, clock, ai: { encryptionKey: () => Buffer.alloc(32) }, storage },
+            0,
+          );
+          await tx.execute("DELETE FROM ai_work_hold");
+        });
+        return inner.fetch(address, options);
+      },
+    };
+
+    await scenario.run({ kinds: [proposedDocumentWork(slow)] });
+
+    expect((await aiModelProposalPage(db, id))?.documents?.[0]).toMatchObject({
+      loading: "failed",
+      reason: "broken-off",
+    });
+    expect(storage.names()).toEqual([]);
+    expect(
+      (await journalOf(db, { aggregateId: id })).filter((entry) => entry.type === "EVT-ProposedDocumentLoaded"),
+    ).toEqual([]);
+  });
 });

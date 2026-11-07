@@ -60,9 +60,7 @@ export function SavedAiModelProposal({ proposal }: { proposal: AiModelProposalPa
                   </span>
                 )}
                 {document.loading === "failed" && document.reason && (
-                  <span role="alert" className="text-destructive text-sm">
-                    {texts.documentFailures[document.reason]}
-                  </span>
+                  <span className="text-destructive text-sm">{texts.documentFailures[document.reason]}</span>
                 )}
               </li>
             ))}

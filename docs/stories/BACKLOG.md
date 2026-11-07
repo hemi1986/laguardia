@@ -2,17 +2,11 @@
 
 > Generated from `docs/stories/ST-*.md` – **do not edit manually**. Change the story files instead.
 
-**Progress: 91 of 95 domain stories done** · scenarios 828 of 841
+**Progress: 92 of 95 domain stories done** · scenarios 832 of 841
 
-**127 stories** · In Progress: 1 · Ready: 3 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 112 · Superseded: 11
+**127 stories** · In Progress: 0 · Ready: 3 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 113 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
-
-## In Progress
-
-| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
-|---|---|---|---|---|---|---|---|
-| [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 
 ## Ready
 
@@ -90,6 +84,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-106](ST-106-index-files-for-ai.md) | Files of machines and machine models are indexed for AI | story | AI assistance | should | L | high | ST-104, ST-112 |
 | [ST-113](ST-113-a-file-can-be-attached-to-several-things.md) | A file is attached to machines and machine models instead of belonging to one | story | Collection | should | L | high | ST-037, ST-054, ST-085, ST-106 |
 | [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
+| [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |

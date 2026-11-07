@@ -59,10 +59,9 @@ describe("the web fetch adapter", () => {
   it.each(["http://example.org/b", "https://10.0.0.1/b", "https://museum.example/b"])(
     "stops a redirect to %s",
     async (target) => {
-      const { fetcher, asked } = web(
-        { "https://example.org/a": () => answer({ status: 301, location: target }) },
-        ["museum.example"],
-      );
+      const { fetcher, asked } = web({ "https://example.org/a": () => answer({ status: 301, location: target }) }, [
+        "museum.example",
+      ]);
       expect(await fetcher.fetch("https://example.org/a", limit)).toEqual({ ok: false, reason: "address-not-allowed" });
       expect(asked).toEqual(["https://example.org/a"]);
     },

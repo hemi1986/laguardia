@@ -34,7 +34,14 @@ async function waitingLinks(db: AiWorkContext["db"]): Promise<(WaitingLink & { p
   return (await acceptedProposalsWithWaitingLinks(db)).flatMap((proposal) =>
     (proposal.documents ?? []).flatMap((document, index) =>
       document.kind === "link" && document.chosen && document.loading === "waiting"
-        ? [{ aiModelProposalId: proposal.id, index, link: document, pieceId: proposedDocumentPieceId(proposal.id, index) }]
+        ? [
+            {
+              aiModelProposalId: proposal.id,
+              index,
+              link: document,
+              pieceId: proposedDocumentPieceId(proposal.id, index),
+            },
+          ]
         : [],
     ),
   );
@@ -97,15 +104,17 @@ export function proposedDocumentWork(web: WebFetcher): AiWorkKind {
       }
       let recorded = false;
       try {
+        let accepted = false;
         const stored = await piece.storeResult(async (tx) => {
           const result = await executeCommand(loadProposedDocumentCommand, inputOf(waiting, outcome), {
             actor: { kind: "system" },
             db: tx,
             clock: context.clock,
           });
-          recorded = result.ok;
+          accepted = result.ok;
         });
-        recorded &&= stored === "stored";
+        // Only once the transaction has committed does the file exist: a failed commit throws past this line.
+        recorded = accepted && stored === "stored";
       } finally {
         // The content belongs to a file only when the file was recorded: a late result or a rejection leaves none behind.
         if (contentName && !recorded) await deleteQuietly(context, contentName);

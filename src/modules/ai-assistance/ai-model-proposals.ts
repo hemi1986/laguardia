@@ -146,10 +146,7 @@ export async function acceptedProposalsWithWaitingLinks(db: Database): Promise<A
     .select()
     .from(aiModelProposal)
     .where(
-      and(
-        eq(aiModelProposal.state, "accepted"),
-        sql`${aiModelProposal.documents} @> '[{"loading":"waiting"}]'::jsonb`,
-      ),
+      and(eq(aiModelProposal.state, "accepted"), sql`${aiModelProposal.documents} @> '[{"loading":"waiting"}]'::jsonb`),
     )
     .orderBy(asc(aiModelProposal.requestedAt), asc(aiModelProposal.id));
   return rows.map(toState);

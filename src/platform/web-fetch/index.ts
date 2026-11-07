@@ -10,8 +10,7 @@
 export type WebFetchFailure = "not-reachable" | "too-large" | "address-not-allowed";
 
 export type WebFetchResult =
-  | { ok: true; contentType: string; bytes: Uint8Array }
-  | { ok: false; reason: WebFetchFailure };
+  { ok: true; contentType: string; bytes: Uint8Array } | { ok: false; reason: WebFetchFailure };
 
 export type WebFetcher = {
   /** Fetches the content behind an address, up to `maxBytes`; it never throws for what the web does. */

@@ -72,11 +72,15 @@ export function allowedWebAddress(address: string, ownHosts: readonly string[] =
     return undefined;
   }
   if (url.protocol !== "https:" || url.username || url.password) return undefined;
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  const host = url.hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.+$/, "");
   if (!host) return undefined;
   if (isIP(host)) return isPublicIp(host) ? url : undefined;
   // A name without a dot lives inside a network; these suffixes never name a public site.
-  if (!host.includes(".") || /\.(localhost|local|internal|intranet|lan|home|corp|private)$/.test(host)) return undefined;
+  if (!host.includes(".") || /\.(localhost|local|internal|intranet|lan|home|corp|private)$/.test(host))
+    return undefined;
   if (ownHosts.some((own) => own.toLowerCase() === host)) return undefined;
   return url;
 }
