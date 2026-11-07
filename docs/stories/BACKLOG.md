@@ -4,15 +4,20 @@
 
 **Progress: 88 of 95 domain stories done** · scenarios 817 of 841
 
-**127 stories** · In Progress: 0 · Ready: 7 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 109 · Superseded: 11
+**127 stories** · In Progress: 1 · Ready: 6 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 109 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-124](ST-124-write-an-ai-model-proposal.md) | The AI completes the machine model and finds documents on the web | domain | AI assistance | must | L | high | ST-123, ST-122 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-124](ST-124-write-an-ai-model-proposal.md) | The AI completes the machine model and finds documents on the web | domain | AI assistance | must | L | high | ST-123, ST-122 |
 | [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 |
 | [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124, ST-125, ST-006, ST-113 |
 | [ST-129](ST-129-load-the-proposed-documents.md) | The chosen links of a saved proposal are loaded as files | domain | AI assistance | must | L | high | ST-128 |
