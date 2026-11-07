@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { wordsOfText } from "@/platform/word-search";
 import { EMBEDDING_SIZE } from "./ai-seam";
+import { aiModelProposalStates } from "./ai-model-proposal";
 import { assessmentFailureReasons, type AiAssessmentReference } from "./ai-assessment";
 import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
 
@@ -131,6 +132,33 @@ export const aiAssessment = pgTable(
     // At most one AI assessment of a defect is being written (HS-31) – the store's guarantee, like the museum number.
     uniqueIndex("ai_assessment_being_written_idx")
       .on(table.defectId)
+      .where(sql`${table.state} = 'requested'`),
+  ],
+);
+
+/**
+ * AGG-AiModelProposal (ST-123, data model *AI model proposal*): one row per request. At most one is *requested* (being
+ * written) at a time over all of them (HS-37) – the partial unique index on a constant is the store's guarantee of that
+ * set-based rule, like HS-31 for an AI assessment. The description is free text and never journaled. The fields,
+ * sources, documents and failure reason of a written or failed one come with ST-124 and ST-126.
+ */
+export const aiModelProposal = pgTable(
+  "ai_model_proposal",
+  {
+    id: uuid("id").primaryKey(),
+    /** What the technician typed – never changes (invariant). */
+    description: text("description").notNull(),
+    requestedBy: uuid("requested_by").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull(),
+    /** The chat model it was requested with – never changes. */
+    chatModel: text("chat_model").notNull(),
+    state: text("state", { enum: aiModelProposalStates }).notNull(),
+    /** Optimistic version check (HS-16). */
+    version: integer("version").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("ai_model_proposal_being_written_idx")
+      .on(sql`(true)`)
       .where(sql`${table.state} = 'requested'`),
   ],
 );

@@ -60,3 +60,11 @@ export {
  * and its policy stay inside the module; only the composed command is exported for the page.
  */
 export { removeFileCommandWithAiIndex } from "./removal-policy";
+export { requestAiModelProposalCommand } from "./request-ai-model-proposal-command";
+export type { RequestAiModelProposalError, RequestAiModelProposalInput } from "./ai-model-proposal";
+export {
+  aiModelProposalPage,
+  aiModelProposalRefusal,
+  openAiModelProposals,
+  type OpenAiModelProposals,
+} from "./open-ai-model-proposals";

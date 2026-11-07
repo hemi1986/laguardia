@@ -8,6 +8,7 @@ import { memoryStorage, type MemoryStorage } from "@/platform/storage";
 import { aiSettingsForm, type AiDependencies } from "./ai-settings";
 import { changeAiSettingsCommand } from "./change-ai-settings-command";
 import { requestAiAssessmentCommand } from "./request-ai-assessment-command";
+import { requestAiModelProposalCommand } from "./request-ai-model-proposal-command";
 import { runAiWork, type AiWorkKind } from "./ai-work";
 import { aJpeg } from "./file-indexing.test-support";
 import { geminiEmbedding, geminiFlash, memoryAi, type MemoryAiSettings } from "./ai-seam.test-support";
@@ -165,6 +166,23 @@ export function aiScenario({
   }
 
   /**
+   * An AI model proposal requested through CMD-RequestAiModelProposal – by the technician at the scenario's clock unless
+   * `by` and `at` say otherwise – its ID.
+   */
+  async function requestAiModelProposal(
+    description = "Flipper High Speed Williams",
+    { by: actor = technician, at = clock }: { by?: Actor; at?: Clock } = {},
+  ): Promise<string> {
+    const asked = await executeCommand(
+      requestAiModelProposalCommand(ai()),
+      { description },
+      { ...context, actor, clock: at, db: db() },
+    );
+    if (!asked.ok) throw new Error(asked.error);
+    return asked.result.aiModelProposalId;
+  }
+
+  /**
    * One run of the background work with the given kinds, the scenario's clock and store, and – by default – `ai()`; it
    * may be given an `openRouter(…)` or whole AI dependencies.
    */
@@ -183,5 +201,5 @@ export function aiScenario({
     return runAiWork({ db: db(), clock, budgetSeconds, ai: dependencies, storage: store(), continueWork, kinds });
   }
 
-  return { openRouter, ai, encryptionKey, turnAiOn, removeTheKey, attachFile, aPhoto, requestAiAssessment, run };
+  return { openRouter, ai, encryptionKey, turnAiOn, removeTheKey, attachFile, aPhoto, requestAiAssessment, requestAiModelProposal, run };
 }

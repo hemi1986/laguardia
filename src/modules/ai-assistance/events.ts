@@ -1,5 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
+import type { AiModelProposalRequested } from "./ai-model-proposal";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
@@ -93,6 +94,15 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiAssessmentId,
       machineId: null,
       data: { defectId: event.defectId, reason: event.reason },
+    }),
+  },
+  // The description a technician typed is free text and stays out of the journal (ST-123): who asked and the model.
+  "EVT-AiModelProposalRequested": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: AiModelProposalRequested) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { requestedBy: event.requestedBy, chatModel: event.chatModel },
     }),
   },
 });

@@ -33,11 +33,11 @@ const changesTheMaintenancePlan = [
 ];
 
 /**
- * The specs that share the one AI settings row (ST-107): the AI assessment spec turns AI on in the browser tests'
- * database and restores it afterwards, while ST-104's settings spec reads „KI ist aus“. They run one after the other,
+ * The specs that share the one AI settings row (ST-107, ST-123): the AI assessment and AI model proposal specs turn AI on in the browser tests'
+ * database and restore it afterwards, while ST-104's settings spec reads „KI ist aus“. They run one after the other,
  * never beside each other.
  */
-const changesAiSettings = ["ai-assessment.spec.ts", "settings.spec.ts"];
+const changesAiSettings = ["ai-assessment.spec.ts", "ai-model-proposal.spec.ts", "settings.spec.ts"];
 
 export default defineConfig({
   testDir: "e2e",

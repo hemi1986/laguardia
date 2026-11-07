@@ -3,21 +3,28 @@ import { Page } from "@/components/page";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Confirmation } from "@/components/ui/message";
+import { aiDependencies, openAiModelProposals } from "@/modules/ai-assistance";
 import { machineModelChangeIn, machineModelsToChooseFrom, type MachineModel } from "@/modules/collection";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../team-session";
 import { oneOf, viewersCommandOn } from "../confirmation";
+import { AiModelProposalsSection } from "./ai-model-proposals-section";
 
 const { machineModels: texts } = teamMessages;
 
 /**
  * The machine models (ST-006): the ones a machine can be registered for (ST-007), each leading to its own page
- * (ST-036). „Neues Modell“ leads to the creation's own page (G2a); back from it, the new model is named (G3).
+ * (ST-036). „Neues Modell“ leads to the creation's own page (G2a); back from it, the new model is named (G3). Above the
+ * list: „Mit KI erstellen“ while AI is on and the section „KI-Vorschläge“ for what is open (ST-123).
  */
 export default async function MachineModelsPage({ searchParams }: PageProps<"/team/machine-models">) {
   const member = await requireTechnician();
-  const [models, { created }] = await Promise.all([machineModelsToChooseFrom(database()), searchParams]);
+  const [models, { created }, aiProposals] = await Promise.all([
+    machineModelsToChooseFrom(database()),
+    searchParams,
+    openAiModelProposals(database(), aiDependencies()),
+  ]);
   // Confirmed only when creating it was the latest command on it and this technician ran it (G3).
   const createdId = oneOf(created);
   const creating = createdId ? await viewersCommandOn(database(), member.id, createdId) : undefined;
@@ -31,6 +38,7 @@ export default async function MachineModelsPage({ searchParams }: PageProps<"/te
       <Link href="/team/machine-models/new" className={buttonVariants({ className: "self-start" })}>
         {texts.newMachineModel}
       </Link>
+      <AiModelProposalsSection data={aiProposals} />
       {createdModel && <Confirmation>{texts.created(createdModel.title)}</Confirmation>}
       {models.length === 0 ? (
         <p>{texts.empty}</p>
