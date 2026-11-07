@@ -423,7 +423,7 @@ condition on the outer `file` row for each question – attached to a machine or
 overview filter, the files an AI assessment is told), attached to a machine model's own or any of its machines' (retired
 ones included), attached to nothing – plus the part of the machine's files every machine of the model shows. The machine's model
 is read from the machine in the condition, so no reader passes a model along; a reader adds the condition to its own `where` and
-leaves removed files out itself. No reader joins `file_attachment` or spells these rules again. The file store and the reads are
+leaves removed files out itself. No reader spells these rules again (naming what a file is attached to – the details, the choice, the overview's own text – still reads `file_attachment` itself). The file store and the reads are
 split by consumer: `files.ts` (store and the commands' facts), `files-of-machine.ts` (machine record, file links, removal
 confirmation), `files-for-ai.ts` (indexing and AI references); `index.ts` stays the interface.
 

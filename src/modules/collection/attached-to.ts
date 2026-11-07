@@ -1,5 +1,4 @@
 import { sql, type SQL } from "drizzle-orm";
-import { file } from "./schema";
 
 /**
  * What a file is "attached to" – the one place that says which files belong to a machine, to a machine model and to
@@ -13,6 +12,12 @@ import { file } from "./schema";
  * Removed files and retired machines play no part here: whether a reader leaves a removed file out is the reader's.
  */
 
+/**
+ * The outer file's ID, always fully qualified: drizzle drops the table name from a column in a select list of one table,
+ * and an unqualified `id` would then resolve to the attachment's own.
+ */
+const fileId = sql.raw('"file"."id"');
+
 /** The attachments table under the alias the conditions use. */
 const attachment = sql.raw("file_attachment fa");
 /** The machine model a machine is of – read from the machine, so no caller passes a model that may be out of date. */
@@ -22,7 +27,7 @@ const modelOf = (machineId: string) => sql`(select m.machine_model_id from machi
 export function attachedToMachineOrItsModel(machineId: string): SQL {
   return sql`exists (
     select 1 from ${attachment}
-    where fa.file_id = ${file.id}
+    where fa.file_id = ${fileId}
       and (fa.machine_id = ${machineId} or fa.machine_model_id = ${modelOf(machineId)}))`;
 }
 
@@ -30,19 +35,19 @@ export function attachedToMachineOrItsModel(machineId: string): SQL {
 export function attachedToItsModel(machineId: string): SQL {
   return sql`exists (
     select 1 from ${attachment}
-    where fa.file_id = ${file.id} and fa.machine_model_id = ${modelOf(machineId)})`;
+    where fa.file_id = ${fileId} and fa.machine_model_id = ${modelOf(machineId)})`;
 }
 
 /** The files of a machine model: attached to it or to any of its machines, retired ones included. */
 export function attachedToModelOrItsMachines(machineModelId: string): SQL {
   return sql`exists (
     select 1 from ${attachment}
-    where fa.file_id = ${file.id}
+    where fa.file_id = ${fileId}
       and (fa.machine_model_id = ${machineModelId}
         or fa.machine_id in (select m.id from machine m where m.machine_model_id = ${machineModelId})))`;
 }
 
 /** The files without any attachment. */
 export function attachedToNothing(): SQL {
-  return sql`not exists (select 1 from ${attachment} where fa.file_id = ${file.id})`;
+  return sql`not exists (select 1 from ${attachment} where fa.file_id = ${fileId})`;
 }
