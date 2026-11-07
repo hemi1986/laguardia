@@ -23,9 +23,25 @@ export type ProposedFileCategory = (typeof proposedFileCategories)[number];
 export const MAX_PROPOSED_DOCUMENTS = 10;
 
 /** A document the AI found on the web: a link (https) with a title and one file category. */
-export type ProposedLink = { kind: "link"; link: string; title: string; fileCategory: ProposedFileCategory };
+export type ProposedLink = {
+  kind: "link";
+  link: string;
+  title: string;
+  fileCategory: ProposedFileCategory;
+  /** Accepted only (ST-128): the technician chose it – its title and file category are then as chosen. */
+  chosen?: true;
+  /** A chosen link only: waiting to be loaded (ST-128); loaded and failed follow with ST-129. */
+  loading?: "waiting";
+};
 /** A file the museum already has, found in the AI index (ST-125): by ID, with the title and file category it had then. */
-export type ProposedFile = { kind: "file"; fileId: string; title: string; fileCategory: ProposedFileCategory };
+export type ProposedFile = {
+  kind: "file";
+  fileId: string;
+  title: string;
+  fileCategory: ProposedFileCategory;
+  /** Accepted only (ST-128): the technician chose it – it was attached to the machine model. */
+  chosen?: true;
+};
 export type ProposedDocument = ProposedFile | ProposedLink;
 
 /** AGG-AiModelProposal – current state. */
@@ -50,6 +66,8 @@ export type AiModelProposalState = {
   documents?: ProposedDocument[];
   embeddingModel?: string;
   cost?: number;
+  /** Accepted only (ST-128): the machine model this proposal created – never changes. */
+  machineModelId?: string;
   changedAt?: Date;
 };
 

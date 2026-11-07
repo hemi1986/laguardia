@@ -7,10 +7,9 @@ import {
 } from "@/modules/collection";
 import type { FormFields } from "@/app/_actions/form-action";
 
-/** The machine model form's own fields – creating and correcting (ST-036) – only these are read and echoed (ST-073). */
-export const machineModelFields = ["title", "manufacturer", "year", "machineCategory", "technology"] as const;
+import { machineModelFields, type MachineModelField } from "./machine-model-field-names";
 
-export type MachineModelField = (typeof machineModelFields)[number];
+export { machineModelFields, type MachineModelField };
 
 type Fields = FormFields<MachineModelField>;
 

@@ -72,6 +72,11 @@ export type MachineModelCreated = {
  * rather than dropped and only the decision may say so.
  */
 export type CreateMachineModelInput = {
+  /**
+   * The ID the new machine model gets – only for a command that must name it before this one runs and so generates it
+   * itself with its own ID generator (CMD-AcceptAiModelProposal, ADR 0019). No form posts one; none given, the decision generates it.
+   */
+  id?: string;
   title: string;
   manufacturer: string;
   year?: string;
@@ -122,7 +127,7 @@ export function createMachineModel(
   if (!checked.ok) return checked;
   const { details } = checked;
   const model: MachineModelState = {
-    id: newId(),
+    id: input.id ?? newId(),
     ...details,
     categoryHistory: [
       { id: newId(), machineCategory: details.machineCategory, technology: details.technology, holdsFrom: clock.now() },

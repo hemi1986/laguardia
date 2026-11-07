@@ -1,6 +1,7 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
 import type { AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
+import type { AiModelProposalAccepted } from "./accept-ai-model-proposal";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
@@ -113,6 +114,15 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { chatModel: event.chatModel, embeddingModel: event.embeddingModel ?? null, cost: event.cost },
+    }),
+  },
+  // Accepted (ST-128): the machine model it created and the existing files it attached; titles and links stay out.
+  "EVT-AiModelProposalAccepted": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: AiModelProposalAccepted) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { machineModelId: event.machineModelId, fileIds: event.fileIds, linkCount: event.linkCount },
     }),
   },
 });

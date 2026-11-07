@@ -107,7 +107,7 @@ export const aiAssistanceTexts = {
     running: "KI arbeitet …",
     runningHint:
       "Die Seite aktualisiert sich selbst. Du kannst sie verlassen – den Vorschlag findest du unter „KI-Vorschläge“.",
-    states: { requested: "KI arbeitet …", written: "Fertig", failed: "Fehlgeschlagen" },
+    states: { requested: "KI arbeitet …", written: "Fertig", failed: "Fehlgeschlagen", accepted: "Gespeichert" },
     /** The written proposal's page (ST-124, RM-AiModelProposal): a field the AI could not fill says so beside it. */
     notFound: "Nicht gefunden",
     sources: "Quellen",
@@ -125,6 +125,17 @@ export const aiAssistanceTexts = {
     documentTick: (title: string) => `„${title}“ laden`,
     documentFileCategory: (title: string) => `Dateikategorie von „${title}“`,
     fileCategories: { manual: "Handbuch", schematic: "Schaltplan", other: "Sonstiges" },
+    /** Saving (ST-128): the button, the hint for a machine model that exists, and the page of a saved proposal (G3). */
+    /** G14: the button says what is saved – a bare „Speichern“ is on ST-091's list of vague texts (the story's wording). */
+    save: "Modell speichern",
+    sameModel: "Ein Modell mit diesem Titel und Hersteller gibt es schon.",
+    toTheModel: "Zum Modell",
+    removedFile: "Wurde inzwischen entfernt",
+    saved: "Gespeichert",
+    savedModel: "Modell",
+    attachedFiles: "Angehängte Dateien",
+    documentsToLoad: "Aus dem Netz",
+    loading: "Wird geladen …",
   },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
@@ -197,6 +208,10 @@ export const aiAssistanceErrors = {
   "ai-model-proposal-ai-off": "Die KI ist ausgeschaltet.",
   "ai-model-proposal-description-required": "Bitte beschreibe das Gerät.",
   "ai-model-proposal-being-written": "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
+  "ai-model-proposal-not-written": "Dieser KI-Vorschlag lässt sich nicht speichern.",
+  "ai-model-proposal-already-accepted": "Dieser KI-Vorschlag wurde schon gespeichert.",
+  "ai-model-proposal-document-unknown": "Dieses Dokument gehört nicht zum KI-Vorschlag.",
+  "ai-model-proposal-document-removed": "Eine Datei wurde inzwischen entfernt. Es wurde nichts gespeichert.",
   "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
   "file-indexing-not-failed":
     "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",

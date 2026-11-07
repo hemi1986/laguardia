@@ -109,7 +109,7 @@ describe("existing files in an AI model proposal", () => {
     const group = html.slice(existing, html.indexOf(texts.loadFromTheWeb));
     expect(group).toContain("Pinball wiki – System 11");
     expect(group).toContain(texts.fileCategories.other);
-    expect(group).toMatch(/<input[^>]*name="existingFile"[^>]*checked/);
+    expect(group).toMatch(/<input[^>]*name="document"[^>]*checked[^>]*value="0"/);
     expect(group).toContain(`href="/team/dateien/${wiki}/details"`);
   });
 

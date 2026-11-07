@@ -53,6 +53,7 @@ export {
  */
 export { removeFileCommandWithAiIndex } from "./removal-policy";
 export { requestAiModelProposalCommand } from "./request-ai-model-proposal-command";
+export { MAX_PROPOSED_DOCUMENTS } from "./ai-model-proposal";
 export type {
   ProposedDocument,
   ProposedFileCategory,
@@ -64,6 +65,13 @@ export {
   aiModelProposalRefusal,
   openAiModelProposals,
   type AiModelProposalPage,
+  type PageDocument,
   type OpenAiModelProposals,
 } from "./open-ai-model-proposals";
+export { acceptAiModelProposalCommand } from "./accept-ai-model-proposal-command";
+export type {
+  AcceptAiModelProposalError,
+  AcceptAiModelProposalInput,
+  ChosenDocument,
+} from "./accept-ai-model-proposal";
 export { aiModelProposalWork } from "./ai-model-proposal-work";

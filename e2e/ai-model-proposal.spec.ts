@@ -115,4 +115,57 @@ test.describe("AI model proposals on the machine models page without JavaScript"
     // Usable at 360 px: nothing pushes the page wider than the screen.
     expect(await pageWidth(page)).toBeLessThanOrEqual(360);
   });
+  /**
+   * ST-128: „Modell speichern“ on a written proposal, without JavaScript. A rejection (no manufacturer) keeps what was
+   * typed; the saved proposal names and links the machine model and says the ticked link is being loaded.
+   */
+  test("saves a written proposal as a machine model and keeps the form after a rejection", async ({ page }) => {
+    await restore();
+    await turnAiOn();
+    const id = randomUUID();
+    const title = `High Speed ${randomUUID().slice(0, 8)}`;
+    await withDatabase(async (client) => {
+      const member = await client.query("SELECT id FROM team_member LIMIT 1");
+      await client.query(
+        `INSERT INTO ai_model_proposal
+           (id, description, requested_by, requested_at, chat_model, state, title, machine_category, sources, documents,
+            cost, changed_at)
+         VALUES ($1, 'Flipper High Speed Williams', $2, now(), 'google/gemini-2.5-flash', 'written', $3, 'pinball',
+                 $4, $5, 0.04, now())`,
+        [
+          id,
+          member.rows[0].id,
+          title,
+          [],
+          JSON.stringify([
+            { kind: "link", title: "High Speed – Manual", fileCategory: "manual", link: "https://www.ipdb.org/manual.pdf" },
+          ]),
+        ],
+      );
+    });
+    await logIn(page);
+    await page.goto(`/team/machine-models/ki-vorschlag/${id}`);
+
+    // A year that is no four digits is rejected by the command: what was typed and ticked stays.
+    await page.getByLabel("Hersteller").fill("Williams");
+    await page.getByLabel("Baujahr").fill("ca. 1986");
+    await page.getByRole("button", { name: "Modell speichern" }).click();
+    await expect(page.getByText("Bitte ein Baujahr mit vier Ziffern angeben")).toBeVisible();
+    await expect(page.getByLabel("Baujahr")).toHaveValue("ca. 1986");
+    await expect(page.getByLabel("Hersteller")).toHaveValue("Williams");
+    await expect(page.getByLabel("Titel", { exact: true })).toHaveValue(title);
+    await expect(page.getByRole("checkbox", { name: "„High Speed – Manual“ laden" })).toBeChecked();
+
+    await page.getByLabel("Baujahr").fill("1986");
+    await page.getByRole("button", { name: "Modell speichern" }).click();
+
+    await expect(page.getByText("Gespeichert", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: title })).toBeVisible();
+    await expect(page.getByText("Wird geladen …")).toBeVisible();
+    // The link is still waiting: the page refreshes itself, and the proposal stays open under „KI-Vorschläge“.
+    await expect(page.locator('meta[http-equiv="refresh"]')).toHaveCount(1);
+    expect(await pageWidth(page)).toBeLessThanOrEqual(360);
+    await page.goto("/team/machine-models");
+    await expect(page.getByRole("heading", { name: "KI-Vorschläge" })).toBeVisible();
+  });
 });

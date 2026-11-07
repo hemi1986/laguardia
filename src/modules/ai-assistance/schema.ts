@@ -163,6 +163,8 @@ export const aiModelProposal = pgTable(
     documents: jsonb("documents").$type<ProposedDocument[]>(),
     embeddingModel: text("embedding_model"),
     cost: doublePrecision("cost"),
+    /** Accepted only (ST-128): the machine model it created – a bare ID, Collection is upstream and no foreign key crosses modules. */
+    machineModelId: uuid("machine_model_id"),
     /** Written or failed at. */
     changedAt: timestamp("changed_at", { withTimezone: true }),
     /** Optimistic version check (HS-16): a late result after the proposal failed records nothing. */
