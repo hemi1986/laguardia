@@ -29,6 +29,7 @@ function toState(row: typeof aiModelProposal.$inferSelect): AiModelProposalState
     ...(row.cost !== null && { cost: row.cost }),
     ...(row.machineModelId !== null && { machineModelId: row.machineModelId }),
     ...(row.changedAt !== null && { changedAt: row.changedAt }),
+    ...(row.failureReason !== null && { failureReason: row.failureReason }),
   };
 }
 
@@ -54,6 +55,7 @@ const store = aggregateStore({
     cost: state.cost ?? null,
     machineModelId: state.machineModelId ?? null,
     changedAt: state.changedAt ?? null,
+    failureReason: state.failureReason ?? null,
   }),
 });
 

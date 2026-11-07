@@ -1,5 +1,6 @@
 import type { ActorOf, Decision, DecisionContext, TeamMemberId } from "@/platform/command";
 import { machineCategories, technologiesOf, type MachineCategory, type Technology } from "@/modules/collection";
+import { assessmentFailureReasons } from "./ai-assessment";
 
 /**
  * AGG-AiModelProposal (ST-123, docs/architecture/data-model.md, data model *AI model proposal*): what an AI makes of
@@ -14,6 +15,13 @@ type RequestingPerson = ActorOf<"technician">;
 /** The five states of the lifecycle (data model *AI model proposal*). */
 export const aiModelProposalStates = ["requested", "written", "failed", "accepted", "discarded"] as const;
 export type AiModelProposalStateName = (typeof aiModelProposalStates)[number];
+
+/**
+ * Why an AI model proposal failed (data model *ProposalFailureReason*, EVT-AiModelProposalFailed): the reasons of an AI
+ * assessment – OpenRouter's failures, AI off, an unusable answer, broken off – and *device not recognised*.
+ */
+export const aiModelProposalFailureReasons = [...assessmentFailureReasons, "device-not-recognised"] as const;
+export type AiModelProposalFailureReason = (typeof aiModelProposalFailureReasons)[number];
 
 /** The file categories a proposed document may have – a photo is no document of a proposal (no images, ST-124). */
 export const proposedFileCategories = ["manual", "schematic", "other"] as const;
@@ -82,7 +90,10 @@ export type AiModelProposalState = {
   cost?: number;
   /** Accepted only (ST-128): the machine model this proposal created – never changes. */
   machineModelId?: string;
+  /** Written or failed at (accepted, ST-128: the same instant stays). */
   changedAt?: Date;
+  /** Failed only (ST-126). */
+  failureReason?: AiModelProposalFailureReason;
 };
 
 /** What CMD-RequestAiModelProposal reads from the outside before it decides. */
@@ -222,8 +233,10 @@ export function writeAiModelProposal(
   state: AiModelProposalState,
   { answer, existingFiles = [], embeddingModel, cost }: WriteAiModelProposalInput,
   { clock }: DecisionContext,
-): Decision<AiModelProposalState, AiModelProposalWritten, "not-requested"> {
+): Decision<AiModelProposalState, AiModelProposalWritten | AiModelProposalFailed, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
+  // No usable machine in the answer fails it (rule): nothing to propose, and nothing to keep.
+  if (!machineNamed(answer)) return failAiModelProposal(state, "device-not-recognised", { clock });
   const machineCategory = machineCategories.find((category) => category === answer.machineCategory);
   const technology = machineCategory
     ? technologiesOf(machineCategory).find((candidate) => candidate === answer.technology)
@@ -278,6 +291,39 @@ export function writeAiModelProposal(
         cost,
       },
     ],
+  };
+}
+
+/**
+ * Whether the answer names a machine (rule, ST-126): a title or a manufacturer. Fields without either – a category or a
+ * year alone – do not make a device; a blank title with a manufacturer is still written (ST-124).
+ */
+export function machineNamed(answer: AiModelProposalAnswer): boolean {
+  return !!(answer.title?.trim() || answer.manufacturer?.trim());
+}
+
+export type AiModelProposalFailed = {
+  type: "EVT-AiModelProposalFailed";
+  aiModelProposalId: string;
+  reason: AiModelProposalFailureReason;
+};
+
+/**
+ * The failing half of CMD-WriteAiModelProposal (ST-126): a proposal still requested is recorded failed with one reason –
+ * a late result after it was failed as broken off records nothing (version check, rule). A failed proposal is never
+ * written again automatically; „Nochmal versuchen“ requests a new one (HS-42). The typed description stays out of the
+ * journal.
+ */
+export function failAiModelProposal(
+  state: AiModelProposalState,
+  reason: AiModelProposalFailureReason,
+  { clock }: Pick<DecisionContext, "clock">,
+): Decision<AiModelProposalState, AiModelProposalFailed, "not-requested"> {
+  if (state.state !== "requested") return { ok: false, error: "not-requested" };
+  return {
+    ok: true,
+    state: { ...state, state: "failed", failureReason: reason, changedAt: clock.now() },
+    events: [{ type: "EVT-AiModelProposalFailed", aiModelProposalId: state.id, reason }],
   };
 }
 

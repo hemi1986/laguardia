@@ -1,6 +1,6 @@
 import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
-import type { AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
+import type { AiModelProposalFailed, AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
 import type { AiModelProposalAccepted } from "./accept-ai-model-proposal";
 import type { ProposedDocumentFailed, ProposedDocumentLoaded } from "./load-proposed-document";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
@@ -115,6 +115,15 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { chatModel: event.chatModel, embeddingModel: event.embeddingModel ?? null, cost: event.cost },
+    }),
+  },
+  // Failed (ST-126): the reason only – the typed description is free text and stays out.
+  "EVT-AiModelProposalFailed": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: AiModelProposalFailed) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { reason: event.reason },
     }),
   },
   // Accepted (ST-128): the machine model it created and the existing files it attached; titles and links stay out.

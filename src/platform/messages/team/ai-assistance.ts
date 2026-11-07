@@ -108,6 +108,23 @@ export const aiAssistanceTexts = {
     runningHint:
       "Die Seite aktualisiert sich selbst. Du kannst sie verlassen – den Vorschlag findest du unter „KI-Vorschläge“.",
     states: { requested: "KI arbeitet …", written: "Fertig", failed: "Fehlgeschlagen", accepted: "Gespeichert" },
+    /** The failed proposal's page (ST-126, G7): why it failed, and „Nochmal versuchen“ – the form „Mit KI erstellen“
+     *  with the description typed in. The reasons of an AI assessment have the texts of ST-108. */
+    failed: "Fehlgeschlagen",
+    tryAgain: "Nochmal versuchen",
+    failureReasons: {
+      "key-invalid":
+        "OpenRouter hat den API-Schlüssel abgelehnt. Techniker:innen können ihn unter Einstellungen ersetzen.",
+      "credit-used-up": "Das Guthaben bei OpenRouter ist aufgebraucht.",
+      "model-not-available":
+        "Das Chat-Modell ist bei OpenRouter gerade nicht verfügbar. Bei einem kostenlosen Modell die Datenschutz-Einstellungen des OpenRouter-Kontos prüfen.",
+      "timed-out": "Die KI hat nicht rechtzeitig geantwortet.",
+      "openrouter-not-reachable": "OpenRouter war nicht erreichbar.",
+      "ai-off": "Die KI ist ausgeschaltet.",
+      "answer-unusable": "Die Antwort der KI war nicht brauchbar.",
+      "broken-off": "Abgebrochen",
+      "device-not-recognised": "Das Gerät wurde nicht erkannt.",
+    },
     /** The written proposal's page (ST-124, RM-AiModelProposal): a field the AI could not fill says so beside it. */
     notFound: "Nicht gefunden",
     sources: "Quellen",
