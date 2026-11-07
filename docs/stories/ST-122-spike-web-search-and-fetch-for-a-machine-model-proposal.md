@@ -9,7 +9,7 @@ risk: high
 events: [EVT-AiModelProposalWritten]
 depends_on: []
 labels: [feature:ai-model-proposal]
-status: in-progress
+status: done
 ---
 
 ## Question
@@ -27,12 +27,15 @@ proposal costs; ST-124 to ST-130 are not `ready` before it is answered.
 route or script on a branch; the key stays an environment variable of that branch and is never committed or pasted.
 
 ## Acceptance Criteria
-- [ ] **First, in minutes:** one request to OpenRouter with the chat model of the settings and the server tool for web search returns an answer with citations for "Flipper High Speed Williams" – and one with the tool for fetching a page returns the text of a given Pinball wiki page. If a tool is not offered for the model, say which models offer it and stop.
-- [ ] Both tools together with a structured answer (title, manufacturer, year, machine category, technology; documents with title, file category and https link; the sources) are returned in the agreed form for three real devices: a pinball machine with a DMD ("High Speed" by Williams), an electromechanical pinball machine, an arcade machine.
-- [ ] Measured per device and written down: duration of the whole run, number of searches and fetches, tokens, cost as OpenRouter reports it.
-- [ ] Recorded: how often a link the AI names is not reachable, not https, not a PDF or text, or larger than 100 MB (the checks of ST-129), counted over the documents of the three runs.
-- [ ] Recorded: whether the requests ask only for providers that neither keep nor train on the data, as ADR 0014 did, is possible with the tools or not (ADR 0016 allows any provider; the answer is for the privacy notice).
-- [ ] Decision for ST-124: one run or two (fields first, documents second), the model requirements, the budget of a run, and what the page shows while it runs. Written into ADR 0019 as a proposed amendment; HS-41 resolved.
+- [x] **First, in minutes:** one request to OpenRouter with the chat model of the settings and the server tool for web search returns an answer with citations for "Flipper High Speed Williams" – and one with the tool for fetching a page returns the text of a given Pinball wiki page. If a tool is not offered for the model, say which models offer it and stop.
+- [x] Both tools together with a structured answer (title, manufacturer, year, machine category, technology; documents with title, file category and https link; the sources) are returned in the agreed form for three real devices: a pinball machine with a DMD ("High Speed" by Williams), an electromechanical pinball machine, an arcade machine.
+- [x] Measured per device and written down: duration of the whole run, number of searches and fetches, tokens, cost as OpenRouter reports it.
+- [x] Recorded: how often a link the AI names is not reachable, not https, not a PDF or text, or larger than 100 MB (the checks of ST-129), counted over the documents of the three runs.
+- [x] Recorded: whether the requests ask only for providers that neither keep nor train on the data, as ADR 0014 did, is possible with the tools or not (ADR 0016 allows any provider; the answer is for the privacy notice).
+- [x] Decision for ST-124: one run or two (fields first, documents second), the model requirements, the budget of a run, and what the page shows while it runs. Written into ADR 0019 as a proposed amendment; HS-41 resolved.
+
+## Result
+Measured 2026-11-07 with `deepseek/deepseek-v4.1-flash-1017`; all findings, the table of durations, searches, tokens and cost, the link checks and the data-preference answer are in `docs/adr/0020-ai-model-proposal-one-run-with-server-tools-and-a-json-object.md` (proposed). Decision: one run with a JSON object, 11–37 s, $0.02–$0.08. The example "High Speed" has no DMD (alphanumeric displays) – the AI answered Solid-state.
 
 ## Out of Scope
 - Writing any production code of the feature
