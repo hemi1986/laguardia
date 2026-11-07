@@ -50,6 +50,10 @@ Scale: ~50 playable machines (some with minor defects) plus ~5–10 machines tha
   machine models' files are indexed for it (text, PDF pages as images, image files). The AI never changes a defect,
   and nothing reaches the AI while AI is off. Out of the first version: AI in triage, chat or follow-up questions,
   automatic assessments, video and audio, rating assessments, AI for visitors, asking the files without a defect.
+  Added by feature `ai-model-proposal` (user, 2026-11-07): a technician types which device to add and the AI proposes
+  the machine model's fields and documents for it – files already in the museum and links found on the web (OpenRouter's
+  server tools for web search and fetching a page). It saves nothing by itself: the technician corrects and confirms.
+  Only the typed device description leaves the house, no personal data or photos, so the privacy notice stays as it is.
 
 ## Non-Goals
 - Ticketing / admission
