@@ -30,6 +30,11 @@ export type Attachment = { id: string } & AttachedTo;
 
 /** What the acting person gave (ST-073, Q19): the title as typed; choices are "no value given" when the form had none. */
 export type AddFileInput = {
+  /**
+   * The ID the new file gets – only for a command that must name it before this one runs and so generates it itself
+   * (CMD-LoadProposedDocument, ADR 0019). No form posts one; none given, the decision generates it.
+   */
+  id?: string;
   title: string;
   fileCategory: FileCategory | undefined;
   /** The name the chosen file had on the person's device – typed text; none when the form could not tell. */
@@ -100,7 +105,7 @@ export function addFile(
     ...[...new Set(input.machineModelIds)].map((machineModelId) => ({ machineModelId })),
   ];
   const file: FileState = {
-    id: newId(),
+    id: input.id ?? newId(),
     title: input.title.trim(),
     fileCategory: input.fileCategory!,
     ...(input.originalFileName?.trim() && { originalFileName: input.originalFileName.trim() }),

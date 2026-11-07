@@ -108,7 +108,11 @@ export type CommandContext = {
    * its own authorization check (architecture review Q6, ST-018). Its rejection rejects the whole command; a person
    * it does not allow makes the whole command `not-authorized`.
    */
-  run: <Input, Result, Error extends string>(command: Command<Input, Result, Error>, input: Input) => Promise<Result>;
+  run: <Input, Result, Error extends string>(
+    command: Command<Input, Result, Error>,
+    input: Input,
+    options?: { as?: Extract<Actor, { kind: "team-member" }> },
+  ) => Promise<Result>;
 };
 
 export type CommandOutcome<Result, Error extends string> =
@@ -236,10 +240,15 @@ async function runInTransaction<Input, Result, Error extends string>(
       laterRows.push(...rows);
       return result;
     },
-    run: async (inner, innerInput) => {
+    run: async (inner, innerInput, options) => {
+      // On behalf of a team member (ST-129): only the system may, and the inner command checks that team member.
+      if (options?.as && actor.kind !== "system") {
+        throw new Error(`${command.id}: only a command run by the system can run another on behalf of a team member`);
+      }
+      const innerActor = options?.as ?? actor;
       // The same authorization check executeCommand makes – the inner command decides whom it allows.
-      if (!inner.allowedActors.includes(actorKind(actor))) throw new Rejected("not-authorized");
-      const { result, rows } = await runInTransaction(inner, innerInput, actor, scope);
+      if (!inner.allowedActors.includes(actorKind(innerActor))) throw new Rejected("not-authorized");
+      const { result, rows } = await runInTransaction(inner, innerInput, innerActor, scope);
       laterRows.push(...rows);
       return result;
     },

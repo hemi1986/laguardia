@@ -2,6 +2,7 @@ import { eventCatalogue } from "@/platform/command";
 import type { AiSettingsChanged } from "./change-ai-settings";
 import type { AiModelProposalRequested, AiModelProposalWritten } from "./ai-model-proposal";
 import type { AiModelProposalAccepted } from "./accept-ai-model-proposal";
+import type { ProposedDocumentFailed, ProposedDocumentLoaded } from "./load-proposed-document";
 import type { AiAssessmentFailed, AiAssessmentRequested, AiAssessmentWritten } from "./ai-assessment";
 import type { FileIndexedForAi, FileIndexingFailed, FileIndexingRetried, FileLeftAiIndex } from "./ai-index-entry";
 
@@ -123,6 +124,23 @@ export const aiAssistanceEvents = eventCatalogue({
       aggregateId: event.aiModelProposalId,
       machineId: null,
       data: { machineModelId: event.machineModelId, fileIds: event.fileIds, linkCount: event.linkCount },
+    }),
+  },
+  // A chosen link loaded or failed (ST-129): its place among the documents and the file or the reason – no title, no link.
+  "EVT-ProposedDocumentLoaded": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: ProposedDocumentLoaded) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { documentIndex: event.documentIndex, fileId: event.fileId },
+    }),
+  },
+  "EVT-ProposedDocumentFailed": {
+    aggregate: "AGG-AiModelProposal",
+    project: (event: ProposedDocumentFailed) => ({
+      aggregateId: event.aiModelProposalId,
+      machineId: null,
+      data: { documentIndex: event.documentIndex, reason: event.reason },
     }),
   },
 });
