@@ -9,7 +9,7 @@ risk: high
 events: [EVT-AiModelProposalWritten]
 depends_on: []
 labels: [feature:ai-model-proposal]
-status: ready
+status: in-progress
 ---
 
 ## Question
