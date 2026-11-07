@@ -4,15 +4,20 @@
 
 **Progress: 93 of 95 domain stories done** · scenarios 836 of 841
 
-**127 stories** · In Progress: 0 · Ready: 2 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 114 · Superseded: 11
+**127 stories** · In Progress: 1 · Ready: 1 · Ready for Human Review: 0 · In Review: 0 · Draft: 0 · Done: 114 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
+
+## In Progress
+
+| ID | Title | Type | Context | Priority | Size | Risk | Depends on |
+|---|---|---|---|---|---|---|---|
+| [ST-127](ST-127-discard-an-ai-model-proposal.md) | Discard an AI model proposal | domain | AI assistance | should | S | low | ST-124 |
 
 ## Ready
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-127](ST-127-discard-an-ai-model-proposal.md) | Discard an AI model proposal | domain | AI assistance | should | S | low | ST-124 |
 | [ST-130](ST-130-retry-a-proposed-document.md) | Retry a proposed document that failed to load | domain | AI assistance | should | S | low | ST-129 |
 
 ## Done
