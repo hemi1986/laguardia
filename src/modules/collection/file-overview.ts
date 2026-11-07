@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import type { Database } from "@/platform/command";
 import type { FileCategory } from "./add-file";
+import { attachedToMachineOrItsModel, attachedToModelOrItsMachines, attachedToNothing } from "./attached-to";
 import { fileMediaTypeOf, type FileMediaType } from "./file-details";
 import { file, machine, machineModel } from "./schema";
 
@@ -31,23 +32,11 @@ export type FileOverviewEntry = {
   ownRanks: (number | null)[];
 };
 
-/** The condition on the attachments, as a subquery on the outer `file` row. */
+/** The condition on the attachments – the rule is `attached-to.ts`. */
 function attachedToCondition(attachedTo: NonNullable<FileOverviewFilter["attachedTo"]>): SQL {
-  if (attachedTo === "nowhere") {
-    return sql`not exists (select 1 from file_attachment fa where fa.file_id = ${file.id})`;
-  }
-  if ("machineId" in attachedTo) {
-    return sql`exists (
-      select 1 from file_attachment fa
-      where fa.file_id = ${file.id}
-        and (fa.machine_id = ${attachedTo.machineId}
-          or fa.machine_model_id = (select m.machine_model_id from machine m where m.id = ${attachedTo.machineId})))`;
-  }
-  return sql`exists (
-    select 1 from file_attachment fa
-    where fa.file_id = ${file.id}
-      and (fa.machine_model_id = ${attachedTo.machineModelId}
-        or fa.machine_id in (select m.id from machine m where m.machine_model_id = ${attachedTo.machineModelId})))`;
+  if (attachedTo === "nowhere") return attachedToNothing();
+  if ("machineId" in attachedTo) return attachedToMachineOrItsModel(attachedTo.machineId);
+  return attachedToModelOrItsMachines(attachedTo.machineModelId);
 }
 
 /**

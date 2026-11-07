@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { aggregateStore, isId, history, type AggregateStore, type Database, type Latest } from "@/platform/command";
 import type { MachineCategory, Technology } from "./create-machine-model";
-import { filesOfMachine, type FileOfMachine } from "./files";
+import { filesOfMachine, type FileOfMachine } from "./files-of-machine";
 import {
   machineStatuses,
   type Machine,
@@ -267,7 +267,7 @@ export async function machineRecord(db: Database, museumNumber: string): Promise
     location: m.location,
     machineStatus: m.machineStatus,
     retirement: retirementOf(m),
-    files: await filesOfMachine(db, { machineId: m.id, machineModelId: m.machineModelId }),
+    files: await filesOfMachine(db, m.id),
   };
 }
 

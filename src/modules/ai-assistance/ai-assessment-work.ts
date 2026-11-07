@@ -58,10 +58,7 @@ export const aiAssessmentWork: AiWorkKind = {
     if (!machineModel) return fail(id, "answer-unusable", piece, context);
     // Read once, when the writing begins (ST-120): this list limits the search, is what the chat model is told and is
     // what the command checks references against – a file attached or detached meanwhile changes nothing.
-    const files = await filesOfMachineAndModelForAi(context.db, {
-      machineId: defect.machineId,
-      machineModelId: machineModel.id,
-    });
+    const files = await filesOfMachineAndModelForAi(context.db, defect.machineId);
     const fileIds = files.map((file) => file.id);
 
     const searches = await searchWithTheDefect({
