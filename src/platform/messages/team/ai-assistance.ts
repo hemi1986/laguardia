@@ -87,6 +87,27 @@ export const aiAssistanceTexts = {
       failed: (reason: string) => `Für die KI nicht lesbar: ${reason}`,
     },
   },
+  /**
+   * The AI model proposal (ST-123): the button and the section „KI-Vorschläge“ on the machine models page, the page
+   * „Mit KI erstellen“ and the proposal's own page while it is being written (G35). The states written and failed are
+   * named here for the list; their pages are ST-124 and ST-126.
+   */
+  aiModelProposals: {
+    create: "Mit KI erstellen",
+    createTitle: "Mit KI erstellen",
+    proposal: "KI-Vorschlag",
+    description: "Welches Gerät?",
+    placeholder: "Flipper High Speed Williams",
+    example: "Zum Beispiel: Flipper High Speed Williams",
+    send: "Vorschlag erstellen",
+    cancel: "Abbrechen",
+    section: "KI-Vorschläge",
+    unknown: "Diesen KI-Vorschlag gibt es nicht.",
+    backToModels: "Zurück zu den Modellen",
+    running: "KI arbeitet …",
+    runningHint: "Die Seite aktualisiert sich selbst. Du kannst sie verlassen – den Vorschlag findest du unter „KI-Vorschläge“.",
+    states: { requested: "KI arbeitet …", written: "Fertig", failed: "Fehlgeschlagen" },
+  },
   /** The section „KI-Einschätzungen“ on a defect's page and its request form (RM-DefectAiAssessments, ST-107). */
   aiAssessments: {
     title: "KI-Einschätzungen",
@@ -155,6 +176,10 @@ export const aiAssistanceErrors = {
     "Diese KI-Einschätzung ist nur für Techniker:innen – der Defekt ist nicht für Helfer:innen geeignet.",
   "ai-assessment-being-written": "Für diesen Defekt läuft schon eine KI-Einschätzung.",
   "ai-assessment-too-many-photos": "Bitte höchstens 5 Fotos mitschicken.",
+  "ai-model-proposal-ai-off": "Die KI ist ausgeschaltet.",
+  "ai-model-proposal-description-required": "Bitte beschreibe das Gerät.",
+  "ai-model-proposal-being-written":
+    "Es wird gerade schon ein KI-Vorschlag erstellt. Bitte warte, bis er fertig ist.",
   "file-indexing-ai-off": "Die KI ist ausgeschaltet. Dateien werden nur für die KI erfasst, solange KI an ist.",
   "file-indexing-not-failed":
     "Diese Datei ist inzwischen nicht mehr als nicht lesbar vermerkt – sie wird nicht erneut erfasst.",

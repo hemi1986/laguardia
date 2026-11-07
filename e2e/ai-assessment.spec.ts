@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { Client } from "pg";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { encryptKey } from "../src/modules/ai-assistance/key-encryption";
+import { turnAiOff, turnAiOn, withDatabase } from "./ai-seed";
 import { anOpenDefect, logIn, openDefect } from "./fixtures";
 
 /**
@@ -11,37 +10,6 @@ import { anOpenDefect, logIn, openDefect } from "./fixtures";
  * form cannot turn AI on there – so this spec seeds the AI settings and the requested AI assessment into the browser
  * tests' own database, and it is therefore local-only (a preview has no such database).
  */
-
-const E2E_ENCRYPTION_KEY = Buffer.alloc(32, 7);
-
-function e2eDatabase(): URL {
-  const url = new URL(process.env.TEST_DATABASE_URL ?? "postgres://laguardia:laguardia@localhost:5433/laguardia_test");
-  url.pathname = "/laguardia_e2e_test";
-  return url;
-}
-
-async function withDatabase<Result>(run: (client: Client) => Promise<Result>): Promise<Result> {
-  const client = new Client({ connectionString: e2eDatabase().toString() });
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
-/** Turns AI on in the browser tests' database: the key, the chat model and the embedding model (AGG-AiSettings). */
-async function turnAiOn(): Promise<void> {
-  await withDatabase((client) =>
-    client.query(
-      `UPDATE ai_settings
-         SET encrypted_key = $1, key_last_four = 'a1b2',
-             chat_model = 'google/gemini-2.5-flash', embedding_model = 'google/gemini-embedding-2',
-             version = version + 1`,
-      [encryptKey(E2E_ENCRYPTION_KEY, "sk-or-v1-e2e-browser-test-key-0123456789")],
-    ),
-  );
-}
 
 /**
  * An AI assessment being written, as a run does it: held first, for an hour. So a run that a form of another spec starts
@@ -69,11 +37,7 @@ async function restoreAiOff(): Promise<void> {
   await withDatabase(async (client) => {
     await client.query("DELETE FROM ai_work_hold WHERE kind = 'ai-assessment'");
     await client.query("DELETE FROM ai_assessment");
-    await client.query(
-      `UPDATE ai_settings
-         SET encrypted_key = NULL, key_last_four = NULL, chat_model = NULL, embedding_model = NULL,
-             version = version + 1`,
-    );
+    await turnAiOff(client);
   });
 }
 

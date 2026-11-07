@@ -12,7 +12,7 @@ risk: medium
 events: [EVT-AiModelProposalRequested]
 depends_on: [ST-122, ST-006, ST-104]
 labels: [feature:ai-model-proposal]
-status: ready
+status: done
 ---
 
 ## Story

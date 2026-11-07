@@ -512,7 +512,7 @@ events:
     aggregate: AGG-AiModelProposal
     pivotal: true
     data: [Description, Chat model, Requested by]
-    description: The description is what the technician typed, for example "Flipper High Speed Williams"; it belongs to the AI model proposal.
+    description: The description is what the technician typed, for example "Flipper High Speed Williams"; it belongs to the AI model proposal. Being free text it is not part of the journal – the journal says who asked and with which chat model (ST-123).
   - id: EVT-AiModelProposalWritten
     name: AI model proposal written
     aggregate: AGG-AiModelProposal
