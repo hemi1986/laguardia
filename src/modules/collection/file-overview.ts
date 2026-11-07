@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import type { Database } from "@/platform/command";
+import { queryOfWord, wordsOfText } from "@/platform/word-search";
 import type { FileCategory } from "./add-file";
 import { attachedToMachineOrItsModel, attachedToModelOrItsMachines, attachedToNothing } from "./attached-to";
 import { fileMediaTypeOf, type FileMediaType } from "./file-details";
@@ -52,8 +53,7 @@ const ownText = sql`(
   || coalesce((select string_agg(mm.title, ' ')
        from file_attachment fa join machine_model mm on mm.id = fa.machine_model_id
        where fa.file_id = ${file.id}), ''))`;
-const normalized = sql`regexp_replace(${ownText}, '[[:punct:][:space:]]+', ' ', 'g')`;
-const ownWords = sql`(to_tsvector('german'::regconfig, ${normalized}) || to_tsvector('english'::regconfig, ${normalized}))`;
+const ownWords = wordsOfText(ownText);
 
 /**
  * Whether and how well the file's own text (`d`, its words) matches a word: a rank, or null. A word that is a stop word in
@@ -61,7 +61,7 @@ const ownWords = sql`(to_tsvector('german'::regconfig, ${normalized}) || to_tsve
  * with rank 0 – "Relais in Backbox" searches for „Relais“ and „Backbox“.
  */
 function ownRankOf(word: string): SQL<number | null> {
-  const query = sql`(plainto_tsquery('german'::regconfig, ${word}) || plainto_tsquery('english'::regconfig, ${word}))`;
+  const query = queryOfWord(word);
   return sql<
     number | null
   >`case when numnode(${query}) = 0 then 0 when own.d @@ ${query} then ts_rank(own.d, ${query}) end`;

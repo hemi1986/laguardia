@@ -14,6 +14,7 @@ import {
   uuid,
   vector,
 } from "drizzle-orm/pg-core";
+import { wordsOfText } from "@/platform/word-search";
 import { EMBEDDING_SIZE } from "./ai-seam";
 import { assessmentFailureReasons, type AiAssessmentReference } from "./ai-assessment";
 import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
@@ -136,14 +137,6 @@ export const aiAssessment = pgTable(
 
 /** PostgreSQL's `tsvector`: the stemmed words of a text, searched with `@@` (ST-118). Never read into the application. */
 const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
-
-/**
- * The words of a text for the file overview's content search (ST-118, ADR 0018): German and English stems together,
- * punctuation and spaces separate words (`medieval_manual-v2` is three). The stored words of a passage;
- * Collection's query makes the words of a file's own text the same way, in SQL of its own (the modules share no code).
- */
-export const wordsOfText = (text: ReturnType<typeof sql>) =>
-  sql`(to_tsvector('german'::regconfig, regexp_replace(coalesce(${text}, ''), '[[:punct:][:space:]]+', ' ', 'g')) || to_tsvector('english'::regconfig, regexp_replace(coalesce(${text}, ''), '[[:punct:][:space:]]+', ' ', 'g')))`;
 
 /**
  * The index items of an AI index entry (ST-106, data model *Index item*): passages, PDF page images and images, each
