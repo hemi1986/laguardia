@@ -201,6 +201,25 @@ aggregates:
       - The note, the photos, who requested it and the chat model it was requested with never change
       - Only a written AI assessment has a summary, probable causes, what to check first and references; only a failed one has a reason
       - Every reference names a file that was attached to the defect's machine or its machine model when the AI assessment was written and, for a PDF, a page – a later detach or removal changes nothing
+  - id: AGG-AiModelProposal
+    name: AI model proposal
+    context: BC-AiAssistance
+    description: >-
+      One per request (feature ai-model-proposal, user, 2026-11-07). A technician types which device to add; the AI
+      completes the machine model's fields and finds documents for it – existing files and links on the web – which the
+      technician confirms before anything is saved. It belongs to AI assistance, not to Collection: it never changes a
+      machine model or a file by itself, only CMD-AcceptAiModelProposal creates the machine model, in one transaction
+      with it, by calling Collection's CMD-CreateMachineModel (AI assistance is downstream of Collection, ADR 0019).
+      At most one AI model proposal is being written at a time – a set-based rule over all of them, checked by
+      CMD-RequestAiModelProposal and guaranteed by the store, like the AI assessment (HS-37).
+    invariants:
+      - An AI model proposal has the description a technician typed, who requested it and the chat model it was requested with; none of them ever changes
+      - An AI model proposal is requested, then either written or failed exactly once; a written or failed one is never written again
+      - Only a written AI model proposal has fields, sources and documents; only a failed one has a reason
+      - Every field of a written AI model proposal is empty or valid – a machine category of the three, a technology that fits it, a four-digit year; what the AI found that is not valid is left empty
+      - A written AI model proposal holds at most 10 documents; each is either an existing file (by ID) or a link on the web (https) with a title, and has one file category (Manual, Schematic or Other)
+      - A written AI model proposal ends accepted or discarded at most once, a failed one only discarded; an accepted or discarded one is final in that respect
+      - An accepted AI model proposal refers to the machine model it created, which never changes, and holds the documents chosen when it was accepted; each chosen link is waiting, loaded (with the file it became) or failed (with exactly one reason)
 events:
   # --- Problem reports ---
   - id: EVT-ProblemReported
@@ -488,6 +507,54 @@ events:
       "timed out" – OpenRouter did not answer in time; "broken off" – the writing ended without a result (a crash, a
       deployment, the time limit) and POL-UnfinishedAiWorkFails recorded it (HS-33, user 2026-11-01, D3). A failed AI
       assessment is never written again automatically; „Erneut versuchen“ requests a new one.
+  - id: EVT-AiModelProposalRequested
+    name: AI model proposal requested
+    aggregate: AGG-AiModelProposal
+    pivotal: true
+    data: [Description, Chat model, Requested by]
+    description: The description is what the technician typed, for example "Flipper High Speed Williams"; it belongs to the AI model proposal.
+  - id: EVT-AiModelProposalWritten
+    name: AI model proposal written
+    aggregate: AGG-AiModelProposal
+    data: [Title (optional), Manufacturer (optional), Year (optional), Machine category (optional), Technology (optional), Sources, Documents (existing file or link, title, file category), Chat model, Embedding model, Cost]
+    description: >-
+      Sources are the links the AI relied on for the fields. Documents are existing files from the AI index first, then
+      links the AI found on the web; no images, no video. The text is not part of the journal – the journal says that it was written and what it cost.
+  - id: EVT-AiModelProposalFailed
+    name: AI model proposal failed
+    aggregate: AGG-AiModelProposal
+    data: [Reason (key invalid, credit used up, model not available, timed out, OpenRouter not reachable, AI off, device not recognised, answer unusable, broken off)]
+    description: >-
+      "device not recognised" – the AI found no machine for the description. "broken off" is recorded by
+      POL-UnfinishedAiWorkFails as for AI assessments (HS-33). A failed AI model proposal is never written again
+      automatically; „Nochmal versuchen“ requests a new one with the same description (HS-42).
+  - id: EVT-AiModelProposalDiscarded
+    name: AI model proposal discarded
+    aggregate: AGG-AiModelProposal
+    description: A technician dropped a written or failed AI model proposal; nothing was saved.
+  - id: EVT-AiModelProposalAccepted
+    name: AI model proposal accepted
+    aggregate: AGG-AiModelProposal
+    pivotal: true
+    data: [Machine model, Chosen documents (existing file or link, title, file category)]
+    description: >-
+      Recorded in the transaction of Collection's EVT-MachineModelCreated, which it causes. The chosen existing files are
+      attached to the machine model in the same transaction (EVT-FileAttached); the chosen links are loaded afterwards
+      (POL-AcceptedProposalDocumentsAreLoaded).
+  - id: EVT-ProposedDocumentLoaded
+    name: Proposed document loaded
+    aggregate: AGG-AiModelProposal
+    data: [Document, File]
+    description: The link was fetched, stored and added as a file attached to the machine model (EVT-FileAdded, EVT-FileAttached in the same transaction); the AI index follows the file as for any added file.
+  - id: EVT-ProposedDocumentFailed
+    name: Proposed document failed
+    aggregate: AGG-AiModelProposal
+    data: [Document, Reason (not reachable, too large, not a PDF or text, address not allowed, broken off)]
+    description: Only this document fails; the machine model and the other documents stay.
+  - id: EVT-ProposedDocumentLoadingRetried
+    name: Loading of a proposed document retried
+    aggregate: AGG-AiModelProposal
+    data: [Document]
 commands:
   # --- Problem reports ---
   - id: CMD-ReportProblem
@@ -878,6 +945,81 @@ commands:
       - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and fails the AI assessment with reason "broken off"
       - AI turned off meanwhile fails it with reason "AI off"; nothing is sent to OpenRouter then
       - References to files outside that list are dropped; an answer without a usable summary fails it with reason "answer unusable" (user, 2026-10-31, story review)
+  - id: CMD-RequestAiModelProposal
+    name: Request AI model proposal
+    aggregate: AGG-AiModelProposal
+    actor: ACT-Technician
+    produces: [EVT-AiModelProposalRequested]
+    description: >-
+      On the page „Mit KI erstellen“, reached from the machine models page. Stores the request only; the writing starts
+      after the response (POL-RequestedAiModelProposalIsWritten, ADR 0015).
+    rules:
+      - AI is on
+      - The description is required and not blank
+      - No AI model proposal is still being written – rejected until it is written or failed (HS-37); one whose writing broke off is failed as "broken off" by the next run once its hold has run out (HS-33)
+  - id: CMD-WriteAiModelProposal
+    name: Write AI model proposal
+    aggregate: AGG-AiModelProposal
+    produces: [EVT-AiModelProposalWritten, EVT-AiModelProposalFailed]
+    description: >-
+      Run only by POL-RequestedAiModelProposalIsWritten in the background. Asks the chat model, with OpenRouter's
+      server tools for web search and fetching a web page (HS-41), to complete title, manufacturer, year, machine
+      category and technology for the description and to name documents – an official manual, schematics, entries of the
+      Pinball wiki and other text documents about the machine or its system. The AI index is searched with the
+      completed fields among all files, also those attached to nothing (ADR 0018); what it finds is offered as existing files.
+    rules:
+      - AI is on; turned off meanwhile fails it with reason "AI off", and nothing is sent to OpenRouter then
+      - A value that is not valid (a machine category of none of the three, a technology that does not fit it, a year that is not four digits) is left empty, not repaired
+      - No usable machine in the answer fails it with reason "device not recognised"; an answer that is not the agreed form fails it with "answer unusable"
+      - At most 10 documents – existing files first, then links; no images, no video, only links starting with https
+      - Web search or fetching not available or finding nothing is no failure – the AI model proposal is written without documents
+      - Only an AI model proposal still requested is written or failed – a late result after it was failed as "broken off" records nothing (version check)
+      - Run by POL-UnfinishedAiWorkFails it reads and sends nothing and fails the AI model proposal with reason "broken off"
+  - id: CMD-DiscardAiModelProposal
+    name: Discard AI model proposal
+    aggregate: AGG-AiModelProposal
+    actor: ACT-Technician
+    produces: [EVT-AiModelProposalDiscarded]
+    rules:
+      - Only a written or failed AI model proposal; an accepted, discarded or still requested one is rejected
+  - id: CMD-AcceptAiModelProposal
+    name: Accept AI model proposal
+    aggregate: AGG-AiModelProposal
+    actor: ACT-Technician
+    produces: [EVT-AiModelProposalAccepted]
+    description: >-
+      „Speichern“ on the page of a written AI model proposal, with the fields as the technician corrected them and the
+      documents as ticked. Calls Collection's CMD-CreateMachineModel (EVT-MachineModelCreated) and, for each chosen
+      existing file, CMD-AttachFile in the same transaction – everything is stored or nothing (ADR 0019).
+    rules:
+      - The AI model proposal is written and neither accepted nor discarded – a second tap or the other technician's tap is rejected
+      - The fields obey CMD-CreateMachineModel's rules – title, manufacturer and machine category are required, the technology fits the category, the year is four digits; a rejection of those changes nothing and keeps what was typed
+      - Of the documents only those of the AI model proposal can be chosen, any number up to its documents; the category of each can be changed to another of Manual, Schematic or Other
+      - A chosen existing file that was removed meanwhile rejects the command and says which (HS-38)
+      - AI may be off – accepting needs no AI
+      - A machine model with the same title and manufacturer already existing does not reject (HS-39)
+  - id: CMD-LoadProposedDocument
+    name: Load proposed document
+    aggregate: AGG-AiModelProposal
+    produces: [EVT-ProposedDocumentLoaded, EVT-ProposedDocumentFailed]
+    description: >-
+      Run only by POL-AcceptedProposalDocumentsAreLoaded in the background, once per chosen link. Fetches the link,
+      stores its content and adds it with Collection's CMD-AddFile as a file with the chosen title and file category,
+      attached to the machine model. The AI index follows by POL-AddedFileIsIndexedForAi.
+    rules:
+      - Only addresses starting with https and not pointing to the museum's own or any private network; a redirect is followed only to such an address
+      - At most 100 MB (as every file); a PDF or a text or Markdown document – other content types fail it with "not a PDF or text"; a web page is stored as the text of the page
+      - Nothing from the fetched content is executed, and it never changes the AI model proposal's documents
+      - Only a link still waiting is loaded – a late result after it was failed as "broken off" records nothing
+      - Run by POL-UnfinishedAiWorkFails it fails the link with reason "broken off"
+      - Works while AI is off – only the indexing waits
+  - id: CMD-RetryProposedDocument
+    name: Retry proposed document
+    aggregate: AGG-AiModelProposal
+    actor: ACT-Technician
+    produces: [EVT-ProposedDocumentLoadingRetried]
+    rules:
+      - Only a failed link of an accepted AI model proposal; it is waiting again
 policies:
   # --- automatic ---
   - id: POL-LinkReopensResolvedDefect
@@ -944,7 +1086,7 @@ policies:
   - id: POL-UnfinishedAiWorkFails
     name: Unfinished AI work fails as broken off
     when: [EVT-AiWorkLeftUnfinished]
-    then: [CMD-IndexFileForAi, CMD-WriteAiAssessment]
+    then: [CMD-IndexFileForAi, CMD-WriteAiAssessment, CMD-WriteAiModelProposal, CMD-LoadProposedDocument]
     description: >-
       Automatic, in the next run of the background work, whatever started it (an attached file, a request, saving the
       AI settings, „Erneut versuchen“, the defect page – ADR 0015), before that run takes new work: a file or an AI
@@ -985,6 +1127,16 @@ policies:
     when: [EVT-MaintenanceRecorded]
     then: [CMD-ReportProblem]
     description: Manual – a fault found during maintenance becomes a problem report.
+  - id: POL-RequestedAiModelProposalIsWritten
+    name: A requested AI model proposal is written
+    when: [EVT-AiModelProposalRequested]
+    then: [CMD-WriteAiModelProposal]
+    description: Automatic, in the background, started after the request's response (ADR 0015, ADR 0017). Within AI assistance.
+  - id: POL-AcceptedProposalDocumentsAreLoaded
+    name: The chosen links of an accepted AI model proposal are loaded
+    when: [EVT-AiModelProposalAccepted, EVT-ProposedDocumentLoadingRetried]
+    then: [CMD-LoadProposedDocument]
+    description: Automatic, in the background, started after the response of the accept or the retry; one run per waiting link. Within AI assistance.
 read_models:
   - id: RM-VisitorMachinePage
     name: Visitor machine page
@@ -1146,6 +1298,25 @@ read_models:
     fed_by: [EVT-MachineRegistered, EVT-MachineRetired, EVT-MachineDetailsCorrected, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-FileAttached, EVT-FileDetached]
     used_by: [ACT-TeamMember]
     fields: [Machines (museum number, machine model title), Machine models (title), Machine category, Technology, Chosen]
+  - id: RM-AiModelProposals
+    name: Open AI model proposals
+    description: >-
+      The section „KI-Vorschläge“ on the machine models page, for technicians: every AI model proposal that is being
+      written, written, failed, or accepted with a link still waiting or failed – each with the description, its state
+      and a link to its page. The button „Mit KI erstellen“ only for technicians and only while AI is on; with AI off
+      the button is absent and the section is shown only for what is open (G37).
+    fed_by: [EVT-AiModelProposalRequested, EVT-AiModelProposalWritten, EVT-AiModelProposalFailed, EVT-AiModelProposalDiscarded, EVT-AiModelProposalAccepted, EVT-ProposedDocumentLoaded, EVT-ProposedDocumentFailed, EVT-ProposedDocumentLoadingRetried, EVT-AiSettingsChanged]
+    used_by: [ACT-Technician]
+  - id: RM-AiModelProposal
+    name: An AI model proposal
+    description: >-
+      The page of one AI model proposal. Being written: „KI arbeitet …“, the page refreshes itself (G35). Written: the
+      fields as a form, the sources as links, the documents in two groups – „Schon im Museum vorhanden“ and „Aus dem
+      Netz laden“ – each with a tick, title, file category and, for a link, its source; a hint with a link when a
+      machine model with the same title and manufacturer exists. Failed: the reason and the description. Accepted: the
+      machine model and per link waiting, loaded or failed with „Nochmal versuchen“.
+    fed_by: [EVT-AiModelProposalRequested, EVT-AiModelProposalWritten, EVT-AiModelProposalFailed, EVT-AiModelProposalDiscarded, EVT-AiModelProposalAccepted, EVT-ProposedDocumentLoaded, EVT-ProposedDocumentFailed, EVT-ProposedDocumentLoadingRetried, EVT-MachineModelCreated, EVT-MachineModelCorrected, EVT-FileRemoved]
+    used_by: [ACT-Technician]
 hotspots:
   # --- Flow: problem report to defect ---
   - id: HS-1
@@ -1484,6 +1655,45 @@ hotspots:
       to it or to its machine model; filtering by a machine model finds what is attached to it or to any of its
       machines, retired ones included. The file details say exactly what a file is attached to.
 
+  # --- Feature ai-model-proposal (2026-11-07) ---
+  - id: HS-37
+    question: May several AI model proposals be written at the same time? Recommendation – no, one at a time, like HS-31.
+    refs: [CMD-RequestAiModelProposal, AGG-AiModelProposal]
+    status: resolved
+    resolution: One at a time; the request is rejected until the running one is written or failed (user, 2026-11-07, grilling Q8).
+  - id: HS-38
+    question: >-
+      A chosen existing file is removed between the AI model proposal being written and „Speichern“. Recommendation –
+      the command rejects and says which document is gone, keeping what was typed; the page then shows the document as
+      removed and not ticked. Alternative – drop it silently, which hides that a manual is missing.
+    refs: [CMD-AcceptAiModelProposal, EVT-FileRemoved]
+    status: resolved
+    resolution: Rejected and names the document, as recommended (user, 2026-11-07).
+  - id: HS-39
+    question: A machine model with the same title and manufacturer exists. Reject, warn or ignore?
+    refs: [CMD-AcceptAiModelProposal, RM-AiModelProposal]
+    status: resolved
+    resolution: A hint with a link on the page; saving stays allowed; no new rule for creating machine models by hand (user, 2026-11-07, grilling Q11).
+  - id: HS-40
+    question: Are the documents loaded while the AI model proposal is written or after „Speichern“?
+    refs: [CMD-LoadProposedDocument, POL-AcceptedProposalDocumentsAreLoaded]
+    status: resolved
+    resolution: After saving, in the background, one document at a time failing alone, with „Nochmal versuchen“ (user, 2026-11-07, grilling Q10 b).
+  - id: HS-41
+    question: >-
+      Do OpenRouter's server tools for web search and fetching a web page work with the chosen chat model together with a
+      structured answer (fields and documents with links)? How long does a run take and what does it cost for three
+      real devices? Decided by a spike (ST-122); until then the stories after it are not ready.
+    refs: [CMD-WriteAiModelProposal, EXT-OpenRouter]
+    status: open
+  - id: HS-42
+    question: >-
+      „Nochmal versuchen“ on a failed AI model proposal. Recommendation – it opens the form „Mit KI erstellen“ with the
+      description already typed in (G8a); the failed one stays until it is discarded, so no command discards and
+      requests in one step.
+    refs: [CMD-RequestAiModelProposal, CMD-DiscardAiModelProposal]
+    status: resolved
+    resolution: As recommended – the form opens with the description typed in; the failed one stays until discarded (user, 2026-11-07).
 flows:
   - id: FLOW-ProblemReportTriage
     name: From problem report to defect
@@ -1536,3 +1746,11 @@ flows:
       AI once, whatever it is attached to. Team members attach it to further machines and machine models and correct its
       title and file category; technicians detach it or remove it for good.
     sequence: [ACT-TeamMember, EVT-FileAdded, EVT-FileAttached, EVT-FileIndexedForAi, EVT-FileDetailsChanged, ACT-Technician, EVT-FileDetached, EVT-FileRemoved, EVT-FileLeftAiIndex]
+  - id: FLOW-AiModelProposal
+    name: Creating a machine model with the AI
+    description: >-
+      Feature ai-model-proposal (2026-11-07). A technician types which device to add; in the background the chat model
+      completes the machine model's fields and names documents – existing files from the AI index and links found on
+      the web. The technician corrects the fields, ticks the documents and saves: the machine model is created and the
+      existing files attached at once, the linked documents are loaded afterwards and indexed like any added file.
+    sequence: [ACT-Technician, EVT-AiModelProposalRequested, EXT-OpenRouter, EVT-AiModelProposalWritten, EVT-AiModelProposalAccepted, EVT-MachineModelCreated, EVT-ProposedDocumentLoaded, EVT-FileAdded, EVT-FileIndexedForAi]

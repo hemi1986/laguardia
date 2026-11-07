@@ -648,6 +648,58 @@ Derived for read models: *May request* (`RM-DefectAiAssessments`) – AI on, the
 
 ---
 
+## AI model proposal (`AGG-AiModelProposal`, context `BC-AiAssistance`)
+
+**Invariants**
+- An AI model proposal has the description a technician typed, who requested it and the chat model; none of them ever changes
+- An AI model proposal is requested, then either written or failed exactly once; a written or failed one is never written again
+- Only a written AI model proposal has fields, sources and documents; only a failed one has a reason
+- Every field of a written AI model proposal is empty or valid – a machine category of the three, a technology that fits it, a four-digit year
+- A written AI model proposal holds at most 10 documents, each an existing file (by ID) or a link on the web (https), with a title and one file category (Manual, Schematic, Other)
+- A written AI model proposal ends accepted or discarded at most once, a failed one only discarded
+- An accepted AI model proposal refers to the machine model it created, and each chosen link is waiting, loaded (with its file) or failed (with one reason)
+
+**Set-based rule (HS-37):** at most one AI model proposal is *requested* (being written) at a time, checked by `CMD-RequestAiModelProposal` and guaranteed by the store, like HS-31. A write that ends without a result is failed as *broken off* by the next run (HS-33).
+
+**Accepting (ADR 0019):** `CMD-AcceptAiModelProposal` calls Collection's `CMD-CreateMachineModel` and `CMD-AttachFile` (for chosen existing files) in its own transaction – stored together or not at all. Links are loaded afterwards, each in its own transaction (`CMD-LoadProposedDocument` → Collection's `CMD-AddFile`), and fail alone (HS-40). The fields the technician corrected are the input of the command; the proposal keeps what the AI proposed.
+
+**Lifecycle**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Requested : EVT-AiModelProposalRequested
+    Requested --> Written : EVT-AiModelProposalWritten
+    Requested --> Failed : EVT-AiModelProposalFailed
+    Written --> Accepted : EVT-AiModelProposalAccepted
+    Written --> Discarded : EVT-AiModelProposalDiscarded
+    Failed --> Discarded : EVT-AiModelProposalDiscarded
+    Accepted --> [*]
+    Discarded --> [*]
+```
+
+A chosen link has its own small lifecycle inside an accepted proposal: waiting → loaded (`EVT-ProposedDocumentLoaded`) or failed (`EVT-ProposedDocumentFailed`) → waiting again (`EVT-ProposedDocumentLoadingRetried`).
+
+| Element | Kind | Attribute | Domain type | Required | Source (event/read model) |
+|---|---|---|---|---|---|
+| AI model proposal | Root | ID | `AiModelProposalId` | yes | – (identity) |
+| | | Description | `Text` | yes | EVT-AiModelProposalRequested; RM-AiModelProposals |
+| | | Requested by | `TeamMemberId` | yes | EVT-AiModelProposalRequested |
+| | | Requested at | `Timestamp` | yes | EVT-AiModelProposalRequested (occurrence) |
+| | | Chat model | `ModelId` | yes | EVT-AiModelProposalRequested, EVT-AiModelProposalWritten |
+| | | State | *requested* \| *written* \| *failed* \| *accepted* \| *discarded* | yes | the five events; *State* in RM-AiModelProposals |
+| | | Title, Manufacturer, Year, Machine category, Technology | as on Machine model | no (each) | EVT-AiModelProposalWritten; RM-AiModelProposal |
+| | | Sources | list of `Link` | when written (may be empty) | EVT-AiModelProposalWritten |
+| | | Embedding model, Cost | `ModelId`, `Cost` | when written | EVT-AiModelProposalWritten |
+| | | Failure reason | `ProposalFailureReason` | when failed | EVT-AiModelProposalFailed |
+| | | Machine model | `MachineModelId` | when accepted | EVT-AiModelProposalAccepted |
+| Proposed document | Entity | Kind, File or Link, Title, File category | `FileId` or `Link`, `Text`, `FileCategory` | yes | EVT-AiModelProposalWritten, EVT-AiModelProposalAccepted (chosen) |
+| | | Chosen | `Boolean` | when accepted | EVT-AiModelProposalAccepted |
+| | | Loading state, File, Reason | *waiting* \| *loaded* \| *failed*, `FileId`, `DocumentFailureReason` | for a chosen link | EVT-ProposedDocumentLoaded, EVT-ProposedDocumentFailed, EVT-ProposedDocumentLoadingRetried; RM-AiModelProposal |
+
+The fields' text is not in the journal; `EVT-AiModelProposalWritten` journals that it was written, the models and the cost.
+
+---
+
 ## Team member (Team area – generic, not modelled)
 
 Not an aggregate of this model; listed only because all contexts reference it (`docs/domain/context-map.md`, `docs/adr/0004-team-authentication.md`).

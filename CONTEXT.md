@@ -374,6 +374,21 @@ assessment is kept with the defect, also when it failed.
 _Avoid_: Diagnosis, AI analysis, AI triage, suggestion
 _UI (de)_: KI-Einschätzung
 
+**AI model proposal**:
+What an AI makes of a technician's description of a device, for example "Flipper High Speed Williams": the fields of a
+machine model (title, manufacturer, year, machine category, technology) and *proposed documents* – files already in the
+museum and links found on the web. Nothing is saved until the technician corrects it and saves: then the machine model
+is created and the documents follow. Kept until it is saved or discarded; also when it failed.
+_Avoid_: Draft, AI import, AI suggestion
+_UI (de)_: KI-Vorschlag („Mit KI erstellen“)
+
+**Proposed document**:
+A document of an AI model proposal that the technician may take along: a file that is already in the museum, which is
+only attached to the new machine model, or a link on the web, which is loaded after saving and becomes a file. At most
+ten per AI model proposal; PDF, text or Markdown, never images or video.
+_Avoid_: Attachment, download, source (a source is where the AI found the fields)
+_UI (de)_: Dokument
+
 **Broken off**:
 The reason of an indexing or an AI assessment that ended without a result – cut off by a crash, a deployment or the
 time limit; not to be confused with *timed out*, OpenRouter not answering in time. It counts as failed and, like
