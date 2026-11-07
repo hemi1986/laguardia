@@ -93,12 +93,25 @@ describe("writeAiModelProposal", () => {
     expect(state.sources).toEqual(["https://example.org/source"]);
   });
 
-  it("gives a file category that is none of the three the category Other", () => {
+  it("gives a file category the AI invented the category Other", () => {
     const state = written({
-      documents: [{ title: "Photo", fileCategory: "photo", link: "https://example.org/p.pdf" }],
+      documents: [{ title: "Doc", fileCategory: "datasheet", link: "https://example.org/d.pdf" }],
     });
 
     expect(state.documents?.[0].fileCategory).toBe("other");
+  });
+
+  it("leaves out images and video: a photo, a picture address, a film address", () => {
+    const state = written({
+      documents: [
+        { title: "Photo", fileCategory: "photo", link: "https://example.org/p.pdf" },
+        { title: "Picture", fileCategory: "other", link: "https://example.org/backglass.JPG" },
+        { title: "Film", fileCategory: "other", link: "https://example.org/demo.mp4?x=1" },
+        { title: "Manual", fileCategory: "manual", link: "https://example.org/manual.pdf" },
+      ],
+    });
+
+    expect(state.documents?.map(({ title }) => title)).toEqual(["Manual"]);
   });
 
   it("writes only a proposal still requested – a late result after it failed records nothing", () => {

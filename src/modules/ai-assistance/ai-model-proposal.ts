@@ -163,6 +163,10 @@ export function httpsLink(value: string): string | undefined {
   }
 }
 
+/** Addresses that end in an image or video file – a proposal holds text documents only. */
+const PICTURE_OR_FILM = /\.(jpe?g|png|gif|webp|avif|bmp|tiff?|svg|heic|mp4|m4v|mov|avi|mkv|webm|mpe?g|wmv|flv)$/i;
+const isPictureOrFilm = (address: string) => PICTURE_OR_FILM.test(new URL(address).pathname);
+
 /** A year is exactly four digits (as on a machine model). */
 function validYear(value: string | undefined): number | undefined {
   return value !== undefined && /^\d{4}$/.test(value.trim()) ? Number(value.trim()) : undefined;
@@ -192,9 +196,11 @@ export function writeAiModelProposal(
   const documents = uniqueBy(
     answer.documents.flatMap(({ link, title: documentTitle, fileCategory }): ProposedLink[] => {
       const address = httpsLink(link);
-      const category = proposedFileCategories.find((candidate) => candidate === fileCategory);
       const named = documentTitle.trim();
-      return address && named ? [{ kind: "link", link: address, title: named, fileCategory: category ?? "other" }] : [];
+      // No images, no video (rule): a document the AI calls a photo, or whose address is a picture or a film, is left out.
+      if (!address || !named || fileCategory === "photo" || isPictureOrFilm(address)) return [];
+      const category = proposedFileCategories.find((candidate) => candidate === fileCategory);
+      return [{ kind: "link", link: address, title: named, fileCategory: category ?? "other" }];
     }),
     (document) => document.link,
   ).slice(0, MAX_PROPOSED_DOCUMENTS);
