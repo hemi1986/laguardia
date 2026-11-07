@@ -136,3 +136,21 @@ export async function openAiModelProposalStates(db: Database): Promise<OpenPropo
     state: row.state as OpenProposal["state"],
   }));
 }
+
+/**
+ * The accepted AI model proposals with a chosen link still waiting to be loaded, the oldest first – what the background
+ * work finds (ST-129, ADR 0015).
+ */
+export async function acceptedProposalsWithWaitingLinks(db: Database): Promise<AiModelProposalState[]> {
+  const rows = await db
+    .select()
+    .from(aiModelProposal)
+    .where(
+      and(
+        eq(aiModelProposal.state, "accepted"),
+        sql`${aiModelProposal.documents} @> '[{"loading":"waiting"}]'::jsonb`,
+      ),
+    )
+    .orderBy(asc(aiModelProposal.requestedAt), asc(aiModelProposal.id));
+  return rows.map(toState);
+}

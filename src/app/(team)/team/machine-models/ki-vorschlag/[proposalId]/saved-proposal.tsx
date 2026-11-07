@@ -9,7 +9,8 @@ const { aiModelProposals: texts } = teamMessages;
 /**
  * A saved AI model proposal (RM-AiModelProposal, ST-128, G3): „Gespeichert“, the machine model it created – named and
  * linked –, the existing files attached to it and, for each chosen link, that it is being loaded (the page refreshes
- * itself while one is, G35). Loaded and failed links come with ST-129 and ST-130.
+ * itself while one is, G35), loaded as the file it became (ST-129) or failed with its reason (ST-129; „Nochmal versuchen“
+ * comes with ST-130).
  */
 export function SavedAiModelProposal({ proposal }: { proposal: AiModelProposalPage }) {
   const documents = proposal.documents ?? [];
@@ -49,6 +50,19 @@ export function SavedAiModelProposal({ proposal }: { proposal: AiModelProposalPa
                 <span>{document.title}</span>
                 {document.loading === "waiting" && (
                   <span className="text-muted-foreground text-sm">{texts.loading}</span>
+                )}
+                {document.loading === "loaded" && document.fileId && (
+                  <span className="text-sm">
+                    {texts.loaded}:{" "}
+                    <Link href={fileDetailsAddress(document.fileId)} className="underline underline-offset-4">
+                      {document.title}
+                    </Link>
+                  </span>
+                )}
+                {document.loading === "failed" && document.reason && (
+                  <span role="alert" className="text-destructive text-sm">
+                    {texts.documentFailures[document.reason]}
+                  </span>
                 )}
               </li>
             ))}

@@ -75,3 +75,5 @@ export type {
   ChosenDocument,
 } from "./accept-ai-model-proposal";
 export { aiModelProposalWork } from "./ai-model-proposal-work";
+export { proposedDocumentPieceId, proposedDocumentWork } from "./proposed-document-work";
+export { documentFailureReasons, type DocumentFailureReason } from "./ai-model-proposal";

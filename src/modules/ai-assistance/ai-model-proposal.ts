@@ -22,6 +22,16 @@ export type ProposedFileCategory = (typeof proposedFileCategories)[number];
 /** At most this many documents in a written AI model proposal (invariant). */
 export const MAX_PROPOSED_DOCUMENTS = 10;
 
+/** Why a chosen link could not be loaded (ST-129, `DocumentFailureReason`) – each has its UI word in the message catalog. */
+export const documentFailureReasons = [
+  "not-reachable",
+  "too-large",
+  "not-pdf-or-text",
+  "address-not-allowed",
+  "broken-off",
+] as const;
+export type DocumentFailureReason = (typeof documentFailureReasons)[number];
+
 /** A document the AI found on the web: a link (https) with a title and one file category. */
 export type ProposedLink = {
   kind: "link";
@@ -30,8 +40,12 @@ export type ProposedLink = {
   fileCategory: ProposedFileCategory;
   /** Accepted only (ST-128): the technician chose it – its title and file category are then as chosen. */
   chosen?: true;
-  /** A chosen link only: waiting to be loaded (ST-128); loaded and failed follow with ST-129. */
-  loading?: "waiting";
+  /** A chosen link only: waiting to be loaded (ST-128), loaded as a file or failed with one reason (ST-129). */
+  loading?: "waiting" | "loaded" | "failed";
+  /** Loaded only (ST-129): the file this link became. */
+  fileId?: string;
+  /** Failed only (ST-129). */
+  reason?: DocumentFailureReason;
 };
 /** A file the museum already has, found in the AI index (ST-125): by ID, with the title and file category it had then. */
 export type ProposedFile = {
