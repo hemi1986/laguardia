@@ -1,30 +1,12 @@
-import {
-  aiDependencies,
-  aiIndexStatesForOverview,
-  filesContainingWords,
-  type AiDependencies,
-} from "@/modules/ai-assistance";
-import {
-  fileOverview,
-  fileOverviewChoices,
-  fileRemovedBy,
-  type FileOverviewChoices,
-  type FileOverviewEntry,
-  type FileOverviewFilter,
-} from "@/modules/collection";
+import { aiDependencies, type AiDependencies } from "@/modules/ai-assistance";
+import { fileOverview, fileOverviewChoices, fileRemovedBy, type FileOverviewEntry } from "@/modules/collection";
 import type { Database } from "@/platform/command";
 import { teamMessages } from "@/platform/messages";
 import { fileDetailsAddress } from "./file-navigation";
 import { fileSizeText } from "./[fileId]/details/file-size";
-import { targetOf, targetValue } from "./[fileId]/details/file-attachments";
-import {
-  FILES_PER_PAGE,
-  fileOverviewAddress,
-  fileOverviewQueryOf,
-  type FileOverviewQuery,
-} from "./file-overview-query";
-import { searched } from "./search-order";
-import { searchWordsOf } from "./search-words";
+import { targetValue } from "./[fileId]/details/file-attachments";
+import { fileOverviewAddress, fileOverviewQueryOf, type FileOverviewQuery } from "./file-overview-query";
+import { fileOverviewPage, type AiIndexState } from "./file-overview-pipeline";
 
 const { fileOverview: texts, fileDetails, aiIndex } = teamMessages;
 
@@ -56,23 +38,9 @@ export type FileOverviewData = {
   removedTitle: string | undefined;
 };
 
-/** What the filters narrow Collection's query to – a machine or machine model only when it exists. */
-function filterOf(query: FileOverviewQuery, choices: FileOverviewChoices): FileOverviewFilter {
-  const target = query.attachedTo === "nowhere" ? ("nowhere" as const) : targetOf(query.attachedTo);
-  const known =
-    target === "nowhere" ||
-    (target &&
-      ("machineId" in target
-        ? choices.machines.some((machine) => machine.id === target.machineId)
-        : choices.machineModels.some((model) => model.id === target.machineModelId)));
-  return { fileCategory: query.fileCategory, attachedTo: known ? target : undefined };
-}
-
 /**
- * The file overview's data (RM-FileOverview, ST-117, context map steps 1, 3 and 5): Collection's files that pass the filters,
- * newest first, with AI assistance's index state – for the 25 shown, or for all that remain when the state filter is set –,
- * cut into the page the address names (G40). The page composes (ST-009). While AI is off the state and its filter are
- * absent, and a state in the address is ignored (G37).
+ * The file overview's data (RM-FileOverview, ST-117): the pipeline's page of files (`fileOverviewPage`) shaped into what the
+ * page shows – the entries, the choices of the filters, the way to the other pages. The page composes (ST-009).
  */
 export async function loadFileOverview(
   db: Database,
@@ -91,34 +59,11 @@ export async function loadFileOverview(
     fileOverviewChoices(db),
     typeof params.fileRemoved === "string" ? fileRemovedBy(db, params.fileRemoved, viewer.id) : undefined,
   ]);
-  const filter = filterOf(asked, choices);
-  // The search (ST-118): Collection's files with how well their own text matches each word, AI assistance's files with the
-  // words in a passage; the page merges them by file ID. Without words the list is as it was.
-  const words = asked.search ? searchWordsOf(asked.search) : [];
-  const found =
-    words.length > 0
-      ? searched(await fileOverview(db, filter, words), await filesContainingWords(db, words))
-      : await fileOverview(db, filter);
-
-  // The AI index state: for every file that remains when it narrows the list, else for the page's files only.
-  const stateOfAll = await aiIndexStatesForOverview(db, ai, asked.aiIndex ? found.map((entry) => entry.id) : []);
-  const aiOn = stateOfAll !== undefined;
-  const aiIndexFilter = aiOn ? asked.aiIndex : undefined;
-  const remaining =
-    stateOfAll && aiIndexFilter ? found.filter((entry) => stateOfAll(entry.id) === aiIndexFilter) : found;
-
-  const pages = Math.max(1, Math.ceil(remaining.length / FILES_PER_PAGE));
-  const page = Math.min(asked.page ?? 1, pages);
-  const shown = remaining.slice((page - 1) * FILES_PER_PAGE, page * FILES_PER_PAGE);
-  const stateOf = !aiOn
-    ? undefined
-    : aiIndexFilter
-      ? stateOfAll
-      : await aiIndexStatesForOverview(
-          db,
-          ai,
-          shown.map((entry) => entry.id),
-        );
+  const { filter, aiIndexFilter, remaining, page, pages, shown, stateOf } = await fileOverviewPage(db, {
+    asked,
+    choices,
+    ai,
+  });
 
   const query: FileOverviewQuery = {
     ...(asked.search && { search: asked.search }),
@@ -153,7 +98,7 @@ export async function loadFileOverview(
       value: targetValue({ machineModelId: model.id }),
       label: model.title,
     })),
-    aiIndexStates: aiOn
+    aiIndexStates: stateOf
       ? [
           { value: "indexed", label: aiIndex.fileState.indexed },
           { value: "waiting", label: aiIndex.fileState.waiting },
@@ -167,7 +112,7 @@ export async function loadFileOverview(
 }
 
 /** „Handbuch · PDF · 12,4 MB · Für die KI erfasst“ (G13, G37): the state only while AI is on; the reason is the details'. */
-function lineOf(entry: FileOverviewEntry, state: "indexed" | "waiting" | "failed" | undefined): string {
+function lineOf(entry: FileOverviewEntry, state: AiIndexState | undefined): string {
   const head = fileDetails.head(
     teamMessages.fileCategories[entry.fileCategory],
     fileDetails.mediaTypes[entry.mediaType],

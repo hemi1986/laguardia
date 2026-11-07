@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { Database } from "@/platform/command";
+import { queryOfWord } from "@/platform/word-search";
 import { aiIndexEntry, aiIndexItem } from "./schema";
 
 /**
@@ -19,7 +20,7 @@ export async function filesContainingWords(db: Database, words: readonly string[
 }
 
 async function filesContaining(db: Database, word: string): Promise<ReadonlyMap<string, number>> {
-  const query = sql`(plainto_tsquery('german'::regconfig, ${word}) || plainto_tsquery('english'::regconfig, ${word}))`;
+  const query = queryOfWord(word);
   const rank = sql<number>`max(ts_rank(${aiIndexItem.words}, ${query}))`;
   const rows = await db
     .select({ fileId: aiIndexItem.fileId, rank })
