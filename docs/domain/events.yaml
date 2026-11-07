@@ -1685,7 +1685,11 @@ hotspots:
       structured answer (fields and documents with links)? How long does a run take and what does it cost for three
       real devices? Decided by a spike (ST-122); until then the stories after it are not ready.
     refs: [CMD-WriteAiModelProposal, EXT-OpenRouter]
-    status: open
+    status: resolved
+    resolution: >-
+      Yes – both tools work with the chat model; a strict JSON schema is not kept with them, a JSON object with the keys in
+      the prompt is (6 of 6). One run takes 11–37 s and costs $0.02–$0.08; one run, not two (spike ST-122, proposed ADR 0020,
+      2026-11-07).
   - id: HS-42
     question: >-
       „Nochmal versuchen“ on a failed AI model proposal. Recommendation – it opens the form „Mit KI erstellen“ with the

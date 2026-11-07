@@ -4,7 +4,7 @@
 
 **Progress: 87 of 95 domain stories done** · scenarios 813 of 841
 
-**127 stories** · In Progress: 0 · Ready: 8 · Ready for Human Review: 0 · In Review: 1 · Draft: 0 · Done: 107 · Superseded: 11
+**127 stories** · In Progress: 0 · Ready: 7 · Ready for Human Review: 0 · In Review: 1 · Draft: 0 · Done: 108 · Superseded: 11
 
 Within each section: by priority, then by story ID, with dependencies pulled in front. Open questions: [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
 
@@ -12,7 +12,6 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 
 | ID | Title | Type | Context | Priority | Size | Risk | Depends on |
 |---|---|---|---|---|---|---|---|
-| [ST-122](ST-122-spike-web-search-and-fetch-for-a-machine-model-proposal.md) | Web search and fetch for a machine model proposal | spike | AI assistance | must | M | high | – |
 | [ST-123](ST-123-request-an-ai-model-proposal.md) | Request an AI model proposal from a description | domain | AI assistance | must | M | medium | ST-122, ST-006, ST-104 |
 | [ST-125](ST-125-existing-files-in-an-ai-model-proposal.md) | The proposal offers files the museum already has | domain | AI assistance | should | M | medium | ST-124 (review) |
 | [ST-128](ST-128-save-an-ai-model-proposal.md) | Save an AI model proposal as a machine model with its files | domain | AI assistance | must | L | high | ST-124 (review), ST-125, ST-006, ST-113 |
@@ -83,6 +82,7 @@ Within each section: by priority, then by story ID, with dependencies pulled in 
 | [ST-098](ST-098-sticker-selection-and-recording-for-several-in-groups.md) | The sticker selection and recording for several machines choose in folding groups | story | Collection | must | S | low | ST-094 |
 | [ST-085](ST-085-direct-private-large-file-upload-and-abandoned-uploads.md) | Direct private large-file upload and abandoned uploads | tech-task | Collection | should | L | high | ST-001, ST-016 |
 | [ST-099](ST-099-s3-compatible-object-storage.md) | S3-compatible object storage everywhere | tech-task | Collection | must | L | high | ST-085 |
+| [ST-122](ST-122-spike-web-search-and-fetch-for-a-machine-model-proposal.md) | Web search and fetch for a machine model proposal | spike | AI assistance | must | M | high | – |
 | [ST-029](ST-029-put-defect-on-hold-and-resume.md) | Put a defect on hold and resume it | story | Repair | should | S | low | ST-024, ST-028, ST-033 |
 | [ST-030](ST-030-reopen-defect.md) | Reopen a resolved defect, optionally changing the machine status | story | Repair | should | M | low | ST-012, ST-018, ST-028, ST-033 |
 | [ST-031](ST-031-change-defect-details.md) | Change a defect's title or suitable-for-helpers mark | story | Repair | should | S | low | ST-025 |
