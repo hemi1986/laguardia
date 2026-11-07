@@ -1,11 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-  attachFileCommand,
-  createMachineModelCommand,
-  registerMachineCommand,
-} from "@/modules/collection";
+import { attachFileCommand, createMachineModelCommand, registerMachineCommand } from "@/modules/collection";
 import { reportProblemAndTriageCommand } from "@/modules/repair";
 import { executeCommand } from "@/platform/command";
 import { memoryStorage, type MemoryStorage } from "@/platform/storage";

@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { Database } from "@/platform/command";
 import { attachedToMachineOrItsModel } from "./attached-to";
 import { fileRemovalLock } from "./file-removal-lock";
+import type { FileCategory } from "./add-file";
 import { file } from "./schema";
 
 /** A file as AI assistance reads it to index it (ST-106) – only a file that is not removed, whatever it is attached to. */
@@ -103,4 +104,19 @@ export async function filesOfMachineAndModelForAi(
     .where(attachedToMachineOrItsModel(machineId))
     .orderBy(asc(file.title), asc(file.addedAt), asc(file.id));
   return rows.map(({ id, title, removedAt }) => ({ id, title, removed: removedAt !== null }));
+}
+
+/** A file an AI model proposal may offer (ST-125): its title and file category – shown only, the category belongs to the file. */
+export type FileForAiModelProposal = { id: string; title: string; fileCategory: FileCategory };
+
+/**
+ * Every file that is not removed, also one attached to nothing (ADR 0018) – what the AI index is searched among when an
+ * AI model proposal is written (ST-125). A removed file is never offered; what it is attached to plays no part.
+ */
+export async function filesForAiModelProposal(db: Database): Promise<FileForAiModelProposal[]> {
+  return db
+    .select({ id: file.id, title: file.title, fileCategory: file.fileCategory })
+    .from(file)
+    .where(isNull(file.removedAt))
+    .orderBy(asc(file.title), asc(file.addedAt), asc(file.id));
 }

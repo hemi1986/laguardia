@@ -201,5 +201,16 @@ export function aiScenario({
     return runAiWork({ db: db(), clock, budgetSeconds, ai: dependencies, storage: store(), continueWork, kinds });
   }
 
-  return { openRouter, ai, encryptionKey, turnAiOn, removeTheKey, attachFile, aPhoto, requestAiAssessment, requestAiModelProposal, run };
+  return {
+    openRouter,
+    ai,
+    encryptionKey,
+    turnAiOn,
+    removeTheKey,
+    attachFile,
+    aPhoto,
+    requestAiAssessment,
+    requestAiModelProposal,
+    run,
+  };
 }

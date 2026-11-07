@@ -663,9 +663,19 @@ describe("what an AI assessment finds follows the attachments (ST-120)", () => {
     const lg042 = await aMachine(otherModel, "LG-042");
     const lg050 = await aMachine(eightBall, "LG-050");
     const { defectId } = await anOpenDefect(lg042);
-    const manual = await attach({ machineId: lg042, to: "machine-model", title: "MM Operations Manual", ...aText("mm") });
+    const manual = await attach({
+      machineId: lg042,
+      to: "machine-model",
+      title: "MM Operations Manual",
+      ...aText("mm"),
+    });
     const wiring = await attach({ machineId: lg042, title: "Wiring notes", ...aText("wiring") });
-    const eightBallManual = await attach({ machineId: lg050, to: "machine-model", title: "Eight Ball Manual", ...aText("eb") });
+    const eightBallManual = await attach({
+      machineId: lg050,
+      to: "machine-model",
+      title: "Eight Ball Manual",
+      ...aText("eb"),
+    });
     await index(manual, [{ kind: "passage", text: "Das Handbuch des Modells" }]);
     await index(wiring, [{ kind: "passage", text: "Die Verdrahtung von LG-042" }]);
     await index(eightBallManual, [{ kind: "passage", text: "Das Handbuch von Eight Ball" }]);
@@ -679,7 +689,10 @@ describe("what an AI assessment finds follows the attachments (ST-120)", () => {
     expect(ai.chatRequests[0].text).toContain("Das Handbuch des Modells");
     expect(ai.chatRequests[0].text).toContain("Die Verdrahtung von LG-042");
     expect(ai.chatRequests[0].text).not.toContain("Das Handbuch von Eight Ball");
-    expect(filesTold(ai.chatRequests[0].text).map((file) => file.titel)).toEqual(["MM Operations Manual", "Wiring notes"]);
+    expect(filesTold(ai.chatRequests[0].text).map((file) => file.titel)).toEqual([
+      "MM Operations Manual",
+      "Wiring notes",
+    ]);
     expect(written.references).toEqual([{ fileId: wiring }]);
   });
 
@@ -693,7 +706,9 @@ describe("what an AI assessment finds follows the attachments (ST-120)", () => {
 
     await run(ai);
 
-    expect(filesTold(ai.chatRequests[0].text)).toEqual([{ id: manual, titel: "MM Operations Manual", entfernt: false }]);
+    expect(filesTold(ai.chatRequests[0].text)).toEqual([
+      { id: manual, titel: "MM Operations Manual", entfernt: false },
+    ]);
     expect(ai.chatRequests[0].text.match(/Das Handbuch des Modells/g)).toHaveLength(1);
     expect((await assessment(id)).filesSearched).toEqual([manual]);
   });

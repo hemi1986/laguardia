@@ -112,6 +112,11 @@ export const aiAssistanceTexts = {
     notFound: "Nicht gefunden",
     sources: "Quellen",
     noSources: "Keine Quellen genannt.",
+    /** The files the museum already has for the device (ST-125) – above the links from the web. */
+    alreadyInTheMuseum: "Schon im Museum vorhanden",
+    details: "Details",
+    fileDetails: (title: string) => `Details von „${title}“`,
+    attachTick: (title: string) => `„${title}“ anhängen`,
     loadFromTheWeb: "Aus dem Netz laden",
     noDocuments: "Keine Dokumente gefunden.",
     documentTitle: "Titel des Dokuments",

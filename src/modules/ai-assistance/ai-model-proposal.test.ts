@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fixedClock } from "@/platform/clock";
 import { writeAiModelProposal, type AiModelProposalAnswer, type AiModelProposalState } from "./ai-model-proposal";
-import { answerOfChat, parseAiModelProposalAnswer } from "./ai-model-proposal-writing";
+import { answerOfChat, existingFilesSearchText, parseAiModelProposalAnswer } from "./ai-model-proposal-writing";
 
 /** The rules of CMD-WriteAiModelProposal over many cases (ST-124) – the scenarios themselves run at the run seam. */
 const requested: AiModelProposalState = {
@@ -89,7 +89,9 @@ describe("writeAiModelProposal", () => {
       fileCategory: "manual",
       link: "https://example.org/manual.pdf",
     });
-    expect(state.documents?.every((document) => document.link.startsWith("https://"))).toBe(true);
+    expect(state.documents?.every((document) => document.kind === "link" && document.link.startsWith("https://"))).toBe(
+      true,
+    );
     expect(state.sources).toEqual(["https://example.org/source"]);
   });
 
@@ -114,6 +116,36 @@ describe("writeAiModelProposal", () => {
     expect(state.documents?.map(({ title }) => title)).toEqual(["Manual"]);
   });
 
+  it("offers existing files first, within the 10 documents, and leaves a photo out (ST-125)", () => {
+    const existingFiles = Array.from({ length: 8 }, (_, index) => ({
+      fileId: `file-${index}`,
+      title: `File ${index}`,
+      fileCategory: index === 0 ? "photo" : "manual",
+    }));
+    const decision = writeAiModelProposal(
+      requested,
+      {
+        answer: answer({
+          documents: [1, 2, 3, 4].map((index) => ({
+            title: `Link ${index}`,
+            fileCategory: "manual",
+            link: `https://example.org/${index}.pdf`,
+          })),
+        }),
+        existingFiles: [...existingFiles, existingFiles[1]],
+        cost: 0.05,
+      },
+      context,
+    );
+    if (!decision.ok) throw new Error(decision.error);
+
+    const documents = decision.state.documents ?? [];
+    expect(documents).toHaveLength(10);
+    // The photo and the duplicate are gone; seven files, then three of the four links.
+    expect(documents.map(({ kind }) => kind)).toEqual([...Array(7).fill("file"), ...Array(3).fill("link")]);
+    expect(documents[0]).toEqual({ kind: "file", fileId: "file-1", title: "File 1", fileCategory: "manual" });
+  });
+
   it("writes only a proposal still requested – a late result after it failed records nothing", () => {
     for (const late of ["written", "failed", "accepted", "discarded"] as const) {
       expect(writeAiModelProposal({ ...requested, state: late }, { answer: answer(), cost: 0 }, context)).toEqual({
@@ -121,6 +153,23 @@ describe("writeAiModelProposal", () => {
         error: "not-requested",
       });
     }
+  });
+});
+
+describe("what the AI index is searched with (ST-125)", () => {
+  it("is the title, manufacturer, year and technology that were named", () => {
+    expect(existingFilesSearchText(answer({ technology: " solid-state " }))).toBe(
+      "High Speed Williams 1986 solid-state",
+    );
+    expect(existingFilesSearchText(answer({ manufacturer: undefined, year: undefined, technology: undefined }))).toBe(
+      "High Speed",
+    );
+  });
+
+  it("is nothing when no field was named – then nothing is searched", () => {
+    expect(
+      existingFilesSearchText(answer({ title: " ", manufacturer: undefined, year: undefined, technology: undefined })),
+    ).toBeUndefined();
   });
 });
 

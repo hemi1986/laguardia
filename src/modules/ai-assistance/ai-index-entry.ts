@@ -199,8 +199,6 @@ export function retryFileIndexing(
   return {
     ok: true,
     state: entry,
-    events: [
-      { type: "EVT-FileIndexingRetried", fileId: input.fileId, embeddingModel: entry.embeddingModel },
-    ],
+    events: [{ type: "EVT-FileIndexingRetried", fileId: input.fileId, embeddingModel: entry.embeddingModel }],
   };
 }

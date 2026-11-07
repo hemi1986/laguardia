@@ -90,3 +90,15 @@ export function parseAiModelProposalAnswer(content: string): AiModelProposalAnsw
       : [],
   };
 }
+
+/**
+ * What the AI index is searched with once the fields are completed (ST-125): title, manufacturer, year and technology as
+ * the answer named them – the text of one embedding request. Nothing named, nothing to search for, no request paid.
+ */
+export function existingFilesSearchText(answer: AiModelProposalAnswer): string | undefined {
+  const text = [answer.title, answer.manufacturer, answer.year, answer.technology]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" ");
+  return text || undefined;
+}

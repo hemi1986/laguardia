@@ -1,7 +1,16 @@
-import { executeCommand } from "@/platform/command";
+import { executeCommand, type Database } from "@/platform/command";
+import { filesForAiModelProposal } from "@/modules/collection";
 import { aiModelProposalById, requestedAiModelProposalIds } from "./ai-model-proposals";
-import { aiModelProposalChatRequest, answerOfChat } from "./ai-model-proposal-writing";
+import {
+  MAX_PROPOSED_DOCUMENTS,
+  proposedFileCategories,
+  type AiModelProposalAnswer,
+  type FoundFile,
+} from "./ai-model-proposal";
+import { aiModelProposalChatRequest, answerOfChat, existingFilesSearchText } from "./ai-model-proposal-writing";
+import { searchAiIndex } from "./ai-index-search";
 import type { AiWorkKind } from "./ai-work";
+import type { OpenRouterSession } from "./open-router-session";
 import { writeAiModelProposalCommand } from "./write-ai-model-proposal-command";
 
 /**
@@ -36,10 +45,20 @@ export const aiModelProposalWork: AiWorkKind = {
     );
     // ST-126: stopped, a failure of OpenRouter and an unusable answer fail the proposal with their reason.
     if (answer === "stopped" || answer === "unusable" || "failure" in answer) return piece.giveUp();
+    // The AI index is searched with the completed fields among all files (ST-125, ADR 0018).
+    const found = await findExistingFiles(context.db, piece.openRouter, answer);
+    // ST-126: a failed embedding fails the proposal with its reason.
+    if (found === "gave-up") return piece.giveUp();
     await piece.storeResult((tx) =>
       executeCommand(
         writeAiModelProposalCommand,
-        { aiModelProposalId: id, answer, cost: piece.openRouter.spent() },
+        {
+          aiModelProposalId: id,
+          answer,
+          existingFiles: found.files,
+          ...(found.embeddingModel !== undefined && { embeddingModel: found.embeddingModel }),
+          cost: piece.openRouter.spent(),
+        },
         { actor: { kind: "system" }, db: tx, clock: context.clock },
       ),
     );
@@ -48,3 +67,34 @@ export const aiModelProposalWork: AiWorkKind = {
   /** ST-126 records the proposal failed as *broken off*; until then a break-off leaves it as it is. */
   async recordBrokenOff() {},
 };
+
+/**
+ * The files the AI index finds for the completed fields (ST-125): the best passages and the best pages or images of the
+ * current embedding model among every file that is not removed, also one attached to nothing – a file counts once, the
+ * best hit first. A photo is no document of a proposal. Nothing named, nothing searched and nothing paid; the number of
+ * hits is fixed (`searchAiIndex`), not a setting.
+ */
+async function findExistingFiles(
+  db: Database,
+  openRouter: OpenRouterSession,
+  answer: AiModelProposalAnswer,
+): Promise<{ files: FoundFile[]; embeddingModel?: string } | "gave-up"> {
+  const text = existingFilesSearchText(answer);
+  if (!text) return { files: [] };
+  const embedded = await openRouter.embed({ kind: "text", text });
+  if (typeof embedded === "string") return "gave-up";
+  const candidates = (await filesForAiModelProposal(db)).filter((file) =>
+    proposedFileCategories.some((category) => category === file.fileCategory),
+  );
+  const scope = { fileIds: candidates.map((file) => file.id), embeddingModel: embedded.model };
+  const hits = [
+    ...(await searchAiIndex(db, scope, embedded.embedding, "text")),
+    ...(await searchAiIndex(db, scope, embedded.embedding, "image")),
+  ];
+  const byId = new Map(candidates.map((file) => [file.id, file]));
+  const files = [...new Set(hits.map((hit) => hit.fileId))]
+    .flatMap((fileId) => byId.get(fileId) ?? [])
+    .slice(0, MAX_PROPOSED_DOCUMENTS)
+    .map(({ id, title, fileCategory }) => ({ fileId: id, title, fileCategory }));
+  return { files, embeddingModel: embedded.model };
+}
