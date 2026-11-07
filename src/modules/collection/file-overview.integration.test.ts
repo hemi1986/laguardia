@@ -8,6 +8,7 @@ import { retireMachine } from "@/test-support/machines";
 import { anExistingTeamMember, TEST_TECHNICIAN } from "@/test-support/team-members";
 import {
   addFileCommand,
+  anyFileExists,
   createMachineModelCommand,
   detachFileCommand,
   fileOverview,
@@ -139,6 +140,15 @@ describe("RM-FileOverview (ST-117)", () => {
     expect(entries.map((entry) => entry.title)).toEqual(["MM Operations Manual", "Wiring notes"]);
     expect(entries[1]).toMatchObject({ fileCategory: "other", mediaType: "png", size: 12_400_000 });
     expect(entries[0].addedAt).toBeInstanceOf(Date);
+  });
+
+  it("knows whether any file exists that is not removed", async () => {
+    expect(await anyFileExists(db)).toBe(false);
+    const only = await aFile("Only manual");
+    expect(await anyFileExists(db)).toBe(true);
+    const removed = await executeCommand(removeFileCommand, { fileId: only, version: 0 }, at("2026-11-02T10:00:00Z"));
+    if (!removed.ok) throw new Error(removed.error);
+    expect(await anyFileExists(db)).toBe(false);
   });
 
   it("a file detached from everything is listed and found as attached to nothing", async () => {

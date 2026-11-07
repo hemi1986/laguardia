@@ -41,6 +41,7 @@ export {
   type FileMediaType,
 } from "./file-details";
 export {
+  anyFileExists,
   fileOverview,
   fileOverviewChoices,
   type FileOverviewChoices,

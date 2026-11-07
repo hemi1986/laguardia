@@ -107,6 +107,12 @@ export async function fileOverview(
   return rows.map(({ contentType, ...row }) => ({ ...row, mediaType: fileMediaTypeOf(contentType) }));
 }
 
+/** Whether any file exists that is not removed – what the overview needs to tell "no file at all" from "none passes the filters" (G7). */
+export async function anyFileExists(db: Database): Promise<boolean> {
+  const [found] = await db.select({ id: file.id }).from(file).where(isNull(file.removedAt)).limit(1);
+  return found !== undefined;
+}
+
 /** What the filter „Angehängt an“ offers (ST-117): the machines and the machine models, to be named by the page. */
 export type FileOverviewChoices = {
   /** By museum number, retired machines at the end. */
