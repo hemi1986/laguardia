@@ -1,5 +1,6 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { aggregateStore, Rejected, type AggregateStore, type Database } from "@/platform/command";
+import type { MachineCategory, Technology } from "@/modules/collection";
 import type { AiModelProposalState } from "./ai-model-proposal";
 import { aiModelProposal } from "./schema";
 
@@ -16,6 +17,17 @@ function toState(row: typeof aiModelProposal.$inferSelect): AiModelProposalState
     requestedAt: row.requestedAt,
     chatModel: row.chatModel,
     state: row.state,
+    ...(row.title !== null && { title: row.title }),
+    ...(row.manufacturer !== null && { manufacturer: row.manufacturer }),
+    ...(row.year !== null && { year: row.year }),
+    // The command wrote only Collection's words into these columns.
+    ...(row.machineCategory !== null && { machineCategory: row.machineCategory as MachineCategory }),
+    ...(row.technology !== null && { technology: row.technology as Technology }),
+    ...(row.sources !== null && { sources: row.sources }),
+    ...(row.documents !== null && { documents: row.documents }),
+    ...(row.embeddingModel !== null && { embeddingModel: row.embeddingModel }),
+    ...(row.cost !== null && { cost: row.cost }),
+    ...(row.changedAt !== null && { changedAt: row.changedAt }),
   };
 }
 
@@ -30,6 +42,16 @@ const store = aggregateStore({
     requestedAt: state.requestedAt,
     chatModel: state.chatModel,
     state: state.state,
+    title: state.title ?? null,
+    manufacturer: state.manufacturer ?? null,
+    year: state.year ?? null,
+    machineCategory: state.machineCategory ?? null,
+    technology: state.technology ?? null,
+    sources: state.sources ?? null,
+    documents: state.documents ?? null,
+    embeddingModel: state.embeddingModel ?? null,
+    cost: state.cost ?? null,
+    changedAt: state.changedAt ?? null,
   }),
 });
 
@@ -65,6 +87,16 @@ export async function aiModelProposalBeingWritten(db: Database): Promise<boolean
     .where(eq(aiModelProposal.state, "requested"))
     .limit(1);
   return !!row;
+}
+
+/** The AI model proposals still requested, the oldest first – what the background work finds (ADR 0015). */
+export async function requestedAiModelProposalIds(db: Database): Promise<string[]> {
+  const rows = await db
+    .select({ id: aiModelProposal.id })
+    .from(aiModelProposal)
+    .where(eq(aiModelProposal.state, "requested"))
+    .orderBy(asc(aiModelProposal.requestedAt), asc(aiModelProposal.id));
+  return rows.map((row) => row.id);
 }
 
 /** One AI model proposal by its ID – undefined for an unknown one. */

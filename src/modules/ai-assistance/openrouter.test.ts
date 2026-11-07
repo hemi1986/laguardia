@@ -339,6 +339,26 @@ describe("the OpenRouter adapter", () => {
     expect(received[0].body).not.toHaveProperty("provider");
   });
 
+  it("gives the chat model OpenRouter's server tools for the web only when asked, within ADR 0020's budget", async () => {
+    answers["POST /api/v1/chat/completions"] = {
+      status: 200,
+      body: { choices: [{ message: { content: "{}" } }], usage: { cost: 0.03 } },
+    };
+
+    await adapter().chat("k", "x/y", { system: "s", text: "t", images: [] });
+    await adapter().chat("k", "x/y", { system: "s", text: "t", images: [], webTools: true });
+
+    expect(received[0].body).not.toHaveProperty("tools");
+    expect(received[1].body).toMatchObject({
+      tools: [
+        { type: "openrouter:web_search", parameters: { max_results: 8 } },
+        { type: "openrouter:web_fetch", parameters: { max_uses: 6 } },
+      ],
+      max_tool_calls: 15,
+      response_format: { type: "json_object" },
+    });
+  });
+
   it.each([
     [401, "key-invalid"],
     [402, "credit-used-up"],

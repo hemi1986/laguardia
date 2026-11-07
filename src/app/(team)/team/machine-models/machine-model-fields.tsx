@@ -44,16 +44,21 @@ export function MachineModelFields({
   rejection,
   kept,
   rejectionId,
+  notFound,
 }: Choices & {
-  given?: Omit<MachineModel, "id">;
+  given?: Partial<Omit<MachineModel, "id">>;
   rejection?: { error: string; values: Partial<Record<MachineModelField, string>> };
   /** `keptKey(state)` – fields keyed on it keep the typed value through React's form reset. */
   kept: string;
   rejectionId: string;
+  /** The fields an AI model proposal could not fill (ST-124): an empty field with this text beside it. */
+  notFound?: { fields: readonly MachineModelField[]; text: string };
 }) {
   const invalid = rejection ? fieldOf[rejection.error as CorrectMachineModelError] : undefined;
   const value = (field: MachineModelField, fallback: string | undefined) =>
     rejection ? (rejection.values[field] ?? "") : (fallback ?? "");
+  const missing = (field: MachineModelField) =>
+    notFound?.fields.includes(field) && <p className="text-muted-foreground text-sm">{notFound.text}</p>;
   const marked = (field: MachineModelField) => ({
     id: field,
     name: field,
@@ -66,6 +71,7 @@ export function MachineModelFields({
       <Field data-invalid={invalid === "title"}>
         <FieldLabel htmlFor="title">{texts.modelTitle}</FieldLabel>
         <Input key={`title-${kept}`} {...marked("title")} defaultValue={value("title", given?.title)} required />
+        {missing("title")}
       </Field>
       <Field data-invalid={invalid === "manufacturer"}>
         <FieldLabel htmlFor="manufacturer">{texts.manufacturer}</FieldLabel>
@@ -75,6 +81,7 @@ export function MachineModelFields({
           defaultValue={value("manufacturer", given?.manufacturer)}
           required
         />
+        {missing("manufacturer")}
       </Field>
       <Field data-invalid={invalid === "year"}>
         <FieldLabel htmlFor="year">{texts.year}</FieldLabel>
@@ -84,6 +91,7 @@ export function MachineModelFields({
           inputMode="numeric"
           defaultValue={value("year", given?.year?.toString())}
         />
+        {missing("year")}
       </Field>
       <Field data-invalid={invalid === "machineCategory"}>
         <FieldLabel htmlFor="machineCategory">{terms["Machine category"]}</FieldLabel>
@@ -100,6 +108,7 @@ export function MachineModelFields({
             </option>
           ))}
         </NativeSelect>
+        {missing("machineCategory")}
       </Field>
       <Field data-invalid={invalid === "technology"}>
         <FieldLabel htmlFor="technology">{terms.Technology}</FieldLabel>
@@ -115,6 +124,7 @@ export function MachineModelFields({
             </option>
           ))}
         </NativeSelect>
+        {missing("technology")}
       </Field>
     </>
   );

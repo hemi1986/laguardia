@@ -16,7 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { wordsOfText } from "@/platform/word-search";
 import { EMBEDDING_SIZE } from "./ai-seam";
-import { aiModelProposalStates } from "./ai-model-proposal";
+import { aiModelProposalStates, type ProposedDocument } from "./ai-model-proposal";
 import { assessmentFailureReasons, type AiAssessmentReference } from "./ai-assessment";
 import { indexItemKinds, indexingFailureReasons } from "./ai-index-entry";
 
@@ -139,8 +139,8 @@ export const aiAssessment = pgTable(
 /**
  * AGG-AiModelProposal (ST-123, data model *AI model proposal*): one row per request. At most one is *requested* (being
  * written) at a time over all of them (HS-37) – the partial unique index on a constant is the store's guarantee of that
- * set-based rule, like HS-31 for an AI assessment. The description is free text and never journaled. The fields,
- * sources, documents and failure reason of a written or failed one come with ST-124 and ST-126.
+ * set-based rule, like HS-31 for an AI assessment. The description is free text and never journaled. The fields, sources
+ * and documents of a written one come with ST-124 (existing files: ST-125), the failure reason with ST-126.
  */
 export const aiModelProposal = pgTable(
   "ai_model_proposal",
@@ -153,7 +153,19 @@ export const aiModelProposal = pgTable(
     /** The chat model it was requested with – never changes. */
     chatModel: text("chat_model").notNull(),
     state: text("state", { enum: aiModelProposalStates }).notNull(),
-    /** Optimistic version check (HS-16). */
+    /** Written only (ST-124) – each field empty or valid; the machine category and technology are Collection's words. */
+    title: text("title"),
+    manufacturer: text("manufacturer"),
+    year: integer("year"),
+    machineCategory: text("machine_category"),
+    technology: text("technology"),
+    sources: text("sources").array(),
+    documents: jsonb("documents").$type<ProposedDocument[]>(),
+    embeddingModel: text("embedding_model"),
+    cost: doublePrecision("cost"),
+    /** Written or failed at. */
+    changedAt: timestamp("changed_at", { withTimezone: true }),
+    /** Optimistic version check (HS-16): a late result after the proposal failed records nothing. */
     version: integer("version").notNull().default(0),
   },
   (table) => [
