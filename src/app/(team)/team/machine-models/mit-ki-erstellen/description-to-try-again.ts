@@ -12,7 +12,8 @@ export async function descriptionToTryAgain(
   query: Record<string, string | string[] | undefined>,
 ): Promise<string | undefined> {
   const id = query[TRY_AGAIN_PARAMETER];
-  if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return undefined;
+  if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    return undefined;
   const proposal = await aiModelProposalPage(db, id);
   return proposal?.state === "failed" ? proposal.description : undefined;
 }

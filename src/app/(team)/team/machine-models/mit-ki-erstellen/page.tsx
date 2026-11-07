@@ -1,6 +1,8 @@
 import { BackLink } from "@/components/ui/back-link";
 import { Page } from "@/components/page";
-import { aiDependencies, aiModelProposalRefusal } from "@/modules/ai-assistance";
+import { aiDependencies, aiModelProposalLeftUnfinished, aiModelProposalRefusal } from "@/modules/ai-assistance";
+import { startAiWorkAfterResponse } from "@/app/ai-work";
+import { systemClock } from "@/platform/clock";
 import { database } from "@/platform/database";
 import { teamMessages } from "@/platform/messages";
 import { requireTechnician } from "../../../../team-session";
@@ -19,6 +21,10 @@ export default async function RequestAiModelProposalPage({
 }: PageProps<"/team/machine-models/mit-ki-erstellen">) {
   await requireTechnician();
   const whyNot = await aiModelProposalRefusal(database(), aiDependencies());
+  // A proposal whose hold ran out blocks a new request until a run records its break-off: start that run (HS-37, ADR 0015).
+  if (whyNot === "ai-model-proposal-being-written" && (await aiModelProposalLeftUnfinished(database(), systemClock))) {
+    startAiWorkAfterResponse();
+  }
   // „Nochmal versuchen“ (ST-126): the form starts with the failed proposal's description.
   const initialDescription = await descriptionToTryAgain(database(), await searchParams);
 

@@ -4,7 +4,7 @@ import { filesForAiModelProposal } from "@/modules/collection";
 import { aiModelProposalById, requestedAiModelProposalIds } from "./ai-model-proposals";
 import {
   MAX_PROPOSED_DOCUMENTS,
-  deviceRecognised,
+  machineNamed,
   proposedFileCategories,
   type AiModelProposalAnswer,
   type AiModelProposalFailureReason,
@@ -30,9 +30,16 @@ import { failAiModelProposalCommand, writeAiModelProposalCommand } from "./write
  */
 const AI_MODEL_PROPOSAL_KIND = "ai-model-proposal";
 
-/** Whether this AI model proposal was left unfinished: its hold ran out without a result (HS-33). */
-export function aiModelProposalLeftUnfinished(db: Database, clock: Clock, aiModelProposalId: string): Promise<boolean> {
-  return aiWorkLeftUnfinished(db, clock, AI_MODEL_PROPOSAL_KIND, [aiModelProposalId]);
+/**
+ * Whether this AI model proposal – or, without an ID, any – was left unfinished: its hold ran out without a result (HS-33).
+ * „Mit KI erstellen“ asks it without an ID, because an unfinished proposal blocks a new request (HS-37).
+ */
+export function aiModelProposalLeftUnfinished(
+  db: Database,
+  clock: Clock,
+  aiModelProposalId?: string,
+): Promise<boolean> {
+  return aiWorkLeftUnfinished(db, clock, AI_MODEL_PROPOSAL_KIND, aiModelProposalId ? [aiModelProposalId] : undefined);
 }
 
 export const aiModelProposalWork: AiWorkKind = {
@@ -60,7 +67,7 @@ export const aiModelProposalWork: AiWorkKind = {
     if (answer === "unusable") return fail(id, "answer-unusable", piece, context);
     if ("failure" in answer) return fail(id, answer.failure, piece, context);
     // No machine in the answer: nothing is searched for and nothing more is paid.
-    if (!deviceRecognised(answer)) return fail(id, "device-not-recognised", piece, context);
+    if (!machineNamed(answer)) return fail(id, "device-not-recognised", piece, context);
     // The AI index is searched with the completed fields among all files (ST-125, ADR 0018).
     const found = await findExistingFiles(context.db, piece.openRouter, answer);
     if ("failure" in found) return fail(id, found.failure, piece, context);

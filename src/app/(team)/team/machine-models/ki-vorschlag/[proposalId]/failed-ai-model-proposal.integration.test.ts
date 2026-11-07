@@ -114,6 +114,7 @@ describe("an AI model proposal that failed or broke off (ST-126)", () => {
     // A foreign or unknown address types nothing in: only a failed proposal's description is offered.
     expect(await descriptionToTryAgain(db, { retry: randomUUID() })).toBeUndefined();
     expect(await descriptionToTryAgain(db, {})).toBeUndefined();
+    expect(await descriptionToTryAgain(db, { retry: "-".repeat(36) })).toBeUndefined();
     expect(await descriptionToTryAgain(db, { retry: ["a", "b"] })).toBeUndefined();
   });
 

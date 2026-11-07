@@ -236,7 +236,7 @@ export function writeAiModelProposal(
 ): Decision<AiModelProposalState, AiModelProposalWritten | AiModelProposalFailed, "not-requested"> {
   if (state.state !== "requested") return { ok: false, error: "not-requested" };
   // No usable machine in the answer fails it (rule): nothing to propose, and nothing to keep.
-  if (!deviceRecognised(answer)) return failAiModelProposal(state, "device-not-recognised", { clock });
+  if (!machineNamed(answer)) return failAiModelProposal(state, "device-not-recognised", { clock });
   const machineCategory = machineCategories.find((category) => category === answer.machineCategory);
   const technology = machineCategory
     ? technologiesOf(machineCategory).find((candidate) => candidate === answer.technology)
@@ -298,7 +298,7 @@ export function writeAiModelProposal(
  * Whether the answer names a machine (rule, ST-126): a title or a manufacturer. Fields without either – a category or a
  * year alone – do not make a device; a blank title with a manufacturer is still written (ST-124).
  */
-export function deviceRecognised(answer: AiModelProposalAnswer): boolean {
+export function machineNamed(answer: AiModelProposalAnswer): boolean {
   return !!(answer.title?.trim() || answer.manufacturer?.trim());
 }
 
