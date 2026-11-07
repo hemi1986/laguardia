@@ -12,7 +12,7 @@ risk: high
 events: [EVT-AiModelProposalWritten, EVT-AiModelProposalFailed]
 depends_on: [ST-123, ST-122]
 labels: [feature:ai-model-proposal]
-status: review
+status: ready-for-human-review
 ---
 
 ## Story
@@ -21,7 +21,7 @@ As a technician who requested an AI model proposal, I want to see the machine mo
 ## Context
 Feature `ai-model-proposal` (user, 2026-11-07; `docs/domain/events.yaml` **CMD-WriteAiModelProposal**,
 **EVT-AiModelProposalWritten**, **POL-RequestedAiModelProposalIsWritten**, **RM-AiModelProposal**, **EXT-OpenRouter**,
-resolved **HS-40**, open **HS-41** (spike ST-122); ADR 0014; ADR 0015; ADR 0019). The happy path from the web; existing
+resolved **HS-40**, resolved **HS-41** (spike ST-122, ADR 0020: one run, JSON object, 11–37 s, $0.02–$0.08); ADR 0014; ADR 0015; ADR 0019; ADR 0020). The happy path from the web; existing
 files of the museum are ST-125, failures and break-offs ST-126, saving ST-128.
 
 **The writing** (background, started after ST-123's response): the chat model of the settings gets the description and
@@ -72,4 +72,4 @@ Scenario: At most ten documents
 - Loading the links (ST-129)
 
 ## Open Questions
-- [OPEN] HS-41: whether the server tools work with the chosen chat model together with a structured answer – answered by ST-122 before this story is `ready`.
+- none
