@@ -20,9 +20,9 @@ export default async function MachineModelsPage({ searchParams }: PageProps<"/te
   const [models, { created }] = await Promise.all([machineModelsToChooseFrom(database()), searchParams]);
   // Confirmed only when creating it was the latest command on it and this technician ran it (G3).
   const createdId = oneOf(created);
-  const creating = await viewersCommandOn(database(), member.id, createdId);
+  const creating = createdId ? await viewersCommandOn(database(), member.id, createdId) : undefined;
   const createdModel =
-    creating && machineModelChangeIn(creating, createdId!).created
+    createdId && creating && machineModelChangeIn(creating, createdId).created
       ? models.find((model) => model.id === createdId)
       : undefined;
 

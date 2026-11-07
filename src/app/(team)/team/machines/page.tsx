@@ -25,8 +25,9 @@ export default async function MachinesPage({ searchParams }: { searchParams: Sea
   const { machines, counts, retiredCount } = await loadMachineOverview(database(), systemClock, query);
   // Confirmed only when registering it was the latest command on it and this technician ran it (G3).
   const registeredId = oneOf(params.registered);
-  const registering = await viewersCommandOn(database(), member.id, registeredId);
-  const registered = registering && machineRegisteredIn(registering, registeredId!) ? registeredId : undefined;
+  const registering = registeredId ? await viewersCommandOn(database(), member.id, registeredId) : undefined;
+  const registered =
+    registeredId && registering && machineRegisteredIn(registering, registeredId) ? registeredId : undefined;
 
   return (
     <Page title={teamMessages.machines.title}>
