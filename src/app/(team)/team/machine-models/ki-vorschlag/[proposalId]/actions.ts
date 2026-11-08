@@ -2,11 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { acceptAiModelProposalCommand, discardAiModelProposalCommand } from "@/modules/ai-assistance";
+import {
+  acceptAiModelProposalCommand,
+  discardAiModelProposalCommand,
+  retryProposedDocumentCommand,
+} from "@/modules/ai-assistance";
 import { formAction } from "@/app/_actions/form-action";
 import { requireTechnician } from "../../../../../team-session";
 import { aiModelProposalAddress } from "../../mit-ki-erstellen/request-ai-model-proposal-definition";
 import { acceptAiModelProposalForm } from "./accept-ai-model-proposal-definition";
+import { retryProposedDocumentForm } from "./retry-proposed-document-definition";
 import { discardAiModelProposalForm, discardedLanding } from "./discard-ai-model-proposal-definition";
 
 import { ALREADY_SAVED } from "./document-fields";
@@ -70,4 +75,27 @@ export async function discardAiModelProposalAction(
     redirect(`${aiModelProposalAddress(String(formData.get("aiModelProposalId") ?? ""))}?${ALREADY_SAVED}=1`);
   }
   return state;
+}
+
+const retryProposedDocument = formAction(
+  retryProposedDocumentCommand,
+  retryProposedDocumentForm({
+    // The proposal's page says the link is waiting again (G3); the runner starts the loading after the response.
+    onSuccess: async ({ aiModelProposalId }) => redirect(aiModelProposalAddress(aiModelProposalId)),
+  }),
+);
+
+export type RetryProposedDocumentState = Awaited<ReturnType<typeof retryProposedDocument>>;
+
+/**
+ * CMD-RetryProposedDocument from „Nochmal versuchen“ beside a failed link on a saved proposal's page (ST-130): the
+ * page's access check, then the command through the Server Action runner, which starts the AI work this event makes
+ * (ADR 0015). The technician stays on the proposal's page, where the link is waiting again.
+ */
+export async function retryProposedDocumentAction(
+  previous: RetryProposedDocumentState,
+  formData: FormData,
+): Promise<RetryProposedDocumentState> {
+  await requireTechnician(); // the page's access check; who may retry is decided by the command
+  return retryProposedDocument(previous, formData);
 }

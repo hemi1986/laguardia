@@ -50,7 +50,11 @@ export async function aiModelProposalRefusal(
 }
 
 /** A document on the page: an existing file the museum removed since the proposal was written is marked (HS-38). */
-export type PageDocument = ProposedDocument & { removed?: true };
+export type PageDocument = ProposedDocument & {
+  removed?: true;
+  /** A saved proposal's documents only: the place among the documents as written – what a retry names (ST-130). */
+  index?: number;
+};
 
 /**
  * The AI model proposal's page: what is known of it now. The fields, sources and documents only of a written one, with
@@ -60,7 +64,7 @@ export type AiModelProposalPage = {
   id: string;
   description: string;
   state: AiModelProposalStateName;
-  /** Written or failed – the version „Speichern“ and „Verwerfen“ post. */
+  /** Written, failed or accepted – the version „Speichern“, „Verwerfen“ and „Nochmal versuchen“ (ST-130) post. */
   version?: number;
   /** Written only, with the sources and documents – a field the AI could not fill (or filled with something not valid) is absent. */
   fields?: {
@@ -94,7 +98,10 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
       : undefined;
     return {
       ...base,
-      documents: chosenDocuments(proposal),
+      version,
+      documents: (proposal.documents ?? []).flatMap((document, index): PageDocument[] =>
+        document.chosen ? [{ ...document, index }] : [],
+      ),
       ...(machineModelId &&
         machineModelTitle !== undefined && { machineModel: { id: machineModelId, title: machineModelTitle } }),
     };
