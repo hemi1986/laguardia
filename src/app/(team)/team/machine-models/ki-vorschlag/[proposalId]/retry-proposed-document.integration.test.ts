@@ -138,7 +138,7 @@ describe("retrying a failed link of a saved proposal", () => {
     });
     expect(await fileCount()).toBe(0);
     // „Nochmal versuchen“ is offered beside the failed link.
-    expect(await savedPage(id)).toContain(texts.retry);
+    expect(await savedPage(id)).toContain(texts.tryAgain);
 
     committed.length = 0;
     const retried = await retry(id);
@@ -149,7 +149,7 @@ describe("retrying a failed link of a saved proposal", () => {
     const waiting = (await aiModelProposalPage(db, id))!.documents![0];
     expect(waiting).toMatchObject({ loading: "waiting" });
     expect(waiting).not.toHaveProperty("reason");
-    expect(await savedPage(id)).not.toContain(texts.retry);
+    expect(await savedPage(id)).not.toContain(texts.tryAgain);
 
     // The site answers now.
     await load(
@@ -179,20 +179,77 @@ describe("retrying a failed link of a saved proposal", () => {
     );
     expect(await fileCount()).toBe(1);
     // For a loaded link „Nochmal versuchen“ is not offered (G11).
-    expect(await savedPage(id)).not.toContain(texts.retry);
+    expect(await savedPage(id)).not.toContain(texts.tryAgain);
 
     const retried = await retry(id);
 
     expect(retried).toMatchObject({ ok: false, error: "ai-model-proposal-document-not-failed" });
-    expect(teamMessages.commandErrors["ai-model-proposal-document-not-failed"]).toBeDefined();
+    expect(teamMessages.commandErrors["ai-model-proposal-document-not-failed"]).toBe(
+      "Dieses Dokument ist nicht fehlgeschlagen – es wird nicht erneut geladen.",
+    );
     expect(await fileCount()).toBe(1);
     expect((await aiModelProposalPage(db, id))!.documents![0]).toMatchObject({ loading: "loaded" });
   });
 
-  it("a waiting link, a link of a place that is none and a link of a proposal not saved cannot be retried either", async () => {
+  it("a waiting link or a place that names no link cannot be retried", async () => {
     const { id } = await aSavedProposal([link("https://example.org/a.pdf", "A")]);
     expect(await retry(id)).toMatchObject({ ok: false, error: "ai-model-proposal-document-not-failed" });
     expect(await retry(id, 5)).toMatchObject({ ok: false, error: "ai-model-proposal-document-not-failed" });
     expect(await retry(id, -1)).toMatchObject({ ok: false, error: "ai-model-proposal-document-not-failed" });
+  });
+
+  it("a proposal that is not saved has no link to retry", async () => {
+    const openRouter = scenario.openRouter({
+      chatAnswer: {
+        content: JSON.stringify({
+          title: "High Speed",
+          manufacturer: "Williams",
+          sources: [],
+          documents: [link("https://example.org/a.pdf", "A")],
+        }),
+        cost: 0.04,
+      },
+    });
+    const id = await scenario.requestAiModelProposal("Flipper High Speed Williams");
+    await scenario.run({ kinds: [aiModelProposalWork], with: openRouter });
+    expect(await retry(id)).toMatchObject({ ok: false, error: "ai-model-proposal-document-not-failed" });
+  });
+
+  it("the link tapped is the link retried, also when an earlier document was not ticked", async () => {
+    const { id } = await aSavedProposal(
+      [
+        link("https://example.org/x.pdf", "X"),
+        link("https://example.org/a.pdf", "A"),
+        link("https://example.org/b.pdf", "B"),
+      ],
+      [1, 2],
+    );
+    await load(memoryWeb({}));
+    const page = await aiModelProposalPage(db, id);
+    // The page names the places as written: A is 1, B is 2 (X was left unticked).
+    expect(page!.documents!.map((document) => [document.kind === "link" && document.title, document.index])).toEqual([
+      ["A", 1],
+      ["B", 2],
+    ]);
+
+    expect((await retry(id, 2)).ok).toBe(true);
+
+    const after = (await aiModelProposalPage(db, id))!.documents!;
+    expect(after.map((document) => document.kind === "link" && document.loading)).toEqual(["failed", "waiting"]);
+    expect(await savedPage(id)).toContain('name="index" value="1"');
+  });
+
+  it("a link that failed for a reason that cannot change fails with the same reason again", async () => {
+    const { id } = await aSavedProposal([link("https://example.org/archive.zip", "Archive")]);
+    const web = memoryWeb({
+      "https://example.org/archive.zip": { contentType: "application/zip", bytes: new Uint8Array([0x50, 0x4b, 3, 4]) },
+    });
+    await load(web);
+    expect((await retry(id)).ok).toBe(true);
+    await load(web);
+    expect((await aiModelProposalPage(db, id))!.documents![0]).toMatchObject({
+      loading: "failed",
+      reason: "not-pdf-or-text",
+    });
   });
 });

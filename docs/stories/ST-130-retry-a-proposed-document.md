@@ -12,7 +12,7 @@ risk: low
 events: [EVT-ProposedDocumentLoadingRetried]
 depends_on: [ST-129]
 labels: [feature:ai-model-proposal]
-status: in-progress
+status: done
 ---
 
 ## Story

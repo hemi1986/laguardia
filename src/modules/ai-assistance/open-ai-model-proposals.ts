@@ -50,7 +50,11 @@ export async function aiModelProposalRefusal(
 }
 
 /** A document on the page: an existing file the museum removed since the proposal was written is marked (HS-38). */
-export type PageDocument = ProposedDocument & { removed?: true };
+export type PageDocument = ProposedDocument & {
+  removed?: true;
+  /** A saved proposal's documents only: the place among the documents as written – what a retry names (ST-130). */
+  index?: number;
+};
 
 /**
  * The AI model proposal's page: what is known of it now. The fields, sources and documents only of a written one, with
@@ -95,7 +99,9 @@ export async function aiModelProposalPage(db: Database, id: string): Promise<AiM
     return {
       ...base,
       version,
-      documents: chosenDocuments(proposal),
+      documents: (proposal.documents ?? []).flatMap((document, index): PageDocument[] =>
+        document.chosen ? [{ ...document, index }] : [],
+      ),
       ...(machineModelId &&
         machineModelTitle !== undefined && { machineModel: { id: machineModelId, title: machineModelTitle } }),
     };

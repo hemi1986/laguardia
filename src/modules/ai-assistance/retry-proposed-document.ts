@@ -44,14 +44,8 @@ export function retryProposedDocument(
   const link = failedLink(state, index);
   if (!link) return { ok: false, error: "ai-model-proposal-document-not-failed" };
   // Waiting again: the link as it was chosen, without the reason it failed with.
-  const waiting: ProposedDocument = {
-    kind: link.kind,
-    link: link.link,
-    title: link.title,
-    fileCategory: link.fileCategory,
-    chosen: link.chosen,
-    loading: "waiting",
-  };
+  const { reason: _reason, fileId: _fileId, ...kept } = link;
+  const waiting: ProposedDocument = { ...kept, loading: "waiting" };
   const documents = (state.documents ?? []).map((document, at) => (at === index ? waiting : document));
   return {
     ok: true,

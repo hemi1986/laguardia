@@ -3,6 +3,7 @@ import { Section } from "@/components/ui/section";
 import type { AiModelProposalPage } from "@/modules/ai-assistance";
 import { teamMessages } from "@/platform/messages";
 import { fileDetailsAddress } from "@/app/(team)/team/dateien/file-navigation";
+import { NO_VERSION_SEEN } from "@/app/_actions/version";
 import { RetryProposedDocumentForm } from "./retry-form";
 
 const { aiModelProposals: texts } = teamMessages;
@@ -11,13 +12,12 @@ const { aiModelProposals: texts } = teamMessages;
  * A saved AI model proposal (RM-AiModelProposal, ST-128, G3): „Gespeichert“, the machine model it created – named and
  * linked –, the existing files attached to it and, for each chosen link, that it is being loaded (the page refreshes
  * itself while one is, G35), loaded as the file it became (ST-129) or failed with its reason (ST-129) and „Nochmal versuchen“
- * (ST-130) – offered for a failed link only (G11).
+ * (ST-130, named by the link's place among the documents as written) – offered for a failed link only (G11).
  */
 export function SavedAiModelProposal({ proposal }: { proposal: AiModelProposalPage }) {
   const documents = proposal.documents ?? [];
   const files = documents.flatMap((document) => (document.kind === "file" ? [document] : []));
-  // A link's place among the documents is what „Nochmal versuchen“ names.
-  const links = documents.flatMap((document, index) => (document.kind === "link" ? [{ ...document, index }] : []));
+  const links = documents.flatMap((document) => (document.kind === "link" ? [document] : []));
   return (
     <>
       <div className="flex flex-col gap-1">
@@ -64,10 +64,10 @@ export function SavedAiModelProposal({ proposal }: { proposal: AiModelProposalPa
                 {document.loading === "failed" && document.reason && (
                   <span className="text-destructive text-sm">{texts.documentFailures[document.reason]}</span>
                 )}
-                {document.loading === "failed" && (
+                {document.loading === "failed" && document.index !== undefined && (
                   <RetryProposedDocumentForm
                     proposalId={proposal.id}
-                    version={proposal.version ?? -1}
+                    version={proposal.version ?? NO_VERSION_SEEN}
                     index={document.index}
                   />
                 )}

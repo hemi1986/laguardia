@@ -6,11 +6,14 @@ import type { RetryProposedDocumentInput } from "@/modules/ai-assistance";
 export const retryProposedDocumentFields = ["aiModelProposalId", "index", "version"] as const;
 export type RetryProposedDocumentField = (typeof retryProposedDocumentFields)[number];
 
+/** A place that names no document. */
+const NO_INDEX = -1;
+
 export function retryProposedDocumentInput(fields: FormFields<RetryProposedDocumentField>): RetryProposedDocumentInput {
   // A place that is no whole number names no link: the command refuses it like any link that did not fail.
   return {
     aiModelProposalId: fields.aiModelProposalId ?? "",
-    index: wholeNumber(fields.index) ?? -1,
+    index: wholeNumber(fields.index) ?? NO_INDEX,
     version: versionSeen(fields.version),
   };
 }

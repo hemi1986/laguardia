@@ -161,8 +161,6 @@ export const aiAssistanceTexts = {
     documentsToLoad: "Aus dem Netz",
     loading: "Wird geladen …",
     loaded: "Geladen",
-    /** Trying a failed link again (ST-130). */
-    retry: "Nochmal versuchen",
     /** Why a chosen link could not be loaded (ST-129) – one word for each reason of `DocumentFailureReason`. */
     documentFailures: {
       "not-reachable": "nicht erreichbar",

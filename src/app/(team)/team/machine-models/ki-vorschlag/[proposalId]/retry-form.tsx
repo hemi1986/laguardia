@@ -31,7 +31,7 @@ export function RetryProposedDocumentForm({
       <input type="hidden" name="index" value={index} />
       {state && <Rejection>{rejectionText(state.error)}</Rejection>}
       <Button type="submit" variant="outline" disabled={pending} className="self-start">
-        {texts.retry}
+        {texts.tryAgain}
       </Button>
     </form>
   );
