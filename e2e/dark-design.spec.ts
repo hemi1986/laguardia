@@ -303,8 +303,9 @@ test("ST-090: Every fold looks the same", async ({ page }) => {
     expect(closed.list).toBe("none");
     expect(await markerOf(manage), design).toEqual(closed);
 
-    await more.locator("> summary").click();
+    // „Verwalten“ first: the open list of „Mehr“ reaches over it (it grew with every new destination).
     await manage.locator("> summary").click();
+    await more.locator("> summary").click();
     const open = await markerOf(more);
     expect(open.marker).not.toBe(closed.marker);
     expect(await markerOf(manage), design).toEqual(open);
