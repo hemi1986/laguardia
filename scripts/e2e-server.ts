@@ -7,6 +7,7 @@
  * override `.env.development.local`, so the development database and bucket are never touched.
  */
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { join } from "node:path";
 import { s3Settings, s3Storage } from "@/platform/storage";
 import { e2eDatabaseUrl, prepareE2eDatabase } from "@/test-support/e2e-database";
@@ -35,6 +36,7 @@ async function main() {
       "Only one of E2E_TEAM_USERNAME / E2E_TEAM_PASSWORD is set – no e2e technician, the team-page tests skip.",
     );
   }
+  startOpenRouterStandIn();
   await reachable(E2E_STORE.S3_ENDPOINT);
   const storage = s3Storage({ settings: s3Settings(E2E_STORE) });
   await prepareE2eDatabase(database, username && password ? { username, password } : undefined, storage);
@@ -58,12 +60,27 @@ async function main() {
 }
 
 /**
+ * The stand-in for OpenRouter: every request is cut off at once (like an address where nothing answers) – except a chat
+ * request, which is never answered, so a proposal or assessment the browser tests ask for stays *being written* for as
+ * long as a test looks at it instead of failing before the page is drawn (ST-123). Listens only on the loopback address.
+ */
+function startOpenRouterStandIn(): void {
+  const standIn = createServer((request, response) => {
+    if (request.method === "POST" && request.url?.endsWith("/chat/completions")) return; // never answered
+    response.socket?.destroy();
+  });
+  standIn.listen(OPENROUTER_STAND_IN_PORT, "127.0.0.1");
+  standIn.unref();
+}
+
+/**
  * AI (ST-104): the browser tests never reach OpenRouter – its address points where nothing answers, so the form „KI“
  * shows that the model list could not be loaded. The encryption key is a fixed one for this throwaway database only.
  * The AI work (ST-112) calls this server's own worker route, with a worker secret fixed for these runs only.
  */
+const OPENROUTER_STAND_IN_PORT = E2E_PORT + 1;
 const E2E_AI = {
-  OPENROUTER_BASE_URL: "http://127.0.0.1:9/api/v1",
+  OPENROUTER_BASE_URL: `http://127.0.0.1:${OPENROUTER_STAND_IN_PORT}/api/v1`,
   AI_SETTINGS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
   AI_WORK_SECRET: "e2e-worker-secret-only-for-local-browser-tests",
   AI_WORK_ORIGIN: `http://localhost:${E2E_PORT}`,
