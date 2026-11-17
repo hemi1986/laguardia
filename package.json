@@ -31,7 +31,7 @@
     "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.65.0",
     "markdown-it": "~15.0.3",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
